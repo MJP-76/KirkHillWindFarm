@@ -1,14 +1,15 @@
 # <B>Kirk Hill Wind Farm integration for Home Assistant<B>
 # Note: This is a fork of my Ripple integration and is Still in testing and development and not live or fit for use yet
+# No data or sensors are generated at the moment
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referral code. You get £50 credit for joining and I get £50 credit.
 
 # Work in progress
-- Base HACS Integration - 29/06/2026
-- Home Assistant UI WorkFlow
-- Create sensors via HA integration
+- Base HACS Integration - Started 29/06/2026
+- Home Assistant UI WorkFlow  - Started 29/06/2026
+- Create sensors via HA integration  - Started 29/06/2026
 
 # Pre Installation
 You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
