@@ -1,0 +1,14 @@
+{
+    "domain": "ripple_energy",
+    "name": "Ripple Energy API",
+    "version": "1.0",
+    "documentation": "https://github.com/MJP-76/RippleEnergyAPI",
+    "issue_tracker": "https://github.com/MJP-76/RippleEnergyAPI/issues",
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": ["@mjp-76"],
+    "integration_type": "hub",
+    "iot_class": "cloud_polling",
+    "config_flow": true
+  }
+  
