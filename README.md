@@ -18,12 +18,11 @@ Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referr
 You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
 
 # Manual Installation - Working on
-1. Paste your Kirk Hill API key inside your standard configuration.yaml file
-<Paste your Kirk Hill API key inside your standard configuration.yaml file>
-<code>kirkhill_wind:</code>
+<br>1. Paste your Kirk Hill API key inside your standard configuration.yaml file
+<br><code>kirkhill_wind:</code>
 <br><code>  api_key: "YOUR_PASTED_API_KEY_HERE"</code>
-2. Clobe and copy kirkhill_wind folder to your cutome_components folder
-3. Reboot Home Assistant
+<br>2. Clobe and copy kirkhill_wind folder to your cutome_components folder
+<br>3. Reboot Home Assistant
 
 # HACS Installation -Not sure if this is working yet
 <B>HACS<B>
