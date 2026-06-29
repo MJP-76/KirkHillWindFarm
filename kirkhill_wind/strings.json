@@ -1,1 +1,18 @@
-
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Link Kirk Hill Account",
+        "description": "Please enter your personal read-only API key found on the dashboard.",
+        "data": {
+          "api_key": "API Key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Kirk Hill API server.",
+      "invalid_auth": "Invalid API token specified.",
+      "unknown": "Unexpected error occurred."
+    }
+  }
+}
