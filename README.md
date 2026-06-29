@@ -6,33 +6,22 @@
 
 Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referral code. You get £50 credit for joining and I get £50 credit.
 
+# Compleated
+- Base HACS installation - Started 29/06/2026
+
 # Currently developing
-- Manual installation - Started 29/06/2026
 
 # Work in progress
-- Base HACS installation - Started 29/06/2026
 - Home Assistant UI WorkFlow  - Started 29/06/2026
 - Create sensors via HA integration  - Started 29/06/2026
 
 # Pre Installation
 You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
 
-# Manual Installation - Working on
-<br>1. Paste your Kirk Hill API key inside your standard configuration.yaml file
-<br><code>kirkhill_wind:</code>
-<br><code>  api_key: "YOUR_PASTED_API_KEY_HERE"</code>
-<br>2. Clobe and copy kirkhill_wind folder to your cutome_components folder
-<br>3. Reboot Home Assistant
-
-# HACS Installation -Not sure if this is working yet
+# Installation
 <B>HACS<B>
 1. Add the https://github.com/MJP-76/KirkHillWindFarm as a "Custom Repository" in HACS (Home Assistant Community Store)
 2. Install the integration in HACS
-3. Restart Home Assistant
-
-<B>Manual<B>
-1. Download the https://github.com/MJP-76/KirkHillWindFarm
-2. Copy the folder custom_components/- Name: kirkhillwinfarm from the zip to your config directory
 3. Restart Home Assistant
 
 # Post Installation
