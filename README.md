@@ -19,8 +19,8 @@ You will require your Kirk Hill Dashboard API key as per available here: [Kirk H
 
 # Manual Installation - Working on
 <Paste your Kirk Hill API key inside your standard configuration.yaml file>
-kirkhill_wind:
-  api_key: "YOUR_PASTED_API_KEY_HERE"
+"kirkhill_wind:
+  api_key: "YOUR_PASTED_API_KEY_HERE""
 
 # HACS Installation -Not sure if this is working yet
 <B>HACS<B>
