@@ -9,13 +9,13 @@ Note:
 Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referral code. You get £50 credit for joining and I get £50 credit.
 
 # Completed
-- Base HACS installation - Started 29/06/2026
+- Base HACS installation - 29/06/2026
 
 # Currently developing
-- Home Assistant UI WorkFlow  - Started xx/xx/xxxx
+- UI Integration WorkFlow - Started 29/06/2026
 
 # Work in progress
-- Create sensors via integration  - Started xx/xx/xxxx
+- Create sensors via integration - Started xx/xx/xxxx
 
 # <B>Pre-Reqs<B>
 You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
