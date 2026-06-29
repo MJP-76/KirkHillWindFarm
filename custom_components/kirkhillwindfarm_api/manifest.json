@@ -1,9 +1,9 @@
 {
-    "domain": "ripple_energy",
-    "name": "Ripple Energy API",
+    "domain": "kirkhill_wind",
+    "name": "Kirk Hill Wind Farm",
     "version": "1.0",
-    "documentation": "https://github.com/MJP-76/RippleEnergyAPI",
-    "issue_tracker": "https://github.com/MJP-76/RippleEnergyAPI/issues",
+    "documentation": "https://github.com/MJP-76/kirkhillwindfarm",
+    "issue_tracker": "https://github.com/MJP-76/kirkhillwindfarm/issues",
     "requirements": [],
     "dependencies": [],
     "codeowners": ["@mjp-76"],
