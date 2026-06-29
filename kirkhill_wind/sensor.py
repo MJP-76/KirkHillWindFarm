@@ -37,7 +37,7 @@ class KirkHillSensor(SensorEntity):
         self._scope = scope
         self._attr_name = f"Kirk Hill Wind {name_suffix}"
         self._attr_unique_id = f"kirkhill_wind_{scope}_{api_key[:6]}"
-        self._attr_native_unit_of_measurement = UnitOfPower.KILOWATT
+        self._attr_native_unit_of_measurement = UnitOfPower.WATT
         self._attr_device_class = SensorDeviceClass.POWER
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_native_value = None
