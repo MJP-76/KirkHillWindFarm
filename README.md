@@ -10,29 +10,28 @@ Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referr
 - Base HACS installation - Started 29/06/2026
 
 # Currently developing
+- Home Assistant UI WorkFlow  - Started xx/xx/xxxx
 
 # Work in progress
-- Home Assistant UI WorkFlow  - Started 29/06/2026
-- Create sensors via HA integration  - Started 29/06/2026
+- Create sensors via integration  - Started xx/xx/xxxx
 
-# Pre Installation
+# <B>Pre-Reqs<B>
 You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
 
-# Installation
+# <B>Installation<B>
 <B>HACS<B>
 1. Add the https://github.com/MJP-76/KirkHillWindFarm as a "Custom Repository" in HACS (Home Assistant Community Store)
 2. Install the integration in HACS
 3. Restart Home Assistant
 
 # Post Installation
-After restart of Home Assistant, integration can be configured through the integration setup UI
+Configure through the integration setup UI
 
 # Sensors
-The following - Sensors are generated from the Kirk Hill Wind Farm(https://dashboard.kirkhillcoop.org/api-docs) API into Home Assistant
+The following sSensors are generated from the Kirk Hill Wind Farm API into Home Assistant
 
 <B>Working<B>
 - None
 
 <B>Work in progress<B>
-<B><B>
 - None
