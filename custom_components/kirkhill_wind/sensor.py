@@ -1,64 +1,87 @@
-"""Sensor platform for Kirk Hill Wind Farm."""
+"""Platform for sensor integration."""
 import logging
 from datetime import timedelta
 import aiohttp
 import async_timeout
 
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorDeviceClass,
-    SensorStateClass,
-)
-from homeassistant.const import CONF_API_KEY, UnitOfPower
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-_LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(minutes=5)
-URL = "https://kirkhillcoop.org"
+DOMAIN = "kirkhill_wind"
+# Update this to your precise Kirk Hill dashboard endpoint
+API_URL = "https://kirkhillwindfarm.co.uk" 
 
-async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up the Kirk Hill sensors via UI configuration entry."""
-    config = hass.data["kirkhill_wind"][entry.entry_id]
-    api_key = config[CONF_API_KEY]
+SCAN_INTERVAL = timedelta(minutes=5) # Fetch data every 5 minutes
+_LOGGER = logging.getLogger(__name__)
+
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the Kirk Hill sensor platform from a config entry."""
+    api_key = config_entry.data.get("api_key")
     session = async_get_clientsession(hass)
     
-    async_add_entities([
-        KirkHillSensor(session, api_key, "Your Share", scope="user"),
-        KirkHillSensor(session, api_key, "Whole Site", scope="site")
-    ], True)
+    # Add your sensors to Home Assistant
+    async_add_entities([KirkHillGenerationSensor(session, api_key)], True)
 
-class KirkHillSensor(SensorEntity):
-    """Representation of a Kirk Hill Wind Farm generation sensor."""
 
-    def __init__(self, session, api_key, name_suffix, scope):
+class KirkHillGenerationSensor(SensorEntity):
+    """Representation of a Kirk Hill Wind Farm Power Generation Sensor."""
+
+    def __init__(self, session, api_key):
         """Initialize the sensor."""
         self._session = session
         self._api_key = api_key
-        self._scope = scope
-        self._attr_name = f"Kirk Hill Wind {name_suffix}"
-        self._attr_unique_id = f"kirkhill_wind_{scope}_{api_key[:6]}"
-        self._attr_native_unit_of_measurement = UnitOfPower.WATT
-        self._attr_device_class = SensorDeviceClass.POWER
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_native_value = None
+        self._state = None
+        self._attrs = {}
+        self._available = False
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return "Kirk Hill Power Generation"
+
+    @property
+    def unique_id(self):
+        """Return a unique ID to manage this entity in the UI."""
+        return f"kirkhill_wind_generation_{self._api_key[:6]}"
+
+    @property
+    def state(self):
+        """Return the current power generation state."""
+        return self._state
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return "kW"  # or kWh depending on what the API spits out
+
+    @property
+    def available(self):
+        """Return True if entity is available."""
+        return self._available
+
+    @property
+    def extra_state_attributes(self):
+        """Return device specific state attributes."""
+        return self._attrs
 
     async def async_update(self):
-        """Fetch latest live data from the Kirk Hill Wind Farm API."""
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Accept": "application/json"
-        }
-        params = {"scope": self._scope}
-
+        """Fetch new state data from the Kirk Hill API."""
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        
         try:
-            async with async_timeout.timeout(10):
-                async with self._session.get(URL, headers=headers, params=params) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        self._attr_native_value = data.get("power", 0)
-                    elif response.status == 401:
-                        _LOGGER.error("Invalid API Key for Kirk Hill Wind Farm API")
-                    else:
-                        _LOGGER.error("Error fetching Kirk Hill data: %s", response.status)
+            with async_timeout.timeout(10):
+                response = await self._session.get(API_URL, headers=headers)
+                
+            if response.status == 200:
+                data = await response.json()
+                # Parse data out of your specific API JSON response structure
+                self._state = data.get("generation", 0) 
+                self._attrs = {"updated_at": data.get("timestamp")}
+                self._available = True
+            else:
+                _LOGGER.error("Error fetching data from Kirk Hill API: %s", response.status)
+                self._available = False
+                
         except Exception as err:
             _LOGGER.error("Failed to connect to Kirk Hill API: %s", err)
+            self._available = False
