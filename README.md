@@ -6,8 +6,11 @@
 
 Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referral code. You get £50 credit for joining and I get £50 credit.
 
+# Currently developing
+- Manual installation - Started 29/06/2026
+
 # Work in progress
-- Base HACS Integration - Started 29/06/2026
+- Base HACS installation - Started 29/06/2026
 - Home Assistant UI WorkFlow  - Started 29/06/2026
 - Create sensors via HA integration  - Started 29/06/2026
 
