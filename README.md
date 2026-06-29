@@ -18,9 +18,10 @@ Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referr
 You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
 
 # Manual Installation - Working on
+Paste your Kirk Hill API key inside your standard configuration.yaml file
 <Paste your Kirk Hill API key inside your standard configuration.yaml file>
-"kirkhill_wind:
-  api_key: "YOUR_PASTED_API_KEY_HERE""
+<code>kirkhill_wind:</code>
+<br><code>  api_key: "YOUR_PASTED_API_KEY_HERE"</code>
 
 # HACS Installation -Not sure if this is working yet
 <B>HACS<B>
