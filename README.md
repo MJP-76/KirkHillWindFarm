@@ -1,6 +1,6 @@
 # <B>Kirk Hill Wind Farm Home Assistant integration<B>
 Excuse me as I am learning the API
-<br>- This is a fork of my Ripple integration that I never compleated for obvious reasons
+<br>- This is a fork of my Ripple integration that I never completed for obvious reasons
 <br>- Still in active test&dev
 
 If you like my work:
