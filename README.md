@@ -6,34 +6,37 @@ Note:
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referral code. You get £50 credit for joining and I get £50 credit.
+# Available sensors
+The following sensors are generated from the Kirk Hill Wind Farm API into Home Assistant
 
+<B>Working sensors<B>
+<br>Whole wind farm sensors<br>
+- Kirk Hill Active Turbines
+- Kirk Hill Capacity Factor
+- Kirk Hill Site Capacity
+- Kirk Hill Total Generation
+
+<B>WIP Sensors<B>
+<br>Personal share sensors<br>
+- None
+
+# <B>Pre-reqs<B>
+You will require your API key from https://dashboard.kirkhillcoop.org/
+
+# <B>Installation<B>
+<B>HACS<B>
+1. Add https://github.com/MJP-76/KirkHillWindFarm as a "Custom Repository" in HACS
+2. Install the integration in HACS
+3. Restart Home Assistant
+
+# Post installation
+Configure through the integration setup UI
+
+# <B>Project updates<B>
 # Completed
 - Base HACS installation - 29/06/2026
 - UI Integration WorkFlow - 30/06/2026
 - "Whole" Wind Farm sensors - 30/06/2026
 
-# Currently developing
-- "Share" Wind farm sensors - Started 30/06/2026
-
 # Work in progress
-
-# <B>Pre-Reqs<B>
-You will require your API key from https://dashboard.kirkhillcoop.org/
-
-# <B>Installation<B>
-<B>HACS<B>
-1. Add the https://github.com/MJP-76/KirkHillWindFarm as a "Custom Repository" in HACS (Home Assistant Community Store)
-2. Install the integration in HACS
-3. Restart Home Assistant
-
-# Post Installation
-Configure through the integration setup UI
-
-# Sensors
-The following sensors are generated from the Kirk Hill Wind Farm API into Home Assistant
-
-<B>Working<B>
-- None
-
-<B>Work in progress<B>
-- None
+- "Share" Wind farm sensors - Started 30/06/2026
