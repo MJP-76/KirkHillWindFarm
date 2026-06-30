@@ -3,7 +3,7 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfPower, PERCENTAGE
+from homeassistant.const import UnitOfEnergy, UnitOfPower, PERCENTAGE, KILO_WATT_HOUR
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -47,7 +47,7 @@ class KirkHillEnergySensor(KirkHillBaseSensor):
     _attr_name = "Kirk Hill Total Generation"
     _attr_unique_id = "kirkhill_total_generation"
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_native_unit_of_measurement = UnitOfEnergy.KILOWATT_HOUR
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
