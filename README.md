@@ -1,7 +1,7 @@
 # <B>Kirk Hill Wind Farm Home Assistant integration<B>
 Note:
 <br>- This is a fork of my Ripple integration that I never compleated for obvious reasons
-<br>- Still in test&dev with minimal sensors being generated at the moment
+<br>- Still in active test&dev with minimal sensors but many updates ;)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
