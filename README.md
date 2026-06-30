@@ -29,14 +29,19 @@ The following sensors are generated from the Kirk Hill Wind Farm API into Home A
 - Kirk Hill Site Capacity
 
 <br>-Owner sensors
-- Kirk Hill Capacity Factor
-- Kirk Hill Site Capacity
-- Kirk Hill Total Generation (7 Day)
+- Kirk Hill Owner Capacity Factor
+- Kirk Hill Owner Generation (7 Day)
 
-<B>WIP Sensors:<B>
+<B>WIP Sensors / Nice to have:<B>
 <br>-Site sensors<br>
-- Kirk Hill Generation - Site
-- Kirk Hill Wind-Speed - Site
-- Kirk Hill turbines - Detailed info
+- Kirk Hill Wind-Speed
+- Kirk Hill Turbines
+- Kirk Hill Site Generation (1 Day)
+- Kirk Hill Site Generation (7 Day)
+- Kirk Hill Site Generation (30 Day)
 
 <br>-Owner sensors<br>
+- Kirk Hill Owner Capacity
+- Kirk Hill Owner Generation (1 Day)
+- Kirk Hill Owner Generation (7 Day)
+- Kirk Hill Owner Generation (30 Day)
