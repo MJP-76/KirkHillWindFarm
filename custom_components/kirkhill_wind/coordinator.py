@@ -10,7 +10,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 _LOGGER = logging.getLogger(__name__)
 
 # This is the web address for the Kirk Hill API
-BASE_URL = "https://kirkhillcoop.org"
+BASE_URL = "https://dashboard.kirkhillcoop.org/api/v1"
 
 class KirkHillCoordinator(DataUpdateCoordinator):
     """Class to manage fetching live Kirk Hill Wind Farm API data."""
