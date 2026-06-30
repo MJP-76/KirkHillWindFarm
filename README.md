@@ -1,8 +1,7 @@
 # <B>Kirk Hill Wind Farm Home Assistant integration<B>
 Note:
 <br>- This is a fork of my Ripple integration that I never compleated for obvious reasons
-<br>- Still in test&dev and not live or fit for use yet
-<br>- No data or sensors are generated at the moment
+<br>- Still in test&dev with minimal sensors being generated at the moment
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
@@ -19,7 +18,7 @@ Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referr
 # Work in progress
 
 # <B>Pre-Reqs<B>
-You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
+You will require your API key from https://dashboard.kirkhillcoop.org/
 
 # <B>Installation<B>
 <B>HACS<B>
