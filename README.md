@@ -2,12 +2,15 @@
 Note:
 <br>- This is a fork of my Ripple integration that I never compleated for obvious reasons
 <br>- Still in active test&dev with minimal sensors but many updates ;)
+<br>
+Excuse me as I am learning the API - If you like my project, why not
+<br> 
 
-Excuse me as I am learning the API - If you like my project, why not buy_me_a_coffee/mjp-76
+If you like my work:
+<br><a href="https://www.buymeacoffee.com/mjp76" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+<br>Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referral code. You get £50 credit for joining and I get £50 credit.
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referral code. You get £50 credit for joining and I get £50 credit.
 # Available sensors
 The following sensors are generated from the Kirk Hill Wind Farm API into Home Assistant
 
@@ -34,7 +37,7 @@ The following sensors are generated from the Kirk Hill Wind Farm API into Home A
 You will require your API key from https://dashboard.kirkhillcoop.org/
 
 # <B>Installation<B>
-<B>HACS<B>
+<br>[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 1. Add https://github.com/MJP-76/KirkHillWindFarm as a "Custom Repository" in HACS
 2. Install the integration in HACS
 3. Restart Home Assistant
@@ -47,3 +50,5 @@ Configure through the integration setup UI
 - Base HACS installation - 29/06/2026
 - UI Integration WorkFlow - 30/06/2026
 - "Whole" Wind Farm sensors - 30/06/2026
+
+
