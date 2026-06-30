@@ -39,4 +39,12 @@ Configure through the integration setup UI
 - "Whole" Wind Farm sensors - 30/06/2026
 
 # Work in progress
-- "Share" Wind farm sensors - Started 30/06/2026
+Sensors
+<br>Whole wind farm sensors<br>
+- Kirk Hill Generation
+- Kirk Hill Wind-Speed
+- Kirk Hill turbines
+
+<B>WIP Sensors<B>
+<br>Personal share sensors<br>
+- None
