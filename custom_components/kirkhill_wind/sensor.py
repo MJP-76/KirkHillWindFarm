@@ -43,7 +43,7 @@ class KirkHillBaseSensor(CoordinatorEntity, SensorEntity):
 class KirkHillEnergySensor(KirkHillBaseSensor):
     """Tracks lifetime accumulated energy production."""
 
-    _attr_name = "Kirk Hill Owner Generation - 7 Day"
+    _attr_name = "Owner Generation - 7 Day"
     _attr_unique_id = "kirkhill_owner_generation_7day"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -62,7 +62,7 @@ class KirkHillEnergySensor(KirkHillBaseSensor):
 class KirkHillCapacityFactorSensor(KirkHillBaseSensor):
     """Tracks capacity factor performance percentage."""
 
-    _attr_name = "Kirk Hill Capacity Factor"
+    _attr_name = "Capacity Factor"
     _attr_unique_id = "kirkhill_capacity_factor"
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -75,7 +75,7 @@ class KirkHillCapacityFactorSensor(KirkHillBaseSensor):
 class KirkHillActiveTurbinesSensor(KirkHillBaseSensor):
     """Tracks the number of currently spinning/active turbines."""
 
-    _attr_name = "Kirk Hill Active Turbines"
+    _attr_name = "Active Turbines"
     _attr_unique_id = "kirkhill_active_turbines"
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:wind-turbine"
@@ -88,7 +88,7 @@ class KirkHillActiveTurbinesSensor(KirkHillBaseSensor):
 class KirkHillSiteCapacitySensor(KirkHillBaseSensor):
     """Tracks overall operational capacity footprint."""
 
-    _attr_name = "Kirk Hill Site Capacity"
+    _attr_name = "Site Capacity"
     _attr_unique_id = "kirkhill_site_capacity"
     _attr_device_class = SensorDeviceClass.POWER
     _attr_native_unit_of_measurement = UnitOfPower.WATT
