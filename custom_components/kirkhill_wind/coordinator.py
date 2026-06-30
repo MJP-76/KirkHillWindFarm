@@ -9,7 +9,6 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 _LOGGER = logging.getLogger(__name__)
 
-BASE_URL = "https://dashboard.kirkhillcoop.org/api/v1"
 # This is the correct base API web path you updated earlier
 
 class KirkHillCoordinator(DataUpdateCoordinator):
