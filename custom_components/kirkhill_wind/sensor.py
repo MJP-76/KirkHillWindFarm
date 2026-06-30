@@ -37,7 +37,6 @@ class KirkHillBaseSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_info = {
             "identifiers": {("kirkhill_wind", "cooperative_shares")},
             "name": "Kirk Hill Wind Farm",
-            "manufacturer": "Ripple Energy",
         }
 
 
