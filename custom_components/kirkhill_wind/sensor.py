@@ -43,8 +43,8 @@ class KirkHillBaseSensor(CoordinatorEntity, SensorEntity):
 class KirkHillEnergySensor(KirkHillBaseSensor):
     """Tracks lifetime accumulated energy production."""
 
-    _attr_name = "Kirk Hill Total Generation"
-    _attr_unique_id = "kirkhill_total_generation"
+    _attr_name = "Kirk Hill Owner Generation - 7 Day"
+    _attr_unique_id = "kirkhill_owner_generation_7day"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
