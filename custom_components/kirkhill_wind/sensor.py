@@ -9,7 +9,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 DOMAIN = "kirkhill_wind"
 # Update this to your precise Kirk Hill dashboard endpoint
-API_URL = "https://kirkhillwindfarm.co.uk" 
+API_URL = "https://dashboard.kirkhillcoop.org/api-docs" 
 
 SCAN_INTERVAL = timedelta(minutes=5) # Fetch data every 5 minutes
 _LOGGER = logging.getLogger(__name__)
