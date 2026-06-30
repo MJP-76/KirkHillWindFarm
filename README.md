@@ -10,12 +10,13 @@ Use my [Octopus.Energy 🐙](https://share.octopus.energy/iron-moose-196) referr
 
 # Completed
 - Base HACS installation - 29/06/2026
+- UI Integration WorkFlow - 30/06/2026
+- Wind Farm "total" sensors - 30/06/2026
 
 # Currently developing
-- UI Integration WorkFlow - Started 29/06/2026
+- Wind farm "share" sensors - Started 30/06/2026
 
 # Work in progress
-- Create sensors via integration - Started xx/xx/xxxx
 
 # <B>Pre-Reqs<B>
 You will require your Kirk Hill Dashboard API key as per available here: [Kirk Hill Wind Farm API Key](https://dashboard.kirkhillcoop.org/api-docs)
