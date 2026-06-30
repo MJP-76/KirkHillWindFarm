@@ -16,8 +16,10 @@ If you like my work:
 # <B>Installation<B>
 <br>[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 1. Generate your API key @ https://dashboard.kirkhillcoop.org/
-2. Add https://github.com/MJP-76/KirkHillWindFarm as a "Custom Repository" in HACS
-3. Install the integration in HACS
+2. Add Custom repository:
+   - Repository: https://github.com/MJP-76/KirkHillWindFarm
+   - Type: Integration
+3. Search and install the "Kirk Hill WindFarm" integration
 4. Restart Home Assistant
 5. Configure through the integration setup UI
 
@@ -25,23 +27,23 @@ If you like my work:
 The following sensors are generated from the Kirk Hill Wind Farm API into Home Assistant
 <br><B>Working sensors:<B>
 <br>-Site sensors<br>
-- Kirk Hill Active Turbines
-- Kirk Hill Site Capacity
+- Active Turbines
+- Site Capacity
 
 <br>-Owner sensors
-- Kirk Hill Owner Capacity Factor
-- Kirk Hill Owner Generation (7 Day)
+- Owner Capacity Factor
+- Owner Generation (7 Day)
 
 <B>WIP Sensors / Nice to have:<B>
 <br>-Site sensors<br>
-- Kirk Hill Wind-Speed
-- Kirk Hill Turbines
-- Kirk Hill Site Generation (1 Day)
-- Kirk Hill Site Generation (7 Day)
-- Kirk Hill Site Generation (30 Day)
+- Wind-Speed
+- Turbines Detail
+- Site Generation (1 Day)
+- Site Generation (7 Day)
+- Site Generation (30 Day)
 
 <br>-Owner sensors<br>
-- Kirk Hill Owner Capacity
-- Kirk Hill Owner Generation (1 Day)
-- Kirk Hill Owner Generation (7 Day)
-- Kirk Hill Owner Generation (30 Day)
+- Owner Capacity
+- Owner Generation (1 Day)
+- Owner Generation (7 Day)
+- Owner Generation (30 Day)
