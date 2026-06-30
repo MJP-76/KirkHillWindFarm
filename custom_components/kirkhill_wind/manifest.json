@@ -7,7 +7,7 @@
     "requirements": [],
     "dependencies": [],
     "codeowners": ["@mjp-76"],
-    "integration_type": "entity",
+    "integration_type": "hub",
     "iot_class": "cloud_polling",
     "config_flow": true
   }
