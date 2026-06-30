@@ -1,87 +1,89 @@
-"""Platform for sensor integration."""
-import logging
-from datetime import timedelta
-import aiohttp
-import async_timeout
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
+)
+from homeassistant.const import UnitOfPower, UnitOfEnergy, PERCENTAGE
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.config_entries import ConfigEntry
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from .coordinator import KirkHillCoordinator
 
-DOMAIN = "kirkhill_wind"
-# Update this to your precise Kirk Hill dashboard endpoint
-API_URL = "https://dashboard.kirkhillcoop.org/api/v1/" 
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Kirk Hill Wind Farm sensors based on a config entry."""
+    # Retrieve your coordinator instance from hass.data (assigned during async_setup_entry in __init__.py)
+    coordinator: KirkHillCoordinator = hass.data["kirkhill_wind"][entry.entry_id]
 
-SCAN_INTERVAL = timedelta(minutes=5) # Fetch data every 5 minutes
-_LOGGER = logging.getLogger(__name__)
+    # Define the sensors you want to map from your API data payload
+    sensors = [
+        KirkHillPowerSensor(coordinator),
+        KirkHillEnergySensor(coordinator),
+        KirkHillCapacitySensor(coordinator),
+    ]
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Kirk Hill sensor platform from a config entry."""
-    api_key = config_entry.data.get("api_key")
-    session = async_get_clientsession(hass)
-    
-    # Add your sensors to Home Assistant
-    async_add_entities([KirkHillGenerationSensor(session, api_key)], True)
+    async_add_entities(sensors, update_before_add=True)
 
 
-class KirkHillGenerationSensor(SensorEntity):
-    """Representation of a Kirk Hill Wind Farm Power Generation Sensor."""
+class KirkHillBaseSensor(CoordinatorEntity, SensorEntity):
+    """Base representation of a Kirk Hill Wind Farm Sensor."""
 
-    def __init__(self, session, api_key):
+    def __init__(self, coordinator: KirkHillCoordinator) -> None:
         """Initialize the sensor."""
-        self._session = session
-        self._api_key = api_key
-        self._state = None
-        self._attrs = {}
-        self._available = False
+        super().__init__(coordinator)
+        # Link this sensor to a common device grouping in the UI
+        self._attr_device_info = {
+            "identifiers": {("kirkhill_wind", "cooperative_shares")},
+            "name": "Kirk Hill Wind Farm",
+            "manufacturer": "Ripple Energy",
+        }
+
+
+class KirkHillPowerSensor(KirkHillBaseSensor):
+    """Sensor tracking current generation power output."""
+
+    _attr_name = "Kirk Hill Current Generation"
+    _attr_unique_id = "kirkhill_current_generation"
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_native_unit_of_measurement = UnitOfPower.WATT
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return "Kirk Hill Power Generation"
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        # Grabs data securely out of the coordinator data dictionary
+        return self.coordinator.data.get("current_generation")
+
+
+class KirkHillEnergySensor(KirkHillBaseSensor):
+    """Sensor tracking lifetime accumulated energy."""
+
+    _attr_name = "Kirk Hill Total Generated"
+    _attr_unique_id = "kirkhill_total_generated"
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILOWATT_HOUR
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
-    def unique_id(self):
-        """Return a unique ID to manage this entity in the UI."""
-        return f"kirkhill_wind_generation_{self._api_key[:6]}"
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        return self.coordinator.data.get("total_generated")
+
+
+class KirkHillCapacitySensor(KirkHillBaseSensor):
+    """Sensor tracking capacity factor performance percentage."""
+
+    _attr_name = "Kirk Hill Capacity Factor"
+    _attr_unique_id = "kirkhill_capacity_factor"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def state(self):
-        """Return the current power generation state."""
-        return self._state
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement."""
-        return "kW"  # or kWh depending on what the API spits out
-
-    @property
-    def available(self):
-        """Return True if entity is available."""
-        return self._available
-
-    @property
-    def extra_state_attributes(self):
-        """Return device specific state attributes."""
-        return self._attrs
-
-    async def async_update(self):
-        """Fetch new state data from the Kirk Hill API."""
-        headers = {"Authorization": f"Bearer {self._api_key}"}
-        
-        try:
-            with async_timeout.timeout(10):
-                response = await self._session.get(API_URL, headers=headers)
-                
-            if response.status == 200:
-                data = await response.json()
-                # Parse data out of your specific API JSON response structure
-                self._state = data.get("generation", 0) 
-                self._attrs = {"updated_at": data.get("timestamp")}
-                self._available = True
-            else:
-                _LOGGER.error("Error fetching data from Kirk Hill API: %s", response.status)
-                self._available = False
-                
-        except Exception as err:
-            _LOGGER.error("Failed to connect to Kirk Hill API: %s", err)
-            self._available = False
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        return self.coordinator.data.get("capacity_factor")
