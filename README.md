@@ -12,6 +12,8 @@ If you like my work:
 - UI Integration WorkFlow - completed 30/06/2026
 - "Site" Wind Farm sensors - Working on 30/06/2026
 - "Owner" Wind Farm sensors - Working on 30/06/2026
+- Fixed version numbers
+   - Added dev branch/release
 
 # <B>Installation<B>
 <br>[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
