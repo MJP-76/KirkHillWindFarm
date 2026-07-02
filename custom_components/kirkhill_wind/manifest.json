@@ -2,9 +2,9 @@
   "domain": "kirkhill_wind",
   "name": "Kirk Hill Wind SCADA Simulator",
   "version": "1.0.0",
-  "documentation": "https://dashboard.kirkhillcoop.org/api-docs",
-  "requirements": [],
-  "codeowners": ["@mjp-76"],
+  "documentation": "https://github.com/MJP-76/KirkHillWindFarm",
+  "issue_tracker": "https://github.com/MJP-76/KirkHillWindFarm/issues",
+  "codeowners": ["@MJP-76"],
   "iot_class": "calculated",
   "config_flow": false
 }
