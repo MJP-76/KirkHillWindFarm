@@ -4,11 +4,11 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 
-class KirkHillApiError(Exception):
+class KirkHillWindApiError(Exception):
     pass
 
 
-class KirkHillApi:
+class KirkHillWindApi:
     def __init__(self, base_url: str, api_key: str):
         self._base_url = base_url
         self._api_key = api_key
@@ -28,7 +28,7 @@ class KirkHillApi:
                 if resp.status >= 400:
                     error_text = await resp.text()
                     _LOGGER.error(f"API error {resp.status}: {error_text}")
-                    raise KirkHillApiError(error_text)
+                    raise KirkHillWindApiError(error_text)
                 response = await resp.json()
                 _LOGGER.debug(f"Raw API response received")
                 # Extract the data field from the response
