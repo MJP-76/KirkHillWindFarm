@@ -1,7 +1,7 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .coordinator import KirkHillCoordinator
+from .coordinator import KirkHillWindCoordinator
 
 PLATFORMS = ["sensor"]
 
@@ -9,7 +9,7 @@ PLATFORMS = ["sensor"]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Kirk Hill Wind Farm from a config entry."""
 
-    coordinator = KirkHillCoordinator(hass, entry)
+    coordinator = KirkHillWindCoordinator(hass, entry)
 
     await coordinator.async_config_entry_first_refresh()
 
