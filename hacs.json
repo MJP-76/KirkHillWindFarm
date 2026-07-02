@@ -1,7 +1,6 @@
 {
-  "name": "Kirkhill Coop Wind Farm",
-  "render_readme": true,
-  "country": ["GB"],
-  "domains": ["sensor", "switch"],
-  "homeassistant": "2024.6.0"
+  "name": "Kirk Hill Wind SCADA Simulator",
+  "domains": ["kirkhill_wind"],
+  "country": "GB",
+  "homeassistant": "2024.1.0"
 }
