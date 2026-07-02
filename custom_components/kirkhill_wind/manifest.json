@@ -1,14 +1,10 @@
 {
-    "domain": "kirkhill_coop",
-    "name": "Kirk Hill Wind Farm",
-    "version": "2.0.0", 
-    "documentation": "https://github.com/MJP-76/kirkhillwindfarm",
-    "issue_tracker": "https://github.com/MJP-76/kirkhillwindfarm/issues",
-    "requirements": [],
-    "dependencies": [],
-    "codeowners": ["@mjp-76"],
-    "integration_type": "hub",
-    "iot_class": "cloud_polling",
-    "config_flow": true
-  }
-  
+  "domain": "kirkhill_wind",
+  "name": "Kirk Hill Wind SCADA Simulator",
+  "version": "1.0.0",
+  "documentation": "https://dashboard.kirkhillcoop.org/api-docs",
+  "requirements": [],
+  "codeowners": ["@mjp-76"],
+  "iot_class": "calculated",
+  "config_flow": false
+}
