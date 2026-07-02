@@ -1,4 +1,4 @@
-DOMAIN = "kirkhill_coop"
+DOMAIN = "kirkhill_wind"
 
 BASE_URL = "https://dashboard.kirkhillcoop.org"
 
