@@ -1,40 +1,30 @@
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from __future__ import annotations
 
-from .coordinator import KirkHillWindCoordinator
-
-PLATFORMS = ["sensor"]
+from .api import KirkHillApi
+from .coordinator import KirkHillCoordinator
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Set up Kirk Hill Wind Farm from a config entry."""
+async def async_setup_entry(hass, entry):
+    session = hass.helpers.aiohttp_client.async_get_clientsession(hass)
 
-    coordinator = KirkHillWindCoordinator(hass, entry)
+    api = KirkHillApi(
+        entry.data["base_url"],
+        entry.data["api_key"],
+    )
+
+    coordinator = KirkHillCoordinator(
+        hass,
+        api=api,
+        update_interval=60,
+    )
 
     await coordinator.async_config_entry_first_refresh()
 
-    # Store coordinator (standard HA pattern)
-    hass.data.setdefault(entry.domain, {})
-    hass.data[entry.domain][entry.entry_id] = coordinator
+    hass.data.setdefault("kirkhill", {})[entry.entry_id] = coordinator
 
-    entry.runtime_data = coordinator
-
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    return True
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Unload Kirk Hill Wind Farm config entry."""
-
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    await hass.config_entries.async_forward_entry_setups(
         entry,
-        PLATFORMS,
+        ["sensor"],
     )
 
-    if unload_ok:
-        hass.data[entry.domain].pop(entry.entry_id, None)
-
-    entry.runtime_data = None
-
-    return unload_ok
+    return True
