@@ -1,49 +1,40 @@
-import logging
-from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 
-from .coordinator import KirkHillCoordinator
+from .coordinator import KirkHillWindCoordinator
 
-_LOGGER = logging.getLogger(__name__)
+PLATFORMS = ["sensor"]
 
-# This tells Home Assistant that this integration has a sensor platform (sensor.py)
-PLATFORMS: list[Platform] = [Platform.SENSOR]
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Kirk Hill Wind Farm from a config entry (UI Setup)."""
-    # Create an empty dictionary in Home Assistant memory to hold our integration data
-    hass.data.setdefault("kirkhill_wind", {})
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up Kirk Hill Wind Farm from a config entry."""
 
-    # Pull the API key that the user typed into the integration's UI config entry
-    api_key = entry.data.get("api_key")
-    if not api_key:
-        _LOGGER.error("No API key found in the configuration entry")
-        return False
+    coordinator = KirkHillWindCoordinator(hass, entry)
 
-    # Initialize the Data Update Coordinator using your custom file
-    coordinator = KirkHillCoordinator(hass, api_key)
-
-    # Make the integration fetch its very first block of live wind data before creating sensors.
-    # This prevents your sensors from showing up as "unknown" on startup.
     await coordinator.async_config_entry_first_refresh()
 
-    # Save this running coordinator instance in Home Assistant's global memory
-    hass.data["kirkhill_wind"][entry.entry_id] = coordinator
+    # Store coordinator (standard HA pattern)
+    hass.data.setdefault(entry.domain, {})
+    hass.data[entry.domain][entry.entry_id] = coordinator
 
-    # Forward the setup instruction down to sensor.py to create the entities
+    entry.runtime_data = coordinator
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry when the user removes or disables the integration."""
-    # This cleans up and turns off the sensor platforms cleanly
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Unload Kirk Hill Wind Farm config entry."""
+
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        entry,
+        PLATFORMS,
+    )
+
     if unload_ok:
-        # Remove the coordinator instance from memory
-        hass.data["kirkhill_wind"].pop(entry.entry_id)
+        hass.data[entry.domain].pop(entry.entry_id, None)
+
+    entry.runtime_data = None
 
     return unload_ok

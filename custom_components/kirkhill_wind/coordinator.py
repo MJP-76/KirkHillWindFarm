@@ -1,75 +1,81 @@
 from datetime import timedelta
 import logging
-import async_timeout
-import aiohttp
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+from .api import KirkHillWindApi
 
 _LOGGER = logging.getLogger(__name__)
 
-# This is the web address for the Kirk Hill API
-BASE_URL = "https://dashboard.kirkhillcoop.org/api/v1"
 
-class KirkHillCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching live Kirk Hill Wind Farm API data."""
+class KirkHillWindCoordinator(DataUpdateCoordinator):
+    """Kirk Hill Wind Farm coordinator."""
 
-    def __init__(self, hass: HomeAssistant, api_key: str) -> None:
-        """Initialize the coordinator."""
-        self.api_key = api_key
-        self.session = async_get_clientsession(hass)
-        
-        # This tells Home Assistant to check the API for new data every 5 minutes
-        super().__init__(
-            hass,
-            _LOGGER,
-            name="Kirk Hill Wind Farm",
-            update_interval=timedelta(minutes=5),
+    def __init__(self, hass, entry):
+        """Initialise coordinator."""
+        self.hass = hass
+        self.entry = entry
+
+        self.api = KirkHillWindApi(
+            base_url="https://dashboard.kirkhillcoop.org",
+            api_key=entry.data["api_key"],
         )
 
-    async def _async_update_data(self) -> dict:
-        """Fetch and parse live data from the Kirk Hill Wind Farm API."""
-        # Setup headers using the Authorize API Key specification
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Accept": "application/json",
-        }
-        
-        # The web link to fetch generation stats
-        url = f"{BASE_URL}/generation"
+        super().__init__(
+            hass,
+            logger=_LOGGER,
+            name="kirkhill_wind",
+            update_interval=timedelta(seconds=60),
+        )
 
+    @property
+    def session(self):
+        """Return shared aiohttp session."""
+        return async_get_clientsession(self.hass)
+
+    async def _async_update_data(self):
+        """Fetch data from API."""
         try:
-            # Give the website 15 seconds to reply before timing out
-            async with async_timeout.timeout(15):
-                response = await self.session.get(url, headers=headers)
-                
-                if response.status == 401:
-                    raise UpdateFailed("Invalid API Key. Please verify your Kirk Hill Dashboard API credentials.")
-                elif response.status != 200:
-                    raise UpdateFailed(f"API returned an unhealthy error code: {response.status}")
+            session = self.session
 
-                # Read the JSON response from the API
-                raw_payload = await response.json()
-                
-                if not raw_payload or "data" not in raw_payload:
-                    raise UpdateFailed("API returned an unexpected or empty payload structure.")
+            owner = await self._fetch_scope(session, "owner")
+            site = await self._fetch_scope(session, "site")
 
-                # This dives down into your JSON structure: data -> summary
-                summary = raw_payload["data"].get("summary", {})
-                if not summary:
-                    raise UpdateFailed("Summary data block missing from the wind farm API response.")
+            _LOGGER.debug("Owner data fetched successfully")
+            _LOGGER.debug("Site data fetched successfully")
 
-                # This pulls out the exact data keys from your text and saves them for the sensors
-                return {
-                    "total_generation": float(summary.get("total_generation_kwh", 0.0)),
-                    "capacity_factor": float(summary.get("capacity_factor_percent", 0.0)),
-                    "active_turbines": int(summary.get("active_turbines", 0)),
-                    "site_capacity_watts": int(summary.get("site_capacity_watts", 0)),
-                    "latest_interval": str(summary.get("latest_generation_interval_end", "")),
-                }
+            data = {
+                "owner": owner,
+                "site": site,
+            }
+            
+            _LOGGER.info("Coordinator data updated successfully")
+            return data
 
-        except aiohttp.ClientError as err:
-            raise UpdateFailed(f"Network error communicating with Kirk Hill API: {err}")
         except Exception as err:
-            raise UpdateFailed(f"Unexpected error parsing Kirk Hill wind data: {err}")
+            _LOGGER.exception("Kirk Hill update failed")
+            raise UpdateFailed(str(err)) from err
+
+    async def _fetch_scope(self, session, scope: str):
+        """Fetch all API endpoints for a scope."""
+        try:
+            summary = await self.api.summary(session, scope)
+            generation = await self.api.generation(session, scope)
+            wind = await self.api.wind(session, scope)
+            turbines = await self.api.turbines(session, scope)
+            
+            _LOGGER.debug(f"[{scope}] summary fetched")
+            _LOGGER.debug(f"[{scope}] generation fetched")
+            _LOGGER.debug(f"[{scope}] wind fetched")
+            _LOGGER.debug(f"[{scope}] turbines fetched")
+            
+            return {
+                "summary": summary,
+                "generation": generation,
+                "wind": wind,
+                "turbines": turbines,
+            }
+        except Exception as err:
+            _LOGGER.error(f"Failed to fetch {scope} scope: {err}")
+            raise
