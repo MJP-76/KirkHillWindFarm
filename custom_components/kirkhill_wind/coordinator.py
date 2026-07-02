@@ -60,17 +60,20 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
     async def _fetch_scope(self, session, scope: str):
         """Fetch all API endpoints for a scope."""
         try:
+            current = await self.api.current(session, scope)
             summary = await self.api.summary(session, scope)
             generation = await self.api.generation(session, scope)
             wind = await self.api.wind(session, scope)
             turbines = await self.api.turbines(session, scope)
             
+            _LOGGER.debug(f"[{scope}] current fetched")
             _LOGGER.debug(f"[{scope}] summary fetched")
             _LOGGER.debug(f"[{scope}] generation fetched")
             _LOGGER.debug(f"[{scope}] wind fetched")
             _LOGGER.debug(f"[{scope}] turbines fetched")
             
             return {
+                "current": current,
                 "summary": summary,
                 "generation": generation,
                 "wind": wind,

@@ -62,6 +62,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
             KirkHillCapacityFactor(coordinator, entry, scope),
             KirkHillGeneration(coordinator, entry, scope),
             KirkHillWindSpeed(coordinator, entry, scope),
+            KirkHillCurrentPower(coordinator, entry, scope),
+            KirkHillCurrentCapacityFactor(coordinator, entry, scope),
+            KirkHillCurrentWindSpeed(coordinator, entry, scope),
+            KirkHillActiveTurbines(coordinator, entry, scope),
         ])
 
         # Turbines (safe check) - API returns turbines as a list
@@ -73,6 +77,28 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 if isinstance(turbine, dict) and "id" in turbine:
                     entities.append(
                         KirkHillTurbineGeneration(
+                            coordinator,
+                            entry,
+                            scope,
+                            turbine["id"],
+                        )
+                    )
+
+        current_data = scope_data.get("current", {})
+        current_turbines = current_data.get("turbines", [])
+        if isinstance(current_turbines, list):
+            for turbine in current_turbines:
+                if isinstance(turbine, dict) and "id" in turbine:
+                    entities.append(
+                        KirkHillTurbineCurrentPower(
+                            coordinator,
+                            entry,
+                            scope,
+                            turbine["id"],
+                        )
+                    )
+                    entities.append(
+                        KirkHillTurbineStatus(
                             coordinator,
                             entry,
                             scope,
@@ -192,6 +218,98 @@ class KirkHillWindSpeed(KirkHillBaseSensor):
         return None
 
 
+class KirkHillCurrentPower(KirkHillBaseSensor):
+    """Current total power sensor - from current endpoint."""
+    _attr_native_unit_of_measurement = "kW"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def name(self):
+        return f"Kirk Hill {self.scope_label} Current Power"
+
+    @property
+    def unique_id(self):
+        return f"{DOMAIN}_{self.entry.entry_id}_{self.scope}_current_power"
+
+    @property
+    def native_value(self):
+        current_data = self.scope_data.get("current", {})
+        summary = current_data.get("summary", {})
+        power = summary.get("total_power_kw")
+        if power is not None and isinstance(power, (int, float)):
+            return power
+        return None
+
+
+class KirkHillCurrentCapacityFactor(KirkHillBaseSensor):
+    """Current capacity factor sensor - from current endpoint."""
+    _attr_native_unit_of_measurement = "%"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def name(self):
+        return f"Kirk Hill {self.scope_label} Current Capacity Factor"
+
+    @property
+    def unique_id(self):
+        return f"{DOMAIN}_{self.entry.entry_id}_{self.scope}_current_capacity_factor"
+
+    @property
+    def native_value(self):
+        current_data = self.scope_data.get("current", {})
+        summary = current_data.get("summary", {})
+        cf = summary.get("capacity_factor_percent")
+        if cf is not None and isinstance(cf, (int, float)):
+            return cf
+        return None
+
+
+class KirkHillCurrentWindSpeed(KirkHillBaseSensor):
+    """Current wind speed sensor - from current endpoint."""
+    _attr_native_unit_of_measurement = "m/s"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def name(self):
+        return f"Kirk Hill {self.scope_label} Current Wind Speed"
+
+    @property
+    def unique_id(self):
+        return f"{DOMAIN}_{self.entry.entry_id}_{self.scope}_current_wind_speed"
+
+    @property
+    def native_value(self):
+        current_data = self.scope_data.get("current", {})
+        summary = current_data.get("summary", {})
+        speed = summary.get("wind_speed_mps")
+        if speed is not None and isinstance(speed, (int, float)):
+            return speed
+        return None
+
+
+class KirkHillActiveTurbines(KirkHillBaseSensor):
+    """Current active turbine count sensor - from current endpoint."""
+    _attr_native_unit_of_measurement = None
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def name(self):
+        return f"Kirk Hill {self.scope_label} Active Turbines"
+
+    @property
+    def unique_id(self):
+        return f"{DOMAIN}_{self.entry.entry_id}_{self.scope}_active_turbines"
+
+    @property
+    def native_value(self):
+        current_data = self.scope_data.get("current", {})
+        summary = current_data.get("summary", {})
+        active = summary.get("active_turbines")
+        if active is not None and isinstance(active, int):
+            return active
+        return None
+
+
 # =========================
 # TURBINE SENSORS
 # =========================
@@ -222,15 +340,87 @@ class KirkHillTurbineGeneration(KirkHillBaseSensor):
         # Turbines are in turbines.data.turbines[] as a list
         turbines_data = self.scope_data.get("turbines", {})
         turbines = turbines_data.get("turbines", [])
-        
+
         if not isinstance(turbines, list):
             return None
-        
+
         # Find the turbine with matching ID
         for turbine in turbines:
             if isinstance(turbine, dict) and turbine.get("id") == self.turbine_id:
                 generation = turbine.get("generation_kwh")
                 if generation is not None and isinstance(generation, (int, float)):
                     return generation
-        
+
+        return None
+
+
+class KirkHillTurbineCurrentPower(KirkHillBaseSensor):
+    """Per-turbine current power sensor - from current endpoint."""
+    _attr_native_unit_of_measurement = "kW"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, entry, scope, turbine_id):
+        super().__init__(coordinator, entry, scope)
+        self.turbine_id = turbine_id
+
+    @property
+    def name(self):
+        return f"Kirk Hill {self.scope_label} Turbine {self.turbine_id} Current Power"
+
+    @property
+    def unique_id(self):
+        return (
+            f"{DOMAIN}_{self.entry.entry_id}_{self.scope}_"
+            f"turbine_{self.turbine_id}_current_power"
+        )
+
+    @property
+    def native_value(self):
+        current_data = self.scope_data.get("current", {})
+        turbines = current_data.get("turbines", [])
+
+        if not isinstance(turbines, list):
+            return None
+
+        for turbine in turbines:
+            if isinstance(turbine, dict) and turbine.get("id") == self.turbine_id:
+                power = turbine.get("power_kw")
+                if power is not None and isinstance(power, (int, float)):
+                    return power
+
+        return None
+
+
+class KirkHillTurbineStatus(KirkHillBaseSensor):
+    """Per-turbine status sensor - from current endpoint."""
+
+    def __init__(self, coordinator, entry, scope, turbine_id):
+        super().__init__(coordinator, entry, scope)
+        self.turbine_id = turbine_id
+
+    @property
+    def name(self):
+        return f"Kirk Hill {self.scope_label} Turbine {self.turbine_id} Status"
+
+    @property
+    def unique_id(self):
+        return (
+            f"{DOMAIN}_{self.entry.entry_id}_{self.scope}_"
+            f"turbine_{self.turbine_id}_status"
+        )
+
+    @property
+    def native_value(self):
+        current_data = self.scope_data.get("current", {})
+        turbines = current_data.get("turbines", [])
+
+        if not isinstance(turbines, list):
+            return None
+
+        for turbine in turbines:
+            if isinstance(turbine, dict) and turbine.get("id") == self.turbine_id:
+                status = turbine.get("status")
+                if isinstance(status, str):
+                    return status
+
         return None
