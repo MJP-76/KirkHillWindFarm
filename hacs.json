@@ -1,5 +1,7 @@
 {
-    "name": "Kirk Hill Wind Farm",
-    "render_readme": true,
-    "country": "GB"
+  "name": "Kirkhill Coop Wind Farm",
+  "render_readme": true,
+  "country": ["GB"],
+  "domains": ["sensor"],
+  "homeassistant": "2024.6.0"
 }
