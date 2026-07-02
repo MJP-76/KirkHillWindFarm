@@ -9,6 +9,7 @@ class KirkHillWindApi:
 
     def __init__(self, base_url: str, api_key: str):
         """Initialize API parameters."""
+        # Clean the base URL and ensure there are no trailing slashes
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
 
@@ -21,6 +22,7 @@ class KirkHillWindApi:
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         
         try:
+            _LOGGER.debug(f"Fetching Kirkhill API endpoint: {url}")
             async with session.get(url, headers=headers, timeout=15) as response:
                 response.raise_for_status()
                 return await response.json()
@@ -30,20 +32,25 @@ class KirkHillWindApi:
 
     async def current(self, session: aiohttp.ClientSession, scope: str) -> dict:
         """Fetch real-time active tracking data for owner or site."""
-        return await self._request(session, f"api/v1/{scope}/current")
+        # Maps directly to: api/v1/owner-current OR api/v1/site-current
+        return await self._request(session, f"api/v1/{scope}-current")
 
     async def summary(self, session: aiohttp.ClientSession, scope: str) -> dict:
         """Fetch general telemetry metadata summary blocks."""
-        return await self._request(session, f"api/v1/{scope}/summary")
+        # Maps directly to: api/v1/owner-summary OR api/v1/site-summary
+        return await self._request(session, f"api/v1/{scope}-summary")
 
     async def generation(self, session: aiohttp.ClientSession, scope: str) -> dict:
         """Fetch cumulative long-term energy counters."""
-        return await self._request(session, f"api/v1/{scope}/generation")
+        # Maps directly to: api/v1/owner-generation OR api/v1/site-generation
+        return await self._request(session, f"api/v1/{scope}-generation")
 
     async def wind(self, session: aiohttp.ClientSession, scope: str) -> dict:
         """Fetch atmospheric environment metrics (e.g. wind speed)."""
-        return await self._request(session, f"api/v1/{scope}/wind")
+        # Maps directly to: api/v1/owner-wind OR api/v1/site-wind
+        return await self._request(session, f"api/v1/{scope}-wind")
 
     async def turbines(self, session: aiohttp.ClientSession, scope: str) -> dict:
         """Fetch structural turbine array metrics (T1–T8)."""
-        return await self._request(session, f"api/v1/{scope}/turbines")
+        # Maps directly to: api/v1/owner-turbines OR api/v1/site-turbines
+        return await self._request(session, f"api/v1/{scope}-turbines")
