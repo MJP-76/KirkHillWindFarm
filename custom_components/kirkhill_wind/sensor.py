@@ -1,14 +1,45 @@
-from homeassistant.components.sensor import SensorEntity, SensorStateClass, SensorDeviceClass
+import logging
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .device import get_device_info
 from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 
 SCOPE_LABEL = {
     "owner": "Owner",
     "site": "Site",
 }
+
+
+def _get_scopes_for_entity_setup(data: dict) -> list[str]:
+    """Return scopes to expose as entities, deduplicating identical payloads."""
+    owner_data = data.get("owner")
+    site_data = data.get("site")
+
+    scopes = []
+    if isinstance(owner_data, dict):
+        scopes.append("owner")
+    if isinstance(site_data, dict):
+        scopes.append("site")
+
+    if (
+        len(scopes) == 2
+        and owner_data == site_data
+    ):
+        _LOGGER.warning(
+            "Owner and site payloads are identical; creating only site entities to avoid duplicates."
+        )
+        return ["site"]
+
+    return scopes
 
 
 # =========================
@@ -23,11 +54,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # 🔒 SAFE READ (no assumption coordinator.data exists fully yet)
     data = coordinator.data or {}
 
-    for scope in ["owner", "site"]:
+    for scope in _get_scopes_for_entity_setup(data):
         scope_data = data.get(scope)
-
-        if not isinstance(scope_data, dict):
-            continue
 
         # Base sensors
         entities.extend([
