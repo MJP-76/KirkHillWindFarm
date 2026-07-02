@@ -25,7 +25,7 @@ class KirkHillCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             logger=_LOGGER,
-            name="kirkhill_coop",
+            name="kirkhill_wind",
             update_interval=timedelta(seconds=60),
         )
 
