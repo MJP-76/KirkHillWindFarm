@@ -1,5 +1,10 @@
-DOMAIN = "kirkhill_wind"
+"""Constants for the Kirk Hill Wind Farm integration."""
+import logging
 
-BASE_URL = "https://dashboard.kirkhillcoop.org"
+DOMAIN = "kirkhill_coop"
+LOGGER = logging.getLogger(__package__)
 
-DEFAULT_SCAN_INTERVAL = 60
+DEFAULT_NAME = "Kirk Hill Wind Farm"
+BASE_URL = "https://dashboard.kirkhillcoop.org/api/v1"
+
+CONF_API_KEY = "api_key"
