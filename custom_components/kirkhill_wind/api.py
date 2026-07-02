@@ -13,7 +13,7 @@ class KirkHillWindApi:
         self.api_key = api_key
 
     async def _request(self, session: aiohttp.ClientSession, endpoint: str) -> dict:
-        """Execute a safe aiohttp request to the API dashboard."""
+        """Execute a safe authenticated request to the Kirkhill dashboard."""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Accept": "application/json",
@@ -25,25 +25,25 @@ class KirkHillWindApi:
                 response.raise_for_status()
                 return await response.json()
         except Exception as err:
-            _LOGGER.error(f"Error accessing API endpoint {url}: {err}")
+            _LOGGER.error(f"Error accessing Kirkhill endpoint {url}: {err}")
             raise
 
     async def current(self, session: aiohttp.ClientSession, scope: str) -> dict:
-        """Fetch current active generation data block for owner or site."""
+        """Fetch real-time active tracking data for owner or site."""
         return await self._request(session, f"api/v1/{scope}/current")
 
     async def summary(self, session: aiohttp.ClientSession, scope: str) -> dict:
-        """Fetch general summary metrics for owner or site."""
+        """Fetch general telemetry metadata summary blocks."""
         return await self._request(session, f"api/v1/{scope}/summary")
 
     async def generation(self, session: aiohttp.ClientSession, scope: str) -> dict:
-        """Fetch cumulative energy statistics for owner or site."""
+        """Fetch cumulative long-term energy counters."""
         return await self._request(session, f"api/v1/{scope}/generation")
 
     async def wind(self, session: aiohttp.ClientSession, scope: str) -> dict:
-        """Fetch weather/wind telemetry mapping for owner or site."""
+        """Fetch atmospheric environment metrics (e.g. wind speed)."""
         return await self._request(session, f"api/v1/{scope}/wind")
 
     async def turbines(self, session: aiohttp.ClientSession, scope: str) -> dict:
-        """Fetch operational data block for T1-T8 assets."""
+        """Fetch structural turbine array metrics (T1–T8)."""
         return await self._request(session, f"api/v1/{scope}/turbines")
