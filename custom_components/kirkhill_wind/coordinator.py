@@ -4,7 +4,7 @@ import logging
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import KirkHillApi
+from .api import KirkHillWindApi
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class KirkHillCoordinator(DataUpdateCoordinator):
         self.hass = hass
         self.entry = entry
 
-        self.api = KirkHillApi(
+        self.api = KirkHillWindApi(
             base_url="https://dashboard.kirkhillcoop.org",
             api_key=entry.data["api_key"],
         )
