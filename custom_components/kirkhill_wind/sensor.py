@@ -289,6 +289,7 @@ class KirkHillCurrentWindSpeed(KirkHillBaseSensor):
 
 class KirkHillActiveTurbines(KirkHillBaseSensor):
     """Current active turbine count sensor - from current endpoint."""
+    _attr_native_unit_of_measurement = None
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
