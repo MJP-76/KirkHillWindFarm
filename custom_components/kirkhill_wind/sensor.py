@@ -16,17 +16,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data["kirkhill_wind"][entry.entry_id]
     entities = []
 
-    # 1. SITE-SCOPED ENTITIES
+    # ==================== 1. SITE-SCOPED ENTITIES ====================
     site_sensors = [
         SensorEntityDescription(
-            key="power",
+            key="power",  # Targeted payload key mapping
             name="Site Power Generation",
             native_unit_of_measurement=UnitOfPower.KILOWATT,
             device_class=SensorDeviceClass.POWER,
             state_class=SensorStateClass.MEASUREMENT,
         ),
         SensorEntityDescription(
-            key="speed",
+            key="speed",  
             name="Wind Speed",
             native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
             device_class=SensorDeviceClass.WIND_SPEED,
@@ -41,25 +41,25 @@ async def async_setup_entry(hass, entry, async_add_entities):
     ]
     
     for desc in site_sensors:
-        # Match descriptions to API dictionary keys
+        # Route query properties into their assigned coordinator dictionary keys
         bucket = "wind" if "speed" in desc.key else "current"
         entities.append(KirkHillSensor(coordinator, desc, scope="site", api_bucket=bucket))
 
-    # 2. OWNER-SCOPED ENTITIES
+    # ==================== 2. OWNER-SCOPED ENTITIES ====================
     owner_sensors = [
         SensorEntityDescription(
-            key="power",
+            key="power",  
             name="My Share Power",
             native_unit_of_measurement=UnitOfPower.KILOWATT,
             device_class=SensorDeviceClass.POWER,
             state_class=SensorStateClass.MEASUREMENT,
         ),
         SensorEntityDescription(
-            key="total_generation",
+            key="total_generation",  
             name="My Total Energy Generation",
             native_unit_of_measurement=UnitOfEnergy.KILOWATT_HOUR,
             device_class=SensorDeviceClass.ENERGY,
-            state_class=SensorStateClass.TOTAL_INCREASING,  # Enables full energy dashboard support
+            state_class=SensorStateClass.TOTAL_INCREASING,  # Enables Native HA Energy Dashboard support
         ),
     ]
 
@@ -67,7 +67,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         bucket = "generation" if "total" in desc.key else "current"
         entities.append(KirkHillSensor(coordinator, desc, scope="owner", api_bucket=bucket))
 
-    # 3. DYNAMIC PER-TURBINE SENSORS (SITE SCOPE)
+    # ==================== 3. PER-TURBINE SENSORS (SITE SCOPE) ====================
     site_turbines = coordinator.data.get("site", {}).get("turbines", {})
     if isinstance(site_turbines, dict):
         for turbine_id in site_turbines.keys():
@@ -91,12 +91,12 @@ class KirkHillSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._scope = scope          # "owner" or "site"
-        self._api_bucket = api_bucket  # "current", "summary", "generation", "wind", "turbines"
+        self._api_bucket = api_bucket  # Matches coordinator structure: current, wind, etc.
         
-        # Unique ID combining scope and entity key prevents overlap errors
+        # Scope-prefixing unique IDs guarantees no tracking overlap crashes
         self._attr_unique_id = f"kirkhill_{scope}_{description.key}"
         
-        # Creates separate clean cards for Site and Owner scopes in HA UI
+        # Groups matching scopes under isolated devices in the HA UI dashboard view
         self._attr_device_info = {
             "identifiers": {("kirkhill_wind", scope)},
             "name": f"Kirk Hill Wind Farm ({scope.capitalize()} Scope)",
@@ -105,7 +105,7 @@ class KirkHillSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Safely crawl the nested scope object based on the data roadmap."""
+        """Safely extract nested property strings out of coordinator mapping dictionary."""
         if not self.coordinator.data:
             return None
             
