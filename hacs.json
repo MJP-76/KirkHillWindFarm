@@ -1,1 +1,7 @@
-
+{
+  "name": "Kirkhill Coop Wind Farm",
+  "render_readme": true,
+  "country": ["GB"],
+  "domains": ["sensor", "switch"],
+  "homeassistant": "2024.6.0"
+}

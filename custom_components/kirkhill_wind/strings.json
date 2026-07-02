@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Kirk Hill",
+        "description": "Enter your API key.",
+        "data": {
+          "api_key": "API Key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the Kirk Hill API.",
+      "invalid_response": "The API returned an invalid response.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account has already been configured."
+    }
+  }
+}

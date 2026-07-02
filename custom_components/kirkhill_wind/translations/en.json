@@ -1,0 +1,17 @@
+
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "api_key": "API Key",
+          "scope": "Scope"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Invalid API key",
+      "cannot_connect": "Cannot connect to API"
+    }
+  }
+}
