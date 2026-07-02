@@ -9,7 +9,7 @@ from .api import KirkHillWindApi
 _LOGGER = logging.getLogger(__name__)
 
 
-class KirkHillCoordinator(DataUpdateCoordinator):
+class KirkHillWindCoordinator(DataUpdateCoordinator):
     """Kirk Hill Wind Farm coordinator."""
 
     def __init__(self, hass, entry):
