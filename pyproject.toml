@@ -1,1 +1,7 @@
+[project]
+name = "kirkhill-wind-scada"
+version = "1.0.0"
+description = "SCADA wind farm simulator for Home Assistant"
 
+[tool.black]
+line-length = 88
