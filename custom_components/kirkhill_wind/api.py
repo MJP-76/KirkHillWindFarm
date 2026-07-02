@@ -50,3 +50,6 @@ class KirkHillWindApi:
 
     async def turbines(self, session, scope):
         return await self.request(session, "/api/v1/turbines", {"scope": scope})
+
+    async def current(self, session, scope):
+        return await self.request(session, "/api/v1/current", {"scope": scope})
