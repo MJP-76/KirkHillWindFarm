@@ -8,7 +8,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpeed
 
-from .const import SCOPES, SCOPE_OWNER, SCOPE_SITE, TIMEFRAME_ORDER
+from .const import SCOPE_OWNER, SCOPE_SITE, SCOPES, TIMEFRAME_ORDER
 from .entity import (
     KirkHillEntity,
     KirkHillScopedEntity,

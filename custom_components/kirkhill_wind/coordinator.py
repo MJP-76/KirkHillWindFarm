@@ -6,7 +6,6 @@ import logging
 from datetime import datetime, timedelta
 
 import aiohttp
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -19,9 +18,9 @@ from .const import (
     DEFAULT_BASE_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    SCOPES,
     SCOPE_OWNER,
     SCOPE_SITE,
+    SCOPES,
     TIMEFRAME_ORDER,
     TIMEFRAME_TO_RANGE,
 )
