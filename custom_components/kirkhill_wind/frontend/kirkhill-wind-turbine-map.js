@@ -23,6 +23,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
       title: "",
       zoom: null,
       height: 560,
+      show_status: false,
       ...config,
     };
     this._render();
@@ -76,6 +77,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
     const markers = visibleTurbines
       .map((turbine) => this._renderMarker(turbine, origin, zoom))
       .join("");
+    const statusGrid = this.config.show_status ? this._renderStatusGrid(turbines) : "";
 
     this.shadowRoot.innerHTML = `
       <style>${this._styles()}</style>
@@ -90,6 +92,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
             <span>&copy; OpenStreetMap contributors</span>
           </div>
         </div>
+        ${statusGrid}
       </ha-card>
     `;
   }
@@ -269,6 +272,24 @@ class KirkHillWindTurbineMap extends HTMLElement {
     return 6 - normalized * 5;
   }
 
+  _renderStatusGrid(turbines) {
+    const tiles = turbines
+      .map((turbine) => {
+        const activeState = turbine.active === true ? "on" : turbine.active === false ? "off" : null;
+        const stateClass = activeState === "on" ? "is-active" : activeState === "off" ? "is-inactive" : "is-unknown";
+        const stateText = activeState === "on" ? "Active" : activeState === "off" ? "Inactive" : "Unavailable";
+        return `
+          <div class="status-tile ${stateClass}">
+            <span class="status-name">${this._escape(turbine.name)}</span>
+            <span class="status-value">${stateText}</span>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `<div class="status-grid">${tiles}</div>`;
+  }
+
   _project(latitude, longitude, zoom) {
     const tileSize = 256;
     const scale = tileSize * 2 ** zoom;
@@ -398,6 +419,44 @@ class KirkHillWindTurbineMap extends HTMLElement {
         padding: 8px 12px 12px;
         font-size: 12px;
         color: var(--secondary-text-color);
+      }
+
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 0 12px 12px;
+      }
+
+      .status-tile {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.08);
+      }
+
+      .status-name {
+        font-weight: 600;
+      }
+
+      .status-value {
+        font-size: 12px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        background: rgba(100, 116, 139, 0.18);
+      }
+
+      .status-tile.is-active .status-value {
+        background: rgba(34, 197, 94, 0.22);
+        color: #166534;
+      }
+
+      .status-tile.is-inactive .status-value {
+        background: rgba(239, 68, 68, 0.2);
+        color: #991b1b;
       }
 
       .empty {

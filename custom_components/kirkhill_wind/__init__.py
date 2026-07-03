@@ -373,29 +373,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         ],
                     },
                     {
-                        "type": "vertical-stack",
-                        "cards": [
-                            {
-                                "type": "custom:kirkhill-wind-turbine-map",
-                                "title": "Turbine map",
-                                "height": 560,
-                                "turbines": turbine_map_entities,
-                            },
-                            {
-                                "type": "grid",
-                                "title": "Turbine status",
-                                "columns": 2,
-                                "square": False,
-                                "cards": [
-                                    {
-                                        "type": "tile",
-                                        "entity": turbine(f"T{i}", "active"),
-                                        "name": f"T{i}",
-                                    }
-                                    for i in range(1, 9)
-                                ],
-                            },
-                        ],
+                        "type": "custom:kirkhill-wind-turbine-map",
+                        "title": "Turbine map",
+                        "height": 560,
+                        "show_status": True,
+                        "turbines": turbine_map_entities,
                     },
                     {
                         "type": "grid",

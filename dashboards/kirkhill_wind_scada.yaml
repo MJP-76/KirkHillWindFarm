@@ -89,81 +89,51 @@ views:
             name: Inactive turbines
           - entity: binary_sensor.kirk_hill_wind_farm_alarm
             name: Alarm
-      - type: vertical-stack
-        cards:
-          - type: custom:kirkhill-wind-turbine-map
-            title: Turbine map
-            height: 560
-            turbines:
-              - name: T1
-                state_entity: sensor.turbine_t1_state
-                power_entity: sensor.turbine_t1_power_site
-                capacity_entity: sensor.turbine_t1_capacity_factor_site
-                active_entity: binary_sensor.turbine_t1_active
-              - name: T2
-                state_entity: sensor.turbine_t2_state
-                power_entity: sensor.turbine_t2_power_site
-                capacity_entity: sensor.turbine_t2_capacity_factor_site
-                active_entity: binary_sensor.turbine_t2_active
-              - name: T3
-                state_entity: sensor.turbine_t3_state
-                power_entity: sensor.turbine_t3_power_site
-                capacity_entity: sensor.turbine_t3_capacity_factor_site
-                active_entity: binary_sensor.turbine_t3_active
-              - name: T4
-                state_entity: sensor.turbine_t4_state
-                power_entity: sensor.turbine_t4_power_site
-                capacity_entity: sensor.turbine_t4_capacity_factor_site
-                active_entity: binary_sensor.turbine_t4_active
-              - name: T5
-                state_entity: sensor.turbine_t5_state
-                power_entity: sensor.turbine_t5_power_site
-                capacity_entity: sensor.turbine_t5_capacity_factor_site
-                active_entity: binary_sensor.turbine_t5_active
-              - name: T6
-                state_entity: sensor.turbine_t6_state
-                power_entity: sensor.turbine_t6_power_site
-                capacity_entity: sensor.turbine_t6_capacity_factor_site
-                active_entity: binary_sensor.turbine_t6_active
-              - name: T7
-                state_entity: sensor.turbine_t7_state
-                power_entity: sensor.turbine_t7_power_site
-                capacity_entity: sensor.turbine_t7_capacity_factor_site
-                active_entity: binary_sensor.turbine_t7_active
-              - name: T8
-                state_entity: sensor.turbine_t8_state
-                power_entity: sensor.turbine_t8_power_site
-                capacity_entity: sensor.turbine_t8_capacity_factor_site
-                active_entity: binary_sensor.turbine_t8_active
-          - type: grid
-            title: Turbine status
-            columns: 2
-            square: false
-            cards:
-              - type: tile
-                entity: binary_sensor.turbine_t1_active
-                name: T1
-              - type: tile
-                entity: binary_sensor.turbine_t2_active
-                name: T2
-              - type: tile
-                entity: binary_sensor.turbine_t3_active
-                name: T3
-              - type: tile
-                entity: binary_sensor.turbine_t4_active
-                name: T4
-              - type: tile
-                entity: binary_sensor.turbine_t5_active
-                name: T5
-              - type: tile
-                entity: binary_sensor.turbine_t6_active
-                name: T6
-              - type: tile
-                entity: binary_sensor.turbine_t7_active
-                name: T7
-              - type: tile
-                entity: binary_sensor.turbine_t8_active
-                name: T8
+      - type: custom:kirkhill-wind-turbine-map
+        title: Turbine map
+        height: 560
+        show_status: true
+        turbines:
+          - name: T1
+            state_entity: sensor.turbine_t1_state
+            power_entity: sensor.turbine_t1_power_site
+            capacity_entity: sensor.turbine_t1_capacity_factor_site
+            active_entity: binary_sensor.turbine_t1_active
+          - name: T2
+            state_entity: sensor.turbine_t2_state
+            power_entity: sensor.turbine_t2_power_site
+            capacity_entity: sensor.turbine_t2_capacity_factor_site
+            active_entity: binary_sensor.turbine_t2_active
+          - name: T3
+            state_entity: sensor.turbine_t3_state
+            power_entity: sensor.turbine_t3_power_site
+            capacity_entity: sensor.turbine_t3_capacity_factor_site
+            active_entity: binary_sensor.turbine_t3_active
+          - name: T4
+            state_entity: sensor.turbine_t4_state
+            power_entity: sensor.turbine_t4_power_site
+            capacity_entity: sensor.turbine_t4_capacity_factor_site
+            active_entity: binary_sensor.turbine_t4_active
+          - name: T5
+            state_entity: sensor.turbine_t5_state
+            power_entity: sensor.turbine_t5_power_site
+            capacity_entity: sensor.turbine_t5_capacity_factor_site
+            active_entity: binary_sensor.turbine_t5_active
+          - name: T6
+            state_entity: sensor.turbine_t6_state
+            power_entity: sensor.turbine_t6_power_site
+            capacity_entity: sensor.turbine_t6_capacity_factor_site
+            active_entity: binary_sensor.turbine_t6_active
+          - name: T7
+            state_entity: sensor.turbine_t7_state
+            power_entity: sensor.turbine_t7_power_site
+            capacity_entity: sensor.turbine_t7_capacity_factor_site
+            active_entity: binary_sensor.turbine_t7_active
+          - name: T8
+            state_entity: sensor.turbine_t8_state
+            power_entity: sensor.turbine_t8_power_site
+            capacity_entity: sensor.turbine_t8_capacity_factor_site
+            active_entity: binary_sensor.turbine_t8_active
       - type: grid
         columns: 2
         square: false
