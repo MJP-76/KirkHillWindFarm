@@ -23,4 +23,4 @@ jobs:
       - name: Python lint (ruff)
         run: |
           pip install ruff
-          ruff check custom_components/
+          ruff check custom_components/ --config ruff.toml

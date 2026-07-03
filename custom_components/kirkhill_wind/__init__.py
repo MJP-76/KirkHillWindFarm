@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 
 import voluptuous as vol
-
 from homeassistant.components import frontend
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
