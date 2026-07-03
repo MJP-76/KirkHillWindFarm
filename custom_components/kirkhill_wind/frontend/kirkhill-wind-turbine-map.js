@@ -300,13 +300,22 @@ class KirkHillWindTurbineMap extends HTMLElement {
     });
 
     const baseline = this._median(nearestNeighborDistances);
-    const threshold = Math.max(0.003, baseline * 4);
+    const threshold = Math.max(0.002, baseline * 3);
     const clustered = turbines.filter(
       (_turbine, index) => nearestNeighborDistances[index] <= threshold,
     );
 
-    if (clustered.length >= Math.max(2, Math.ceil(turbines.length / 2))) {
+    if (clustered.length >= 3) {
       return clustered;
+    }
+
+    if (turbines.length >= 4) {
+      const sortedIndexes = nearestNeighborDistances
+        .map((distance, index) => ({ distance, index }))
+        .sort((a, b) => b.distance - a.distance)
+        .map((entry) => entry.index);
+      const worstIndex = sortedIndexes[0];
+      return turbines.filter((_turbine, index) => index !== worstIndex);
     }
 
     return turbines;
