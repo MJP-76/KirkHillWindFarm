@@ -73,14 +73,18 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_register_frontend(hass: HomeAssistant) -> None:
     """Register the bundled custom Lovelace card for the turbine map."""
-    if hass.data.get(_FRONTEND_REGISTERED):
-        return
+    js_version = int(_FRONTEND_FILE.stat().st_mtime)
+    versioned_url = f"{_FRONTEND_URL}?v={js_version}"
 
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(_FRONTEND_URL, str(_FRONTEND_FILE), False)]
-    )
-    add_extra_js_url(hass, f"{_FRONTEND_URL}?v={int(_FRONTEND_FILE.stat().st_mtime)}")
-    hass.data[_FRONTEND_REGISTERED] = True
+    if not hass.data.get(_FRONTEND_REGISTERED):
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(_FRONTEND_URL, str(_FRONTEND_FILE), False)]
+        )
+        hass.data[_FRONTEND_REGISTERED] = True
+
+    # Always (re-)add the versioned URL so the browser picks up JS changes
+    # after an integration reload without needing a full HA restart.
+    add_extra_js_url(hass, versioned_url)
 
 
 async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -129,6 +133,10 @@ async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> No
         hass.data[LOVELACE_DATA].dashboards[url_path] = lovelace_store
 
     await lovelace_store.async_save(_build_dashboard_config(hass, entry))
+
+    # Notify all connected browser clients that the dashboard config has changed
+    # so they reload it without needing a manual page refresh.
+    hass.bus.async_fire("lovelace_updated", {"url_path": url_path, "updated": True})
 
     frontend.async_register_built_in_panel(
         hass,
