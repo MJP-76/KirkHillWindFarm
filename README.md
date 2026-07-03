@@ -113,8 +113,8 @@ The generated dashboard includes:
 - all owner/site generation timeframe entities
 - live farm wind and turbine availability
 - a larger full-width animated turbine map on the **Turbines** tab
-- turbine status tiles shown directly below the map in the same card block on the **Turbines** tab
-- automatic map zoom that fits all turbines by default
+- turbine-by-turbine status listed in the **Turbine status overview** card on the **Turbines** tab
+- automatic map zoom that fits all valid turbine coordinates and ignores coordinate outliers
 - turbine icons that spin in proportion to live output
 - full per-turbine owner/site power, capacity, wind, state, and active status
 - generation display cards that switch between **kWh** and **MWh** automatically and show **2 decimal places**

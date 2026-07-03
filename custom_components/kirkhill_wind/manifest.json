@@ -1,7 +1,7 @@
 {
   "domain": "kirkhill_wind",
   "name": "Kirk Hill Wind Farm",
-  "version": "4.3.3",
+  "version": "4.3.4",
   "documentation": "https://github.com/MJP-76/KirkHillWindFarm",
   "issue_tracker": "https://github.com/MJP-76/KirkHillWindFarm/issues",
   "codeowners": [

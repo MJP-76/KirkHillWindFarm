@@ -23,7 +23,6 @@ class KirkHillWindTurbineMap extends HTMLElement {
       title: "",
       zoom: null,
       height: 560,
-      show_status: false,
       ...config,
     };
     this._render();
@@ -56,8 +55,8 @@ class KirkHillWindTurbineMap extends HTMLElement {
     const height = Number(this.config.height) || 560;
     const header = this.config.title ? ` header="${this._escape(this.config.title)}"` : "";
     const turbines = this._collectTurbines();
-    const visibleTurbines = turbines.filter(
-      (turbine) => Number.isFinite(turbine.latitude) && Number.isFinite(turbine.longitude),
+    const visibleTurbines = turbines.filter((turbine) =>
+      this._isValidCoordinatePair(turbine.latitude, turbine.longitude),
     );
 
     if (visibleTurbines.length === 0) {
@@ -70,14 +69,14 @@ class KirkHillWindTurbineMap extends HTMLElement {
       return;
     }
 
-    const viewport = this._resolveViewport(visibleTurbines, width, height);
+    const viewportTurbines = this._selectViewportTurbines(visibleTurbines);
+    const viewport = this._resolveViewport(viewportTurbines, width, height);
     const zoom = viewport.zoom;
     const origin = viewport.origin;
     const tiles = this._renderTiles(origin, zoom, width, height);
     const markers = visibleTurbines
       .map((turbine) => this._renderMarker(turbine, origin, zoom))
       .join("");
-    const statusGrid = this.config.show_status ? this._renderStatusGrid(turbines) : "";
 
     this.shadowRoot.innerHTML = `
       <style>${this._styles()}</style>
@@ -92,7 +91,6 @@ class KirkHillWindTurbineMap extends HTMLElement {
             <span>&copy; OpenStreetMap contributors</span>
           </div>
         </div>
-        ${statusGrid}
       </ha-card>
     `;
   }
@@ -272,22 +270,47 @@ class KirkHillWindTurbineMap extends HTMLElement {
     return 6 - normalized * 5;
   }
 
-  _renderStatusGrid(turbines) {
-    const tiles = turbines
-      .map((turbine) => {
-        const activeState = turbine.active === true ? "on" : turbine.active === false ? "off" : null;
-        const stateClass = activeState === "on" ? "is-active" : activeState === "off" ? "is-inactive" : "is-unknown";
-        const stateText = activeState === "on" ? "Active" : activeState === "off" ? "Inactive" : "Unavailable";
-        return `
-          <div class="status-tile ${stateClass}">
-            <span class="status-name">${this._escape(turbine.name)}</span>
-            <span class="status-value">${stateText}</span>
-          </div>
-        `;
-      })
-      .join("");
+  _isValidCoordinatePair(latitude, longitude) {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return false;
+    }
+    if (latitude < -85 || latitude > 85 || longitude < -180 || longitude > 180) {
+      return false;
+    }
+    return !(Math.abs(latitude) < 0.0001 && Math.abs(longitude) < 0.0001);
+  }
 
-    return `<div class="status-grid">${tiles}</div>`;
+  _selectViewportTurbines(turbines) {
+    if (turbines.length < 3) {
+      return turbines;
+    }
+
+    const medianLatitude = this._median(turbines.map((turbine) => turbine.latitude));
+    const medianLongitude = this._median(turbines.map((turbine) => turbine.longitude));
+    const threshold = 0.5;
+    const clustered = turbines.filter(
+      (turbine) =>
+        Math.abs(turbine.latitude - medianLatitude) <= threshold &&
+        Math.abs(turbine.longitude - medianLongitude) <= threshold,
+    );
+
+    if (clustered.length >= Math.max(2, Math.ceil(turbines.length / 2))) {
+      return clustered;
+    }
+
+    return turbines;
+  }
+
+  _median(values) {
+    if (values.length === 0) {
+      return 0;
+    }
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 1) {
+      return sorted[middle];
+    }
+    return (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
   _project(latitude, longitude, zoom) {
@@ -419,44 +442,6 @@ class KirkHillWindTurbineMap extends HTMLElement {
         padding: 8px 12px 12px;
         font-size: 12px;
         color: var(--secondary-text-color);
-      }
-
-      .status-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-        padding: 0 12px 12px;
-      }
-
-      .status-tile {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 10px;
-        background: rgba(15, 23, 42, 0.08);
-      }
-
-      .status-name {
-        font-weight: 600;
-      }
-
-      .status-value {
-        font-size: 12px;
-        border-radius: 999px;
-        padding: 2px 8px;
-        background: rgba(100, 116, 139, 0.18);
-      }
-
-      .status-tile.is-active .status-value {
-        background: rgba(34, 197, 94, 0.22);
-        color: #166534;
-      }
-
-      .status-tile.is-inactive .status-value {
-        background: rgba(239, 68, 68, 0.2);
-        color: #991b1b;
       }
 
       .empty {

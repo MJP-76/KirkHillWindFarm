@@ -89,10 +89,27 @@ views:
             name: Inactive turbines
           - entity: binary_sensor.kirk_hill_wind_farm_alarm
             name: Alarm
+          - type: section
+            label: Turbine status
+          - entity: binary_sensor.turbine_t1_active
+            name: T1
+          - entity: binary_sensor.turbine_t2_active
+            name: T2
+          - entity: binary_sensor.turbine_t3_active
+            name: T3
+          - entity: binary_sensor.turbine_t4_active
+            name: T4
+          - entity: binary_sensor.turbine_t5_active
+            name: T5
+          - entity: binary_sensor.turbine_t6_active
+            name: T6
+          - entity: binary_sensor.turbine_t7_active
+            name: T7
+          - entity: binary_sensor.turbine_t8_active
+            name: T8
       - type: custom:kirkhill-wind-turbine-map
         title: Turbine map
         height: 560
-        show_status: true
         turbines:
           - name: T1
             state_entity: sensor.turbine_t1_state
