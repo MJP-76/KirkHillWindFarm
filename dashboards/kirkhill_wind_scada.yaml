@@ -69,12 +69,6 @@ views:
                 name: Site capacity factor
               - entity: sensor.kirk_hill_wind_farm_wind_speed
                 name: Wind speed
-              - entity: sensor.kirk_hill_wind_farm_active_turbines
-                name: Active turbines
-              - entity: sensor.kirk_hill_wind_farm_inactive_turbines
-                name: Inactive turbines
-              - entity: binary_sensor.kirk_hill_wind_farm_alarm
-                name: Alarm
           - type: history-graph
             title: Site and wind (last 6 hours)
             hours_to_show: 6
@@ -85,6 +79,16 @@ views:
     path: turbines
     icon: mdi:wind-turbine
     cards:
+      - type: entities
+        title: Turbine status overview
+        show_header_toggle: false
+        entities:
+          - entity: sensor.kirk_hill_wind_farm_active_turbines
+            name: Active turbines
+          - entity: sensor.kirk_hill_wind_farm_inactive_turbines
+            name: Inactive turbines
+          - entity: binary_sensor.kirk_hill_wind_farm_alarm
+            name: Alarm
       - type: grid
         title: Turbine status
         columns: 2
