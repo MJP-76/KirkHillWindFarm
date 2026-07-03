@@ -2,16 +2,10 @@ class KirkHillWindTurbineMap extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._resizeObserver = new ResizeObserver(() => this._render());
   }
 
   connectedCallback() {
-    this._resizeObserver.observe(this);
     this._render();
-  }
-
-  disconnectedCallback() {
-    this._resizeObserver.disconnect();
   }
 
   setConfig(config) {
@@ -22,7 +16,6 @@ class KirkHillWindTurbineMap extends HTMLElement {
     this.config = {
       title: "",
       zoom: null,
-      height: 560,
       ...config,
     };
     this._render();
@@ -46,17 +39,23 @@ class KirkHillWindTurbineMap extends HTMLElement {
     };
   }
 
+  // Fixed internal canvas dimensions — SVG scales via CSS width:100%/height:auto.
+  // Zoom is always calculated against these dimensions so it is consistent
+  // regardless of when/how wide the card actually renders.
+  static MAP_W = 900;
+  static MAP_H = 560;
+  static MAP_PAD = 80;
+  static TILE_SIZE = 256;
+
   _render() {
     if (!this.config || !this.shadowRoot) {
       return;
     }
 
-    const width = Math.max(Math.round(this.getBoundingClientRect().width) || 900, 320);
-    const height = Number(this.config.height) || 560;
     const header = this.config.title ? ` header="${this._escape(this.config.title)}"` : "";
     const turbines = this._collectTurbines();
-    const visibleTurbines = turbines.filter((turbine) =>
-      this._isValidCoordinatePair(turbine.latitude, turbine.longitude),
+    const visibleTurbines = turbines.filter((t) =>
+      this._isValidCoordinatePair(t.latitude, t.longitude),
     );
 
     if (visibleTurbines.length === 0) {
@@ -69,23 +68,30 @@ class KirkHillWindTurbineMap extends HTMLElement {
       return;
     }
 
-    const viewportTurbines = this._selectViewportTurbines(visibleTurbines);
-    const viewport = this._resolveViewport(viewportTurbines, width, height);
-    const zoom = viewport.zoom;
-    const origin = viewport.origin;
-    const tiles = this._renderTiles(origin, zoom, width, height);
+    const { zoom, originX, originY } = this._resolveViewport(visibleTurbines);
+    const tiles = this._renderTiles(originX, originY, zoom);
     const markers = visibleTurbines
-      .map((turbine) => this._renderMarker(turbine, origin, zoom))
+      .map((t) => this._renderMarker(t, originX, originY, zoom))
       .join("");
+
+    const W = KirkHillWindTurbineMap.MAP_W;
+    const H = KirkHillWindTurbineMap.MAP_H;
 
     this.shadowRoot.innerHTML = `
       <style>${this._styles()}</style>
       <ha-card${header}>
-        <div class="map-shell" style="height:${height}px;">
-          <div class="map-surface">
-            ${tiles}
-            ${markers}
-          </div>
+        <div class="map-shell">
+          <svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Turbine map">
+            <defs>
+              <clipPath id="khmap-clip">
+                <rect x="0" y="0" width="${W}" height="${H}" />
+              </clipPath>
+            </defs>
+            <g clip-path="url(#khmap-clip)">
+              ${tiles}
+              ${markers}
+            </g>
+          </svg>
           <div class="legend">
             <span>Rotation speed uses live site capacity factor when available.</span>
             <span>&copy; OpenStreetMap contributors</span>
@@ -114,243 +120,122 @@ class KirkHillWindTurbineMap extends HTMLElement {
     });
   }
 
-  _resolveViewport(turbines, width, height) {
-    const configuredZoom = Number(this.config.zoom);
-    const manualZoom = Number.isFinite(configuredZoom)
-      ? Math.max(1, Math.min(19, configuredZoom))
-      : null;
+  _isValidCoordinatePair(lat, lon) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+    if (lat < -85 || lat > 85 || lon < -180 || lon > 180) return false;
+    // reject null-island
+    if (Math.abs(lat) < 0.0001 && Math.abs(lon) < 0.0001) return false;
+    return true;
+  }
 
-    if (manualZoom !== null) {
-      const center = this._centerCoordinates(turbines);
-      const projected = this._project(center.latitude, center.longitude, manualZoom);
-      return {
-        zoom: manualZoom,
-        origin: {
-          x: projected.x - width / 2,
-          y: projected.y - height / 2,
-        },
-      };
+  _project(lat, lon, zoom) {
+    const scale = KirkHillWindTurbineMap.TILE_SIZE * Math.pow(2, zoom);
+    const sin = Math.sin((lat * Math.PI) / 180);
+    return {
+      x: ((lon + 180) / 360) * scale,
+      y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale,
+    };
+  }
+
+  _resolveViewport(turbines) {
+    const W = KirkHillWindTurbineMap.MAP_W;
+    const H = KirkHillWindTurbineMap.MAP_H;
+    const PAD = KirkHillWindTurbineMap.MAP_PAD;
+
+    // Manual zoom from config
+    const configuredZoom = Number(this.config.zoom);
+    if (Number.isFinite(configuredZoom)) {
+      const zoom = Math.max(1, Math.min(19, configuredZoom));
+      const xs = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).x);
+      const ys = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).y);
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+      return { zoom, originX: cx - W / 2, originY: cy - H / 2 };
     }
 
-    const padding = 72;
-    const usableWidth = Math.max(width - padding * 2, 120);
-    const usableHeight = Math.max(height - padding * 2, 120);
-
-    for (let zoom = 19; zoom >= 1; zoom -= 1) {
-      const bounds = this._projectedBounds(turbines, zoom);
-      if (bounds.width <= usableWidth && bounds.height <= usableHeight) {
-        return {
-          zoom,
-          origin: {
-            x: bounds.centerX - width / 2,
-            y: bounds.centerY - height / 2,
-          },
-        };
+    // Auto zoom: search from 17 down to 8 — sensible range for a wind farm
+    for (let zoom = 17; zoom >= 8; zoom--) {
+      const xs = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).x);
+      const ys = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).y);
+      const spanX = Math.max(...xs) - Math.min(...xs);
+      const spanY = Math.max(...ys) - Math.min(...ys);
+      if (spanX <= W - PAD * 2 && spanY <= H - PAD * 2) {
+        const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+        const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+        return { zoom, originX: cx - W / 2, originY: cy - H / 2 };
       }
     }
 
-    const bounds = this._projectedBounds(turbines, 1);
-    return {
-      zoom: 1,
-      origin: {
-        x: bounds.centerX - width / 2,
-        y: bounds.centerY - height / 2,
-      },
-    };
+    // Fallback: zoom 8, centred on turbines
+    const zoom = 8;
+    const xs = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).x);
+    const ys = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).y);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    return { zoom, originX: cx - W / 2, originY: cy - H / 2 };
   }
 
-  _centerCoordinates(turbines) {
-    const latitude =
-      turbines.reduce((sum, turbine) => sum + turbine.latitude, 0) / turbines.length;
-    const longitude =
-      turbines.reduce((sum, turbine) => sum + turbine.longitude, 0) / turbines.length;
-    return { latitude, longitude };
-  }
-
-  _projectedBounds(turbines, zoom) {
-    const projected = turbines.map((turbine) =>
-      this._project(turbine.latitude, turbine.longitude, zoom),
-    );
-    const xs = projected.map((point) => point.x);
-    const ys = projected.map((point) => point.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-
-    return {
-      width: maxX - minX,
-      height: maxY - minY,
-      centerX: (minX + maxX) / 2,
-      centerY: (minY + maxY) / 2,
-    };
-  }
-
-  _renderTiles(origin, zoom, width, height) {
-    const tileSize = 256;
-    const tileCount = 2 ** zoom;
-    const minTileX = Math.floor(origin.x / tileSize) - 1;
-    const maxTileX = Math.floor((origin.x + width) / tileSize) + 1;
-    const minTileY = Math.floor(origin.y / tileSize) - 1;
-    const maxTileY = Math.floor((origin.y + height) / tileSize) + 1;
+  _renderTiles(originX, originY, zoom) {
+    const TS = KirkHillWindTurbineMap.TILE_SIZE;
+    const W = KirkHillWindTurbineMap.MAP_W;
+    const H = KirkHillWindTurbineMap.MAP_H;
+    const maxTile = Math.pow(2, zoom);
     let html = "";
 
-    for (let tileX = minTileX; tileX <= maxTileX; tileX += 1) {
-      for (let tileY = minTileY; tileY <= maxTileY; tileY += 1) {
-        if (tileY < 0 || tileY >= tileCount) {
-          continue;
-        }
-
-        const wrappedX = ((tileX % tileCount) + tileCount) % tileCount;
-        const left = tileX * tileSize - origin.x;
-        const top = tileY * tileSize - origin.y;
-        html += `
-          <img
-            class="tile"
-            alt=""
-            loading="lazy"
-            src="https://tile.openstreetmap.org/${zoom}/${wrappedX}/${tileY}.png"
-            style="left:${left}px;top:${top}px;width:${tileSize}px;height:${tileSize}px;"
-          >
-        `;
+    for (let tx = Math.floor(originX / TS); tx <= Math.floor((originX + W) / TS); tx++) {
+      for (let ty = Math.floor(originY / TS); ty <= Math.floor((originY + H) / TS); ty++) {
+        if (ty < 0 || ty >= maxTile) continue;
+        const wx = ((tx % maxTile) + maxTile) % maxTile;
+        const left = tx * TS - originX;
+        const top = ty * TS - originY;
+        html += `<image href="https://tile.openstreetmap.org/${zoom}/${wx}/${ty}.png" x="${left}" y="${top}" width="${TS}" height="${TS}" />`;
       }
     }
-
     return html;
   }
 
-  _renderMarker(turbine, origin, zoom) {
-    const projected = this._project(turbine.latitude, turbine.longitude, zoom);
-    const left = projected.x - origin.x;
-    const top = projected.y - origin.y;
+  _renderMarker(turbine, originX, originY, zoom) {
+    const { x, y } = this._project(turbine.latitude, turbine.longitude, zoom);
+    const left = x - originX;
+    const top = y - originY;
     const duration = this._spinDuration(turbine);
     const detail = Number.isFinite(turbine.capacity)
       ? `${turbine.capacity.toFixed(1)}% CF`
       : Number.isFinite(turbine.power)
         ? `${turbine.power.toFixed(2)} kW`
         : turbine.stateText;
-    const animationStyle = duration ? `--spin-duration:${duration.toFixed(2)}s;` : "";
+    const animStyle = duration ? `animation-duration:${duration.toFixed(2)}s;` : "";
+    const activeClass = turbine.active ? "is-active" : "is-inactive";
+    const spinClass = duration ? "is-spinning" : "";
 
     return `
-      <div class="marker ${turbine.active ? "is-active" : "is-inactive"}" style="left:${left}px;top:${top}px;">
-        <div class="rotor ${duration ? "is-spinning" : ""}" style="${animationStyle}">
-          <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-            <line x1="50" y1="50" x2="50" y2="92" class="tower"></line>
-            <circle cx="50" cy="36" r="5" class="hub"></circle>
-            <g class="blades">
-              <path d="M50 36 L24 28 Q16 26 20 20 Q24 16 30 22 Z" class="blade"></path>
-              <path d="M50 36 L62 8 Q66 1 73 5 Q79 9 73 16 Z" class="blade"></path>
-              <path d="M50 36 L76 44 Q84 46 80 52 Q76 58 70 52 Z" class="blade"></path>
-            </g>
-          </svg>
-        </div>
-        <div class="label">${this._escape(turbine.name)}</div>
-        <div class="detail">${this._escape(detail)}</div>
-      </div>
+      <g class="marker ${activeClass}" transform="translate(${left},${top})">
+        <circle class="marker-disc" r="22" />
+        <g class="rotor ${spinClass}" style="${animStyle}">
+          <line x1="0" y1="0" x2="0" y2="16" class="tower"></line>
+          <circle r="3" class="hub"></circle>
+          <g class="blades">
+            <path d="M0 0 L-10 -8 Q-14 -10 -12 -14 Q-10 -17 -6 -14 Z" class="blade"></path>
+            <path d="M0 0 L5 -14 Q7 -18 11 -16 Q15 -14 12 -10 Z" class="blade"></path>
+            <path d="M0 0 L10 8 Q14 10 12 14 Q10 17 6 14 Z" class="blade"></path>
+          </g>
+        </g>
+        <text class="turbine-label" y="32">${this._escape(turbine.name)}</text>
+        <text class="turbine-detail" y="44">${this._escape(detail)}</text>
+      </g>
     `;
   }
 
   _spinDuration(turbine) {
-    if (!turbine.active) {
-      return null;
-    }
-
+    if (!turbine.active) return null;
     let normalized = null;
-
     if (Number.isFinite(turbine.capacity)) {
       normalized = Math.max(0, Math.min(100, turbine.capacity)) / 100;
     } else if (Number.isFinite(turbine.power) && turbine.power > 0) {
       normalized = Math.max(0.05, Math.min(1, turbine.power / 2500));
     }
-
-    if (!normalized || normalized <= 0) {
-      return null;
-    }
-
+    if (!normalized || normalized <= 0) return null;
     return 6 - normalized * 5;
-  }
-
-  _isValidCoordinatePair(latitude, longitude) {
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return false;
-    }
-    if (latitude < -85 || latitude > 85 || longitude < -180 || longitude > 180) {
-      return false;
-    }
-    return !(Math.abs(latitude) < 0.0001 && Math.abs(longitude) < 0.0001);
-  }
-
-  _selectViewportTurbines(turbines) {
-    if (turbines.length < 3) {
-      return turbines;
-    }
-
-    const nearestNeighborDistances = turbines.map((turbine, index) => {
-      let nearest = Number.POSITIVE_INFINITY;
-      for (let i = 0; i < turbines.length; i += 1) {
-        if (i === index) {
-          continue;
-        }
-        const distance = this._coordinateDistance(turbine, turbines[i]);
-        if (distance < nearest) {
-          nearest = distance;
-        }
-      }
-      return nearest;
-    });
-
-    const baseline = this._median(nearestNeighborDistances);
-    const threshold = Math.max(0.002, baseline * 3);
-    const clustered = turbines.filter(
-      (_turbine, index) => nearestNeighborDistances[index] <= threshold,
-    );
-
-    if (clustered.length >= 3) {
-      return clustered;
-    }
-
-    if (turbines.length >= 4) {
-      const sortedIndexes = nearestNeighborDistances
-        .map((distance, index) => ({ distance, index }))
-        .sort((a, b) => b.distance - a.distance)
-        .map((entry) => entry.index);
-      const worstIndex = sortedIndexes[0];
-      return turbines.filter((_turbine, index) => index !== worstIndex);
-    }
-
-    return turbines;
-  }
-
-  _coordinateDistance(a, b) {
-    const latitudeDelta = a.latitude - b.latitude;
-    const longitudeDelta = a.longitude - b.longitude;
-    return Math.sqrt(latitudeDelta ** 2 + longitudeDelta ** 2);
-  }
-
-  _median(values) {
-    if (values.length === 0) {
-      return 0;
-    }
-    const sorted = [...values].sort((a, b) => a - b);
-    const middle = Math.floor(sorted.length / 2);
-    if (sorted.length % 2 === 1) {
-      return sorted[middle];
-    }
-    return (sorted[middle - 1] + sorted[middle]) / 2;
-  }
-
-  _project(latitude, longitude, zoom) {
-    const tileSize = 256;
-    const scale = tileSize * 2 ** zoom;
-    const sinLatitude = Math.sin((latitude * Math.PI) / 180);
-
-    return {
-      x: ((longitude + 180) / 360) * scale,
-      y:
-        (0.5 -
-          Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI)) *
-        scale,
-    };
   }
 
   _number(value) {
@@ -369,96 +254,60 @@ class KirkHillWindTurbineMap extends HTMLElement {
 
   _styles() {
     return `
-      :host {
-        display: block;
-      }
+      :host { display: block; }
 
-      ha-card {
-        overflow: hidden;
-      }
+      ha-card { overflow: hidden; }
 
       .map-shell {
-        position: relative;
         display: flex;
         flex-direction: column;
       }
 
-      .map-surface {
-        position: relative;
-        flex: 1;
-        overflow: hidden;
+      svg.map {
+        width: 100%;
+        height: auto;
+        display: block;
         background: #cfe4f7;
       }
 
-      .tile {
-        position: absolute;
-        object-fit: cover;
-        user-select: none;
-      }
+      .marker { cursor: default; }
 
-      .marker {
-        position: absolute;
-        transform: translate(-50%, -50%);
-        min-width: 68px;
-        text-align: center;
-        pointer-events: none;
+      .marker-disc {
+        fill: rgba(15, 23, 42, 0.55);
+        stroke-width: 2;
       }
+      .marker.is-active .marker-disc { stroke: #22c55e; }
+      .marker.is-inactive .marker-disc { stroke: #94a3b8; opacity: 0.6; }
 
       .rotor {
-        width: 54px;
-        height: 54px;
-        margin: 0 auto 4px;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+        transform-box: fill-box;
+        transform-origin: center;
       }
-
-      .rotor svg {
-        width: 100%;
-        height: 100%;
-      }
-
-      .rotor.is-spinning svg {
+      .rotor.is-spinning {
         animation: turbine-spin var(--spin-duration, 2s) linear infinite;
+        animation-duration: inherit;
       }
 
-      .tower {
-        stroke: #4b5563;
-        stroke-width: 5;
-        stroke-linecap: round;
-      }
+      .tower { stroke: #4b5563; stroke-width: 2.5; stroke-linecap: round; }
+      .hub { fill: #0f172a; }
+      .blade { fill: #f8fafc; stroke: #1f2937; stroke-width: 0.8; stroke-linejoin: round; }
+      .marker.is-inactive .blade { fill: #94a3b8; }
 
-      .hub {
-        fill: #0f172a;
-      }
-
-      .blade {
-        fill: #f8fafc;
-        stroke: #1f2937;
-        stroke-width: 1.5;
-        stroke-linejoin: round;
-      }
-
-      .marker.is-inactive {
-        opacity: 0.5;
-      }
-
-      .label,
-      .detail {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 999px;
-        background: rgba(15, 23, 42, 0.72);
-        color: #fff;
-        backdrop-filter: blur(3px);
-      }
-
-      .label {
-        font-weight: 600;
-        font-size: 12px;
-      }
-
-      .detail {
-        margin-top: 4px;
+      .turbine-label {
         font-size: 11px;
+        font-weight: 700;
+        fill: #fff;
+        stroke: rgba(0,0,0,0.8);
+        stroke-width: 0.4px;
+        paint-order: stroke;
+        text-anchor: middle;
+        dominant-baseline: middle;
+      }
+      .turbine-detail {
+        font-size: 9px;
+        fill: rgba(255,255,255,0.85);
+        text-anchor: middle;
+        dominant-baseline: middle;
       }
 
       .legend {
@@ -470,19 +319,9 @@ class KirkHillWindTurbineMap extends HTMLElement {
         color: var(--secondary-text-color);
       }
 
-      .empty {
-        padding: 24px 16px;
-        color: var(--secondary-text-color);
-      }
+      .empty { padding: 24px 16px; color: var(--secondary-text-color); }
 
-      @keyframes turbine-spin {
-        from {
-          transform: rotate(0deg);
-        }
-        to {
-          transform: rotate(360deg);
-        }
-      }
+      @keyframes turbine-spin { to { transform: rotate(360deg); } }
     `;
   }
 }
@@ -490,10 +329,3 @@ class KirkHillWindTurbineMap extends HTMLElement {
 if (!customElements.get("kirkhill-wind-turbine-map")) {
   customElements.define("kirkhill-wind-turbine-map", KirkHillWindTurbineMap);
 }
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "kirkhill-wind-turbine-map",
-  name: "Kirk Hill Wind Turbine Map",
-  description: "Animated turbine map for the Kirk Hill Wind Farm dashboard.",
-});
