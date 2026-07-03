@@ -285,18 +285,24 @@ class KirkHillWindTurbineMap extends HTMLElement {
       return turbines;
     }
 
-    const latitudes = turbines.map((turbine) => turbine.latitude);
-    const longitudes = turbines.map((turbine) => turbine.longitude);
-    const latitudeSpan = Math.max(...latitudes) - Math.min(...latitudes);
-    const longitudeSpan = Math.max(...longitudes) - Math.min(...longitudes);
-    const medianLatitude = this._median(turbines.map((turbine) => turbine.latitude));
-    const medianLongitude = this._median(turbines.map((turbine) => turbine.longitude));
-    const latitudeThreshold = Math.max(0.01, Math.min(0.08, latitudeSpan * 0.35));
-    const longitudeThreshold = Math.max(0.01, Math.min(0.08, longitudeSpan * 0.35));
+    const nearestNeighborDistances = turbines.map((turbine, index) => {
+      let nearest = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < turbines.length; i += 1) {
+        if (i === index) {
+          continue;
+        }
+        const distance = this._coordinateDistance(turbine, turbines[i]);
+        if (distance < nearest) {
+          nearest = distance;
+        }
+      }
+      return nearest;
+    });
+
+    const baseline = this._median(nearestNeighborDistances);
+    const threshold = Math.max(0.003, baseline * 4);
     const clustered = turbines.filter(
-      (turbine) =>
-        Math.abs(turbine.latitude - medianLatitude) <= latitudeThreshold &&
-        Math.abs(turbine.longitude - medianLongitude) <= longitudeThreshold,
+      (_turbine, index) => nearestNeighborDistances[index] <= threshold,
     );
 
     if (clustered.length >= Math.max(2, Math.ceil(turbines.length / 2))) {
@@ -304,6 +310,12 @@ class KirkHillWindTurbineMap extends HTMLElement {
     }
 
     return turbines;
+  }
+
+  _coordinateDistance(a, b) {
+    const latitudeDelta = a.latitude - b.latitude;
+    const longitudeDelta = a.longitude - b.longitude;
+    return Math.sqrt(latitudeDelta ** 2 + longitudeDelta ** 2);
   }
 
   _median(values) {
