@@ -370,14 +370,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "name": "Inactive turbines",
                             },
                             {"entity": farm("farm_alarm"), "name": "Alarm"},
-                            {"type": "section", "label": "Turbine status"},
-                            *[
-                                {
-                                    "entity": turbine(f"T{i}", "active"),
-                                    "name": f"T{i}",
-                                }
-                                for i in range(1, 9)
-                            ],
                         ],
                     },
                     {
