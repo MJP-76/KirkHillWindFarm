@@ -208,6 +208,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
     const activeClass = turbine.active ? "is-active" : "is-inactive";
     const spinClass = duration ? "is-spinning" : "";
 
+    const label = this._escape(turbine.name);
     return `
       <g class="marker ${activeClass}" transform="translate(${left},${top})">
         <circle class="marker-disc" r="22" />
@@ -220,8 +221,9 @@ class KirkHillWindTurbineMap extends HTMLElement {
             <path d="M0 0 L10 8 Q14 10 12 14 Q10 17 6 14 Z" class="blade"></path>
           </g>
         </g>
-        <text class="turbine-label" y="32">${this._escape(turbine.name)}</text>
-        <text class="turbine-detail" y="44">${this._escape(detail)}</text>
+        <rect class="label-bg" x="-13" y="-41" width="26" height="16" rx="4" />
+        <text class="turbine-id" y="-29">${label}</text>
+        <text class="turbine-detail" y="36">${this._escape(detail)}</text>
       </g>
     `;
   }
@@ -293,13 +295,13 @@ class KirkHillWindTurbineMap extends HTMLElement {
       .blade { fill: #f8fafc; stroke: #1f2937; stroke-width: 0.8; stroke-linejoin: round; }
       .marker.is-inactive .blade { fill: #94a3b8; }
 
-      .turbine-label {
+      .label-bg {
+        fill: rgba(0,0,0,0.65);
+      }
+      .turbine-id {
         font-size: 11px;
         font-weight: 700;
         fill: #fff;
-        stroke: rgba(0,0,0,0.8);
-        stroke-width: 0.4px;
-        paint-order: stroke;
         text-anchor: middle;
         dominant-baseline: middle;
       }
