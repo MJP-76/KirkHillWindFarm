@@ -28,3 +28,7 @@ jobs:
       - name: Check manifest JSON
         run: |
           python -c "import json; json.load(open('custom_components/kirkhill_wind/manifest.json'))"
+
+      - name: Check synchronized release version
+        run: |
+          python scripts/version_sync.py check

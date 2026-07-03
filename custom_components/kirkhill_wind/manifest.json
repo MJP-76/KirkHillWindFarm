@@ -1,10 +1,12 @@
 {
   "domain": "kirkhill_wind",
   "name": "Kirk Hill Wind Farm",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "documentation": "https://github.com/MJP-76/KirkHillWindFarm",
   "issue_tracker": "https://github.com/MJP-76/KirkHillWindFarm/issues",
-  "codeowners": ["@MJP-76"],
+  "codeowners": [
+    "@MJP-76"
+  ],
   "iot_class": "cloud_polling",
   "config_flow": true,
   "requirements": [],

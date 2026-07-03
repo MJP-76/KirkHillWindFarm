@@ -124,6 +124,21 @@ The animated map card is bundled by the integration and loaded automatically wit
 
 For manual import or customization, a dashboard YAML is also provided at [`dashboards/kirkhill_wind_scada.yaml`](dashboards/kirkhill_wind_scada.yaml).
 
+## Version management
+
+All release versions are tracked from a single source-of-truth file: [`VERSION`](VERSION).
+
+When preparing a release:
+1. Update `VERSION` (use `X.Y.Z`, for example `4.3.1`).
+2. Run `python scripts/version_sync.py sync` to update:
+   - `custom_components/kirkhill_wind/manifest.json`
+   - `pyproject.toml`
+3. Validate with `python scripts/version_sync.py check`.
+4. Commit and push.
+5. Create tag + GitHub release from the same version with `python scripts/version_sync.py release`.
+
+Release tags are generated as `vX.Y.Z` directly from `VERSION`.
+
 ## License
 
 MIT
