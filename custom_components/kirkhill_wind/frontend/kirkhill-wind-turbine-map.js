@@ -2,6 +2,12 @@ class KirkHillWindTurbineMap extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this._vb = null;        // current viewBox {x, y, w, h}
+    this._defaultVb = null; // viewBox at initial render (for reset)
+    this._drag = null;      // {x, y} when dragging
+    this._pinchStart = null; // distance between fingers when pinch started
+    this._needsRebuild = true;
+    this._lastViewport = null; // {zoom, originX, originY} used for marker positions
   }
 
   connectedCallback() {
@@ -18,6 +24,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
       zoom: null,
       ...config,
     };
+    this._needsRebuild = true;
     this._render();
   }
 
@@ -65,40 +72,184 @@ class KirkHillWindTurbineMap extends HTMLElement {
           <div class="empty">Turbine coordinates are not available yet.</div>
         </ha-card>
       `;
+      this._vb = null;
+      this._needsRebuild = true;
       return;
     }
 
     const { zoom, originX, originY } = this._resolveViewport(visibleTurbines);
-    const tiles = this._renderTiles(originX, originY, zoom);
-    const markers = visibleTurbines
-      .map((t) => this._renderMarker(t, originX, originY, zoom))
-      .join("");
-
     const W = KirkHillWindTurbineMap.MAP_W;
     const H = KirkHillWindTurbineMap.MAP_H;
 
-    this.shadowRoot.innerHTML = `
-      <style>${this._styles()}</style>
-      <ha-card${header}>
-        <div class="map-shell">
-          <svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Turbine map">
-            <defs>
-              <clipPath id="khmap-clip">
-                <rect x="0" y="0" width="${W}" height="${H}" />
-              </clipPath>
-            </defs>
-            <g clip-path="url(#khmap-clip)">
-              ${tiles}
-              ${markers}
-            </g>
-          </svg>
-          <div class="legend">
-            <span>Rotation speed uses live site capacity factor when available.</span>
-            <span>&copy; OpenStreetMap contributors</span>
+    const svgEl = this.shadowRoot.querySelector("svg.map");
+
+    if (!svgEl || this._needsRebuild) {
+      // Full rebuild — only happens on first render or config change
+      const tiles = this._renderTiles(originX, originY, zoom);
+      const markers = visibleTurbines
+        .map((t) => this._renderMarker(t, originX, originY, zoom))
+        .join("");
+
+      this.shadowRoot.innerHTML = `
+        <style>${this._styles()}</style>
+        <ha-card${header}>
+          <div class="map-shell">
+            <svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Turbine map">
+              <defs>
+                <clipPath id="khmap-clip">
+                  <rect x="0" y="0" width="${W}" height="${H}" />
+                </clipPath>
+              </defs>
+              <g clip-path="url(#khmap-clip)">
+                ${tiles}
+                <g class="markers">${markers}</g>
+              </g>
+            </svg>
+            <div class="legend">
+              <span>Scroll/pinch to zoom · Drag to pan · Double-click to reset</span>
+              <span>&copy; OpenStreetMap contributors</span>
+            </div>
           </div>
-        </div>
-      </ha-card>
-    `;
+        </ha-card>
+      `;
+
+      this._vb = { x: 0, y: 0, w: W, h: H };
+      this._defaultVb = { x: 0, y: 0, w: W, h: H };
+      this._lastViewport = { zoom, originX, originY };
+      this._needsRebuild = false;
+      this._attachInteraction();
+    } else {
+      // Partial update — only refresh marker states (spin speed, active class, detail text)
+      const markersEl = this.shadowRoot.querySelector("g.markers");
+      if (markersEl && this._lastViewport) {
+        const { zoom: vz, originX: vox, originY: voy } = this._lastViewport;
+        markersEl.innerHTML = visibleTurbines
+          .map((t) => this._renderMarker(t, vox, voy, vz))
+          .join("");
+      }
+    }
+  }
+
+  _attachInteraction() {
+    const svg = this.shadowRoot.querySelector("svg.map");
+    if (!svg) return;
+
+    // Scroll wheel zoom
+    svg.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 1.15 : 1 / 1.15;
+      this._zoomViewBox(factor, this._svgPoint(svg, e.clientX, e.clientY));
+    }, { passive: false });
+
+    // Mouse drag
+    svg.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      this._drag = { x: e.clientX, y: e.clientY };
+      svg.style.cursor = "grabbing";
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!this._drag) return;
+      this._panViewBox(e.clientX - this._drag.x, e.clientY - this._drag.y, svg);
+      this._drag = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener("mouseup", () => {
+      if (!this._drag) return;
+      this._drag = null;
+      svg.style.cursor = "grab";
+    });
+
+    // Touch drag + pinch
+    svg.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        this._drag = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        this._pinchStart = null;
+      } else if (e.touches.length === 2) {
+        this._drag = null;
+        this._pinchStart = this._touchDist(e.touches);
+      }
+    }, { passive: false });
+
+    svg.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && this._drag) {
+        this._panViewBox(
+          e.touches[0].clientX - this._drag.x,
+          e.touches[0].clientY - this._drag.y,
+          svg,
+        );
+        this._drag = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2 && this._pinchStart !== null) {
+        const newDist = this._touchDist(e.touches);
+        const factor = this._pinchStart / newDist;
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        this._zoomViewBox(factor, this._svgPoint(svg, midX, midY));
+        this._pinchStart = newDist;
+      }
+    }, { passive: false });
+
+    svg.addEventListener("touchend", () => {
+      this._drag = null;
+      this._pinchStart = null;
+    });
+
+    // Double-click / double-tap resets to default view
+    svg.addEventListener("dblclick", () => {
+      if (this._defaultVb) {
+        this._vb = { ...this._defaultVb };
+        this._applyViewBox(svg);
+      }
+    });
+  }
+
+  _svgPoint(svg, clientX, clientY) {
+    const rect = svg.getBoundingClientRect();
+    const vb = this._vb ?? { x: 0, y: 0, w: KirkHillWindTurbineMap.MAP_W, h: KirkHillWindTurbineMap.MAP_H };
+    return {
+      x: ((clientX - rect.left) / rect.width) * vb.w + vb.x,
+      y: ((clientY - rect.top) / rect.height) * vb.h + vb.y,
+    };
+  }
+
+  _zoomViewBox(factor, center) {
+    if (!this._vb) return;
+    const W = KirkHillWindTurbineMap.MAP_W;
+    const H = KirkHillWindTurbineMap.MAP_H;
+    const minW = 80;
+    const maxW = W * 4;
+    const newW = Math.min(maxW, Math.max(minW, this._vb.w * factor));
+    const newH = newW * (H / W);
+    const ratioX = (center.x - this._vb.x) / this._vb.w;
+    const ratioY = (center.y - this._vb.y) / this._vb.h;
+    this._vb = {
+      x: center.x - ratioX * newW,
+      y: center.y - ratioY * newH,
+      w: newW,
+      h: newH,
+    };
+    const svg = this.shadowRoot.querySelector("svg.map");
+    if (svg) this._applyViewBox(svg);
+  }
+
+  _panViewBox(dx, dy, svg) {
+    if (!this._vb) return;
+    const rect = svg.getBoundingClientRect();
+    this._vb.x -= (dx / rect.width) * this._vb.w;
+    this._vb.y -= (dy / rect.height) * this._vb.h;
+    this._applyViewBox(svg);
+  }
+
+  _applyViewBox(svg) {
+    if (!this._vb || !svg) return;
+    const { x, y, w, h } = this._vb;
+    svg.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
+  }
+
+  _touchDist(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
   }
 
   _collectTurbines() {
@@ -270,7 +421,12 @@ class KirkHillWindTurbineMap extends HTMLElement {
         height: auto;
         display: block;
         background: #cfe4f7;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
       }
+
+      svg.map:active { cursor: grabbing; }
 
       .marker { cursor: default; }
 
