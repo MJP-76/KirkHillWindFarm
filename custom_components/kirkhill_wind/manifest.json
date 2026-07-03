@@ -1,15 +1,15 @@
 {
   "domain": "kirkhill_wind",
   "name": "Kirk Hill Wind Farm",
-  "version": "4.5.2",
-  "documentation": "https://github.com/MJP-76/KirkHillWindFarm",
-  "issue_tracker": "https://github.com/MJP-76/KirkHillWindFarm/issues",
   "codeowners": [
     "@MJP-76"
   ],
-  "iot_class": "cloud_polling",
   "config_flow": true,
-  "requirements": [],
   "dependencies": ["http", "lovelace"],
-  "integration_type": "hub"
+  "documentation": "https://github.com/MJP-76/KirkHillWindFarm",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/MJP-76/KirkHillWindFarm/issues",
+  "requirements": [],
+  "version": "4.5.2"
 }
