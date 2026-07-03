@@ -47,9 +47,10 @@ Or use my [Octopus Energy referral link](https://share.octopus.energy/iron-moose
 - Optional automatic dashboard creation during setup
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
-- Dashboard now follows the live entity IDs from your installed config entry
-- Dashboard generation cards display values dynamically as kWh or MWh and round to 2 decimal places
-- Dashboard YAML file is still included for manual import/customization
+- Dashboard follows the live entity IDs from your installed config entry
+- Generation cards display values dynamically as kWh or MWh and round to 2 decimal places
+- Dashboard YAML file included for manual import/customization
+- Interactive turbine map with scroll/pinch zoom, drag-to-pan, and T1–T8 labels
 
 ## Installation
 1. Add this repository to HACS (Custom Repositories)
@@ -108,18 +109,25 @@ Per turbine device (`Turbine T1` ... `Turbine T8`):
 When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk-hill-wind-dashboard`) in the sidebar.
 
 The generated dashboard includes:
-- owner and site overview sections
-- owner and site generation cards shown first in each overview section
-- all owner/site generation timeframe entities
-- live farm wind and turbine availability
-- a larger full-width animated turbine map on the **Turbines** tab
-- turbine-by-turbine status listed in the **Turbine status overview** card on the **Turbines** tab
-- automatic map zoom that fits all valid turbine coordinates and ignores coordinate outliers
-- turbine icons that spin in proportion to live output
-- full per-turbine owner/site power, capacity, wind, state, and active status
-- generation display cards that switch between **kWh** and **MWh** automatically and show **2 decimal places**
+- Owner and site overview sections
+- Owner and site generation cards shown first in each overview section
+- All owner/site generation timeframe entities
+- Live farm wind and turbine availability
+- A dedicated **Turbines** tab containing:
+  - **Turbine status overview** card — active turbines, inactive turbines, and alarm state
+  - **Interactive turbine map** — a full-width animated map card with:
+    - T1–T8 labels above each turbine marker
+    - Turbine icons that spin in proportion to live site capacity factor
+    - Active/inactive state shown by marker colour
+    - Fixed zoom level (zoom 15) centred on the farm
+    - **Scroll wheel** to zoom in/out centred on the cursor
+    - **Drag** to pan around the map
+    - **Pinch** to zoom on touch devices
+    - **Double-click / double-tap** to reset to the default view
+  - Per-turbine owner/site power, capacity, wind, state, and active status cards
+- Generation display cards that switch between **kWh** and **MWh** automatically and show **2 decimal places**
 
-The generated dashboard now uses the **live entity registry** for the current config entry, so it follows your real entity IDs instead of relying on hardcoded names.
+The generated dashboard uses the **live entity registry** for the current config entry, so it follows your real entity IDs instead of relying on hardcoded names.
 
 The animated map card is bundled by the integration and loaded automatically with the dashboard. After upgrading, reload the integration or restart Home Assistant so the new frontend resource is picked up.
 
