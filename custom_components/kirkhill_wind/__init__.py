@@ -360,23 +360,28 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                 "icon": "mdi:wind-turbine",
                 "cards": [
                     {
-                        "type": "entities",
-                        "title": "Turbine status overview",
-                        "show_header_toggle": False,
-                        "entities": [
-                            {"entity": farm("farm_active_turbines"), "name": "Active turbines"},
+                        "type": "vertical-stack",
+                        "cards": [
                             {
-                                "entity": farm("farm_inactive_turbines"),
-                                "name": "Inactive turbines",
+                                "type": "entities",
+                                "title": "Turbine status overview",
+                                "show_header_toggle": False,
+                                "entities": [
+                                    {"entity": farm("farm_active_turbines"), "name": "Active turbines"},
+                                    {
+                                        "entity": farm("farm_inactive_turbines"),
+                                        "name": "Inactive turbines",
+                                    },
+                                    {"entity": farm("farm_alarm"), "name": "Alarm"},
+                                ],
                             },
-                            {"entity": farm("farm_alarm"), "name": "Alarm"},
+                            {
+                                "type": "custom:kirkhill-wind-turbine-map",
+                                "title": "Turbine map",
+                                "zoom": 15,
+                                "turbines": turbine_map_entities,
+                            },
                         ],
-                    },
-                    {
-                        "type": "custom:kirkhill-wind-turbine-map",
-                        "title": "Turbine map",
-                        "zoom": 15,
-                        "turbines": turbine_map_entities,
                     },
                     {
                         "type": "grid",
