@@ -129,7 +129,7 @@ The generated dashboard includes:
 
 The generated dashboard uses the **live entity registry** for the current config entry, so it follows your real entity IDs instead of relying on hardcoded names.
 
-The animated map card is bundled by the integration and loaded automatically with the dashboard. After upgrading, reload the integration or restart Home Assistant so the new frontend resource is picked up.
+The animated map card is bundled by the integration and loaded automatically with the dashboard. From **v4.5.2**, the dashboard and frontend card are reloaded automatically whenever the integration starts or is reloaded — no manual page refresh or HA restart required.
 
 For manual import or customization, a dashboard YAML is also provided at [`dashboards/kirkhill_wind_scada.yaml`](dashboards/kirkhill_wind_scada.yaml).
 
@@ -137,14 +137,22 @@ For manual import or customization, a dashboard YAML is also provided at [`dashb
 
 All release versions are tracked from a single source-of-truth file: [`VERSION`](VERSION).
 
+**Branch strategy:**
+- `main` — stable releases
+- `dev` — pre-releases / in-progress work; merged to `main` when stable
+
 When preparing a release:
-1. Update `VERSION` (use `X.Y.Z`, for example `4.3.1`).
+1. Update `VERSION` (use `X.Y.Z`, for example `4.5.2`).
 2. Run `python scripts/version_sync.py sync` to update:
    - `custom_components/kirkhill_wind/manifest.json`
    - `pyproject.toml`
 3. Validate with `python scripts/version_sync.py check`.
-4. Commit and push.
-5. Create tag + GitHub release from the same version with `python scripts/version_sync.py release`.
+4. Commit and push to the appropriate branch (`dev` for pre-release, `main` for stable).
+5. Tag and create a GitHub release:
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   gh release create vX.Y.Z --title vX.Y.Z --generate-notes [--prerelease] --target <branch>
+   ```
 
 Release tags are generated as `vX.Y.Z` directly from `VERSION`.
 
