@@ -19,7 +19,7 @@ It pulls current data for both OpenAPI scopes:
 - `site` (whole-site values)
 
 
-<br>If you find this integration useful, you can support my work here:
+<br>If you find this integration useful, or want to support further development you can support my work here:
 
 <a href="https://www.buymeacoffee.com/mjp76" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 
@@ -138,5 +138,3 @@ MIT
 [github-badge]: https://img.shields.io/badge/GitHub-Repository-181717?style=flat-square&logo=github
 [copilot]: https://github.com/features/copilot
 [copilot-badge]: https://img.shields.io/badge/GitHub%20Copilot-Built%20with-000000?style=flat-square&logo=githubcopilot
-[ci]: https://github.com/njp970/ha_kirkhill/actions/workflows/ci.yml
-[ci-badge]: https://github.com/njp970/ha_kirkhill/actions/workflows/ci.yml/badge.svg
