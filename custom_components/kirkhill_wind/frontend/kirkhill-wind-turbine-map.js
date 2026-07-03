@@ -153,8 +153,8 @@ class KirkHillWindTurbineMap extends HTMLElement {
       return { zoom, originX: cx - W / 2, originY: cy - H / 2 };
     }
 
-    // Auto zoom: search from 17 down to 8 — sensible range for a wind farm
-    for (let zoom = 17; zoom >= 8; zoom--) {
+    // Auto zoom: search from 17 down to 12 — sensible range for a wind farm
+    for (let zoom = 17; zoom >= 12; zoom--) {
       const xs = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).x);
       const ys = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).y);
       const spanX = Math.max(...xs) - Math.min(...xs);
@@ -166,8 +166,8 @@ class KirkHillWindTurbineMap extends HTMLElement {
       }
     }
 
-    // Fallback: zoom 8, centred on turbines
-    const zoom = 8;
+    // Fallback: zoom 12, centred on turbines
+    const zoom = 12;
     const xs = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).x);
     const ys = turbines.map((t) => this._project(t.latitude, t.longitude, zoom).y);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2;

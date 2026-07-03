@@ -383,7 +383,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                     {
                         "type": "custom:kirkhill-wind-turbine-map",
                         "title": "Turbine map",
-                        "height": 560,
+                        "zoom": 15,
                         "turbines": turbine_map_entities,
                     },
                     {

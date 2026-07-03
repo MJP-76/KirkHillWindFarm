@@ -109,7 +109,7 @@ views:
             name: T8
       - type: custom:kirkhill-wind-turbine-map
         title: Turbine map
-        height: 560
+        zoom: 15
         turbines:
           - name: T1
             state_entity: sensor.turbine_t1_state
