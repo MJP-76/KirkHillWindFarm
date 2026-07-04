@@ -188,6 +188,7 @@ All release versions are tracked from a single source-of-truth file: <a href="VE
 **Branch strategy:**
 - `main` — stable releases
 - Pre-releases and stable releases are both published from `main`
+- Release cadence can include both in sequence: a stable **Latest** tag, then a dev **Pre-release** tag
 
 When preparing a release:
 1. Update `VERSION` (use `X.Y.Z`, for example `4.5.2`).
