@@ -106,6 +106,10 @@ class KirkHillWindTurbineMap extends HTMLElement {
               </g>
             </svg>
             <div class="legend">
+              <span class="status">
+                <span class="dot running"></span>Running
+                <span class="dot stopped"></span>Stopped
+              </span>
               <span>Scroll/pinch to zoom · Drag to pan · Double-click to reset</span>
               <span>&copy; OpenStreetMap contributors</span>
             </div>
@@ -258,10 +262,14 @@ class KirkHillWindTurbineMap extends HTMLElement {
       const power = this._number(this._hass?.states?.[config.power_entity]?.state);
       const capacity = this._number(this._hass?.states?.[config.capacity_entity]?.state);
       const active = this._hass?.states?.[config.active_entity]?.state === "on";
+      const status = state?.attributes?.status;
+      const statusStartedAt = state?.attributes?.status_started_at;
 
       return {
         name: config.name || "Turbine",
         stateText: state?.state || "Unavailable",
+        status: status || null,
+        statusStartedAt: statusStartedAt || null,
         latitude: this._number(state?.attributes?.latitude),
         longitude: this._number(state?.attributes?.longitude),
         power,
@@ -355,6 +363,9 @@ class KirkHillWindTurbineMap extends HTMLElement {
       : Number.isFinite(turbine.power)
         ? `${turbine.power.toFixed(2)} kW`
         : turbine.stateText;
+    const statusText = turbine.active ? "Running" : "Stopped";
+    const statusAt = turbine.statusStartedAt ? ` at ${this._formatShortDateTime(turbine.statusStartedAt)}` : "";
+    const titleText = `${turbine.name}: ${statusText} · ${detail}${statusAt}`;
     const animStyle = duration ? `animation-duration:${duration.toFixed(2)}s;` : "";
     const activeClass = turbine.active ? "is-active" : "is-inactive";
     const spinClass = duration ? "is-spinning" : "";
@@ -362,6 +373,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
     const label = this._escape(turbine.name);
     return `
       <g class="marker ${activeClass}" transform="translate(${left},${top})">
+        <title>${this._escape(titleText)}</title>
         <circle class="marker-disc" r="22" />
         <g class="rotor ${spinClass}" style="${animStyle}">
           <line x1="0" y1="0" x2="0" y2="16" class="tower"></line>
@@ -377,6 +389,17 @@ class KirkHillWindTurbineMap extends HTMLElement {
         <text class="turbine-detail" y="36">${this._escape(detail)}</text>
       </g>
     `;
+  }
+
+  _formatShortDateTime(value) {
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return value;
+    return dt.toLocaleString(undefined, {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   _spinDuration(turbine) {
@@ -476,6 +499,20 @@ class KirkHillWindTurbineMap extends HTMLElement {
         font-size: 12px;
         color: var(--secondary-text-color);
       }
+
+      .legend .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .legend .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .legend .dot.running { background: #22c55e; }
+      .legend .dot.stopped { background: #94a3b8; }
 
       .empty { padding: 24px 16px; color: var(--secondary-text-color); }
 

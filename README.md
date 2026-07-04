@@ -163,6 +163,7 @@ The generated dashboard includes:
     - T1–T8 labels above each turbine marker
     - Turbine icons that spin in proportion to live site capacity factor
     - Active/inactive state shown by marker colour
+    - Running/stopped legend and per-turbine hover title (state + current detail + status time when available)
     - Fixed zoom level (zoom 15) centred on the farm
     - **Scroll wheel** to zoom in/out centred on the cursor
     - **Drag** to pan around the map
