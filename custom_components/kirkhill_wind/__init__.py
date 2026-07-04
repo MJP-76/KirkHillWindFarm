@@ -171,13 +171,17 @@ def _entity_ids_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, 
 
 
 def _generation_markdown_line(label: str, entity_id: str) -> str:
-    """Return a markdown line that formats generation as kWh or MWh."""
+    """Return a markdown line that formats generation with scaled energy units."""
     return (
         f"- **{label}:** "
         f"{{% set v = state_attr('{entity_id}', 'raw_generation_kwh') %}}"
         "{% if v is not none %}"
         "{% set n = v | float(0) %}"
-        "{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
+        "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
+        "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
+        "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
+        "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
+        "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
         "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
         "{% else %}—{% endif %}"
     )
@@ -194,7 +198,11 @@ def _owner_generation_markdown_line(
         f"{{% set v = state_attr('{generation_entity_id}', 'raw_generation_kwh') %}}"
         "{% if v is not none %}"
         "{% set n = v | float(0) %}"
-        "{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
+        "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
+        "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
+        "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
+        "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
+        "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
         "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
         "{% else %}—{% endif %}"
     )

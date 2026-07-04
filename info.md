@@ -6,7 +6,7 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 
 ## Project notes
 
-Owner/site generation kWh values are **live dynamic API values**. Owner/site financial earnings shown in the dashboard are **projected values** and **not real-time dynamic earnings**.
+Owner/site generation kWh values are **live dynamic API values**. Owner/site financial earnings shown in the dashboard are **projected values** and **not real-time dynamic earnings**. All-time projected value now uses the API all-time timeframe start date when available.
 Kirk Hill API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
 Dashboard layout and labels are being aligned to the live Kirk Hill dashboard UX from exported snapshots, while preserving Home Assistant-native entity behavior.
 
@@ -28,6 +28,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 
 - **Farm sensors** — live power, capacity factor, wind speed, active/inactive turbine count, and alarm state
 - **Generation sensors** — yesterday, today, week, month, year-to-date, year, and all-time totals for both your owner share and the whole site
+  - Dashboard display auto-scales generation units from kWh up to EWh for large values
 - **Owner + site projected value sensors** — estimated GBP value for each timeframe from configured annual projections (non-dynamic)
 - **Projected finance inputs** — configurable annual owner/site projected earnings values used by projected finance sensors
 - **Published books finance inputs** — editable revenue/cost/distribution number entities for entering current figures from wind farm accounts

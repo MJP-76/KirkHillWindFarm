@@ -1,7 +1,7 @@
 """Sensor platform for the Kirk Hill Wind Farm integration."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -50,6 +50,22 @@ def _as_float(value) -> float | None:
         except ValueError:
             return None
     return None
+
+
+def _display_energy_from_kwh(value_kwh: float | None) -> tuple[str, float | None]:
+    if value_kwh is None:
+        return UnitOfEnergy.KILO_WATT_HOUR, None
+    if value_kwh >= 1_000_000_000_000_000:
+        return "EWh", round(value_kwh / 1_000_000_000_000_000, 2)
+    if value_kwh >= 1_000_000_000_000:
+        return "PWh", round(value_kwh / 1_000_000_000_000, 2)
+    if value_kwh >= 1_000_000_000:
+        return "TWh", round(value_kwh / 1_000_000_000, 2)
+    if value_kwh >= 1_000_000:
+        return "GWh", round(value_kwh / 1_000_000, 2)
+    if value_kwh >= 1_000:
+        return UnitOfEnergy.MEGA_WATT_HOUR, round(value_kwh / 1_000, 2)
+    return UnitOfEnergy.KILO_WATT_HOUR, round(value_kwh, 2)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -170,18 +186,12 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
         value_kwh = self._generation_kwh()
+        display_unit, display_value = _display_energy_from_kwh(value_kwh)
         attrs["timeframe"] = self._timeframe
         attrs["generation_source"] = "api_dynamic"
         attrs["raw_generation_kwh"] = value_kwh
-        if value_kwh is None:
-            attrs["display_unit"] = UnitOfEnergy.KILO_WATT_HOUR
-            attrs["display_value"] = None
-        elif value_kwh >= 1000:
-            attrs["display_unit"] = UnitOfEnergy.MEGA_WATT_HOUR
-            attrs["display_value"] = round(value_kwh / 1000, 2)
-        else:
-            attrs["display_unit"] = UnitOfEnergy.KILO_WATT_HOUR
-            attrs["display_value"] = round(value_kwh, 2)
+        attrs["display_unit"] = display_unit
+        attrs["display_value"] = display_value
         return attrs
 
 
@@ -208,6 +218,75 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
             default = DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP
         return float(self._entry.options.get(key, self._entry.data.get(key, default)))
 
+    @staticmethod
+    def _parse_api_date(value) -> date | None:
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return value
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, (int, float)):
+            try:
+                return datetime.utcfromtimestamp(float(value)).date()
+            except (OverflowError, OSError, ValueError):
+                return None
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return None
+            normalized = raw.replace("Z", "+00:00")
+            try:
+                return datetime.fromisoformat(normalized).date()
+            except ValueError:
+                try:
+                    return date.fromisoformat(raw)
+                except ValueError:
+                    return None
+        return None
+
+    def _alltime_start_date(self) -> date | None:
+        summary = (
+            self.coordinator.data.get("timeframe_summaries", {})
+            .get(self._scope, {})
+            .get("alltime", {})
+        )
+        if not isinstance(summary, dict):
+            return None
+
+        direct_keys = (
+            "period_start",
+            "range_start",
+            "start_date",
+            "start_at",
+            "from_date",
+            "from",
+            "start",
+            "since",
+        )
+        for key in direct_keys:
+            if key in summary:
+                parsed = self._parse_api_date(summary.get(key))
+                if parsed is not None:
+                    return parsed
+
+        nested_keys = ("period", "range", "timeframe", "window")
+        for container_key in nested_keys:
+            nested = summary.get(container_key)
+            if not isinstance(nested, dict):
+                continue
+            for key in ("start", "from", "start_date", "start_at"):
+                parsed = self._parse_api_date(nested.get(key))
+                if parsed is not None:
+                    return parsed
+
+        for key, value in summary.items():
+            lowered = str(key).lower()
+            if lowered == "from" or "start" in lowered:
+                parsed = self._parse_api_date(value)
+                if parsed is not None:
+                    return parsed
+
+        return None
+
     def _projection_factor(self) -> float:
         if self._timeframe in ("yesterday", "today"):
             return 1 / 365
@@ -220,7 +299,11 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         if self._timeframe == "year":
             return 1.0
         if self._timeframe == "alltime":
-            return 20.0
+            start_date = self._alltime_start_date()
+            if start_date is None:
+                return 20.0
+            elapsed_days = max((date.today() - start_date).days, 1)
+            return elapsed_days / 365
         return 0.0
 
     @property
@@ -234,6 +317,14 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         attrs["projection_basis"] = "projected_non_dynamic"
         attrs["projected_annual_gbp"] = self._annual_projected_gbp()
         attrs["projection_factor"] = self._projection_factor()
+        if self._timeframe == "alltime":
+            start_date = self._alltime_start_date()
+            attrs["alltime_start_date"] = (
+                start_date.isoformat() if start_date is not None else None
+            )
+            attrs["alltime_factor_source"] = (
+                "api_timeframe_start" if start_date is not None else "legacy_fixed_20y_fallback"
+            )
         return attrs
 
 

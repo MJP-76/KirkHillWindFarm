@@ -65,7 +65,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
 - Dashboard follows the live entity IDs from your installed config entry
-- Generation cards display values dynamically as kWh or MWh and round to 2 decimal places
+- Generation cards display values dynamically with scaled units (kWh, MWh, GWh, TWh, PWh, EWh) and round to 2 decimal places
 - Dashboard YAML file included for manual import/customization
 - Interactive turbine map with scroll/pinch zoom, drag-to-pan, and T1–T8 labels
 - Taller turbine map viewport for improved full-farm fit on the Turbines tab
@@ -117,6 +117,7 @@ Farm hub device:
 - Generation (alltime) [kWh] for owner and site
 - Generation source attribute marks these entities as `api_dynamic`
 - Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site is non-dynamic
+  - For **all-time projected value**, the projection window start date is derived from the API all-time timeframe when available
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Published books revenue [GBP] (editable number)
 - Published books operating costs [GBP] (editable number)
@@ -128,7 +129,7 @@ Farm hub device:
 - Inactive turbines
 - Alarm (binary sensor)
 
-Timeframe generation entities keep a stable raw **kWh** state for reliability in Home Assistant. The generated dashboard formats those values for display as **kWh** or **MWh** automatically and rounds them to **2 decimal places**. Financial values are separate **projected** figures and are not calculated from live generation.
+Timeframe generation entities keep a stable raw **kWh** state for reliability in Home Assistant. The generated dashboard formats those values for display with automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and rounds them to **2 decimal places**. Financial values are separate **projected** figures and are not calculated from live generation.
 
 Per turbine device (`Turbine T1` ... `Turbine T8`):
 - Power (owner) [kW]
@@ -147,7 +148,7 @@ The generated dashboard includes:
 - Owner and site overview sections
 - Dashboard range controls aligned with the Kirk Hill dashboard UX (`Today`, `Yesterday`, `7 days`, `30 days`, `year`, `All time`)
 - Owner and site generation cards shown first in each overview section
-- Owner generation cards show actual generation energy values (kWh/MWh) only
+- Owner generation cards show actual generation energy values with automatic unit scaling (kWh, MWh, GWh, TWh, PWh, EWh)
 - Dedicated **Owner projected earnings** section listing projected monetary sensors for all timeframes
 - Dedicated **Finances** tab with:
   - **Published books inputs** (editable revenue/cost/distribution figures)
@@ -169,7 +170,7 @@ The generated dashboard includes:
     - **Pinch** to zoom on touch devices
     - **Double-click / double-tap** to reset to the default view
   - Per-turbine owner/site power, capacity, wind, state, and active status cards
-- Generation display cards that switch between **kWh** and **MWh** automatically and show **2 decimal places**
+- Generation display cards that switch automatically between **kWh**, **MWh**, **GWh**, **TWh**, **PWh**, and **EWh**, showing **2 decimal places**
 
 The generated dashboard uses the **live entity registry** for the current config entry, so it follows your real entity IDs instead of relying on hardcoded names.
 Dashboard structure and labels are periodically aligned against exported snapshots of `dashboard.kirkhillcoop.org` where possible, while maintaining Home Assistant entity/state model compatibility.
