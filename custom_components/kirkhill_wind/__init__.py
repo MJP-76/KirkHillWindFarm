@@ -183,9 +183,46 @@ def _generation_markdown_line(label: str, entity_id: str) -> str:
     )
 
 
+def _owner_generation_markdown_line(
+    label: str,
+    generation_entity_id: str,
+    value_entity_id: str,
+) -> str:
+    """Return a markdown line with generation and owner monetary value."""
+    return (
+        f"- **{label}:** "
+        f"{{% set v = state_attr('{generation_entity_id}', 'raw_generation_kwh') %}}"
+        "{% if v is not none %}"
+        "{% set n = v | float(0) %}"
+        "{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
+        "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
+        "{% else %}—{% endif %}"
+        f"{{% set money = states('{value_entity_id}') %}}"
+        "{% if money not in ['unknown', 'unavailable', 'none', ''] %}"
+        " (£{{ '%.2f' | format(money | float(0)) }})"
+        "{% endif %}"
+    )
+
+
 def _generation_markdown_card(title: str, entries: list[tuple[str, str]]) -> dict:
     """Return a markdown card for formatted generation display."""
     content = "\n".join(_generation_markdown_line(label, entity_id) for label, entity_id in entries)
+    return {
+        "type": "markdown",
+        "title": title,
+        "content": content,
+    }
+
+
+def _owner_generation_markdown_card(
+    title: str,
+    entries: list[tuple[str, str, str]],
+) -> dict:
+    """Return a markdown card for owner generation and value display."""
+    content = "\n".join(
+        _owner_generation_markdown_line(label, generation_entity_id, value_entity_id)
+        for label, generation_entity_id, value_entity_id in entries
+    )
     return {
         "type": "markdown",
         "title": title,
@@ -207,13 +244,41 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         return entity_ids[f"{entry.entry_id}_turbine_{turbine_id}_{unique_suffix}"]
 
     owner_generation_entities = [
-        ("Yesterday", farm_scoped("owner", "farm_generation_yesterday")),
-        ("Today", farm_scoped("owner", "farm_generation_today")),
-        ("Week", farm_scoped("owner", "farm_generation_week")),
-        ("Month", farm_scoped("owner", "farm_generation_month")),
-        ("YTD", farm_scoped("owner", "farm_generation_ytd")),
-        ("Year", farm_scoped("owner", "farm_generation_year")),
-        ("All time", farm_scoped("owner", "farm_generation_alltime")),
+        (
+            "Yesterday",
+            farm_scoped("owner", "farm_generation_yesterday"),
+            farm_scoped("owner", "farm_generation_value_yesterday"),
+        ),
+        (
+            "Today",
+            farm_scoped("owner", "farm_generation_today"),
+            farm_scoped("owner", "farm_generation_value_today"),
+        ),
+        (
+            "Week",
+            farm_scoped("owner", "farm_generation_week"),
+            farm_scoped("owner", "farm_generation_value_week"),
+        ),
+        (
+            "Month",
+            farm_scoped("owner", "farm_generation_month"),
+            farm_scoped("owner", "farm_generation_value_month"),
+        ),
+        (
+            "YTD",
+            farm_scoped("owner", "farm_generation_ytd"),
+            farm_scoped("owner", "farm_generation_value_ytd"),
+        ),
+        (
+            "Year",
+            farm_scoped("owner", "farm_generation_year"),
+            farm_scoped("owner", "farm_generation_value_year"),
+        ),
+        (
+            "All time",
+            farm_scoped("owner", "farm_generation_alltime"),
+            farm_scoped("owner", "farm_generation_value_alltime"),
+        ),
     ]
     site_generation_entities = [
         ("Yesterday", farm_scoped("site", "farm_generation_yesterday")),
@@ -290,7 +355,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading": "Your share",
                                 "heading_style": "title",
                             },
-                            _generation_markdown_card(
+                            _owner_generation_markdown_card(
                                 "Owner generation",
                                 owner_generation_entities,
                             ),

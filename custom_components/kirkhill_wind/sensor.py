@@ -8,7 +8,14 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpeed
 
-from .const import SCOPE_OWNER, SCOPE_SITE, SCOPES, TIMEFRAME_ORDER
+from .const import (
+    CONF_OWNER_VALUE_RATE,
+    DEFAULT_OWNER_VALUE_RATE,
+    SCOPE_OWNER,
+    SCOPE_SITE,
+    SCOPES,
+    TIMEFRAME_ORDER,
+)
 from .entity import (
     KirkHillEntity,
     KirkHillScopedEntity,
@@ -52,6 +59,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
         *[
             FarmGenerationByTimeframeSensor(coordinator, entry, scope, timeframe)
             for scope in SCOPES
+            for timeframe in TIMEFRAME_ORDER
+        ],
+        *[
+            OwnerGenerationValueByTimeframeSensor(coordinator, entry, timeframe)
             for timeframe in TIMEFRAME_ORDER
         ],
         FarmWindSpeedSensor(coordinator, entry),
@@ -156,6 +167,54 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         else:
             attrs["display_unit"] = UnitOfEnergy.KILO_WATT_HOUR
             attrs["display_value"] = round(value_kwh, 2)
+        return attrs
+
+
+class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "GBP"
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:cash"
+
+    def __init__(self, coordinator, entry, timeframe: str):
+        super().__init__(coordinator, entry, SCOPE_OWNER, f"farm_generation_value_{timeframe}")
+        self._timeframe = timeframe
+        label = TIMEFRAME_LABELS.get(timeframe, f"Generation ({timeframe})")
+        self._attr_name = f"{label} value (Owner)"
+
+    def _generation_kwh(self) -> float | None:
+        summary = (
+            self.coordinator.data.get("timeframe_summaries", {})
+            .get(SCOPE_OWNER, {})
+            .get(self._timeframe, {})
+        )
+        value = _as_float(summary.get("total_generation_kwh"))
+        if value is not None:
+            return value
+        return _as_float(summary.get("total_kwh"))
+
+    def _unit_rate(self) -> float:
+        return float(
+            self._entry.options.get(
+                CONF_OWNER_VALUE_RATE,
+                self._entry.data.get(CONF_OWNER_VALUE_RATE, DEFAULT_OWNER_VALUE_RATE),
+            )
+        )
+
+    @property
+    def native_value(self):
+        generation_kwh = self._generation_kwh()
+        if generation_kwh is None:
+            return None
+        return round(generation_kwh * self._unit_rate(), 2)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs = super().extra_state_attributes
+        attrs["timeframe"] = self._timeframe
+        attrs["unit_rate_per_kwh"] = self._unit_rate()
+        attrs["raw_generation_kwh"] = self._generation_kwh()
         return attrs
 
 

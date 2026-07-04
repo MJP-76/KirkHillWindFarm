@@ -32,6 +32,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
+  - owner generation value by timeframe (GBP), based on a configurable rate per kWh
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -46,6 +47,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Config flow with API key validation
 - Masked API key entry in the setup form
 - Optional automatic dashboard creation during setup
+- Configurable owner value rate (GBP per kWh)
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
 - Dashboard follows the live entity IDs from your installed config entry
@@ -68,12 +70,14 @@ During setup, the integration asks for:
 
 - **API key** — entered as a masked password field in Home Assistant
 - **Create dashboard automatically** — choose whether the integration should create/update its Lovelace dashboard tab
+- **Owner value rate (GBP per kWh)** — used to calculate monetary value for each owner generation timeframe
 - **Site name** — used as the integration title in Home Assistant
 
 After setup, the **Configure** options let you change:
 
 - **Polling interval**
 - **Create dashboard automatically**
+- **Owner value rate (GBP per kWh)**
 
 ## Sensors
 
@@ -89,6 +93,7 @@ Farm hub device:
 - Generation (ytd) [kWh] for owner and site
 - Generation (year) [kWh] for owner and site
 - Generation (alltime) [kWh] for owner and site
+- Generation value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner
 - Wind speed [m/s]
 - Active turbines
 - Inactive turbines
@@ -112,6 +117,7 @@ When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk
 The generated dashboard includes:
 - Owner and site overview sections
 - Owner and site generation cards shown first in each overview section
+- Owner generation cards show both energy and estimated monetary value per timeframe
 - All owner/site generation timeframe entities
 - Live farm wind and turbine availability
 - A dedicated **Turbines** tab containing:
