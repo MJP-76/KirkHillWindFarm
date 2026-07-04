@@ -1,6 +1,8 @@
 """Sensor platform for the Kirk Hill Wind Farm integration."""
 from __future__ import annotations
 
+from datetime import date
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -9,10 +11,10 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpeed
 
 from .const import (
-    CONF_OWNER_SHARE_PERCENT,
-    CONF_OWNER_VALUE_RATE,
-    DEFAULT_OWNER_SHARE_PERCENT,
-    DEFAULT_OWNER_VALUE_RATE,
+    CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+    CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+    DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+    DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     SCOPE_OWNER,
     SCOPE_SITE,
     SCOPES,
@@ -184,77 +186,44 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         super().__init__(coordinator, entry, scope, f"farm_generation_value_{timeframe}")
         self._timeframe = timeframe
         scope_label = scope.capitalize()
-        label = TIMEFRAME_LABELS.get(timeframe, f"Generation ({timeframe})")
-        self._attr_name = f"{label} value ({scope_label})"
+        label = TIMEFRAME_LABELS.get(timeframe, f"Projected ({timeframe})")
+        self._attr_name = f"{label} projected value ({scope_label})"
 
-    def _owner_generation_kwh(self) -> float | None:
-        summary = (
-            self.coordinator.data.get("timeframe_summaries", {})
-            .get(SCOPE_OWNER, {})
-            .get(self._timeframe, {})
-        )
-        value = _as_float(summary.get("total_generation_kwh"))
-        if value is not None:
-            return value
-        return _as_float(summary.get("total_kwh"))
-
-    def _unit_rate(self) -> float:
-        return float(
-            self._entry.options.get(
-                CONF_OWNER_VALUE_RATE,
-                self._entry.data.get(CONF_OWNER_VALUE_RATE, DEFAULT_OWNER_VALUE_RATE),
-            )
-        )
-
-    def _share_percent(self) -> float:
-        return float(
-            self._entry.options.get(
-                CONF_OWNER_SHARE_PERCENT,
-                self._entry.data.get(CONF_OWNER_SHARE_PERCENT, DEFAULT_OWNER_SHARE_PERCENT),
-            )
-        )
-
-    def _site_generation_kwh(self) -> float | None:
-        summary = (
-            self.coordinator.data.get("timeframe_summaries", {})
-            .get(SCOPE_SITE, {})
-            .get(self._timeframe, {})
-        )
-        value = _as_float(summary.get("total_generation_kwh"))
-        if value is not None:
-            return value
-        return _as_float(summary.get("total_kwh"))
-
-    def _effective_owner_generation_kwh(self) -> tuple[float | None, str]:
-        share_percent = self._share_percent()
-        site_generation_kwh = self._site_generation_kwh()
-        if share_percent > 0 and site_generation_kwh is not None:
-            return site_generation_kwh * (share_percent / 100), "site_share"
-        return self._owner_generation_kwh(), "owner_scope"
-
-    def _effective_generation_kwh(self) -> tuple[float | None, str]:
+    def _annual_projected_gbp(self) -> float:
         if self._scope == SCOPE_OWNER:
-            return self._effective_owner_generation_kwh()
-        return self._site_generation_kwh(), "site_scope"
+            key = CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP
+            default = DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP
+        else:
+            key = CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP
+            default = DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP
+        return float(self._entry.options.get(key, self._entry.data.get(key, default)))
+
+    def _projection_factor(self) -> float:
+        if self._timeframe in ("yesterday", "today"):
+            return 1 / 365
+        if self._timeframe == "week":
+            return 7 / 365
+        if self._timeframe == "month":
+            return 30 / 365
+        if self._timeframe == "ytd":
+            return date.today().timetuple().tm_yday / 365
+        if self._timeframe == "year":
+            return 1.0
+        if self._timeframe == "alltime":
+            return 20.0
+        return 0.0
 
     @property
     def native_value(self):
-        generation_kwh, _ = self._effective_generation_kwh()
-        if generation_kwh is None:
-            return 0.0
-        return round(generation_kwh * self._unit_rate(), 2)
+        return round(self._annual_projected_gbp() * self._projection_factor(), 2)
 
     @property
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
-        generation_kwh, generation_source = self._effective_generation_kwh()
         attrs["timeframe"] = self._timeframe
-        attrs["unit_rate_per_kwh"] = self._unit_rate()
-        attrs["owner_share_percent"] = self._share_percent() if self._scope == SCOPE_OWNER else None
-        attrs["site_generation_kwh"] = self._site_generation_kwh()
-        attrs["raw_generation_kwh"] = generation_kwh
-        attrs["generation_source"] = generation_source
-        attrs["generation_available"] = generation_kwh is not None
+        attrs["projection_basis"] = "projected_non_dynamic"
+        attrs["projected_annual_gbp"] = self._annual_projected_gbp()
+        attrs["projection_factor"] = self._projection_factor()
         return attrs
 
 

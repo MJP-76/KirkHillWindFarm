@@ -199,7 +199,7 @@ def _owner_generation_markdown_line(
         "{% else %}—{% endif %}"
         f"{{% set money = states('{value_entity_id}') %}}"
         "{% if money not in ['unknown', 'unavailable', 'none', ''] %}"
-        " (£{{ '%.2f' | format(money | float(0)) }})"
+        " (Projected £{{ '%.2f' | format(money | float(0)) }})"
         "{% endif %}"
     )
 
@@ -386,7 +386,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             ),
                             {
                                 "type": "entities",
-                                "title": "Owner earnings",
+                                "title": "Owner projected earnings",
                                 "show_header_toggle": False,
                                 "entities": owner_value_entities,
                             },
@@ -526,7 +526,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             },
                             {
                                 "type": "entities",
-                                "title": "Owner earnings by timeframe",
+                                "title": "Owner projected earnings by timeframe",
                                 "show_header_toggle": False,
                                 "entities": owner_value_entities,
                             },
@@ -542,7 +542,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             },
                             {
                                 "type": "entities",
-                                "title": "Site value by timeframe",
+                                "title": "Site projected value by timeframe",
                                 "show_header_toggle": False,
                                 "entities": site_value_entities,
                             },

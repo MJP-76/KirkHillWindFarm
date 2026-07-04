@@ -14,6 +14,8 @@ A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
 > **Not affiliated with Kirk Hill Co-op.** This is a community integration that
 > reads the dashboard's public API endpoints with your personal API key.
+>
+> **Financial earnings figures are projected, not real-time dynamic values.**
 
 It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
@@ -32,7 +34,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
-  - owner and site value by timeframe (GBP), calculated from generated energy and your configured value rate (owner also supports owner share %)
+  - owner and site **projected** value by timeframe (GBP), based on configured annual projections (non-dynamic)
 - Manual published-books finance inputs (editable number entities):
   - revenue
   - operating costs
@@ -77,16 +79,20 @@ During setup, the integration asks for:
 
 - **API key** — entered as a masked password field in Home Assistant
 - **Create dashboard automatically** — choose whether the integration should create/update its Lovelace dashboard tab
-- **Owner value rate (GBP per kWh)** — used to calculate monetary value for each owner generation timeframe
-- **Owner share (%)** — optional; if set above 0, owner earnings are calculated from site generation × owner share for each timeframe
+- **Owner projected annual earnings (GBP)** — annual projected owner earnings used to derive timeframe values (non-dynamic)
+- **Site projected annual earnings (GBP)** — annual projected site value used to derive timeframe values (non-dynamic)
+- **Owner value rate (GBP per kWh)** — legacy setting retained for compatibility
+- **Owner share (%)** — legacy setting retained for compatibility
 - **Site name** — used as the integration title in Home Assistant
 
 After setup, the **Configure** options let you change:
 
 - **Polling interval**
 - **Create dashboard automatically**
-- **Owner value rate (GBP per kWh)**
-- **Owner share (%)**
+- **Owner projected annual earnings (GBP)**
+- **Site projected annual earnings (GBP)**
+- **Owner value rate (GBP per kWh)** (legacy compatibility)
+- **Owner share (%)** (legacy compatibility)
 
 ## Sensors
 
@@ -102,7 +108,7 @@ Farm hub device:
 - Generation (ytd) [kWh] for owner and site
 - Generation (year) [kWh] for owner and site
 - Generation (alltime) [kWh] for owner and site
-- Generation value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site
+- Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site (non-dynamic)
 - Published books revenue [GBP] (editable number)
 - Published books operating costs [GBP] (editable number)
 - Published books finance costs [GBP] (editable number)
@@ -113,7 +119,7 @@ Farm hub device:
 - Inactive turbines
 - Alarm (binary sensor)
 
-Timeframe generation entities keep a stable raw **kWh** state for reliability in Home Assistant. The generated dashboard formats those values for display as **kWh** or **MWh** automatically and rounds them to **2 decimal places**.
+Timeframe generation entities keep a stable raw **kWh** state for reliability in Home Assistant. The generated dashboard formats those values for display as **kWh** or **MWh** automatically and rounds them to **2 decimal places**. Financial values are separate **projected** figures and are not calculated from live generation.
 
 Per turbine device (`Turbine T1` ... `Turbine T8`):
 - Power (owner) [kW]
@@ -135,8 +141,8 @@ The generated dashboard includes:
 - Dedicated **Owner earnings** section listing monetary sensors for all timeframes
 - Dedicated **Finances** tab with:
   - **Published books inputs** (editable revenue/cost/distribution figures)
-  - **Owner finances** timeframe value sensors
-  - **Site finances** timeframe value sensors
+  - **Owner finances** projected timeframe value sensors
+  - **Site finances** projected timeframe value sensors
 - All owner/site generation timeframe entities
 - Live farm wind and turbine availability
 - A dedicated **Turbines** tab containing:
