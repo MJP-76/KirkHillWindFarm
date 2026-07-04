@@ -310,10 +310,19 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ("Year", farm_scoped("site", "farm_generation_year")),
         ("All time", farm_scoped("site", "farm_generation_alltime")),
     ]
-    windy_forecast_entities = [
-        {"entity": farm("windy_next_hour_wind_speed_mps"), "name": "Windy next hour"},
-        {"entity": farm("windy_next_3h_avg_wind_speed_mps"), "name": "Windy next 3h avg"},
-        {"entity": farm("windy_next_24h_avg_wind_speed_mps"), "name": "Windy next 24h avg"},
+    forecast_entities = [
+        {
+            "entity": farm("open_meteo_next_hour_wind_speed_mps"),
+            "name": "Forecast next hour (Open-Meteo)",
+        },
+        {
+            "entity": farm("open_meteo_next_3h_avg_wind_speed_mps"),
+            "name": "Forecast next 3h avg (Open-Meteo)",
+        },
+        {
+            "entity": farm("open_meteo_next_24h_avg_wind_speed_mps"),
+            "name": "Forecast next 24h avg (Open-Meteo)",
+        },
     ]
     turbine_map_entities = [
         {
@@ -442,16 +451,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                         "entity": farm_scoped("site", "farm_capacity_factor"),
                                         "name": "Site capacity factor",
                                     },
-                                    {"entity": farm("farm_wind_speed"), "name": "Wind speed"},
-                                ],
-                            },
-                            {
-                                "type": "entities",
-                                "title": "Wind forecast (Windy, forecast only)",
-                                "show_header_toggle": False,
-                                "entities": [
-                                    {"entity": farm("farm_wind_speed"), "name": "Actual wind speed (Kirk Hill API)"},
-                                    *windy_forecast_entities,
+                                    {
+                                        "entity": farm("farm_wind_speed"),
+                                        "name": "Actual wind speed (Kirk Hill API)",
+                                    },
+                                    *forecast_entities,
                                 ],
                             },
                             {

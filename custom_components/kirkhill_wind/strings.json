@@ -3,16 +3,13 @@
     "step": {
       "user": {
         "title": "Connect to Kirk Hill Wind Farm",
-        "description": "Enter your Kirk Hill dashboard API key. The site name is used as the integration title in Home Assistant.",
+        "description": "Enter your Kirk Hill dashboard API key. Forecast entities use Open-Meteo automatically (no forecast API key required).",
         "data": {
           "api_key": "API key",
           "create_dashboard": "Create dashboard automatically",
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
           "owner_share_percent": "Owner share (%)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
-          "windy_api_key": "Windy API key (forecast only, optional)",
-          "windy_latitude": "Windy forecast latitude",
-          "windy_longitude": "Windy forecast longitude",
           "owner_value_rate": "Owner value rate (GBP per kWh, legacy)",
           "site_name": "Site name"
         }
@@ -31,15 +28,12 @@
     "step": {
       "init": {
         "title": "Kirk Hill Wind Farm options",
-        "description": "Adjust how often Home Assistant polls the API.",
+        "description": "Adjust polling and finance options. Forecast entities use Open-Meteo automatically (no forecast API key required).",
         "data": {
           "create_dashboard": "Create dashboard automatically",
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
           "owner_share_percent": "Owner share (%)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
-          "windy_api_key": "Windy API key (forecast only, optional)",
-          "windy_latitude": "Windy forecast latitude",
-          "windy_longitude": "Windy forecast longitude",
           "owner_value_rate": "Owner value rate (GBP per kWh, legacy)",
           "scan_interval": "Poll interval (seconds)"
         }

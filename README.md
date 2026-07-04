@@ -60,7 +60,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Configurable owner projected annual earnings (GBP)
 - Configurable site projected annual earnings (GBP)
 - Legacy compatibility options: owner share (%) and owner value rate (GBP per kWh)
-- Optional Windy forecast integration (forecast only; not used as authoritative actual generation)
+- Open-Meteo forecast integration (forecast only; not used as authoritative actual generation)
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
 - Dashboard follows the live entity IDs from your installed config entry
@@ -87,8 +87,7 @@ During setup, the integration asks for:
 - **Site projected annual earnings (GBP)** — annual projected site value used to derive timeframe values (non-dynamic)
 - **Owner value rate (GBP per kWh)** — legacy setting retained for compatibility
 - **Owner share (%)** — legacy setting retained for compatibility
-- **Windy API key (forecast only, optional)** — enables Windy forecast sensors
-- **Windy forecast latitude / longitude** — forecast point coordinates
+- **Forecast source** — Open-Meteo is used automatically for forecast sensors using farm-location lookup (no forecast API key required)
 - **Site name** — used as the integration title in Home Assistant
 
 After setup, the **Configure** options let you change:
@@ -99,8 +98,6 @@ After setup, the **Configure** options let you change:
 - **Site projected annual earnings (GBP)**
 - **Owner value rate (GBP per kWh)** (legacy compatibility)
 - **Owner share (%)** (legacy compatibility)
-- **Windy API key (forecast only, optional)**
-- **Windy forecast latitude / longitude**
 
 ## Sensors
 
@@ -118,7 +115,7 @@ Farm hub device:
 - Generation (alltime) [kWh] for owner and site
 - Generation source attribute marks these entities as `api_dynamic`
 - Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site is non-dynamic
-- Windy forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
+- Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Published books revenue [GBP] (editable number)
 - Published books operating costs [GBP] (editable number)
 - Published books finance costs [GBP] (editable number)
@@ -154,7 +151,7 @@ The generated dashboard includes:
   - **Published books inputs** (editable revenue/cost/distribution figures)
   - **Owner finances** projected timeframe value sensors
   - **Site finances** projected timeframe value sensors
-- **Wind forecast (Windy, forecast only)** card in the site overview, shown alongside actual wind speed from Kirk Hill API
+- Open-Meteo forecast entities included directly in **Site metrics** alongside actual wind speed from Kirk Hill API
 - All owner/site generation timeframe entities
 - Live farm wind and turbine availability
 - A dedicated **Turbines** tab containing:

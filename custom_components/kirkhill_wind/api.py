@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-import math
+from datetime import datetime, timezone
 from typing import Any
 
 import aiohttp
@@ -93,91 +93,93 @@ class KirkHillApiClient:
         await self.get_current(session, SCOPE_OWNER)
 
 
-class WindyApiClient:
-    """Async HTTP client for Windy point-forecast data (forecasting only)."""
+class OpenMeteoApiClient:
+    """Async HTTP client for Open-Meteo wind forecast data (forecasting only)."""
 
-    def __init__(self, api_key: str) -> None:
-        self._api_key = api_key
-        self._base_url = "https://api.windy.com"
+    def __init__(self) -> None:
+        self._base_url = "https://api.open-meteo.com/v1/forecast"
 
     async def get_point_forecast(
         self,
         session: aiohttp.ClientSession,
         latitude: float,
         longitude: float,
-        model: str = "ecmwf",
     ) -> dict[str, Any]:
-        """POST /api/point-forecast/v2 and return parsed wind forecast summary."""
-        payload = {
-            "lat": latitude,
-            "lon": longitude,
-            "model": model,
-            "parameters": ["wind", "windGust"],
-            "levels": ["surface"],
-            "key": self._api_key,
+        """GET Open-Meteo forecast and return parsed wind forecast summary."""
+        params = {
+            "latitude": f"{latitude:.6f}",
+            "longitude": f"{longitude:.6f}",
+            "hourly": "wind_speed_10m",
+            "forecast_days": "2",
+            "timezone": "UTC",
+            "wind_speed_unit": "ms",
         }
         try:
-            async with session.post(
-                f"{self._base_url}/api/point-forecast/v2",
-                json=payload,
+            async with session.get(
+                self._base_url,
+                params=params,
                 timeout=TIMEOUT,
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                headers={"Accept": "application/json"},
             ) as resp:
-                if resp.status in {401, 403}:
-                    raise KirkHillAuthError("Invalid or unauthorized Windy API key")
                 resp.raise_for_status()
                 body = await resp.json()
-        except KirkHillAuthError:
-            raise
         except aiohttp.ClientError as exc:
             raise KirkHillConnectionError(str(exc)) from exc
         except asyncio.TimeoutError as exc:
-            raise KirkHillConnectionError("Windy request timed out") from exc
+            raise KirkHillConnectionError("Open-Meteo request timed out") from exc
 
-        return self._summarize_forecast(body, model=model)
+        return self._summarize_forecast(body)
 
-    def _summarize_forecast(self, body: dict[str, Any], model: str) -> dict[str, Any]:
-        """Build stable summary metrics from Windy API payload."""
-        timestamps = body.get("ts")
-        if not isinstance(timestamps, list) or not timestamps:
+    def _summarize_forecast(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Build stable summary metrics from Open-Meteo payload."""
+        hourly = body.get("hourly")
+        if not isinstance(hourly, dict):
             return {}
 
-        u_series = self._extract_series(body, "wind_u")
-        v_series = self._extract_series(body, "wind_v")
-        if not u_series or not v_series:
+        timestamps = hourly.get("time")
+        speeds = hourly.get("wind_speed_10m")
+        if not isinstance(timestamps, list) or not isinstance(speeds, list):
             return {}
 
-        speeds: list[float] = []
-        for u, v in zip(u_series, v_series):
-            if isinstance(u, (int, float)) and isinstance(v, (int, float)):
-                speeds.append(math.sqrt((float(u) ** 2) + (float(v) ** 2)))
-            else:
-                speeds.append(float("nan"))
+        points: list[tuple[datetime, float]] = []
+        for time_raw, speed_raw in zip(timestamps, speeds):
+            point_time = self._parse_hourly_timestamp(time_raw)
+            if point_time is None or not isinstance(speed_raw, (int, float)):
+                continue
+            points.append((point_time, float(speed_raw)))
 
-        valid = [s for s in speeds if not math.isnan(s)]
-        if not valid:
+        if not points:
+            return {}
+
+        now_utc = datetime.now(timezone.utc)
+        future_speeds = [speed for point_time, speed in points if point_time > now_utc]
+        if not future_speeds:
+            future_speeds = [speed for _, speed in points]
+
+        if not future_speeds:
             return {}
 
         def _avg(first_n: int) -> float | None:
-            subset = [s for s in speeds[:first_n] if not math.isnan(s)]
+            subset = future_speeds[:first_n]
             if not subset:
                 return None
             return round(sum(subset) / len(subset), 2)
 
-        next_hour = speeds[0] if not math.isnan(speeds[0]) else None
         return {
-            "provider": "windy",
-            "model": model,
-            "forecast_points": len(valid),
-            "next_hour_wind_speed_mps": round(next_hour, 2) if isinstance(next_hour, float) else None,
+            "provider": "open_meteo",
+            "model": "open-meteo",
+            "forecast_points": len(future_speeds),
+            "next_hour_wind_speed_mps": round(future_speeds[0], 2),
             "next_3h_avg_wind_speed_mps": _avg(3),
             "next_24h_avg_wind_speed_mps": _avg(24),
         }
 
     @staticmethod
-    def _extract_series(body: dict[str, Any], prefix: str) -> list[Any] | None:
-        """Return first list value for keys matching prefix (e.g. wind_u-*)."""
-        for key, value in body.items():
-            if key.startswith(prefix) and isinstance(value, list):
-                return value
-        return None
+    def _parse_hourly_timestamp(raw: Any) -> datetime | None:
+        """Parse Open-Meteo hourly timestamp as UTC."""
+        if not isinstance(raw, str):
+            return None
+        try:
+            return datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
