@@ -146,6 +146,7 @@ When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk
 
 The generated dashboard includes:
 - Owner and site overview sections
+- Dashboard range controls aligned with the Kirk Hill dashboard UX (`Today`, `Yesterday`, `7 days`, `30 days`, `year`, `All time`)
 - Owner and site generation cards shown first in each overview section
 - Owner generation cards show actual generation energy values (kWh/MWh) only
 - Dedicated **Owner projected earnings** section listing projected monetary sensors for all timeframes
@@ -171,6 +172,7 @@ The generated dashboard includes:
 - Generation display cards that switch between **kWh** and **MWh** automatically and show **2 decimal places**
 
 The generated dashboard uses the **live entity registry** for the current config entry, so it follows your real entity IDs instead of relying on hardcoded names.
+Dashboard structure and labels are periodically aligned against exported snapshots of `dashboard.kirkhillcoop.org` where possible, while maintaining Home Assistant entity/state model compatibility.
 
 The animated map card is bundled by the integration and loaded automatically with the dashboard. From **v4.5.2**, the dashboard and frontend card are reloaded automatically whenever the integration starts or is reloaded — no manual page refresh or HA restart required.
 
