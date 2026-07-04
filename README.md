@@ -68,6 +68,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Generation cards display values dynamically as kWh or MWh and round to 2 decimal places
 - Dashboard YAML file included for manual import/customization
 - Interactive turbine map with scroll/pinch zoom, drag-to-pan, and T1–T8 labels
+- Taller turbine map viewport for improved full-farm fit on the Turbines tab
 
 ## Installation
 1. Add this repository to HACS (Custom Repositories)

@@ -34,15 +34,15 @@ class KirkHillWindTurbineMap extends HTMLElement {
   }
 
   getCardSize() {
-    return 8;
+    return 10;
   }
 
   getGridOptions() {
     return {
       columns: 12,
-      rows: 10,
-      min_rows: 8,
-      max_rows: 12,
+      rows: 12,
+      min_rows: 10,
+      max_rows: 14,
     };
   }
 
@@ -50,7 +50,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
   // Zoom is always calculated against these dimensions so it is consistent
   // regardless of when/how wide the card actually renders.
   static MAP_W = 900;
-  static MAP_H = 560;
+  static MAP_H = 700;
   static MAP_PAD = 80;
   static TILE_SIZE = 256;
 
