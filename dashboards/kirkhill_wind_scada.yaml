@@ -87,6 +87,18 @@ views:
                 name: Site capacity factor
               - entity: sensor.kirk_hill_wind_farm_wind_speed
                 name: Wind speed
+          - type: entities
+            title: Wind forecast (Windy, forecast only)
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_wind_speed
+                name: Actual wind speed (Kirk Hill API)
+              - entity: sensor.kirk_hill_wind_farm_windy_forecast_wind_next_hour
+                name: Windy next hour
+              - entity: sensor.kirk_hill_wind_farm_windy_forecast_wind_next_3h_avg
+                name: Windy next 3h avg
+              - entity: sensor.kirk_hill_wind_farm_windy_forecast_wind_next_24h_avg
+                name: Windy next 24h avg
           - type: history-graph
             title: Site and wind (last 6 hours)
             hours_to_show: 6

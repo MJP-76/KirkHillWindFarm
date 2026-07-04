@@ -16,6 +16,8 @@ A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 > reads the dashboard's public API endpoints with your personal API key.
 >
 > **Financial earnings figures are projected, not real-time dynamic values.**
+>
+> **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
@@ -55,8 +57,10 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Config flow with API key validation
 - Masked API key entry in the setup form
 - Optional automatic dashboard creation during setup
-- Configurable owner share (% of site generation)
-- Configurable owner value rate (GBP per kWh)
+- Configurable owner projected annual earnings (GBP)
+- Configurable site projected annual earnings (GBP)
+- Legacy compatibility options: owner share (%) and owner value rate (GBP per kWh)
+- Optional Windy forecast integration (forecast only; not used as authoritative actual generation)
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
 - Dashboard follows the live entity IDs from your installed config entry
@@ -83,6 +87,8 @@ During setup, the integration asks for:
 - **Site projected annual earnings (GBP)** — annual projected site value used to derive timeframe values (non-dynamic)
 - **Owner value rate (GBP per kWh)** — legacy setting retained for compatibility
 - **Owner share (%)** — legacy setting retained for compatibility
+- **Windy API key (forecast only, optional)** — enables Windy forecast sensors
+- **Windy forecast latitude / longitude** — forecast point coordinates
 - **Site name** — used as the integration title in Home Assistant
 
 After setup, the **Configure** options let you change:
@@ -93,6 +99,8 @@ After setup, the **Configure** options let you change:
 - **Site projected annual earnings (GBP)**
 - **Owner value rate (GBP per kWh)** (legacy compatibility)
 - **Owner share (%)** (legacy compatibility)
+- **Windy API key (forecast only, optional)**
+- **Windy forecast latitude / longitude**
 
 ## Sensors
 
@@ -108,8 +116,9 @@ Farm hub device:
 - Generation (ytd) [kWh] for owner and site
 - Generation (year) [kWh] for owner and site
 - Generation (alltime) [kWh] for owner and site
-- Generation (yesterday/today/week/month/ytd/year/alltime) [kWh] for owner and site is live and dynamic from the API
+- Generation source attribute marks these entities as `api_dynamic`
 - Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site is non-dynamic
+- Windy forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Published books revenue [GBP] (editable number)
 - Published books operating costs [GBP] (editable number)
 - Published books finance costs [GBP] (editable number)
@@ -138,12 +147,13 @@ When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk
 The generated dashboard includes:
 - Owner and site overview sections
 - Owner and site generation cards shown first in each overview section
-- Owner generation cards show both energy and estimated monetary value per timeframe
-- Dedicated **Owner earnings** section listing monetary sensors for all timeframes
+- Owner generation cards show actual generation energy values (kWh/MWh) only
+- Dedicated **Owner projected earnings** section listing projected monetary sensors for all timeframes
 - Dedicated **Finances** tab with:
   - **Published books inputs** (editable revenue/cost/distribution figures)
   - **Owner finances** projected timeframe value sensors
   - **Site finances** projected timeframe value sensors
+- **Wind forecast (Windy, forecast only)** card in the site overview, shown alongside actual wind speed from Kirk Hill API
 - All owner/site generation timeframe entities
 - Live farm wind and turbine availability
 - A dedicated **Turbines** tab containing:
@@ -172,7 +182,7 @@ All release versions are tracked from a single source-of-truth file: <a href="VE
 
 **Branch strategy:**
 - `main` — stable releases
-- `dev` — pre-releases / in-progress work; merged to `main` when stable
+- Pre-releases and stable releases are both published from `main`
 
 When preparing a release:
 1. Update `VERSION` (use `X.Y.Z`, for example `4.5.2`).
@@ -180,7 +190,7 @@ When preparing a release:
    - `custom_components/kirkhill_wind/manifest.json`
    - `pyproject.toml`
 3. Validate with `python scripts/version_sync.py check`.
-4. Commit and push to the appropriate branch (`dev` for pre-release, `main` for stable).
+4. Commit and push to `main`.
 5. Tag and create a GitHub release:
    ```bash
    git tag vX.Y.Z && git push origin vX.Y.Z

@@ -10,6 +10,9 @@
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
           "owner_share_percent": "Owner share (%)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
+          "windy_api_key": "Windy API key (forecast only, optional)",
+          "windy_latitude": "Windy forecast latitude",
+          "windy_longitude": "Windy forecast longitude",
           "owner_value_rate": "Owner value rate (GBP per kWh, legacy)",
           "site_name": "Site name"
         }
@@ -34,6 +37,9 @@
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
           "owner_share_percent": "Owner share (%)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
+          "windy_api_key": "Windy API key (forecast only, optional)",
+          "windy_latitude": "Windy forecast latitude",
+          "windy_longitude": "Windy forecast longitude",
           "owner_value_rate": "Owner value rate (GBP per kWh, legacy)",
           "scan_interval": "Poll interval (seconds)"
         }

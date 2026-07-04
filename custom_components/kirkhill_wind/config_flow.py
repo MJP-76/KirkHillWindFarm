@@ -25,6 +25,9 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+    CONF_WINDY_API_KEY,
+    CONF_WINDY_LATITUDE,
+    CONF_WINDY_LONGITUDE,
     DEFAULT_BASE_URL,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -33,6 +36,8 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SITE_NAME,
     DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+    DEFAULT_WINDY_LATITUDE,
+    DEFAULT_WINDY_LONGITUDE,
     DOMAIN,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
@@ -82,6 +87,13 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
                             DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
                         ),
+                        CONF_WINDY_API_KEY: user_input.get(CONF_WINDY_API_KEY, "").strip(),
+                        CONF_WINDY_LATITUDE: user_input.get(
+                            CONF_WINDY_LATITUDE, DEFAULT_WINDY_LATITUDE
+                        ),
+                        CONF_WINDY_LONGITUDE: user_input.get(
+                            CONF_WINDY_LONGITUDE, DEFAULT_WINDY_LONGITUDE
+                        ),
                         CONF_SITE_NAME: user_input.get(CONF_SITE_NAME, DEFAULT_SITE_NAME),
                         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                     },
@@ -116,6 +128,17 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
                         default=DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
                     ): vol.All(vol.Coerce(float), vol.Range(min=0)),
+                    vol.Optional(CONF_WINDY_API_KEY, default=""): TextSelector(
+                        TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                    ),
+                    vol.Optional(
+                        CONF_WINDY_LATITUDE,
+                        default=DEFAULT_WINDY_LATITUDE,
+                    ): vol.All(vol.Coerce(float), vol.Range(min=-90, max=90)),
+                    vol.Optional(
+                        CONF_WINDY_LONGITUDE,
+                        default=DEFAULT_WINDY_LONGITUDE,
+                    ): vol.All(vol.Coerce(float), vol.Range(min=-180, max=180)),
                 }
             ),
             errors=errors,
@@ -205,6 +228,18 @@ class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
                             DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
                         ),
                     ): vol.All(vol.Coerce(float), vol.Range(min=0)),
+                    vol.Optional(
+                        CONF_WINDY_API_KEY,
+                        default=current.get(CONF_WINDY_API_KEY, ""),
+                    ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+                    vol.Required(
+                        CONF_WINDY_LATITUDE,
+                        default=current.get(CONF_WINDY_LATITUDE, DEFAULT_WINDY_LATITUDE),
+                    ): vol.All(vol.Coerce(float), vol.Range(min=-90, max=90)),
+                    vol.Required(
+                        CONF_WINDY_LONGITUDE,
+                        default=current.get(CONF_WINDY_LONGITUDE, DEFAULT_WINDY_LONGITUDE),
+                    ): vol.All(vol.Coerce(float), vol.Range(min=-180, max=180)),
                 }
             ),
         )

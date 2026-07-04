@@ -7,6 +7,7 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 ## Project notes
 
 Owner/site generation kWh values are **live dynamic API values**. Owner/site financial earnings shown in the dashboard are **projected values** and **not real-time dynamic earnings**.
+Kirk Hill API remains the authoritative source for actual generation values. Windy integration is forecast-only.
 
 The Kirk Hill documents (agreement/rules/share offer) help define the finance model structure and assumptions, but they do not provide full live values on their own. Live API/dashboard data and the latest published accounts are still required for current figures.
 
@@ -27,7 +28,9 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Farm sensors** — live power, capacity factor, wind speed, active/inactive turbine count, and alarm state
 - **Generation sensors** — yesterday, today, week, month, year-to-date, year, and all-time totals for both your owner share and the whole site
 - **Owner + site projected value sensors** — estimated GBP value for each timeframe from configured annual projections (non-dynamic)
+- **Projected finance inputs** — configurable annual owner/site projected earnings values used by projected finance sensors
 - **Published books finance inputs** — editable revenue/cost/distribution number entities for entering current figures from wind farm accounts
+- **Windy forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative)
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, and active binary sensor for each of the 8 turbines
 - **Auto-generated Lovelace dashboard** — created automatically during setup with overview, finances, and turbines tabs containing:
   - Active/inactive turbine count and alarm status

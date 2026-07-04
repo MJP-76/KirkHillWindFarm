@@ -310,6 +310,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ("Year", farm_scoped("site", "farm_generation_year")),
         ("All time", farm_scoped("site", "farm_generation_alltime")),
     ]
+    windy_forecast_entities = [
+        {"entity": farm("windy_next_hour_wind_speed_mps"), "name": "Windy next hour"},
+        {"entity": farm("windy_next_3h_avg_wind_speed_mps"), "name": "Windy next 3h avg"},
+        {"entity": farm("windy_next_24h_avg_wind_speed_mps"), "name": "Windy next 24h avg"},
+    ]
     turbine_map_entities = [
         {
             "name": f"T{i}",
@@ -438,6 +443,15 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                         "name": "Site capacity factor",
                                     },
                                     {"entity": farm("farm_wind_speed"), "name": "Wind speed"},
+                                ],
+                            },
+                            {
+                                "type": "entities",
+                                "title": "Wind forecast (Windy, forecast only)",
+                                "show_header_toggle": False,
+                                "entities": [
+                                    {"entity": farm("farm_wind_speed"), "name": "Actual wind speed (Kirk Hill API)"},
+                                    *windy_forecast_entities,
                                 ],
                             },
                             {

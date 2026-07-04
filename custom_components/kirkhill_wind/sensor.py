@@ -71,6 +71,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
             for scope in SCOPES
         ],
         FarmWindSpeedSensor(coordinator, entry),
+        WindyForecastWindSpeedSensor(
+            coordinator, entry, "next_hour_wind_speed_mps", "Windy forecast wind (next hour)"
+        ),
+        WindyForecastWindSpeedSensor(
+            coordinator, entry, "next_3h_avg_wind_speed_mps", "Windy forecast wind (next 3h avg)"
+        ),
+        WindyForecastWindSpeedSensor(
+            coordinator, entry, "next_24h_avg_wind_speed_mps", "Windy forecast wind (next 24h avg)"
+        ),
         FarmActiveTurbinesSensor(coordinator, entry),
         FarmInactiveTurbinesSensor(coordinator, entry),
     ]
@@ -243,6 +252,37 @@ class FarmWindSpeedSensor(KirkHillEntity, SensorEntity):
         if value is not None:
             return value
         return _as_float(self.coordinator.data[SCOPE_OWNER]["summary"].get("wind_speed_mps"))
+
+
+class WindyForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
+    """Forecast wind-speed sensor from Windy API (non-authoritative)."""
+
+    _attr_device_class = SensorDeviceClass.WIND_SPEED
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfSpeed.METERS_PER_SECOND
+    _attr_icon = "mdi:weather-windy"
+
+    def __init__(self, coordinator, entry, forecast_key: str, name: str):
+        super().__init__(coordinator, entry, f"windy_{forecast_key}")
+        self._forecast_key = forecast_key
+        self._attr_name = name
+
+    @property
+    def native_value(self):
+        value = (
+            self.coordinator.data.get("windy_forecast", {}).get(self._forecast_key)
+        )
+        return _as_float(value)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        forecast = self.coordinator.data.get("windy_forecast", {})
+        return {
+            "source": "windy_forecast_only",
+            "authoritative_actual_source": "kirkhill_api",
+            "model": forecast.get("model"),
+            "forecast_points": forecast.get("forecast_points"),
+        }
 
 
 class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):

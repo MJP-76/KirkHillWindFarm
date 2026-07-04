@@ -10,13 +10,18 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import KirkHillApiClient
+from .api import KirkHillApiClient, WindyApiClient
 from .const import (
     CONF_API_KEY,
     CONF_BASE_URL,
     CONF_SCAN_INTERVAL,
+    CONF_WINDY_API_KEY,
+    CONF_WINDY_LATITUDE,
+    CONF_WINDY_LONGITUDE,
     DEFAULT_BASE_URL,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_WINDY_LATITUDE,
+    DEFAULT_WINDY_LONGITUDE,
     DOMAIN,
     SCOPE_OWNER,
     SCOPE_SITE,
@@ -48,6 +53,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             api_key=entry.data[CONF_API_KEY],
             base_url=entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         )
+        windy_api_key = entry.options.get(CONF_WINDY_API_KEY, entry.data.get(CONF_WINDY_API_KEY))
+        self.windy_client = WindyApiClient(windy_api_key) if windy_api_key else None
 
     def apply_options(self) -> None:
         """Re-apply scan interval when options change."""
@@ -71,6 +78,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             except KirkHillApiError as exc:
                 raise UpdateFailed(str(exc)) from exc
 
+            windy_forecast = await self._fetch_windy_forecast(session)
+
         coordinates: dict[str, dict[str, float | str | None]] = {}
         for row in site_turbines:
             turbine_id = row.get("id")
@@ -89,6 +98,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "coordinates": coordinates,
             "timeframe_summaries": timeframe_summaries,
             "wind_speed_today": wind_speed_today,
+            "windy_forecast": windy_forecast,
         }
 
     async def _fetch_timeframe_summaries(
@@ -144,3 +154,27 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
         value = latest.get("wind_speed_mps")
         return value if isinstance(value, (int, float)) else None
+
+    async def _fetch_windy_forecast(self, session: aiohttp.ClientSession) -> dict:
+        """Fetch optional Windy forecast summary; never fail the core update."""
+        if self.windy_client is None:
+            return {}
+
+        latitude = float(
+            self.entry.options.get(
+                CONF_WINDY_LATITUDE,
+                self.entry.data.get(CONF_WINDY_LATITUDE, DEFAULT_WINDY_LATITUDE),
+            )
+        )
+        longitude = float(
+            self.entry.options.get(
+                CONF_WINDY_LONGITUDE,
+                self.entry.data.get(CONF_WINDY_LONGITUDE, DEFAULT_WINDY_LONGITUDE),
+            )
+        )
+
+        try:
+            return await self.windy_client.get_point_forecast(session, latitude=latitude, longitude=longitude)
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.warning("Windy forecast fetch failed (forecast-only, non-fatal): %s", exc)
+            return {}
