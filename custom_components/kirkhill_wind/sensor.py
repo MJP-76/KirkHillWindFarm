@@ -9,7 +9,9 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpeed
 
 from .const import (
+    CONF_OWNER_SHARE_PERCENT,
     CONF_OWNER_VALUE_RATE,
+    DEFAULT_OWNER_SHARE_PERCENT,
     DEFAULT_OWNER_VALUE_RATE,
     SCOPE_OWNER,
     SCOPE_SITE,
@@ -202,9 +204,35 @@ class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
             )
         )
 
+    def _share_percent(self) -> float:
+        return float(
+            self._entry.options.get(
+                CONF_OWNER_SHARE_PERCENT,
+                self._entry.data.get(CONF_OWNER_SHARE_PERCENT, DEFAULT_OWNER_SHARE_PERCENT),
+            )
+        )
+
+    def _site_generation_kwh(self) -> float | None:
+        summary = (
+            self.coordinator.data.get("timeframe_summaries", {})
+            .get(SCOPE_SITE, {})
+            .get(self._timeframe, {})
+        )
+        value = _as_float(summary.get("total_generation_kwh"))
+        if value is not None:
+            return value
+        return _as_float(summary.get("total_kwh"))
+
+    def _effective_owner_generation_kwh(self) -> tuple[float | None, str]:
+        share_percent = self._share_percent()
+        site_generation_kwh = self._site_generation_kwh()
+        if share_percent > 0 and site_generation_kwh is not None:
+            return site_generation_kwh * (share_percent / 100), "site_share"
+        return self._generation_kwh(), "owner_scope"
+
     @property
     def native_value(self):
-        generation_kwh = self._generation_kwh()
+        generation_kwh, _ = self._effective_owner_generation_kwh()
         if generation_kwh is None:
             return None
         return round(generation_kwh * self._unit_rate(), 2)
@@ -212,9 +240,13 @@ class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
+        generation_kwh, generation_source = self._effective_owner_generation_kwh()
         attrs["timeframe"] = self._timeframe
         attrs["unit_rate_per_kwh"] = self._unit_rate()
-        attrs["raw_generation_kwh"] = self._generation_kwh()
+        attrs["owner_share_percent"] = self._share_percent()
+        attrs["site_generation_kwh"] = self._site_generation_kwh()
+        attrs["raw_generation_kwh"] = generation_kwh
+        attrs["generation_source"] = generation_source
         return attrs
 
 

@@ -7,6 +7,7 @@
         "data": {
           "api_key": "API key",
           "create_dashboard": "Create dashboard automatically",
+          "owner_share_percent": "Owner share (%)",
           "owner_value_rate": "Owner value rate (GBP per kWh)",
           "site_name": "Site name"
         }
@@ -28,6 +29,7 @@
         "description": "Adjust how often Home Assistant polls the API.",
         "data": {
           "create_dashboard": "Create dashboard automatically",
+          "owner_share_percent": "Owner share (%)",
           "owner_value_rate": "Owner value rate (GBP per kWh)",
           "scan_interval": "Poll interval (seconds)"
         }

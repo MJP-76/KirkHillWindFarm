@@ -32,7 +32,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
-  - owner generation value by timeframe (GBP), based on a configurable rate per kWh
+  - owner earnings by timeframe (GBP), calculated automatically from generated energy using your configured owner share (%) and value rate (GBP/kWh)
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -47,6 +47,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Config flow with API key validation
 - Masked API key entry in the setup form
 - Optional automatic dashboard creation during setup
+- Configurable owner share (% of site generation)
 - Configurable owner value rate (GBP per kWh)
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
@@ -71,6 +72,7 @@ During setup, the integration asks for:
 - **API key** — entered as a masked password field in Home Assistant
 - **Create dashboard automatically** — choose whether the integration should create/update its Lovelace dashboard tab
 - **Owner value rate (GBP per kWh)** — used to calculate monetary value for each owner generation timeframe
+- **Owner share (%)** — optional; if set above 0, owner earnings are calculated from site generation × owner share for each timeframe
 - **Site name** — used as the integration title in Home Assistant
 
 After setup, the **Configure** options let you change:
@@ -78,6 +80,7 @@ After setup, the **Configure** options let you change:
 - **Polling interval**
 - **Create dashboard automatically**
 - **Owner value rate (GBP per kWh)**
+- **Owner share (%)**
 
 ## Sensors
 

@@ -19,11 +19,13 @@ from .const import (
     CONF_API_KEY,
     CONF_BASE_URL,
     CONF_CREATE_DASHBOARD,
+    CONF_OWNER_SHARE_PERCENT,
     CONF_OWNER_VALUE_RATE,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
     DEFAULT_BASE_URL,
     DEFAULT_CREATE_DASHBOARD,
+    DEFAULT_OWNER_SHARE_PERCENT,
     DEFAULT_OWNER_VALUE_RATE,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SITE_NAME,
@@ -65,6 +67,9 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_OWNER_VALUE_RATE: user_input.get(
                             CONF_OWNER_VALUE_RATE, DEFAULT_OWNER_VALUE_RATE
                         ),
+                        CONF_OWNER_SHARE_PERCENT: user_input.get(
+                            CONF_OWNER_SHARE_PERCENT, DEFAULT_OWNER_SHARE_PERCENT
+                        ),
                         CONF_SITE_NAME: user_input.get(CONF_SITE_NAME, DEFAULT_SITE_NAME),
                         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                     },
@@ -87,6 +92,10 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_OWNER_VALUE_RATE,
                         default=DEFAULT_OWNER_VALUE_RATE,
                     ): vol.All(vol.Coerce(float), vol.Range(min=0)),
+                    vol.Optional(
+                        CONF_OWNER_SHARE_PERCENT,
+                        default=DEFAULT_OWNER_SHARE_PERCENT,
+                    ): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
                 }
             ),
             errors=errors,
@@ -155,6 +164,13 @@ class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
                             DEFAULT_OWNER_VALUE_RATE,
                         ),
                     ): vol.All(vol.Coerce(float), vol.Range(min=0)),
+                    vol.Required(
+                        CONF_OWNER_SHARE_PERCENT,
+                        default=current.get(
+                            CONF_OWNER_SHARE_PERCENT,
+                            DEFAULT_OWNER_SHARE_PERCENT,
+                        ),
+                    ): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
                 }
             ),
         )

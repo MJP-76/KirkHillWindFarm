@@ -8,7 +8,7 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 
 - **Farm sensors** — live power, capacity factor, wind speed, active/inactive turbine count, and alarm state
 - **Generation sensors** — yesterday, today, week, month, year-to-date, year, and all-time totals for both your owner share and the whole site
-- **Owner generation value sensors** — estimated GBP value for each owner generation timeframe, based on your configured GBP/kWh rate
+- **Owner earnings sensors** — estimated GBP value for each timeframe, calculated automatically from generated energy using your configured owner share (%) and GBP/kWh rate
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, and active binary sensor for each of the 8 turbines
 - **Auto-generated Lovelace dashboard** — created automatically during setup with an overview tab and a Turbines tab containing:
   - Active/inactive turbine count and alarm status
