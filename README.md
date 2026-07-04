@@ -190,6 +190,7 @@ All release versions are tracked from a single source-of-truth file: <a href="VE
 - Pre-releases and stable releases are both published from `main`
 - Release cadence can include both in sequence: a stable **Latest** tag, then a dev **Pre-release** tag
 - Stable updates are always published as GitHub **Latest** releases
+- Stable release flow includes a full merge into `main` before tagging/publishing
 
 When preparing a release:
 1. Update `VERSION` (use `X.Y.Z`, for example `4.5.2`).
