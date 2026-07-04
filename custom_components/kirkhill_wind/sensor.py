@@ -64,8 +64,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
             for timeframe in TIMEFRAME_ORDER
         ],
         *[
-            OwnerGenerationValueByTimeframeSensor(coordinator, entry, timeframe)
+            GenerationValueByTimeframeSensor(coordinator, entry, scope, timeframe)
             for timeframe in TIMEFRAME_ORDER
+            for scope in SCOPES
         ],
         FarmWindSpeedSensor(coordinator, entry),
         FarmActiveTurbinesSensor(coordinator, entry),
@@ -172,20 +173,21 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         return attrs
 
 
-class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
+class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "GBP"
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:cash"
 
-    def __init__(self, coordinator, entry, timeframe: str):
-        super().__init__(coordinator, entry, SCOPE_OWNER, f"farm_generation_value_{timeframe}")
+    def __init__(self, coordinator, entry, scope: str, timeframe: str):
+        super().__init__(coordinator, entry, scope, f"farm_generation_value_{timeframe}")
         self._timeframe = timeframe
+        scope_label = scope.capitalize()
         label = TIMEFRAME_LABELS.get(timeframe, f"Generation ({timeframe})")
-        self._attr_name = f"{label} value (Owner)"
+        self._attr_name = f"{label} value ({scope_label})"
 
-    def _generation_kwh(self) -> float | None:
+    def _owner_generation_kwh(self) -> float | None:
         summary = (
             self.coordinator.data.get("timeframe_summaries", {})
             .get(SCOPE_OWNER, {})
@@ -228,11 +230,16 @@ class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         site_generation_kwh = self._site_generation_kwh()
         if share_percent > 0 and site_generation_kwh is not None:
             return site_generation_kwh * (share_percent / 100), "site_share"
-        return self._generation_kwh(), "owner_scope"
+        return self._owner_generation_kwh(), "owner_scope"
+
+    def _effective_generation_kwh(self) -> tuple[float | None, str]:
+        if self._scope == SCOPE_OWNER:
+            return self._effective_owner_generation_kwh()
+        return self._site_generation_kwh(), "site_scope"
 
     @property
     def native_value(self):
-        generation_kwh, _ = self._effective_owner_generation_kwh()
+        generation_kwh, _ = self._effective_generation_kwh()
         if generation_kwh is None:
             return 0.0
         return round(generation_kwh * self._unit_rate(), 2)
@@ -240,10 +247,10 @@ class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
-        generation_kwh, generation_source = self._effective_owner_generation_kwh()
+        generation_kwh, generation_source = self._effective_generation_kwh()
         attrs["timeframe"] = self._timeframe
         attrs["unit_rate_per_kwh"] = self._unit_rate()
-        attrs["owner_share_percent"] = self._share_percent()
+        attrs["owner_share_percent"] = self._share_percent() if self._scope == SCOPE_OWNER else None
         attrs["site_generation_kwh"] = self._site_generation_kwh()
         attrs["raw_generation_kwh"] = generation_kwh
         attrs["generation_source"] = generation_source

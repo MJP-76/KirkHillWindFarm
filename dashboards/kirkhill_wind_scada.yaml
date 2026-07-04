@@ -93,6 +93,90 @@ views:
             entities:
               - sensor.kirk_hill_wind_farm_power_site
               - sensor.kirk_hill_wind_farm_wind_speed
+  - title: Finances
+    path: finances
+    icon: mdi:cash-multiple
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Finances
+            heading_style: title
+            icon: mdi:cash-multiple
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Published books (enter current figures)
+            heading_style: title
+          - type: entities
+            title: Published books inputs
+            show_header_toggle: false
+            entities:
+              - entity: number.kirk_hill_wind_farm_published_books_revenue
+                name: Revenue
+              - entity: number.kirk_hill_wind_farm_published_books_operating_costs
+                name: Operating costs
+              - entity: number.kirk_hill_wind_farm_published_books_finance_costs
+                name: Finance costs
+              - entity: number.kirk_hill_wind_farm_published_books_other_costs
+                name: Other costs
+              - entity: number.kirk_hill_wind_farm_published_books_owner_distribution
+                name: Owner distribution
+          - type: markdown
+            title: Published books totals
+            content: |
+              - **Site net after costs:** {% set rev = states('number.kirk_hill_wind_farm_published_books_revenue') | float(0) %}{% set op = states('number.kirk_hill_wind_farm_published_books_operating_costs') | float(0) %}{% set fin = states('number.kirk_hill_wind_farm_published_books_finance_costs') | float(0) %}{% set other = states('number.kirk_hill_wind_farm_published_books_other_costs') | float(0) %}£{{ '%.2f' | format(rev - op - fin - other) }}
+              - **Owner distribution:** £{{ '%.2f' | format(states('number.kirk_hill_wind_farm_published_books_owner_distribution') | float(0)) }}
+      - type: grid
+        cards:
+          - type: heading
+            heading: Owner finances
+            heading_style: title
+          - type: entities
+            title: Owner earnings by timeframe
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_generation_value_yesterday_owner
+                name: Yesterday
+              - entity: sensor.kirk_hill_wind_farm_generation_value_today_owner
+                name: Today
+              - entity: sensor.kirk_hill_wind_farm_generation_value_week_owner
+                name: Week
+              - entity: sensor.kirk_hill_wind_farm_generation_value_month_owner
+                name: Month
+              - entity: sensor.kirk_hill_wind_farm_generation_value_ytd_owner
+                name: YTD
+              - entity: sensor.kirk_hill_wind_farm_generation_value_year_owner
+                name: Year
+              - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_owner
+                name: All time
+      - type: grid
+        cards:
+          - type: heading
+            heading: Site finances
+            heading_style: title
+          - type: entities
+            title: Site value by timeframe
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_generation_value_yesterday_site
+                name: Yesterday
+              - entity: sensor.kirk_hill_wind_farm_generation_value_today_site
+                name: Today
+              - entity: sensor.kirk_hill_wind_farm_generation_value_week_site
+                name: Week
+              - entity: sensor.kirk_hill_wind_farm_generation_value_month_site
+                name: Month
+              - entity: sensor.kirk_hill_wind_farm_generation_value_ytd_site
+                name: YTD
+              - entity: sensor.kirk_hill_wind_farm_generation_value_year_site
+                name: Year
+              - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_site
+                name: All time
   - title: Turbines
     path: turbines
     icon: mdi:wind-turbine

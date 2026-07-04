@@ -38,4 +38,4 @@ TIMEFRAME_TO_RANGE = {
 }
 TIMEFRAME_ORDER = ("yesterday", "today", "week", "month", "ytd", "year", "alltime")
 
-PLATFORMS = ["sensor", "binary_sensor"]
+PLATFORMS = ["sensor", "binary_sensor", "number"]

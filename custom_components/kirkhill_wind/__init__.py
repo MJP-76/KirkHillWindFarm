@@ -289,6 +289,22 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         {"entity": farm_scoped("owner", "farm_generation_value_year"), "name": "Year"},
         {"entity": farm_scoped("owner", "farm_generation_value_alltime"), "name": "All time"},
     ]
+    site_value_entities = [
+        {"entity": farm_scoped("site", "farm_generation_value_yesterday"), "name": "Yesterday"},
+        {"entity": farm_scoped("site", "farm_generation_value_today"), "name": "Today"},
+        {"entity": farm_scoped("site", "farm_generation_value_week"), "name": "Week"},
+        {"entity": farm_scoped("site", "farm_generation_value_month"), "name": "Month"},
+        {"entity": farm_scoped("site", "farm_generation_value_ytd"), "name": "YTD"},
+        {"entity": farm_scoped("site", "farm_generation_value_year"), "name": "Year"},
+        {"entity": farm_scoped("site", "farm_generation_value_alltime"), "name": "All time"},
+    ]
+    published_books_entities = [
+        {"entity": farm("books_revenue_gbp"), "name": "Revenue"},
+        {"entity": farm("books_operating_costs_gbp"), "name": "Operating costs"},
+        {"entity": farm("books_finance_costs_gbp"), "name": "Finance costs"},
+        {"entity": farm("books_other_costs_gbp"), "name": "Other costs"},
+        {"entity": farm("books_owner_distribution_gbp"), "name": "Owner distribution"},
+    ]
     site_generation_entities = [
         ("Yesterday", farm_scoped("site", "farm_generation_yesterday")),
         ("Today", farm_scoped("site", "farm_generation_today")),
@@ -436,6 +452,99 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     farm_scoped("site", "farm_power"),
                                     farm("farm_wind_speed"),
                                 ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                "title": "Finances",
+                "path": "finances",
+                "icon": "mdi:cash-multiple",
+                "type": "sections",
+                "max_columns": 2,
+                "sections": [
+                    {
+                        "type": "grid",
+                        "column_span": 2,
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Finances",
+                                "heading_style": "title",
+                                "icon": "mdi:cash-multiple",
+                            }
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "column_span": 2,
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Published books (enter current figures)",
+                                "heading_style": "title",
+                            },
+                            {
+                                "type": "entities",
+                                "title": "Published books inputs",
+                                "show_header_toggle": False,
+                                "entities": published_books_entities,
+                            },
+                            {
+                                "type": "markdown",
+                                "title": "Published books totals",
+                                "content": (
+                                    "- **Site net after costs:** "
+                                    "{% set rev = states('"
+                                    + farm("books_revenue_gbp")
+                                    + "') | float(0) %}"
+                                    "{% set op = states('"
+                                    + farm("books_operating_costs_gbp")
+                                    + "') | float(0) %}"
+                                    "{% set fin = states('"
+                                    + farm("books_finance_costs_gbp")
+                                    + "') | float(0) %}"
+                                    "{% set other = states('"
+                                    + farm("books_other_costs_gbp")
+                                    + "') | float(0) %}"
+                                    "£{{ '%.2f' | format(rev - op - fin - other) }}\n"
+                                    "- **Owner distribution:** £{{ '%.2f' | format(states('"
+                                    + farm("books_owner_distribution_gbp")
+                                    + "') | float(0)) }}"
+                                ),
+                            },
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Owner finances",
+                                "heading_style": "title",
+                            },
+                            {
+                                "type": "entities",
+                                "title": "Owner earnings by timeframe",
+                                "show_header_toggle": False,
+                                "entities": owner_value_entities,
+                            },
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Site finances",
+                                "heading_style": "title",
+                            },
+                            {
+                                "type": "entities",
+                                "title": "Site value by timeframe",
+                                "show_header_toggle": False,
+                                "entities": site_value_entities,
                             },
                         ],
                     },

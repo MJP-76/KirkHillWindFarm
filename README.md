@@ -32,7 +32,13 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
-  - owner earnings by timeframe (GBP), calculated automatically from generated energy using your configured owner share (%) and value rate (GBP/kWh)
+  - owner and site value by timeframe (GBP), calculated from generated energy and your configured value rate (owner also supports owner share %)
+- Manual published-books finance inputs (editable number entities):
+  - revenue
+  - operating costs
+  - finance costs
+  - other costs
+  - owner distribution
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -96,7 +102,12 @@ Farm hub device:
 - Generation (ytd) [kWh] for owner and site
 - Generation (year) [kWh] for owner and site
 - Generation (alltime) [kWh] for owner and site
-- Generation value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner
+- Generation value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site
+- Published books revenue [GBP] (editable number)
+- Published books operating costs [GBP] (editable number)
+- Published books finance costs [GBP] (editable number)
+- Published books other costs [GBP] (editable number)
+- Published books owner distribution [GBP] (editable number)
 - Wind speed [m/s]
 - Active turbines
 - Inactive turbines
@@ -122,6 +133,10 @@ The generated dashboard includes:
 - Owner and site generation cards shown first in each overview section
 - Owner generation cards show both energy and estimated monetary value per timeframe
 - Dedicated **Owner earnings** section listing monetary sensors for all timeframes
+- Dedicated **Finances** tab with:
+  - **Published books inputs** (editable revenue/cost/distribution figures)
+  - **Owner finances** timeframe value sensors
+  - **Site finances** timeframe value sensors
 - All owner/site generation timeframe entities
 - Live farm wind and turbine availability
 - A dedicated **Turbines** tab containing:
