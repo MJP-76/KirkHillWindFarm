@@ -61,6 +61,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Configurable site projected annual earnings (GBP)
 - Legacy compatibility options: owner share (%) and owner value rate (GBP per kWh)
 - Open-Meteo forecast integration (forecast only; not used as authoritative actual generation)
+- No forecast API key required (Open-Meteo is used automatically)
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
 - Dashboard follows the live entity IDs from your installed config entry

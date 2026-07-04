@@ -7,7 +7,7 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 ## Project notes
 
 Owner/site generation kWh values are **live dynamic API values**. Owner/site financial earnings shown in the dashboard are **projected values** and **not real-time dynamic earnings**.
-Kirk Hill API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only.
+Kirk Hill API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
 Dashboard layout and labels are being aligned to the live Kirk Hill dashboard UX from exported snapshots, while preserving Home Assistant-native entity behavior.
 
 The Kirk Hill documents (agreement/rules/share offer) help define the finance model structure and assumptions, but they do not provide full live values on their own. Live API/dashboard data and the latest published accounts are still required for current figures.
