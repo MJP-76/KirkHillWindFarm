@@ -13,6 +13,12 @@ views:
             heading: Wind Farm
             heading_style: title
             icon: mdi:wind-turbine
+          - type: button
+            name: Reload dashboard/integration
+            icon: mdi:reload
+            tap_action:
+              action: call-service
+              service: kirkhill_wind.reload_integration
 
       - type: grid
         cards:

@@ -1,0 +1,10 @@
+reload_integration:
+  name: Reload integration
+  description: Reload the Kirk Hill Wind Farm integration config entry.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID to reload. If omitted, the first Kirk Hill Wind Farm entry is reloaded.
+      required: false
+      selector:
+        text:

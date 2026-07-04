@@ -64,6 +64,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - No forecast API key required (Open-Meteo is used automatically)
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
+- Dashboard reload button at the top of the dashboard that calls integration reload
 - Dashboard follows the live entity IDs from your installed config entry
 - Generation cards display values dynamically with scaled units (kWh, MWh, GWh, TWh, PWh, EWh) and round to 2 decimal places
 - Dashboard YAML file included for manual import/customization
@@ -145,6 +146,7 @@ Per turbine device (`Turbine T1` ... `Turbine T8`):
 When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk-hill-wind-dashboard`) in the sidebar.
 
 The generated dashboard includes:
+- A top-level **Reload dashboard/integration** button that calls `kirkhill_wind.reload_integration`
 - Owner and site overview sections
 - Dashboard range controls aligned with the Kirk Hill dashboard UX (`Today`, `Yesterday`, `7 days`, `30 days`, `year`, `All time`)
 - Owner and site generation cards shown first in each overview section
