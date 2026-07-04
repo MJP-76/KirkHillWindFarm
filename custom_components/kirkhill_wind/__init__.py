@@ -280,6 +280,15 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             farm_scoped("owner", "farm_generation_value_alltime"),
         ),
     ]
+    owner_value_entities = [
+        {"entity": farm_scoped("owner", "farm_generation_value_yesterday"), "name": "Yesterday"},
+        {"entity": farm_scoped("owner", "farm_generation_value_today"), "name": "Today"},
+        {"entity": farm_scoped("owner", "farm_generation_value_week"), "name": "Week"},
+        {"entity": farm_scoped("owner", "farm_generation_value_month"), "name": "Month"},
+        {"entity": farm_scoped("owner", "farm_generation_value_ytd"), "name": "YTD"},
+        {"entity": farm_scoped("owner", "farm_generation_value_year"), "name": "Year"},
+        {"entity": farm_scoped("owner", "farm_generation_value_alltime"), "name": "All time"},
+    ]
     site_generation_entities = [
         ("Yesterday", farm_scoped("site", "farm_generation_yesterday")),
         ("Today", farm_scoped("site", "farm_generation_today")),
@@ -359,6 +368,12 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "Owner generation",
                                 owner_generation_entities,
                             ),
+                            {
+                                "type": "entities",
+                                "title": "Owner earnings",
+                                "show_header_toggle": False,
+                                "entities": owner_value_entities,
+                            },
                             {
                                 "type": "entities",
                                 "title": "Owner metrics",

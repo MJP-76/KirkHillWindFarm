@@ -234,7 +234,7 @@ class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     def native_value(self):
         generation_kwh, _ = self._effective_owner_generation_kwh()
         if generation_kwh is None:
-            return None
+            return 0.0
         return round(generation_kwh * self._unit_rate(), 2)
 
     @property
@@ -247,6 +247,7 @@ class OwnerGenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         attrs["site_generation_kwh"] = self._site_generation_kwh()
         attrs["raw_generation_kwh"] = generation_kwh
         attrs["generation_source"] = generation_source
+        attrs["generation_available"] = generation_kwh is not None
         return attrs
 
 

@@ -30,6 +30,24 @@ views:
               - **Year:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_year_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}{% set money = states('sensor.kirk_hill_wind_farm_generation_value_year_owner') %}{% if money not in ['unknown', 'unavailable', 'none', ''] %} (£{{ '%.2f' | format(money | float(0)) }}){% endif %}
               - **All time:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_alltime_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}{% set money = states('sensor.kirk_hill_wind_farm_generation_value_alltime_owner') %}{% if money not in ['unknown', 'unavailable', 'none', ''] %} (£{{ '%.2f' | format(money | float(0)) }}){% endif %}
           - type: entities
+            title: Owner earnings
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_generation_value_yesterday_owner
+                name: Yesterday
+              - entity: sensor.kirk_hill_wind_farm_generation_value_today_owner
+                name: Today
+              - entity: sensor.kirk_hill_wind_farm_generation_value_week_owner
+                name: Week
+              - entity: sensor.kirk_hill_wind_farm_generation_value_month_owner
+                name: Month
+              - entity: sensor.kirk_hill_wind_farm_generation_value_ytd_owner
+                name: YTD
+              - entity: sensor.kirk_hill_wind_farm_generation_value_year_owner
+                name: Year
+              - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_owner
+                name: All time
+          - type: entities
             title: Owner metrics
             show_header_toggle: false
             entities:

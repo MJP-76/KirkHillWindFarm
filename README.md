@@ -121,6 +121,7 @@ The generated dashboard includes:
 - Owner and site overview sections
 - Owner and site generation cards shown first in each overview section
 - Owner generation cards show both energy and estimated monetary value per timeframe
+- Dedicated **Owner earnings** section listing monetary sensors for all timeframes
 - All owner/site generation timeframe entities
 - Live farm wind and turbine availability
 - A dedicated **Turbines** tab containing:
