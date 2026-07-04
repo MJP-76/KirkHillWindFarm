@@ -389,13 +389,20 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "icon": "mdi:wind-turbine",
                             },
                             {
-                                "type": "button",
-                                "name": "Reload dashboard/integration",
-                                "icon": "mdi:reload",
-                                "tap_action": {
-                                    "action": "call-service",
-                                    "service": "kirkhill_wind.reload_integration",
-                                },
+                                "type": "entities",
+                                "title": "Quick actions",
+                                "show_header_toggle": False,
+                                "entities": [
+                                    {
+                                        "type": "button",
+                                        "name": "Reload integration",
+                                        "icon": "mdi:reload",
+                                        "tap_action": {
+                                            "action": "call-service",
+                                            "service": "kirkhill_wind.reload_integration",
+                                        },
+                                    }
+                                ],
                             },
                         ],
                     },
