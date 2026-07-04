@@ -108,7 +108,8 @@ Farm hub device:
 - Generation (ytd) [kWh] for owner and site
 - Generation (year) [kWh] for owner and site
 - Generation (alltime) [kWh] for owner and site
-- Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site (non-dynamic)
+- Generation (yesterday/today/week/month/ytd/year/alltime) [kWh] for owner and site is live and dynamic from the API
+- Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site is non-dynamic
 - Published books revenue [GBP] (editable number)
 - Published books operating costs [GBP] (editable number)
 - Published books finance costs [GBP] (editable number)

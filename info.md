@@ -6,7 +6,7 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 
 ## Project notes
 
-Owner and site earnings shown in the dashboard are **projected values** and **not real-time dynamic earnings**.
+Owner/site generation kWh values are **live dynamic API values**. Owner/site financial earnings shown in the dashboard are **projected values** and **not real-time dynamic earnings**.
 
 The Kirk Hill documents (agreement/rules/share offer) help define the finance model structure and assumptions, but they do not provide full live values on their own. Live API/dashboard data and the latest published accounts are still required for current figures.
 

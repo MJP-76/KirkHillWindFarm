@@ -162,6 +162,7 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         attrs = super().extra_state_attributes
         value_kwh = self._generation_kwh()
         attrs["timeframe"] = self._timeframe
+        attrs["generation_source"] = "api_dynamic"
         attrs["raw_generation_kwh"] = value_kwh
         if value_kwh is None:
             attrs["display_unit"] = UnitOfEnergy.KILO_WATT_HOUR
