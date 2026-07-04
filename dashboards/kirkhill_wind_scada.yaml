@@ -13,16 +13,14 @@ views:
             heading: Wind Farm
             heading_style: title
             icon: mdi:wind-turbine
-          - type: entities
-            title: Quick actions
-            show_header_toggle: false
-            entities:
-              - type: button
-                name: Reload integration
-                icon: mdi:reload
-                tap_action:
-                  action: call-service
-                  service: kirkhill_wind.reload_integration
+          - type: button
+            name: Reload integration
+            icon: mdi:reload
+            show_name: false
+            show_state: false
+            tap_action:
+              action: call-service
+              service: kirkhill_wind.reload_integration
 
       - type: grid
         cards:

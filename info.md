@@ -36,7 +36,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Open-Meteo forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative), using automatic farm-location lookup
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, and active binary sensor for each of the 8 turbines
 - **Auto-generated Lovelace dashboard** — created automatically during setup with overview, finances, and turbines tabs containing:
-  - A compact top-level Quick actions reload control that triggers integration reload
+  - A compact top-level icon-only reload control that triggers integration reload
   - Taller turbine map viewport so all turbines fit more reliably on-screen
   - Active/inactive turbine count and alarm status
   - An **interactive turbine map** showing all 8 turbines with T1–T8 labels, running/stopped legend, hover titles, live spin animation proportional to output, scroll/pinch zoom, drag-to-pan, and double-click to reset
