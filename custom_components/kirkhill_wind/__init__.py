@@ -188,7 +188,7 @@ def _owner_generation_markdown_line(
     generation_entity_id: str,
     value_entity_id: str,
 ) -> str:
-    """Return a markdown line with generation and owner monetary value."""
+    """Return a markdown line with actual owner generation."""
     return (
         f"- **{label}:** "
         f"{{% set v = state_attr('{generation_entity_id}', 'raw_generation_kwh') %}}"
@@ -197,10 +197,6 @@ def _owner_generation_markdown_line(
         "{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
         "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
         "{% else %}—{% endif %}"
-        f"{{% set money = states('{value_entity_id}') %}}"
-        "{% if money not in ['unknown', 'unavailable', 'none', ''] %}"
-        " (Projected £{{ '%.2f' | format(money | float(0)) }})"
-        "{% endif %}"
     )
 
 
