@@ -121,31 +121,6 @@ views:
             heading_style: title
             icon: mdi:cash-multiple
       - type: grid
-        column_span: 2
-        cards:
-          - type: heading
-            heading: Published books (enter current figures)
-            heading_style: title
-          - type: entities
-            title: Published books inputs
-            show_header_toggle: false
-            entities:
-              - entity: number.kirk_hill_wind_farm_published_books_revenue
-                name: Revenue
-              - entity: number.kirk_hill_wind_farm_published_books_operating_costs
-                name: Operating costs
-              - entity: number.kirk_hill_wind_farm_published_books_finance_costs
-                name: Finance costs
-              - entity: number.kirk_hill_wind_farm_published_books_other_costs
-                name: Other costs
-              - entity: number.kirk_hill_wind_farm_published_books_owner_distribution
-                name: Owner distribution
-          - type: markdown
-            title: Published books totals
-            content: |
-              - **Site net after costs:** {% set rev = states('number.kirk_hill_wind_farm_published_books_revenue') | float(0) %}{% set op = states('number.kirk_hill_wind_farm_published_books_operating_costs') | float(0) %}{% set fin = states('number.kirk_hill_wind_farm_published_books_finance_costs') | float(0) %}{% set other = states('number.kirk_hill_wind_farm_published_books_other_costs') | float(0) %}£{{ '%.2f' | format(rev - op - fin - other) }}
-              - **Owner distribution:** £{{ '%.2f' | format(states('number.kirk_hill_wind_farm_published_books_owner_distribution') | float(0)) }}
-      - type: grid
         cards:
           - type: heading
             heading: Owner finances

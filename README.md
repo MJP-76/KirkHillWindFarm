@@ -37,12 +37,6 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
   - owner and site **projected** value by timeframe (GBP), based on configured annual projections (non-dynamic)
-- Manual published-books finance inputs (editable number entities):
-  - revenue
-  - operating costs
-  - finance costs
-  - other costs
-  - owner distribution
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -60,6 +54,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Configurable owner projected annual earnings (GBP)
 - Configurable site projected annual earnings (GBP)
 - Legacy compatibility options: owner share (%) and owner value rate (GBP per kWh)
+- Published-books/AGM manual finance inputs removed; projected owner/site figures remain
 - Open-Meteo forecast integration (forecast only; not used as authoritative actual generation)
 - No forecast API key required (Open-Meteo is used automatically)
 - Optional Ethex payment-tracking onboarding toggle in config flow
@@ -123,11 +118,6 @@ Farm hub device:
 - Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site is non-dynamic
   - For **all-time projected value**, the projection window start date is derived from the API all-time timeframe when available
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
-- Published books revenue [GBP] (editable number)
-- Published books operating costs [GBP] (editable number)
-- Published books finance costs [GBP] (editable number)
-- Published books other costs [GBP] (editable number)
-- Published books owner distribution [GBP] (editable number)
 - Wind speed [m/s]
 - Active turbines
 - Inactive turbines
@@ -156,7 +146,6 @@ The generated dashboard includes:
 - Owner generation cards show actual generation energy values with automatic unit scaling (kWh, MWh, GWh, TWh, PWh, EWh)
 - Dedicated **Owner projected earnings** section listing projected monetary sensors for all timeframes
 - Dedicated **Finances** tab with:
-  - **Published books inputs** (editable revenue/cost/distribution figures)
   - **Owner finances** projected timeframe value sensors
   - **Site finances** projected timeframe value sensors
 - Open-Meteo forecast entities included directly in **Site metrics** alongside actual wind speed from Kirk Hill API

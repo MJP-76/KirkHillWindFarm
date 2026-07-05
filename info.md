@@ -33,7 +33,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   - Dashboard display auto-scales generation units from kWh up to EWh for large values
 - **Owner + site projected value sensors** — estimated GBP value for each timeframe from configured annual projections (non-dynamic)
 - **Projected finance inputs** — configurable annual owner/site projected earnings values used by projected finance sensors
-- **Published books finance inputs** — editable revenue/cost/distribution number entities for entering current figures from wind farm accounts
+- **AGM/published-books manual finance inputs removed** — owner/site projected figures remain available
 - **Open-Meteo forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative), using automatic farm-location lookup
 - **Optional Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, and active binary sensor for each of the 8 turbines
