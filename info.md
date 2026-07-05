@@ -35,7 +35,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Projected finance inputs** — configurable annual owner/site projected earnings values used by projected finance sensors
 - **AGM/published-books manual finance inputs removed** — owner/site projected figures remain available
 - **Open-Meteo forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative), using automatic farm-location lookup
-- **Optional Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
+- **Optional experimental Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, and active binary sensor for each of the 8 turbines
 - **Auto-generated Lovelace dashboard** — created automatically during setup with overview, finances, and turbines tabs containing:
   - A compact top-level icon-only reload control that triggers integration reload
