@@ -8,7 +8,8 @@
 <a href="https://github.com/hacs/integration" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS"></a>
 <a href="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml" target="_blank" rel="noopener noreferrer"><img src="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml/badge.svg" alt="HACS Validation"></a>
 <a href="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml" target="_blank" rel="noopener noreferrer"><img src="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-<a href="https://github.com/features/copilot" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/GitHub%20Copilot-Built%20with-000000?style=flat-square&logo=githubcopilot" alt="GitHub Copilot"></a>
+[![Built with GitHub Copilot](https://img.shields.io/badge/Built%20with-GitHub%20Copilot-8A2BE2.svg)](https://github.com/features/copilot)
+
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
