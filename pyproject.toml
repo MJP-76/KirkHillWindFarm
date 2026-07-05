@@ -1,6 +1,6 @@
 [project]
 name = "kirkhill-wind-scada"
-version = "4.6.21"
+version = "4.6.22"
 description = "SCADA wind farm simulator for Home Assistant"
 
 [tool.black]
