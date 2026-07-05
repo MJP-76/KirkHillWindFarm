@@ -7,6 +7,7 @@
 [![Home Assistant][badge-home-assistant]][home-assistant]
 [![HACS][badge-hacs]][hacs]
 [![HACS Validation][badge-hacs-validation]][workflow-hacs-validation]
+[![Hassfest][badge-hassfest]][workflow-hacs-validation]
 [![CI][badge-ci]][workflow-ci]
 [![GitHub Copilot][badge-copilot]][github-copilot]
 
@@ -206,6 +207,7 @@ MIT
 [badge-home-assistant]: https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white
 [badge-hacs]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
 [badge-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml/badge.svg
+[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/validate.yml?branch=main&label=Hassfest
 [badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
 [badge-copilot]: https://img.shields.io/badge/GitHub%20Copilot-Built%20with-000000?style=flat-square&logo=githubcopilot
 [badge-buy-me-a-coffee]: https://cdn.buymeacoffee.com/buttons/default-orange.png
