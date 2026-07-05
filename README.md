@@ -4,11 +4,11 @@
 
 **IF YOU INSTALLED THE INITIAL / V1 RELEASE, YOU MUST REMOVE THE HACS REPOSITORY AND THE INTEGRATION IN DEVICES & SERVICES, THEN RE-ADD THEM**
 
-<a href="https://www.home-assistant.io/" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white" alt="Home Assistant"></a>
-<a href="https://github.com/hacs/integration" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS"></a>
-<a href="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml" target="_blank" rel="noopener noreferrer"><img src="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml/badge.svg" alt="HACS Validation"></a>
-<a href="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml" target="_blank" rel="noopener noreferrer"><img src="https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-<a href="https://github.com/features/copilot" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/GitHub%20Copilot-Built%20with-000000?style=flat-square&logo=githubcopilot" alt="GitHub Copilot"></a>
+[![Home Assistant][badge-home-assistant]][home-assistant]
+[![HACS][badge-hacs]][hacs]
+[![HACS Validation][badge-hacs-validation]][workflow-hacs-validation]
+[![CI][badge-ci]][workflow-ci]
+[![GitHub Copilot][badge-copilot]][github-copilot]
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
@@ -24,11 +24,11 @@ It pulls current data for both OpenAPI scopes:
 - `site` (whole-site values)
 
 
-<br>If you find this integration useful, or want to support further development you can support my work here:
+If you find this integration useful, or want to support further development you can support my work here:
 
-<a href="https://www.buymeacoffee.com/mjp76" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+[![Buy Me A Coffee][badge-buy-me-a-coffee]][buy-me-a-coffee]
 
-Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" rel="noopener noreferrer">Octopus Energy referral link</a> — you get GBP50 credit for joining, and I get GBP50 too.
+Or use my [Octopus Energy referral link][octopus-referral] — you get GBP50 credit for joining, and I get GBP50 too.
 
 ## Features
 - Live API polling (`cloud_polling` integration)
@@ -171,11 +171,11 @@ Dashboard structure and labels are periodically aligned against exported snapsho
 
 The animated map card is bundled by the integration and loaded automatically with the dashboard. From **v4.5.2**, the dashboard and frontend card are reloaded automatically whenever the integration starts or is reloaded — no manual page refresh or HA restart required.
 
-For manual import or customization, a dashboard YAML is also provided at <a href="dashboards/kirkhill_wind_scada.yaml" target="_blank" rel="noopener noreferrer"><code>dashboards/kirkhill_wind_scada.yaml</code></a>.
+For manual import or customization, a dashboard YAML is also provided at [`dashboards/kirkhill_wind_scada.yaml`][dashboard-yaml].
 
 ## Version management
 
-All release versions are tracked from a single source-of-truth file: <a href="VERSION" target="_blank" rel="noopener noreferrer"><code>VERSION</code></a>.
+All release versions are tracked from a single source-of-truth file: [`VERSION`][version-file].
 
 **Branch strategy:**
 - `main` — stable releases
@@ -202,3 +202,19 @@ Release tags are generated as `vX.Y.Z` directly from `VERSION`.
 ## License
 
 MIT
+
+[badge-home-assistant]: https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white
+[badge-hacs]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
+[badge-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml/badge.svg
+[badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
+[badge-copilot]: https://img.shields.io/badge/GitHub%20Copilot-Built%20with-000000?style=flat-square&logo=githubcopilot
+[badge-buy-me-a-coffee]: https://cdn.buymeacoffee.com/buttons/default-orange.png
+[home-assistant]: https://www.home-assistant.io/
+[hacs]: https://github.com/hacs/integration
+[workflow-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
+[workflow-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml
+[github-copilot]: https://github.com/features/copilot
+[buy-me-a-coffee]: https://www.buymeacoffee.com/mjp76
+[octopus-referral]: https://share.octopus.energy/iron-moose-196
+[dashboard-yaml]: dashboards/kirkhill_wind_scada.yaml
+[version-file]: VERSION
