@@ -6,6 +6,7 @@ DEFAULT_NAME = "Kirk Hill Wind Farm"
 CONF_API_KEY = "api_key"
 CONF_BASE_URL = "base_url"
 CONF_CREATE_DASHBOARD = "create_dashboard"
+CONF_ENABLE_PAYMENT_TRACKING = "enable_payment_tracking"
 CONF_SITE_NAME = "site_name"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_OWNER_VALUE_RATE = "owner_value_rate"
@@ -15,6 +16,7 @@ CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP = "site_projected_annual_earnings_gbp"
 
 DEFAULT_BASE_URL = "https://dashboard.kirkhillcoop.org"
 DEFAULT_CREATE_DASHBOARD = True
+DEFAULT_ENABLE_PAYMENT_TRACKING = False
 DEFAULT_SITE_NAME = "Kirk Hill Wind Farm"
 DEFAULT_SCAN_INTERVAL = 60  # seconds between API polls
 DEFAULT_OWNER_VALUE_RATE = 0.0

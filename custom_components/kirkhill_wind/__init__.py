@@ -22,7 +22,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
-from .const import CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD, PLATFORMS
+from .const import (
+    CONF_CREATE_DASHBOARD,
+    CONF_ENABLE_PAYMENT_TRACKING,
+    DEFAULT_CREATE_DASHBOARD,
+    DEFAULT_ENABLE_PAYMENT_TRACKING,
+    PLATFORMS,
+)
 from .coordinator import KirkHillWindCoordinator
 from .services import async_setup_services, async_unload_services
 
@@ -30,6 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 _FRONTEND_URL = "/kirkhill_wind/turbine-map-card.js"
 _FRONTEND_FILE = Path(__file__).parent / "frontend" / "kirkhill-wind-turbine-map.js"
 _FRONTEND_REGISTERED = "kirkhill_wind_frontend_registered"
+_ETHEX_DOMAIN = "ethex"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -45,6 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await _async_setup_payment_tracking(hass, entry)
     await _async_register_frontend(hass)
     await _async_ensure_dashboard(hass, entry)
 
@@ -56,6 +64,7 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     coordinator: KirkHillWindCoordinator = entry.runtime_data
     coordinator.apply_options()
     await coordinator.async_request_refresh()
+    await _async_setup_payment_tracking(hass, entry)
     await _async_ensure_dashboard(hass, entry)
 
 
@@ -155,6 +164,30 @@ def _dashboard_enabled(entry: ConfigEntry) -> bool:
     return entry.options.get(
         CONF_CREATE_DASHBOARD,
         entry.data.get(CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD),
+    )
+
+
+async def _async_setup_payment_tracking(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Initialize Ethex config flow when payment tracking is enabled."""
+    if not entry.options.get(
+        CONF_ENABLE_PAYMENT_TRACKING,
+        entry.data.get(CONF_ENABLE_PAYMENT_TRACKING, DEFAULT_ENABLE_PAYMENT_TRACKING),
+    ):
+        return
+
+    if _ETHEX_DOMAIN not in hass.config.components:
+        _LOGGER.warning(
+            "Payment tracking is enabled, but the Ethex integration is not installed."
+        )
+        return
+
+    if hass.config_entries.async_entries(_ETHEX_DOMAIN):
+        return
+
+    _LOGGER.info("Payment tracking enabled: starting Ethex configuration flow")
+    await hass.config_entries.flow.async_init(
+        _ETHEX_DOMAIN,
+        context={"source": "user"},
     )
 
 

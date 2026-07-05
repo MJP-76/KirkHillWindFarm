@@ -19,6 +19,7 @@ from .const import (
     CONF_API_KEY,
     CONF_BASE_URL,
     CONF_CREATE_DASHBOARD,
+    CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     CONF_OWNER_SHARE_PERCENT,
     CONF_OWNER_VALUE_RATE,
@@ -27,6 +28,7 @@ from .const import (
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_BASE_URL,
     DEFAULT_CREATE_DASHBOARD,
+    DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_OWNER_SHARE_PERCENT,
     DEFAULT_OWNER_VALUE_RATE,
@@ -68,6 +70,10 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_CREATE_DASHBOARD: user_input.get(
                             CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD
                         ),
+                        CONF_ENABLE_PAYMENT_TRACKING: user_input.get(
+                            CONF_ENABLE_PAYMENT_TRACKING,
+                            DEFAULT_ENABLE_PAYMENT_TRACKING,
+                        ),
                         CONF_OWNER_VALUE_RATE: user_input.get(
                             CONF_OWNER_VALUE_RATE, DEFAULT_OWNER_VALUE_RATE
                         ),
@@ -99,6 +105,10 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ): str,
                     vol.Optional(
                         CONF_CREATE_DASHBOARD, default=DEFAULT_CREATE_DASHBOARD
+                    ): bool,
+                    vol.Optional(
+                        CONF_ENABLE_PAYMENT_TRACKING,
+                        default=DEFAULT_ENABLE_PAYMENT_TRACKING,
                     ): bool,
                     vol.Optional(
                         CONF_OWNER_VALUE_RATE,
@@ -175,6 +185,13 @@ class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
                         default=current.get(
                             CONF_CREATE_DASHBOARD,
                             DEFAULT_CREATE_DASHBOARD,
+                        ),
+                    ): bool,
+                    vol.Required(
+                        CONF_ENABLE_PAYMENT_TRACKING,
+                        default=current.get(
+                            CONF_ENABLE_PAYMENT_TRACKING,
+                            DEFAULT_ENABLE_PAYMENT_TRACKING,
                         ),
                     ): bool,
                     vol.Required(

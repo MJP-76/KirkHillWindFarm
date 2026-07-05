@@ -62,6 +62,7 @@ Or use my <a href="https://share.octopus.energy/iron-moose-196" target="_blank" 
 - Legacy compatibility options: owner share (%) and owner value rate (GBP per kWh)
 - Open-Meteo forecast integration (forecast only; not used as authoritative actual generation)
 - No forecast API key required (Open-Meteo is used automatically)
+- Optional Ethex payment-tracking onboarding toggle in config flow
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard tab created during integration setup
 - Compact icon-only reload control at the top of the dashboard that calls integration reload
@@ -91,6 +92,7 @@ During setup, the integration asks for:
 - **Owner value rate (GBP per kWh)** — legacy setting retained for compatibility
 - **Owner share (%)** — legacy setting retained for compatibility
 - **Forecast source** — Open-Meteo is used automatically for forecast sensors using farm-location lookup (no forecast API key required)
+- **Enable payment tracking onboarding (Ethex)** — optionally starts Ethex setup flow to configure payment tracking
 - **Site name** — used as the integration title in Home Assistant
 
 After setup, the **Configure** options let you change:
@@ -101,6 +103,7 @@ After setup, the **Configure** options let you change:
 - **Site projected annual earnings (GBP)**
 - **Owner value rate (GBP per kWh)** (legacy compatibility)
 - **Owner share (%)** (legacy compatibility)
+- **Enable payment tracking onboarding (Ethex)**
 
 ## Sensors
 
