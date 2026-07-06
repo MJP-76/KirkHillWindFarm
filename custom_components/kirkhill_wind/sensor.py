@@ -156,7 +156,7 @@ class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
 
 class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_suggested_display_precision = 2
 
@@ -197,7 +197,7 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
 
 class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
     _attr_native_unit_of_measurement = "GBP"
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:cash"
@@ -379,7 +379,6 @@ class OpenMeteoForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
 
 class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Active turbines"
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:wind-turbine"
 
     def __init__(self, coordinator, entry):
@@ -392,7 +391,6 @@ class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):
 
 class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Inactive turbines"
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:wind-turbine-alert"
 
     def __init__(self, coordinator, entry):
