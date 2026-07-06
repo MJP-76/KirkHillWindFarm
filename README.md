@@ -43,6 +43,7 @@ Or use my [Octopus Energy referral link][octopus-referral] — you get GBP50 cre
   - active turbines
   - inactive turbines
   - alarm binary sensor
+- Validation hardening for turbine count sensor handling (active/inactive)
 - Per-turbine sensors:
   - power (`owner` + `site`)
   - capacity factor (`owner` + `site`)

@@ -388,7 +388,6 @@ class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):
     @property
     def native_value(self):
         return self.coordinator.data[SCOPE_OWNER]["summary"].get("active_turbines")
-        return _as_float(value)
 
 class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Inactive turbines"
@@ -401,7 +400,6 @@ class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     @property
     def native_value(self):
         return self.coordinator.data[SCOPE_OWNER]["summary"].get("inactive_turbines")
-        return _as_float(value)
 
 class TurbinePowerSensor(KirkHillScopedTurbineEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.POWER
