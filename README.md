@@ -69,11 +69,17 @@ Or use my [Octopus Energy referral link][octopus-referral] — you get GBP50 cre
 - Taller turbine map viewport for improved full-farm fit on the Turbines tab
 
 ## Installation
+**Pre-Reqs**
+*Generate you Kirk Hill Wind Farm API by logging in to the dashboard https://dashboard.kirkhillcoop.org, clicking on your username / account in teh top right cornner, scroll down to the API section, press "Generate" and copy the API key*
+
 1. Add this repository to HACS (Custom Repositories)
 2. Install "Kirk Hill Wind Farm"
 3. Restart Home Assistant
 4. Add the integration via Settings -> Devices & Services -> Add Integration -> "Kirk Hill Wind Farm"
 5. Enter your API key, choose whether to create the dashboard automatically, and set a site name
+
+>If you want to include your earnings from the Ethex Investment Platform, you will need to also add that reposity https://github/mjp-76/ha-ethex
+>Currently in testing awaitng the go live of Kirk Hill Wind Farm payments omn Ethex
 
 Polling interval can be changed later from the integration's **Configure** (Options) menu.
 
