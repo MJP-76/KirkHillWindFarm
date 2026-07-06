@@ -380,18 +380,21 @@ class OpenMeteoForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
 class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Active turbines"
     _attr_icon = "mdi:wind-turbine"
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry, "farm_active_turbines")
-
+    return _as_float(value)
     @property
     def native_value(self):
         return self.coordinator.data[SCOPE_OWNER]["summary"].get("active_turbines")
+        return _as_float(value)
 
 
 class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Inactive turbines"
     _attr_icon = "mdi:wind-turbine-alert"
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry, "farm_inactive_turbines")
@@ -399,7 +402,7 @@ class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     @property
     def native_value(self):
         return self.coordinator.data[SCOPE_OWNER]["summary"].get("inactive_turbines")
-
+        return _as_float(value)
 
 class TurbinePowerSensor(KirkHillScopedTurbineEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.POWER
