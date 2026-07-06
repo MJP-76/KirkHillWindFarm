@@ -150,35 +150,35 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         return value if isinstance(value, (int, float)) else None
 
     async def _fetch_open_meteo_forecast(
-    self,
-    session: aiohttp.ClientSession,
-    coordinates: dict[str, dict[str, float | str | None]],
-) -> dict:
-    """Fetch optional Open-Meteo forecast; never fail core update."""
+        self,
+        session: aiohttp.ClientSession,
+        coordinates: dict[str, dict[str, float | str | None]],
+    ) -> dict:
+        """Fetch optional Open-Meteo forecast; never fail core update."""
 
-    latitude, longitude = self._resolve_forecast_location(coordinates)
-    if latitude is None or longitude is None:
+        latitude, longitude = self._resolve_forecast_location(coordinates)
+        if latitude is None or longitude is None:
+            return {}
+
+        last_exc = None
+
+        for attempt in range(3):
+            try:
+                return await self.open_meteo_client.get_point_forecast(
+                    session,
+                    latitude=latitude,
+                    longitude=longitude,
+                )
+
+            except (aiohttp.ClientError, asyncio.TimeoutError, KirkHillApiError) as exc:
+                last_exc = exc
+                await asyncio.sleep(2 ** attempt)
+
+        _LOGGER.warning(
+            "Open-Meteo forecast fetch failed (forecast-only, non-fatal): %s",
+            last_exc,
+        )
         return {}
-
-    last_exc = None
-
-    for attempt in range(3):
-        try:
-            return await self.open_meteo_client.get_point_forecast(
-                session,
-                latitude=latitude,
-                longitude=longitude,
-            )
-
-        except (aiohttp.ClientError, asyncio.TimeoutError, KirkHillApiError) as exc:
-            last_exc = exc
-            await asyncio.sleep(2 ** attempt)
-
-    _LOGGER.warning(
-        "Open-Meteo forecast fetch failed (forecast-only, non-fatal): %s",
-        last_exc,
-    )
-    return {}
 
     def _resolve_forecast_location(
         self, coordinates: dict[str, dict[str, float | str | None]]
