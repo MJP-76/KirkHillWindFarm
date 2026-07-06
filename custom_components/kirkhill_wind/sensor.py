@@ -384,12 +384,11 @@ class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator, entry, "farm_active_turbines")
-    return _as_float(value)
+
     @property
     def native_value(self):
         return self.coordinator.data[SCOPE_OWNER]["summary"].get("active_turbines")
         return _as_float(value)
-
 
 class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Inactive turbines"
