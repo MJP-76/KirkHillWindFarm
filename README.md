@@ -19,11 +19,13 @@ It pulls current data for both OpenAPI scopes:
 - `site` (whole-site values)
 
 
-<br>If you find this integration useful, or want to support further development you can support my work here:
+## Support me
 
-<a href="https://www.buymeacoffee.com/mjp76" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+If you find this project useful, and would like to help support its continued development, you can do so here:
 
-Or use my [Octopus Energy referral link](https://share.octopus.energy/iron-moose-196) — you get GBP50 credit for joining, and I get GBP50 too.
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=000000)](https://www.buymeacoffee.com/mjp76)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=ffffff)](https://ko-fi.com/mjp76)
+[![Octopus Energy — you get £50, I get £50](https://img.shields.io/badge/Octopus%20Energy-%E2%80%94%20you%20get%20%C2%A350%2C%20I%20get%20%C2%A350-14294A?style=for-the-badge&logo=octopus-energy&logoColor=ffffff)](https://share.octopus.energy/iron-moose-196)
 
 ## Features
 - Live API polling (`cloud_polling` integration)
