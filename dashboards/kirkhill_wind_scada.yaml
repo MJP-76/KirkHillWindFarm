@@ -13,6 +13,14 @@ views:
             heading: Wind Farm
             heading_style: title
             icon: mdi:wind-turbine
+          - type: button
+            name: Reload integration
+            icon: mdi:reload
+            show_name: false
+            show_state: false
+            tap_action:
+              action: call-service
+              service: kirkhill_wind.reload_integration
 
       - type: grid
         cards:
@@ -22,13 +30,31 @@ views:
           - type: markdown
             title: Owner generation
             content: |
-              - **Yesterday:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_yesterday_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Today:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_today_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Week:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_week_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Month:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_month_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **YTD:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_ytd_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Year:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_year_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **All time:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_alltime_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Yesterday:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_yesterday_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Today:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_today_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Week:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_week_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Month:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_month_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **YTD:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_ytd_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Year:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_year_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **All time:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_alltime_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+          - type: entities
+            title: Owner projected earnings
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_generation_value_yesterday_owner
+                name: Yesterday
+              - entity: sensor.kirk_hill_wind_farm_generation_value_today_owner
+                name: Today
+              - entity: sensor.kirk_hill_wind_farm_generation_value_week_owner
+                name: Week
+              - entity: sensor.kirk_hill_wind_farm_generation_value_month_owner
+                name: Month
+              - entity: sensor.kirk_hill_wind_farm_generation_value_ytd_owner
+                name: YTD
+              - entity: sensor.kirk_hill_wind_farm_generation_value_year_owner
+                name: Year
+              - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_owner
+                name: All time
           - type: entities
             title: Owner metrics
             show_header_toggle: false
@@ -52,13 +78,13 @@ views:
           - type: markdown
             title: Site generation
             content: |
-              - **Yesterday:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_yesterday_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Today:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_today_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Week:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_week_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Month:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_month_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **YTD:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_ytd_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **Year:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_year_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
-              - **All time:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_alltime_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Yesterday:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_yesterday_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Today:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_today_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Week:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_week_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Month:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_month_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **YTD:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_ytd_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Year:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_year_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **All time:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_alltime_site', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
           - type: entities
             title: Site metrics
             show_header_toggle: false
@@ -68,100 +94,138 @@ views:
               - entity: sensor.kirk_hill_wind_farm_capacity_factor_site
                 name: Site capacity factor
               - entity: sensor.kirk_hill_wind_farm_wind_speed
-                name: Wind speed
+                name: Actual wind speed (Kirk Hill API)
+              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_hour
+                name: Forecast next hour (Open-Meteo)
+              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_3h_avg
+                name: Forecast next 3h avg (Open-Meteo)
+              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_24h_avg
+                name: Forecast next 24h avg (Open-Meteo)
           - type: history-graph
             title: Site and wind (last 6 hours)
             hours_to_show: 6
             entities:
               - sensor.kirk_hill_wind_farm_power_site
               - sensor.kirk_hill_wind_farm_wind_speed
+  - title: Finances
+    path: finances
+    icon: mdi:cash-multiple
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Finances
+            heading_style: title
+            icon: mdi:cash-multiple
+      - type: grid
+        cards:
+          - type: heading
+            heading: Owner finances
+            heading_style: title
+          - type: entities
+            title: Owner projected earnings by timeframe
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_generation_value_yesterday_owner
+                name: Yesterday
+              - entity: sensor.kirk_hill_wind_farm_generation_value_today_owner
+                name: Today
+              - entity: sensor.kirk_hill_wind_farm_generation_value_week_owner
+                name: Week
+              - entity: sensor.kirk_hill_wind_farm_generation_value_month_owner
+                name: Month
+              - entity: sensor.kirk_hill_wind_farm_generation_value_ytd_owner
+                name: YTD
+              - entity: sensor.kirk_hill_wind_farm_generation_value_year_owner
+                name: Year
+              - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_owner
+                name: All time
+      - type: grid
+        cards:
+          - type: heading
+            heading: Site finances
+            heading_style: title
+          - type: entities
+            title: Site projected value by timeframe
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_generation_value_yesterday_site
+                name: Yesterday
+              - entity: sensor.kirk_hill_wind_farm_generation_value_today_site
+                name: Today
+              - entity: sensor.kirk_hill_wind_farm_generation_value_week_site
+                name: Week
+              - entity: sensor.kirk_hill_wind_farm_generation_value_month_site
+                name: Month
+              - entity: sensor.kirk_hill_wind_farm_generation_value_ytd_site
+                name: YTD
+              - entity: sensor.kirk_hill_wind_farm_generation_value_year_site
+                name: Year
+              - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_site
+                name: All time
   - title: Turbines
     path: turbines
     icon: mdi:wind-turbine
     cards:
-      - type: entities
-        title: Turbine status overview
-        show_header_toggle: false
-        entities:
-          - entity: sensor.kirk_hill_wind_farm_active_turbines
-            name: Active turbines
-          - entity: sensor.kirk_hill_wind_farm_inactive_turbines
-            name: Inactive turbines
-          - entity: binary_sensor.kirk_hill_wind_farm_alarm
-            name: Alarm
-      - type: grid
-        title: Turbine status
-        columns: 2
-        square: false
+      - type: vertical-stack
         cards:
-          - type: tile
-            entity: binary_sensor.turbine_t1_active
-            name: T1
-          - type: tile
-            entity: binary_sensor.turbine_t2_active
-            name: T2
-          - type: tile
-            entity: binary_sensor.turbine_t3_active
-            name: T3
-          - type: tile
-            entity: binary_sensor.turbine_t4_active
-            name: T4
-          - type: tile
-            entity: binary_sensor.turbine_t5_active
-            name: T5
-          - type: tile
-            entity: binary_sensor.turbine_t6_active
-            name: T6
-          - type: tile
-            entity: binary_sensor.turbine_t7_active
-            name: T7
-          - type: tile
-            entity: binary_sensor.turbine_t8_active
-            name: T8
-      - type: custom:kirkhill-wind-turbine-map
-        title: Turbine map
-        height: 560
-        turbines:
-          - name: T1
-            state_entity: sensor.turbine_t1_state
-            power_entity: sensor.turbine_t1_power_site
-            capacity_entity: sensor.turbine_t1_capacity_factor_site
-            active_entity: binary_sensor.turbine_t1_active
-          - name: T2
-            state_entity: sensor.turbine_t2_state
-            power_entity: sensor.turbine_t2_power_site
-            capacity_entity: sensor.turbine_t2_capacity_factor_site
-            active_entity: binary_sensor.turbine_t2_active
-          - name: T3
-            state_entity: sensor.turbine_t3_state
-            power_entity: sensor.turbine_t3_power_site
-            capacity_entity: sensor.turbine_t3_capacity_factor_site
-            active_entity: binary_sensor.turbine_t3_active
-          - name: T4
-            state_entity: sensor.turbine_t4_state
-            power_entity: sensor.turbine_t4_power_site
-            capacity_entity: sensor.turbine_t4_capacity_factor_site
-            active_entity: binary_sensor.turbine_t4_active
-          - name: T5
-            state_entity: sensor.turbine_t5_state
-            power_entity: sensor.turbine_t5_power_site
-            capacity_entity: sensor.turbine_t5_capacity_factor_site
-            active_entity: binary_sensor.turbine_t5_active
-          - name: T6
-            state_entity: sensor.turbine_t6_state
-            power_entity: sensor.turbine_t6_power_site
-            capacity_entity: sensor.turbine_t6_capacity_factor_site
-            active_entity: binary_sensor.turbine_t6_active
-          - name: T7
-            state_entity: sensor.turbine_t7_state
-            power_entity: sensor.turbine_t7_power_site
-            capacity_entity: sensor.turbine_t7_capacity_factor_site
-            active_entity: binary_sensor.turbine_t7_active
-          - name: T8
-            state_entity: sensor.turbine_t8_state
-            power_entity: sensor.turbine_t8_power_site
-            capacity_entity: sensor.turbine_t8_capacity_factor_site
-            active_entity: binary_sensor.turbine_t8_active
+          - type: entities
+            title: Turbine status overview
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_active_turbines
+                name: Active turbines
+              - entity: sensor.kirk_hill_wind_farm_inactive_turbines
+                name: Inactive turbines
+              - entity: binary_sensor.kirk_hill_wind_farm_alarm
+                name: Alarm
+          - type: custom:kirkhill-wind-turbine-map
+            title: Turbine map
+            zoom: 15
+            turbines:
+              - name: T1
+                state_entity: sensor.turbine_t1_state
+                power_entity: sensor.turbine_t1_power_site
+                capacity_entity: sensor.turbine_t1_capacity_factor_site
+                active_entity: binary_sensor.turbine_t1_active
+              - name: T2
+                state_entity: sensor.turbine_t2_state
+                power_entity: sensor.turbine_t2_power_site
+                capacity_entity: sensor.turbine_t2_capacity_factor_site
+                active_entity: binary_sensor.turbine_t2_active
+              - name: T3
+                state_entity: sensor.turbine_t3_state
+                power_entity: sensor.turbine_t3_power_site
+                capacity_entity: sensor.turbine_t3_capacity_factor_site
+                active_entity: binary_sensor.turbine_t3_active
+              - name: T4
+                state_entity: sensor.turbine_t4_state
+                power_entity: sensor.turbine_t4_power_site
+                capacity_entity: sensor.turbine_t4_capacity_factor_site
+                active_entity: binary_sensor.turbine_t4_active
+              - name: T5
+                state_entity: sensor.turbine_t5_state
+                power_entity: sensor.turbine_t5_power_site
+                capacity_entity: sensor.turbine_t5_capacity_factor_site
+                active_entity: binary_sensor.turbine_t5_active
+              - name: T6
+                state_entity: sensor.turbine_t6_state
+                power_entity: sensor.turbine_t6_power_site
+                capacity_entity: sensor.turbine_t6_capacity_factor_site
+                active_entity: binary_sensor.turbine_t6_active
+              - name: T7
+                state_entity: sensor.turbine_t7_state
+                power_entity: sensor.turbine_t7_power_site
+                capacity_entity: sensor.turbine_t7_capacity_factor_site
+                active_entity: binary_sensor.turbine_t7_active
+              - name: T8
+                state_entity: sensor.turbine_t8_state
+                power_entity: sensor.turbine_t8_power_site
+                capacity_entity: sensor.turbine_t8_capacity_factor_site
+                active_entity: binary_sensor.turbine_t8_active
       - type: grid
         columns: 2
         square: false

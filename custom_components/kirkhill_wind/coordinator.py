@@ -6,12 +6,11 @@ import logging
 from datetime import datetime, timedelta
 
 import aiohttp
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import KirkHillApiClient
+from .api import KirkHillApiClient, OpenMeteoApiClient
 from .const import (
     CONF_API_KEY,
     CONF_BASE_URL,
@@ -19,9 +18,9 @@ from .const import (
     DEFAULT_BASE_URL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    SCOPES,
     SCOPE_OWNER,
     SCOPE_SITE,
+    SCOPES,
     TIMEFRAME_ORDER,
     TIMEFRAME_TO_RANGE,
 )
@@ -49,6 +48,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             api_key=entry.data[CONF_API_KEY],
             base_url=entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         )
+        self.open_meteo_client = OpenMeteoApiClient()
 
     def apply_options(self) -> None:
         """Re-apply scan interval when options change."""
@@ -72,17 +72,19 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             except KirkHillApiError as exc:
                 raise UpdateFailed(str(exc)) from exc
 
-        coordinates: dict[str, dict[str, float | str | None]] = {}
-        for row in site_turbines:
-            turbine_id = row.get("id")
-            coord = row.get("coordinates") or {}
-            if turbine_id:
-                coordinates[turbine_id] = {
-                    "latitude": coord.get("latitude"),
-                    "longitude": coord.get("longitude"),
-                    "source": coord.get("source"),
-                    "openstreetmap_node_id": coord.get("openstreetmap_node_id"),
-                }
+            coordinates: dict[str, dict[str, float | str | None]] = {}
+            for row in site_turbines:
+                turbine_id = row.get("id")
+                coord = row.get("coordinates") or {}
+                if turbine_id:
+                    coordinates[turbine_id] = {
+                        "latitude": coord.get("latitude"),
+                        "longitude": coord.get("longitude"),
+                        "source": coord.get("source"),
+                        "openstreetmap_node_id": coord.get("openstreetmap_node_id"),
+                    }
+
+            open_meteo_forecast = await self._fetch_open_meteo_forecast(session, coordinates)
 
         return {
             SCOPE_OWNER: owner_data,
@@ -90,6 +92,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "coordinates": coordinates,
             "timeframe_summaries": timeframe_summaries,
             "wind_speed_today": wind_speed_today,
+            "open_meteo_forecast": open_meteo_forecast,
         }
 
     async def _fetch_timeframe_summaries(
@@ -145,3 +148,52 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
         value = latest.get("wind_speed_mps")
         return value if isinstance(value, (int, float)) else None
+
+    async def _fetch_open_meteo_forecast(
+        self,
+        session: aiohttp.ClientSession,
+        coordinates: dict[str, dict[str, float | str | None]],
+    ) -> dict:
+        """Fetch optional Open-Meteo forecast; never fail core update."""
+
+        latitude, longitude = self._resolve_forecast_location(coordinates)
+        if latitude is None or longitude is None:
+            return {}
+
+        last_exc = None
+
+        for attempt in range(3):
+            try:
+                return await self.open_meteo_client.get_point_forecast(
+                    session,
+                    latitude=latitude,
+                    longitude=longitude,
+                )
+
+            except (aiohttp.ClientError, asyncio.TimeoutError, KirkHillApiError) as exc:
+                last_exc = exc
+                await asyncio.sleep(2 ** attempt)
+
+        _LOGGER.warning(
+            "Open-Meteo forecast fetch failed (forecast-only, non-fatal): %s",
+            last_exc,
+        )
+        return {}
+
+    def _resolve_forecast_location(
+        self, coordinates: dict[str, dict[str, float | str | None]]
+    ) -> tuple[float | None, float | None]:
+        """Resolve forecast location from turbine coordinates automatically."""
+        latitudes: list[float] = []
+        longitudes: list[float] = []
+        for coord in coordinates.values():
+            lat = coord.get("latitude")
+            lon = coord.get("longitude")
+            if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+                latitudes.append(float(lat))
+                longitudes.append(float(lon))
+
+        if not latitudes or not longitudes:
+            return None, None
+
+        return sum(latitudes) / len(latitudes), sum(longitudes) / len(longitudes)

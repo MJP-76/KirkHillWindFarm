@@ -1,7 +1,6 @@
 {
   "name": "Kirk Hill Wind Farm",
   "render_readme": true,
-  "domains": ["kirkhill_wind"],
   "country": "GB",
   "homeassistant": "2024.1.0",
   "content_in_root": false

@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 
 import voluptuous as vol
-
 from homeassistant.components import frontend
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
@@ -23,7 +22,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
-from .const import CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD, PLATFORMS
+from .const import (
+    CONF_CREATE_DASHBOARD,
+    CONF_ENABLE_PAYMENT_TRACKING,
+    DEFAULT_CREATE_DASHBOARD,
+    DEFAULT_ENABLE_PAYMENT_TRACKING,
+    PLATFORMS,
+)
 from .coordinator import KirkHillWindCoordinator
 from .services import async_setup_services, async_unload_services
 
@@ -31,6 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 _FRONTEND_URL = "/kirkhill_wind/turbine-map-card.js"
 _FRONTEND_FILE = Path(__file__).parent / "frontend" / "kirkhill-wind-turbine-map.js"
 _FRONTEND_REGISTERED = "kirkhill_wind_frontend_registered"
+_ETHEX_DOMAIN = "ethex"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -46,6 +52,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await _async_setup_payment_tracking(hass, entry)
     await _async_register_frontend(hass)
     await _async_ensure_dashboard(hass, entry)
 
@@ -57,6 +64,7 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     coordinator: KirkHillWindCoordinator = entry.runtime_data
     coordinator.apply_options()
     await coordinator.async_request_refresh()
+    await _async_setup_payment_tracking(hass, entry)
     await _async_ensure_dashboard(hass, entry)
 
 
@@ -73,14 +81,18 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_register_frontend(hass: HomeAssistant) -> None:
     """Register the bundled custom Lovelace card for the turbine map."""
-    if hass.data.get(_FRONTEND_REGISTERED):
-        return
+    js_version = int(_FRONTEND_FILE.stat().st_mtime)
+    versioned_url = f"{_FRONTEND_URL}?v={js_version}"
 
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(_FRONTEND_URL, str(_FRONTEND_FILE), False)]
-    )
-    add_extra_js_url(hass, f"{_FRONTEND_URL}?v={int(_FRONTEND_FILE.stat().st_mtime)}")
-    hass.data[_FRONTEND_REGISTERED] = True
+    if not hass.data.get(_FRONTEND_REGISTERED):
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(_FRONTEND_URL, str(_FRONTEND_FILE), False)]
+        )
+        hass.data[_FRONTEND_REGISTERED] = True
+
+    # Always (re-)add the versioned URL so the browser picks up JS changes
+    # after an integration reload without needing a full HA restart.
+    add_extra_js_url(hass, versioned_url)
 
 
 async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -130,6 +142,10 @@ async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> No
 
     await lovelace_store.async_save(_build_dashboard_config(hass, entry))
 
+    # Notify all connected browser clients that the dashboard config has changed
+    # so they reload it without needing a manual page refresh.
+    hass.bus.async_fire("lovelace_updated", {"url_path": url_path, "updated": True})
+
     frontend.async_register_built_in_panel(
         hass,
         "lovelace",
@@ -151,6 +167,30 @@ def _dashboard_enabled(entry: ConfigEntry) -> bool:
     )
 
 
+async def _async_setup_payment_tracking(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Initialize Ethex config flow when payment tracking is enabled."""
+    if not entry.options.get(
+        CONF_ENABLE_PAYMENT_TRACKING,
+        entry.data.get(CONF_ENABLE_PAYMENT_TRACKING, DEFAULT_ENABLE_PAYMENT_TRACKING),
+    ):
+        return
+
+    if _ETHEX_DOMAIN not in hass.config.components:
+        _LOGGER.warning(
+            "Payment tracking is enabled, but the Ethex integration is not installed."
+        )
+        return
+
+    if hass.config_entries.async_entries(_ETHEX_DOMAIN):
+        return
+
+    _LOGGER.info("Payment tracking enabled: starting Ethex configuration flow")
+    await hass.config_entries.flow.async_init(
+        _ETHEX_DOMAIN,
+        context={"source": "user"},
+    )
+
+
 def _entity_ids_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, str]:
     """Return a map of entity unique_id to current entity_id."""
     registry = er.async_get(hass)
@@ -164,13 +204,38 @@ def _entity_ids_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, 
 
 
 def _generation_markdown_line(label: str, entity_id: str) -> str:
-    """Return a markdown line that formats generation as kWh or MWh."""
+    """Return a markdown line that formats generation with scaled energy units."""
     return (
         f"- **{label}:** "
         f"{{% set v = state_attr('{entity_id}', 'raw_generation_kwh') %}}"
         "{% if v is not none %}"
         "{% set n = v | float(0) %}"
-        "{% if n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
+        "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
+        "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
+        "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
+        "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
+        "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
+        "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
+        "{% else %}—{% endif %}"
+    )
+
+
+def _owner_generation_markdown_line(
+    label: str,
+    generation_entity_id: str,
+    value_entity_id: str,
+) -> str:
+    """Return a markdown line with actual owner generation."""
+    return (
+        f"- **{label}:** "
+        f"{{% set v = state_attr('{generation_entity_id}', 'raw_generation_kwh') %}}"
+        "{% if v is not none %}"
+        "{% set n = v | float(0) %}"
+        "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
+        "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
+        "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
+        "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
+        "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
         "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
         "{% else %}—{% endif %}"
     )
@@ -179,6 +244,22 @@ def _generation_markdown_line(label: str, entity_id: str) -> str:
 def _generation_markdown_card(title: str, entries: list[tuple[str, str]]) -> dict:
     """Return a markdown card for formatted generation display."""
     content = "\n".join(_generation_markdown_line(label, entity_id) for label, entity_id in entries)
+    return {
+        "type": "markdown",
+        "title": title,
+        "content": content,
+    }
+
+
+def _owner_generation_markdown_card(
+    title: str,
+    entries: list[tuple[str, str, str]],
+) -> dict:
+    """Return a markdown card for owner generation and value display."""
+    content = "\n".join(
+        _owner_generation_markdown_line(label, generation_entity_id, value_entity_id)
+        for label, generation_entity_id, value_entity_id in entries
+    )
     return {
         "type": "markdown",
         "title": title,
@@ -200,13 +281,59 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         return entity_ids[f"{entry.entry_id}_turbine_{turbine_id}_{unique_suffix}"]
 
     owner_generation_entities = [
-        ("Yesterday", farm_scoped("owner", "farm_generation_yesterday")),
-        ("Today", farm_scoped("owner", "farm_generation_today")),
-        ("Week", farm_scoped("owner", "farm_generation_week")),
-        ("Month", farm_scoped("owner", "farm_generation_month")),
-        ("YTD", farm_scoped("owner", "farm_generation_ytd")),
-        ("Year", farm_scoped("owner", "farm_generation_year")),
-        ("All time", farm_scoped("owner", "farm_generation_alltime")),
+        (
+            "Yesterday",
+            farm_scoped("owner", "farm_generation_yesterday"),
+            farm_scoped("owner", "farm_generation_value_yesterday"),
+        ),
+        (
+            "Today",
+            farm_scoped("owner", "farm_generation_today"),
+            farm_scoped("owner", "farm_generation_value_today"),
+        ),
+        (
+            "Week",
+            farm_scoped("owner", "farm_generation_week"),
+            farm_scoped("owner", "farm_generation_value_week"),
+        ),
+        (
+            "Month",
+            farm_scoped("owner", "farm_generation_month"),
+            farm_scoped("owner", "farm_generation_value_month"),
+        ),
+        (
+            "YTD",
+            farm_scoped("owner", "farm_generation_ytd"),
+            farm_scoped("owner", "farm_generation_value_ytd"),
+        ),
+        (
+            "Year",
+            farm_scoped("owner", "farm_generation_year"),
+            farm_scoped("owner", "farm_generation_value_year"),
+        ),
+        (
+            "All time",
+            farm_scoped("owner", "farm_generation_alltime"),
+            farm_scoped("owner", "farm_generation_value_alltime"),
+        ),
+    ]
+    owner_value_entities = [
+        {"entity": farm_scoped("owner", "farm_generation_value_yesterday"), "name": "Yesterday"},
+        {"entity": farm_scoped("owner", "farm_generation_value_today"), "name": "Today"},
+        {"entity": farm_scoped("owner", "farm_generation_value_week"), "name": "Week"},
+        {"entity": farm_scoped("owner", "farm_generation_value_month"), "name": "Month"},
+        {"entity": farm_scoped("owner", "farm_generation_value_ytd"), "name": "YTD"},
+        {"entity": farm_scoped("owner", "farm_generation_value_year"), "name": "Year"},
+        {"entity": farm_scoped("owner", "farm_generation_value_alltime"), "name": "All time"},
+    ]
+    site_value_entities = [
+        {"entity": farm_scoped("site", "farm_generation_value_yesterday"), "name": "Yesterday"},
+        {"entity": farm_scoped("site", "farm_generation_value_today"), "name": "Today"},
+        {"entity": farm_scoped("site", "farm_generation_value_week"), "name": "Week"},
+        {"entity": farm_scoped("site", "farm_generation_value_month"), "name": "Month"},
+        {"entity": farm_scoped("site", "farm_generation_value_ytd"), "name": "YTD"},
+        {"entity": farm_scoped("site", "farm_generation_value_year"), "name": "Year"},
+        {"entity": farm_scoped("site", "farm_generation_value_alltime"), "name": "All time"},
     ]
     site_generation_entities = [
         ("Yesterday", farm_scoped("site", "farm_generation_yesterday")),
@@ -216,6 +343,20 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ("YTD", farm_scoped("site", "farm_generation_ytd")),
         ("Year", farm_scoped("site", "farm_generation_year")),
         ("All time", farm_scoped("site", "farm_generation_alltime")),
+    ]
+    forecast_entities = [
+        {
+            "entity": farm("open_meteo_next_hour_wind_speed_mps"),
+            "name": "Forecast next hour (Open-Meteo)",
+        },
+        {
+            "entity": farm("open_meteo_next_3h_avg_wind_speed_mps"),
+            "name": "Forecast next 3h avg (Open-Meteo)",
+        },
+        {
+            "entity": farm("open_meteo_next_24h_avg_wind_speed_mps"),
+            "name": "Forecast next 24h avg (Open-Meteo)",
+        },
     ]
     turbine_map_entities = [
         {
@@ -272,7 +413,18 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading": "Wind Farm",
                                 "heading_style": "title",
                                 "icon": "mdi:wind-turbine",
-                            }
+                            },
+                            {
+                                "type": "button",
+                                "name": "Reload integration",
+                                "icon": "mdi:reload",
+                                "show_name": False,
+                                "show_state": False,
+                                "tap_action": {
+                                    "action": "call-service",
+                                    "service": "kirkhill_wind.reload_integration",
+                                },
+                            },
                         ],
                     },
                     {
@@ -283,10 +435,16 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading": "Your share",
                                 "heading_style": "title",
                             },
-                            _generation_markdown_card(
+                            _owner_generation_markdown_card(
                                 "Owner generation",
                                 owner_generation_entities,
                             ),
+                            {
+                                "type": "entities",
+                                "title": "Owner projected earnings",
+                                "show_header_toggle": False,
+                                "entities": owner_value_entities,
+                            },
                             {
                                 "type": "entities",
                                 "title": "Owner metrics",
@@ -338,7 +496,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                         "entity": farm_scoped("site", "farm_capacity_factor"),
                                         "name": "Site capacity factor",
                                     },
-                                    {"entity": farm("farm_wind_speed"), "name": "Wind speed"},
+                                    {
+                                        "entity": farm("farm_wind_speed"),
+                                        "name": "Actual wind speed (Kirk Hill API)",
+                                    },
+                                    *forecast_entities,
                                 ],
                             },
                             {
@@ -355,42 +517,86 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                 ],
             },
             {
+                "title": "Finances",
+                "path": "finances",
+                "icon": "mdi:cash-multiple",
+                "type": "sections",
+                "max_columns": 2,
+                "sections": [
+                    {
+                        "type": "grid",
+                        "column_span": 2,
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Finances",
+                                "heading_style": "title",
+                                "icon": "mdi:cash-multiple",
+                            }
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Owner finances",
+                                "heading_style": "title",
+                            },
+                            {
+                                "type": "entities",
+                                "title": "Owner projected earnings by timeframe",
+                                "show_header_toggle": False,
+                                "entities": owner_value_entities,
+                            },
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Site finances",
+                                "heading_style": "title",
+                            },
+                            {
+                                "type": "entities",
+                                "title": "Site projected value by timeframe",
+                                "show_header_toggle": False,
+                                "entities": site_value_entities,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
                 "title": "Turbines",
                 "path": "turbines",
                 "icon": "mdi:wind-turbine",
                 "cards": [
                     {
-                        "type": "entities",
-                        "title": "Turbine status overview",
-                        "show_header_toggle": False,
-                        "entities": [
-                            {"entity": farm("farm_active_turbines"), "name": "Active turbines"},
-                            {
-                                "entity": farm("farm_inactive_turbines"),
-                                "name": "Inactive turbines",
-                            },
-                            {"entity": farm("farm_alarm"), "name": "Alarm"},
-                        ],
-                    },
-                    {
-                        "type": "grid",
-                        "title": "Turbine status",
-                        "columns": 2,
-                        "square": False,
+                        "type": "vertical-stack",
                         "cards": [
                             {
-                                "type": "tile",
-                                "entity": turbine(f"T{i}", "active"),
-                                "name": f"T{i}",
-                            }
-                            for i in range(1, 9)
+                                "type": "entities",
+                                "title": "Turbine status overview",
+                                "show_header_toggle": False,
+                                "entities": [
+                                    {"entity": farm("farm_active_turbines"), "name": "Active turbines"},
+                                    {
+                                        "entity": farm("farm_inactive_turbines"),
+                                        "name": "Inactive turbines",
+                                    },
+                                    {"entity": farm("farm_alarm"), "name": "Alarm"},
+                                ],
+                            },
+                            {
+                                "type": "custom:kirkhill-wind-turbine-map",
+                                "title": "Turbine map",
+                                "zoom": 15,
+                                "turbines": turbine_map_entities,
+                            },
                         ],
-                    },
-                    {
-                        "type": "custom:kirkhill-wind-turbine-map",
-                        "title": "Turbine map",
-                        "height": 560,
-                        "turbines": turbine_map_entities,
                     },
                     {
                         "type": "grid",
