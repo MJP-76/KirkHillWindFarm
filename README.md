@@ -65,6 +65,12 @@ If you find this project useful, and would like to help support its continued de
 - Dashboard YAML file included for manual import/customization
 - Interactive turbine map with scroll/pinch zoom, drag-to-pan, and T1–T8 labels
 - Taller turbine map viewport for improved full-farm fit on the Turbines tab
+- **Bundled chart cards** — ApexCharts and Plotly cards are shipped with the integration (no separate HACS installs needed)
+- **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes (6-hour history)
+- **Power vs Wind scatter plot** — correlation between wind speed and site power output (24-hour history)
+- **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
+- **Dashboard customisation preserved** — user-added cards, sections, and views are retained across integration reloads and updates
+- **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores the dashboard to integration defaults
 
 ## Installation
 **Pre-Reqs**
@@ -170,11 +176,28 @@ The generated dashboard includes:
     - **Double-click / double-tap** to reset to the default view
   - Per-turbine owner/site power, capacity, wind, state, and active status cards
 - Generation display cards that switch automatically between **kWh**, **MWh**, **GWh**, **TWh**, **PWh**, and **EWh**, showing **2 decimal places**
+- A **Charts** section with:
+  - **Combined Power and Wind** history graph — owner power, site power, and wind speed on a single chart
+  - **Dual-axis Power chart** (ApexCharts) — site power (MW) and owner power (kW) on separate Y-axes
+  - **Power vs Wind scatter plot** (Plotly) — wind speed (m/s) vs site power (MW) correlation
 
-The generated dashboard uses the **live entity registry** for the current config entry, so it follows your real entity IDs instead of relying on hardcoded names.
-Dashboard structure and labels are periodically aligned against exported snapshots of `dashboard.kirkhillcoop.org` where possible, while maintaining Home Assistant entity/state model compatibility.
+### Dashboard customisation
 
-The animated map card is bundled by the integration and loaded automatically with the dashboard. From **v4.5.2**, the dashboard and frontend card are reloaded automatically whenever the integration starts or is reloaded — no manual page refresh or HA restart required.
+User-added cards, sections, and views are **preserved** across integration reloads and updates. The integration only updates the cards it manages — anything you add yourself is kept.
+
+If you want to reset the dashboard to its default layout, use the `kirkhill_wind.reset_dashboard` service:
+
+```yaml
+service: kirkhill_wind.reset_dashboard
+```
+
+### Bundled chart cards
+
+The ApexCharts and Plotly Lovelace cards are bundled with the integration and registered automatically. No separate HACS installation is required for the dashboard charts.
+
+### Frontend cards
+
+The animated map card and chart cards are bundled by the integration and loaded automatically with the dashboard. From **v4.5.2**, the dashboard and frontend cards are reloaded automatically whenever the integration starts or is reloaded — no manual page refresh or HA restart required.
 
 For manual import or customization, a dashboard YAML is also provided at [`dashboards/kirkhill_wind_scada.yaml`][dashboard-yaml].
 

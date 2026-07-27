@@ -63,12 +63,6 @@ views:
                 name: Owner power
               - entity: sensor.kirk_hill_wind_farm_capacity_factor_owner
                 name: Owner capacity factor
-          - type: history-graph
-            title: Owner and wind (last 6 hours)
-            hours_to_show: 6
-            entities:
-              - sensor.kirk_hill_wind_farm_power_owner
-              - sensor.kirk_hill_wind_farm_wind_speed
 
       - type: grid
         cards:
@@ -101,12 +95,84 @@ views:
                 name: Forecast next 3h avg (Open-Meteo)
               - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_24h_avg
                 name: Forecast next 24h avg (Open-Meteo)
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Charts
+            heading_style: title
+            icon: mdi:chart-line
           - type: history-graph
-            title: Site and wind (last 6 hours)
+            title: Power and Wind (last 6 hours)
             hours_to_show: 6
             entities:
+              - sensor.kirk_hill_wind_farm_power_owner
               - sensor.kirk_hill_wind_farm_power_site
               - sensor.kirk_hill_wind_farm_wind_speed
+          - type: custom:apexcharts-card
+            graph_span: 6h
+            apex_config:
+              legend:
+                show: false
+              stroke:
+                width: 2
+            header:
+              show: true
+              title: Power (Site and Owner)
+              show_states: true
+              colorize_states: true
+            series:
+              - entity: sensor.kirk_hill_wind_farm_power_site
+                fill_raw: last
+                yaxis_id: MW
+                unit: MW
+              - entity: sensor.kirk_hill_wind_farm_power_owner
+                fill_raw: last
+                curve: stepline
+                yaxis_id: kW
+                color: blue
+            yaxis:
+              - id: MW
+                max: ~1
+                min: ~0
+                apex_config:
+                  labels:
+                    style:
+                      color: orange
+              - id: kW
+                opposite: true
+                min: ~0
+                max: ~1
+                apex_config:
+                  labels:
+                    style:
+                      color: blue
+          - type: custom:plotly-graph
+            title: Power vs Wind
+            hours_to_show: 24
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_wind_speed
+                internal: true
+                fn: $fn ({ ys, vars }) => vars.wind = ys
+              - entity: sensor.kirk_hill_wind_farm_power_site
+                internal: true
+                fn: $fn ({ ys, vars }) => vars.pwr = ys
+              - entity: ""
+                x: $fn ({ vars }) => vars.wind
+                "y": $fn ({ vars }) => vars.pwr
+                type: scatter2d
+                mode: markers
+                marker:
+                  size: 7
+                  color: rgba(50, 50, 217, 0.5)
+                  opacity: 0.5
+            raw_plotly_config: true
+            layout:
+              xaxis:
+                title: Wind Speed (m/s)
+              yaxis:
+                title: Power (MW)
   - title: Finances
     path: finances
     icon: mdi:cash-multiple

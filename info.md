@@ -51,6 +51,12 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   - Active/inactive turbine count and alarm status
   - An **interactive turbine map** showing all 8 turbines with T1–T8 labels, running/stopped legend, hover titles, live spin animation proportional to output, scroll/pinch zoom, drag-to-pan, and double-click to reset
   - Full per-turbine detail cards
+- **Bundled chart cards** — ApexCharts and Plotly Lovelace cards shipped with the integration (no separate HACS installs needed)
+- **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
+- **Power vs Wind scatter plot** — wind speed vs site power correlation
+- **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
+- **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
+- **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
 
 ## Requirements
 

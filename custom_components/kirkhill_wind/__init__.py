@@ -1,6 +1,7 @@
 """The Kirk Hill Wind Farm integration."""
 from __future__ import annotations
 
+import copy
 import logging
 from pathlib import Path
 
@@ -33,10 +34,15 @@ from .coordinator import KirkHillWindCoordinator
 from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
-_FRONTEND_URL = "/kirkhill_wind/turbine-map-card.js"
-_FRONTEND_FILE = Path(__file__).parent / "frontend" / "kirkhill-wind-turbine-map.js"
+_FRONTEND_DIR = Path(__file__).parent / "frontend"
 _FRONTEND_REGISTERED = "kirkhill_wind_frontend_registered"
 _ETHEX_DOMAIN = "ethex"
+
+_FRONTEND_CARDS: list[tuple[str, Path]] = [
+    ("/kirkhill_wind/turbine-map-card.js", _FRONTEND_DIR / "kirkhill-wind-turbine-map.js"),
+    ("/kirkhill_wind/apexcharts-card.js", _FRONTEND_DIR / "apexcharts-card.js"),
+    ("/kirkhill_wind/plotly-graph-card.js", _FRONTEND_DIR / "plotly-graph-card.js"),
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -80,19 +86,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_register_frontend(hass: HomeAssistant) -> None:
-    """Register the bundled custom Lovelace card for the turbine map."""
-    js_version = int(_FRONTEND_FILE.stat().st_mtime)
-    versioned_url = f"{_FRONTEND_URL}?v={js_version}"
-
+    """Register bundled custom Lovelace cards (turbine map, ApexCharts, Plotly)."""
     if not hass.data.get(_FRONTEND_REGISTERED):
         await hass.http.async_register_static_paths(
-            [StaticPathConfig(_FRONTEND_URL, str(_FRONTEND_FILE), False)]
+            [
+                StaticPathConfig(url, str(path), False)
+                for url, path in _FRONTEND_CARDS
+            ]
         )
         hass.data[_FRONTEND_REGISTERED] = True
 
-    # Always (re-)add the versioned URL so the browser picks up JS changes
+    # Always (re-)add the versioned URLs so the browser picks up JS changes
     # after an integration reload without needing a full HA restart.
-    add_extra_js_url(hass, versioned_url)
+    for url, path in _FRONTEND_CARDS:
+        js_version = int(path.stat().st_mtime)
+        add_extra_js_url(hass, f"{url}?v={js_version}")
 
 
 async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -140,7 +148,20 @@ async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> No
         lovelace_store = lovelace_dashboard.LovelaceStorage(hass, item)
         hass.data[LOVELACE_DATA].dashboards[url_path] = lovelace_store
 
-    await lovelace_store.async_save(_build_dashboard_config(hass, entry))
+    new_default = _build_dashboard_config(hass, entry)
+    try:
+        existing_config = await lovelace_store.async_load()
+    except Exception:  # noqa: BLE001
+        existing_config = None
+
+    if existing_config and "views" in existing_config:
+        config_to_save = _merge_dashboard_config(existing_config, new_default)
+        _LOGGER.debug("Merged dashboard config with existing user customisations")
+    else:
+        config_to_save = new_default
+        _LOGGER.debug("No existing dashboard found; saving default config")
+
+    await lovelace_store.async_save(config_to_save)
 
     # Notify all connected browser clients that the dashboard config has changed
     # so they reload it without needing a manual page refresh.
@@ -165,6 +186,21 @@ def _dashboard_enabled(entry: ConfigEntry) -> bool:
         CONF_CREATE_DASHBOARD,
         entry.data.get(CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD),
     )
+
+
+async def async_reset_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reset the Lovelace dashboard to defaults, discarding user customisations."""
+    url_path = "kirk-hill-wind-dashboard"
+
+    lovelace_store = hass.data.get(LOVELACE_DATA, {}).dashboards.get(url_path)
+    if lovelace_store is None:
+        _LOGGER.warning("Dashboard store not found; cannot reset")
+        return
+
+    new_default = _build_dashboard_config(hass, entry)
+    await lovelace_store.async_save(new_default)
+    hass.bus.async_fire("lovelace_updated", {"url_path": url_path, "updated": True})
+    _LOGGER.info("Dashboard reset to defaults")
 
 
 async def _async_setup_payment_tracking(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -265,6 +301,168 @@ def _owner_generation_markdown_card(
         "title": title,
         "content": content,
     }
+
+
+# ---------------------------------------------------------------------------
+# Dashboard merge helpers — preserve user customisations across reloads
+# ---------------------------------------------------------------------------
+
+def _card_match_key(card: dict) -> str | None:
+    """Return a stable key used to match a card across default updates."""
+    ctype = card.get("type", "")
+    # Headings are matched by heading text
+    if ctype == "heading":
+        return f"heading:{card.get('heading', '')}"
+    # Entity / entities cards matched by title
+    if card.get("title"):
+        return f"{ctype}:title:{card['title']}"
+    # Button cards matched by name
+    if card.get("name") and ctype == "button":
+        return f"button:name:{card['name']}"
+    # Markdown cards matched by title
+    if ctype == "markdown" and card.get("title"):
+        return f"markdown:title:{card['title']}"
+    # History-graph matched by title
+    if ctype == "history-graph" and card.get("title"):
+        return f"history-graph:title:{card['title']}"
+    # Custom cards matched by type + title
+    if ctype.startswith("custom:") and card.get("title"):
+        return f"{ctype}:title:{card['title']}"
+    return None
+
+
+def _section_match_key(section: dict) -> str | None:
+    """Return a key used to match sections across default updates."""
+    for card in section.get("cards", []):
+        if card.get("type") == "heading":
+            return f"heading:{card.get('heading', '')}"
+    return None
+
+
+def _merge_cards(existing_cards: list[dict], new_cards: list[dict]) -> list[dict]:
+    """Replace managed cards and preserve user-added cards.
+
+    Cards with a matching key are replaced by the new default version.
+    Cards without a match in the new default are preserved (user-added).
+    New cards without a match in existing are appended.
+    """
+    merged: list[dict] = []
+    remaining_existing = list(existing_cards)
+
+    for new_card in new_cards:
+        new_key = _card_match_key(new_card)
+        if new_key is None:
+            # Can't match — treat as new, add it
+            merged.append(copy.deepcopy(new_card))
+            continue
+
+        # Find and replace the matching existing card
+        found = False
+        for i, existing_card in enumerate(remaining_existing):
+            if _card_match_key(existing_card) == new_key:
+                merged.append(copy.deepcopy(new_card))
+                remaining_existing.pop(i)
+                found = True
+                break
+
+        if not found:
+            # No match in existing — add the new card
+            merged.append(copy.deepcopy(new_card))
+
+    # Any remaining existing cards are user-added — preserve them at the end
+    merged.extend(copy.deepcopy(remaining_existing))
+    return merged
+
+
+def _merge_section(existing_section: dict, new_section: dict) -> dict:
+    """Merge a section, replacing managed cards and preserving user cards."""
+    merged = copy.deepcopy(existing_section)
+    existing_cards = merged.get("cards", [])
+    new_cards = new_section.get("cards", [])
+    merged["cards"] = _merge_cards(existing_cards, new_cards)
+    return merged
+
+
+def _merge_view(existing_view: dict, new_view: dict) -> dict:
+    """Merge a view, preserving user-added sections and cards."""
+    merged = copy.deepcopy(existing_view)
+
+    # Update view-level properties from default
+    for key in ("title", "icon", "type", "max_columns"):
+        if key in new_view:
+            merged[key] = new_view[key]
+
+    # Sections-type views
+    if new_view.get("type") == "sections" and "sections" in new_view:
+        existing_sections = merged.get("sections", [])
+        new_sections = new_view["sections"]
+        merged_sections: list[dict] = []
+        remaining_existing = list(existing_sections)
+
+        for new_section in new_sections:
+            new_key = _section_match_key(new_section)
+            if new_key is None:
+                merged_sections.append(copy.deepcopy(new_section))
+                continue
+
+            found = False
+            for i, existing_section in enumerate(remaining_existing):
+                if _section_match_key(existing_section) == new_key:
+                    merged_sections.append(
+                        _merge_section(existing_section, new_section)
+                    )
+                    remaining_existing.pop(i)
+                    found = True
+                    break
+
+            if not found:
+                merged_sections.append(copy.deepcopy(new_section))
+
+        # Preserve user-added sections at the end
+        merged_sections.extend(remaining_existing)
+        merged["sections"] = merged_sections
+
+    # Direct-cards views (e.g. Turbines)
+    elif "cards" in new_view:
+        existing_cards = merged.get("cards", [])
+        new_cards = new_view["cards"]
+        merged["cards"] = _merge_cards(existing_cards, new_cards)
+
+    return merged
+
+
+def _merge_dashboard_config(existing: dict, new_default: dict) -> dict:
+    """Merge new default dashboard with existing user customisations.
+
+    Views and sections matched by path/heading are updated with new defaults.
+    User-added views, sections, and cards are preserved.
+    """
+    if not existing or "views" not in existing:
+        return copy.deepcopy(new_default)
+
+    merged = copy.deepcopy(new_default)
+    existing_views = existing["views"]
+    new_views = merged.get("views", [])
+    merged_views: list[dict] = []
+    remaining_existing_views = list(existing_views)
+
+    for new_view in new_views:
+        new_path = new_view.get("path")
+        found = False
+        for i, existing_view in enumerate(remaining_existing_views):
+            if existing_view.get("path") == new_path:
+                merged_views.append(_merge_view(existing_view, new_view))
+                remaining_existing_views.pop(i)
+                found = True
+                break
+
+        if not found:
+            merged_views.append(copy.deepcopy(new_view))
+
+    # Preserve user-added views
+    merged_views.extend(remaining_existing_views)
+    merged["views"] = merged_views
+    return merged
 
 
 def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
@@ -460,15 +658,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     },
                                 ],
                             },
-                            {
-                                "type": "history-graph",
-                                "title": "Owner and wind (last 6 hours)",
-                                "hours_to_show": 6,
-                                "entities": [
-                                    farm_scoped("owner", "farm_power"),
-                                    farm("farm_wind_speed"),
-                                ],
-                            },
                         ],
                     },
                     {
@@ -503,14 +692,113 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     *forecast_entities,
                                 ],
                             },
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "column_span": 2,
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Charts",
+                                "heading_style": "title",
+                                "icon": "mdi:chart-line",
+                            },
                             {
                                 "type": "history-graph",
-                                "title": "Site and wind (last 6 hours)",
+                                "title": "Power and Wind (last 6 hours)",
                                 "hours_to_show": 6,
                                 "entities": [
+                                    farm_scoped("owner", "farm_power"),
                                     farm_scoped("site", "farm_power"),
                                     farm("farm_wind_speed"),
                                 ],
+                            },
+                            {
+                                "type": "custom:apexcharts-card",
+                                "graph_span": "6h",
+                                "apex_config": {
+                                    "legend": {"show": False},
+                                    "stroke": {"width": 2},
+                                },
+                                "header": {
+                                    "show": True,
+                                    "title": "Power (Site and Owner)",
+                                    "show_states": True,
+                                    "colorize_states": True,
+                                },
+                                "series": [
+                                    {
+                                        "entity": farm_scoped("site", "farm_power"),
+                                        "fill_raw": "last",
+                                        "yaxis_id": "MW",
+                                        "unit": "MW",
+                                    },
+                                    {
+                                        "entity": farm_scoped("owner", "farm_power"),
+                                        "fill_raw": "last",
+                                        "curve": "stepline",
+                                        "yaxis_id": "kW",
+                                        "color": "blue",
+                                    },
+                                ],
+                                "yaxis": [
+                                    {
+                                        "id": "MW",
+                                        "max": "~1",
+                                        "min": "~0",
+                                        "apex_config": {
+                                            "labels": {
+                                                "style": {"color": "orange"},
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "id": "kW",
+                                        "opposite": True,
+                                        "min": "~0",
+                                        "max": "~1",
+                                        "apex_config": {
+                                            "labels": {
+                                                "style": {"color": "blue"},
+                                            },
+                                        },
+                                    },
+                                ],
+                            },
+                            {
+                                "type": "custom:plotly-graph",
+                                "title": "Power vs Wind",
+                                "hours_to_show": 24,
+                                "entities": [
+                                    {
+                                        "entity": farm("farm_wind_speed"),
+                                        "internal": True,
+                                        "fn": "$fn ({ ys, vars }) => vars.wind = ys",
+                                    },
+                                    {
+                                        "entity": farm_scoped("site", "farm_power"),
+                                        "internal": True,
+                                        "fn": "$fn ({ ys, vars }) => vars.pwr = ys",
+                                    },
+                                    {
+                                        "entity": "",
+                                        "x": "$fn ({ vars }) => vars.wind",
+                                        "y": "$fn ({ vars }) => vars.pwr",
+                                        "type": "scatter2d",
+                                        "mode": "markers",
+                                        "marker": {
+                                            "size": 7,
+                                            "color": "rgba(50, 50, 217, 0.5)",
+                                            "opacity": 0.5,
+                                        },
+                                    },
+                                ],
+                                "raw_plotly_config": True,
+                                "layout": {
+                                    "xaxis": {"title": "Wind Speed (m/s)"},
+                                    "yaxis": {"title": "Power (MW)"},
+                                },
                             },
                         ],
                     },
