@@ -743,6 +743,43 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     },
                                 ],
                             },
+                            {
+                                "type": "custom:plotly-graph",
+                                "hours_to_show": 6,
+                                "refresh_interval": "auto",
+                                "entities": [
+                                    {
+                                        "entity": farm_scoped("owner", "farm_power"),
+                                        "y_axis": "y",
+                                        "line": {"width": 2},
+                                    },
+                                    {
+                                        "entity": farm_scoped("site", "farm_power"),
+                                        "y_axis": "y2",
+                                        "line": {"width": 2},
+                                    },
+                                    {
+                                        "entity": farm("farm_wind_speed"),
+                                        "y_axis": "y3",
+                                        "line": {"width": 1, "dash": "dot"},
+                                    },
+                                ],
+                                "layout": {
+                                    "title": "Power & Wind Scatter",
+                                    "yaxis": {"title": "Owner (kW)", "side": "left"},
+                                    "yaxis2": {
+                                        "title": "Site (kW)",
+                                        "overlaying": "y",
+                                        "side": "right",
+                                    },
+                                    "yaxis3": {
+                                        "title": "Wind (m/s)",
+                                        "overlaying": "y",
+                                        "side": "right",
+                                        "showgrid": False,
+                                    },
+                                },
+                            },
                         ],
                     },
                 ],

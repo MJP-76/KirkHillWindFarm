@@ -132,6 +132,37 @@ views:
                 color: orange
                 unit: kW
                 transform: "return x * 1000;"
+          - type: custom:plotly-graph
+            hours_to_show: 6
+            refresh_interval: auto
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_power_owner
+                y_axis: y
+                line:
+                  width: 2
+              - entity: sensor.kirk_hill_wind_farm_power_site
+                y_axis: y2
+                line:
+                  width: 2
+              - entity: sensor.kirk_hill_wind_farm_wind_speed
+                y_axis: y3
+                line:
+                  width: 1
+                  dash: dot
+            layout:
+              title: Power & Wind Scatter
+              yaxis:
+                title: Owner (kW)
+                side: left
+              yaxis2:
+                title: Site (kW)
+                overlaying: y
+                side: right
+              yaxis3:
+                title: Wind (m/s)
+                overlaying: y
+                side: right
+                showgrid: false
   - title: Finances
     path: finances
     icon: mdi:cash-multiple
