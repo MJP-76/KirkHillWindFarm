@@ -1,9 +1,5 @@
 # Kirk Hill Wind Farm Integration
 
-## ⚠️ **IMPORTANT V1 UPGRADE NOTICE**
-
-**IF YOU INSTALLED THE INITIAL / V1 RELEASE, YOU MUST REMOVE THE HACS REPOSITORY AND THE INTEGRATION IN DEVICES & SERVICES, THEN RE-ADD THEM**
-
 [![Home Assistant][badge-home-assistant]][home-assistant]
 [![HACS][badge-hacs]][hacs]
 [![HACS Validation][badge-hacs-validation]][workflow-hacs-validation]
