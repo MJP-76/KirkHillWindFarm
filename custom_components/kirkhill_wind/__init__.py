@@ -723,82 +723,25 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 },
                                 "header": {
                                     "show": True,
-                                    "title": "Power (Site and Owner)",
+                                    "title": "Power — Owner (blue) / Site (orange)",
                                     "show_states": True,
                                     "colorize_states": True,
                                 },
                                 "series": [
                                     {
-                                        "entity": farm_scoped("site", "farm_power"),
-                                        "fill_raw": "last",
-                                        "yaxis_id": "MW",
-                                        "unit": "MW",
-                                    },
-                                    {
                                         "entity": farm_scoped("owner", "farm_power"),
                                         "fill_raw": "last",
-                                        "curve": "stepline",
-                                        "yaxis_id": "kW",
                                         "color": "blue",
-                                    },
-                                ],
-                                "yaxis": [
-                                    {
-                                        "id": "MW",
-                                        "max": "~1",
-                                        "min": "~0",
-                                        "apex_config": {
-                                            "labels": {
-                                                "style": {"color": "orange"},
-                                            },
-                                        },
-                                    },
-                                    {
-                                        "id": "kW",
-                                        "opposite": True,
-                                        "min": "~0",
-                                        "max": "~1",
-                                        "apex_config": {
-                                            "labels": {
-                                                "style": {"color": "blue"},
-                                            },
-                                        },
-                                    },
-                                ],
-                            },
-                            {
-                                "type": "custom:plotly-graph",
-                                "title": "Power vs Wind",
-                                "hours_to_show": 24,
-                                "entities": [
-                                    {
-                                        "entity": farm("farm_wind_speed"),
-                                        "internal": True,
-                                        "fn": "$fn ({ ys, vars }) => vars.wind = ys",
+                                        "unit": "kW",
                                     },
                                     {
                                         "entity": farm_scoped("site", "farm_power"),
-                                        "internal": True,
-                                        "fn": "$fn ({ ys, vars }) => vars.pwr = ys",
-                                    },
-                                    {
-                                        "entity": "",
-                                        "x": "$fn ({ vars }) => vars.wind",
-                                        "y": "$fn ({ vars }) => vars.pwr",
-                                        "type": "scatter2d",
-                                        "mode": "markers",
-                                        "marker": {
-                                            "size": 7,
-                                            "color": "rgba(50, 50, 217, 0.5)",
-                                            "opacity": 0.5,
-                                        },
+                                        "fill_raw": "last",
+                                        "color": "orange",
+                                        "unit": "kW",
+                                        "transform": "return x * 1000;",
                                     },
                                 ],
-                                "raw_plotly_config": True,
-                                "layout": {
-                                    "xaxis": {"title": "Wind Speed (m/s)"},
-                                    "yaxis": {"title": "Power (MW)"},
-                                },
                             },
                         ],
                     },
