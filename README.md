@@ -12,6 +12,12 @@ A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
+> **Not affiliated with Kirk Hill Co-op.** This is a community integration that
+> reads the dashboard's public API endpoints with your personal API key.
+>
+> **Financial earnings figures are projected, not real-time dynamic values.**
+>
+> **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
 
@@ -21,12 +27,6 @@ If you find this project useful, and would like to help support its continued de
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=ffffff)](https://ko-fi.com/mjp76)
 [![Octopus Energy — you get £50, I get £50](https://img.shields.io/badge/Octopus%20Energy-%E2%80%94%20you%20get%20%C2%A350%2C%20I%20get%20%C2%A350-14294A?style=for-the-badge&logo=octopus-energy&logoColor=ffffff)](https://share.octopus.energy/iron-moose-196)
 
-> **Not affiliated with Kirk Hill Co-op.** This is a community integration that
-> reads the dashboard's public API endpoints with your personal API key.
->
-> **Financial earnings figures are projected, not real-time dynamic values.**
->
-> **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Features
 - Live API polling (`cloud_polling` integration)
