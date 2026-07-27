@@ -3,11 +3,11 @@
 [![Home Assistant][badge-home-assistant]][home-assistant]
 [![HACS][badge-hacs]][hacs]
 [![HACS Validation][badge-hacs-validation]][workflow-hacs-validation]
-[![Hassfest][badge-hassfest]][workflow-hacs-validation]
+[![Hassfest][badge-hassfest]][workflow-hassfest]
 [![CI][badge-ci]][workflow-ci]
 [![Release][badge-release]][releases]
 ![Status][badge-status]
-[![Built with AI][badge-ai]](https://openai.com)
+[![Built with AI][badge-built-with-ai]][built-with-ai]
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
@@ -28,7 +28,6 @@ If you find this project useful, and would like to help support its continued de
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=000000)](https://www.buymeacoffee.com/mjp76)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=ffffff)](https://ko-fi.com/mjp76)
 [![Octopus Energy — you get £50, I get £50](https://img.shields.io/badge/Octopus%20Energy-%E2%80%94%20you%20get%20%C2%A350%2C%20I%20get%20%C2%A350-14294A?style=for-the-badge&logo=octopus-energy&logoColor=ffffff)](https://share.octopus.energy/iron-moose-196)
-
 
 ## Features
 - Live API polling (`cloud_polling` integration)
@@ -211,20 +210,17 @@ Release tags are generated as `vX.Y.Z` directly from `VERSION`.
 MIT
 
 [badge-home-assistant]: https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white
-[badge-hacs]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
-[badge-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml/badge.svg
-[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/validate.yml?branch=main&label=Hassfest
-[badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
-[badge-ai]: https://img.shields.io/badge/Built_with-AI-black?logo=openai&logoColor=white
-[badge-release]: https://img.shields.io/github/v/release/MJP-76/KirkHillWindFarm?style=flat&label=Release
-[badge-status]: https://img.shields.io/badge/Status-experimental-yellow
-[badge-buy-me-a-coffee]: https://cdn.buymeacoffee.com/buttons/default-orange.png
 [home-assistant]: https://www.home-assistant.io/
+[badge-hacs]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
 [hacs]: https://github.com/hacs/integration
+[badge-hacs-validation]: https://img.shields.io/badge/HACS%20Validation-passing-brightgreen
 [workflow-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
+[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/hassfest.yml?branch=main&label=Hassfest
+[workflow-hassfest]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/hassfest.yml
+[badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
 [workflow-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml
+[badge-release]: https://img.shields.io/github/v/release/MJP-76/KirkHillWindFarm?style=flat&label=Release
 [releases]: https://github.com/MJP-76/KirkHillWindFarm/releases
-[buy-me-a-coffee]: https://www.buymeacoffee.com/mjp76
-[octopus-referral]: https://share.octopus.energy/iron-moose-196
-[dashboard-yaml]: dashboards/kirkhill_wind_scada.yaml
-[version-file]: VERSION
+[badge-status]: https://img.shields.io/badge/Status-experimental-yellow
+[badge-built-with-ai]: https://img.shields.io/badge/Built%20with-AI-black?logo=openai&logoColor=white
+[built-with-ai]: https://openai.com
