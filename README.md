@@ -5,7 +5,6 @@
 [![HACS Validation][badge-hacs-validation]][workflow-hacs-validation]
 [![Hassfest][badge-hassfest]][workflow-hacs-validation]
 [![CI][badge-ci]][workflow-ci]
-[![GitHub Copilot][badge-copilot]][github-copilot]
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
