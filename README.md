@@ -5,6 +5,7 @@
 [![HACS Validation][badge-hacs-validation]][workflow-hacs-validation]
 [![Hassfest][badge-hassfest]][workflow-hacs-validation]
 [![CI][badge-ci]][workflow-ci]
+[![Built with AI][badge-ai]](https://openai.com)
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
@@ -212,13 +213,12 @@ MIT
 [badge-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml/badge.svg
 [badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/validate.yml?branch=main&label=Hassfest
 [badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
-[badge-copilot]: https://img.shields.io/badge/GitHub%20Copilot-Built%20with-000000?style=flat-square&logo=githubcopilot
+[badge-ai]: https://img.shields.io/badge/Built_with-AI-black?logo=openai&logoColor=white
 [badge-buy-me-a-coffee]: https://cdn.buymeacoffee.com/buttons/default-orange.png
 [home-assistant]: https://www.home-assistant.io/
 [hacs]: https://github.com/hacs/integration
 [workflow-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
 [workflow-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml
-[github-copilot]: https://github.com/features/copilot
 [buy-me-a-coffee]: https://www.buymeacoffee.com/mjp76
 [octopus-referral]: https://share.octopus.energy/iron-moose-196
 [dashboard-yaml]: dashboards/kirkhill_wind_scada.yaml
