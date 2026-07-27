@@ -1,7 +1,7 @@
 """Sensor platform for the Kirk Hill Wind Farm integration."""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -226,7 +226,7 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
             return value.date()
         if isinstance(value, (int, float)):
             try:
-                return datetime.utcfromtimestamp(float(value)).date()
+                return datetime.fromtimestamp(float(value), tz=timezone.utc).date()
             except (OverflowError, OSError, ValueError):
                 return None
         if isinstance(value, str):

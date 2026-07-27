@@ -577,20 +577,85 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                 "entities": [
                     {"entity": turbine(turbine_id, "owner_power"), "name": "Owner power"},
                     {"entity": turbine(turbine_id, "site_power"), "name": "Site power"},
-                    {
-                        "entity": turbine(turbine_id, "owner_capacity_factor"),
-                        "name": "Owner capacity factor",
-                    },
-                    {
-                        "entity": turbine(turbine_id, "site_capacity_factor"),
-                        "name": "Site capacity factor",
-                    },
-                    {"entity": turbine(turbine_id, "wind_speed"), "name": "Wind speed"},
                     {"entity": turbine(turbine_id, "state_text"), "name": "State"},
                     {"entity": turbine(turbine_id, "active"), "name": "Active"},
                 ],
             }
         )
+
+    kpi_cards = [
+        {
+            "type": "stat",
+            "name": "Owner Power",
+            "state": farm_scoped("owner", "farm_power"),
+            "icon": "mdi:flash",
+        },
+        {
+            "type": "stat",
+            "name": "Site Power",
+            "state": farm_scoped("site", "farm_power"),
+            "icon": "mdi:transmission-tower",
+        },
+        {
+            "type": "gauge",
+            "entity": farm_scoped("owner", "farm_capacity_factor"),
+            "name": "Capacity Factor",
+            "min": 0,
+            "max": 100,
+            "severity": {"green": 50, "yellow": 20, "red": 0},
+        },
+        {
+            "type": "stat",
+            "name": "Active Turbines",
+            "state": farm("farm_active_turbines"),
+            "icon": "mdi:wind-turbine",
+        },
+        {
+            "type": "stat",
+            "name": "Wind Speed",
+            "state": farm("farm_wind_speed"),
+            "icon": "mdi:weather-windy",
+        },
+        {
+            "type": "tile",
+            "entity": farm("farm_alarm"),
+            "name": "Alarm",
+            "icon": "mdi:alert",
+            "color": "red",
+        },
+        {
+            "type": "button",
+            "name": "Reload integration",
+            "icon": "mdi:reload",
+            "show_name": False,
+            "show_state": False,
+            "tap_action": {
+                "action": "call-service",
+                "service": "kirkhill_wind.reload_integration",
+            },
+        },
+    ]
+
+    financial_kpi_cards = [
+        {
+            "type": "stat",
+            "name": "Today's Earnings",
+            "state": farm_scoped("owner", "farm_generation_value_today"),
+            "icon": "mdi:cash",
+        },
+        {
+            "type": "stat",
+            "name": "This Month",
+            "state": farm_scoped("owner", "farm_generation_value_month"),
+            "icon": "mdi:calendar-month",
+        },
+        {
+            "type": "stat",
+            "name": "Year to Date",
+            "state": farm_scoped("owner", "farm_generation_value_ytd"),
+            "icon": "mdi:chart-timeline-variant",
+        },
+    ]
 
     return {
         "title": "Wind Farm",
@@ -605,25 +670,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                     {
                         "type": "grid",
                         "column_span": 2,
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Wind Farm",
-                                "heading_style": "title",
-                                "icon": "mdi:wind-turbine",
-                            },
-                            {
-                                "type": "button",
-                                "name": "Reload integration",
-                                "icon": "mdi:reload",
-                                "show_name": False,
-                                "show_state": False,
-                                "tap_action": {
-                                    "action": "call-service",
-                                    "service": "kirkhill_wind.reload_integration",
-                                },
-                            },
-                        ],
+                        "cards": kpi_cards,
                     },
                     {
                         "type": "grid",
@@ -642,21 +689,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "title": "Owner projected earnings",
                                 "show_header_toggle": False,
                                 "entities": owner_value_entities,
-                            },
-                            {
-                                "type": "entities",
-                                "title": "Owner metrics",
-                                "show_header_toggle": False,
-                                "entities": [
-                                    {
-                                        "entity": farm_scoped("owner", "farm_power"),
-                                        "name": "Owner power",
-                                    },
-                                    {
-                                        "entity": farm_scoped("owner", "farm_capacity_factor"),
-                                        "name": "Owner capacity factor",
-                                    },
-                                ],
                             },
                         ],
                     },
@@ -689,7 +721,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                         "entity": farm("farm_wind_speed"),
                                         "name": "Actual wind speed (Kirk Hill API)",
                                     },
-                                    *forecast_entities,
                                 ],
                             },
                         ],
@@ -706,8 +737,8 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             },
                             {
                                 "type": "history-graph",
-                                "title": "Power and Wind (last 6 hours)",
-                                "hours_to_show": 6,
+                                "title": "Power and Wind (last 25 hours)",
+                                "hours_to_show": 25,
                                 "entities": [
                                     farm_scoped("owner", "farm_power"),
                                     farm_scoped("site", "farm_power"),
@@ -716,7 +747,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             },
                             {
                                 "type": "custom:apexcharts-card",
-                                "graph_span": "6h",
+                                "graph_span": "25h",
                                 "apex_config": {
                                     "legend": {"show": False},
                                     "stroke": {"width": 2},
@@ -733,6 +764,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                         "fill_raw": "last",
                                         "color": "blue",
                                         "unit": "kW",
+                                        "type": "area",
                                     },
                                     {
                                         "entity": farm_scoped("site", "farm_power"),
@@ -740,12 +772,13 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                         "color": "orange",
                                         "unit": "kW",
                                         "transform": "return x * 1000;",
+                                        "type": "area",
                                     },
                                 ],
                             },
                             {
                                 "type": "custom:plotly-graph",
-                                "hours_to_show": 6,
+                                "hours_to_show": 25,
                                 "refresh_interval": "auto",
                                 "entities": [
                                     {
@@ -765,7 +798,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     },
                                 ],
                                 "layout": {
-                                    "title": "Power & Wind Scatter",
+                                    "title": "Power & Wind (25h)",
                                     "yaxis": {"title": "Owner (kW)", "side": "left"},
                                     "yaxis2": {
                                         "title": "Site (kW)",
@@ -780,6 +813,34 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     },
                                 },
                             },
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "column_span": 2,
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Wind Forecast",
+                                "heading_style": "title",
+                                "icon": "mdi:weather-partly-cloudy",
+                            },
+                            {
+                                "type": "entities",
+                                "title": "Open-Meteo forecasts",
+                                "show_header_toggle": False,
+                                "entities": forecast_entities,
+                            },
+                            _owner_generation_markdown_card(
+                                "Today's summary",
+                                [
+                                    (
+                                        "Generation",
+                                        farm_scoped("owner", "farm_generation_today"),
+                                        farm_scoped("owner", "farm_generation_value_today"),
+                                    ),
+                                ],
+                            ),
                         ],
                     },
                 ],
@@ -800,7 +861,8 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading": "Finances",
                                 "heading_style": "title",
                                 "icon": "mdi:cash-multiple",
-                            }
+                            },
+                            *financial_kpi_cards,
                         ],
                     },
                     {

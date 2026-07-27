@@ -9,10 +9,36 @@ views:
       - type: grid
         column_span: 2
         cards:
-          - type: heading
-            heading: Wind Farm
-            heading_style: title
+          - type: stat
+            name: Owner Power
+            state: sensor.kirk_hill_wind_farm_power_owner
+            icon: mdi:flash
+          - type: stat
+            name: Site Power
+            state: sensor.kirk_hill_wind_farm_power_site
+            icon: mdi:transmission-tower
+          - type: gauge
+            entity: sensor.kirk_hill_wind_farm_capacity_factor_owner
+            name: Capacity Factor
+            min: 0
+            max: 100
+            severity:
+              green: 50
+              yellow: 20
+              red: 0
+          - type: stat
+            name: Active Turbines
+            state: sensor.kirk_hill_wind_farm_active_turbines
             icon: mdi:wind-turbine
+          - type: stat
+            name: Wind Speed
+            state: sensor.kirk_hill_wind_farm_wind_speed
+            icon: mdi:weather-windy
+          - type: tile
+            entity: binary_sensor.kirk_hill_wind_farm_alarm
+            name: Alarm
+            icon: mdi:alert
+            color: red
           - type: button
             name: Reload integration
             icon: mdi:reload
@@ -55,14 +81,6 @@ views:
                 name: Year
               - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_owner
                 name: All time
-          - type: entities
-            title: Owner metrics
-            show_header_toggle: false
-            entities:
-              - entity: sensor.kirk_hill_wind_farm_power_owner
-                name: Owner power
-              - entity: sensor.kirk_hill_wind_farm_capacity_factor_owner
-                name: Owner capacity factor
 
       - type: grid
         cards:
@@ -89,12 +107,6 @@ views:
                 name: Site capacity factor
               - entity: sensor.kirk_hill_wind_farm_wind_speed
                 name: Actual wind speed (Kirk Hill API)
-              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_hour
-                name: Forecast next hour (Open-Meteo)
-              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_3h_avg
-                name: Forecast next 3h avg (Open-Meteo)
-              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_24h_avg
-                name: Forecast next 24h avg (Open-Meteo)
 
       - type: grid
         column_span: 2
@@ -104,14 +116,14 @@ views:
             heading_style: title
             icon: mdi:chart-line
           - type: history-graph
-            title: Power and Wind (last 6 hours)
-            hours_to_show: 6
+            title: Power and Wind (last 25 hours)
+            hours_to_show: 25
             entities:
               - sensor.kirk_hill_wind_farm_power_owner
               - sensor.kirk_hill_wind_farm_power_site
               - sensor.kirk_hill_wind_farm_wind_speed
           - type: custom:apexcharts-card
-            graph_span: 6h
+            graph_span: 25h
             apex_config:
               legend:
                 show: false
@@ -127,13 +139,15 @@ views:
                 fill_raw: last
                 color: blue
                 unit: kW
+                type: area
               - entity: sensor.kirk_hill_wind_farm_power_site
                 fill_raw: last
                 color: orange
                 unit: kW
                 transform: "return x * 1000;"
+                type: area
           - type: custom:plotly-graph
-            hours_to_show: 6
+            hours_to_show: 25
             refresh_interval: auto
             entities:
               - entity: sensor.kirk_hill_wind_farm_power_owner
@@ -150,7 +164,7 @@ views:
                   width: 1
                   dash: dot
             layout:
-              title: Power & Wind Scatter
+              title: "Power & Wind (25h)"
               yaxis:
                 title: Owner (kW)
                 side: left
@@ -163,6 +177,30 @@ views:
                 overlaying: y
                 side: right
                 showgrid: false
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Wind Forecast
+            heading_style: title
+            icon: mdi:weather-partly-cloudy
+          - type: entities
+            title: Open-Meteo forecasts
+            show_header_toggle: false
+            entities:
+              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_hour
+                name: Forecast next hour (Open-Meteo)
+              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_3h_avg
+                name: Forecast next 3h avg (Open-Meteo)
+              - entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_24h_avg
+                name: Forecast next 24h avg (Open-Meteo)
+          - type: markdown
+            title: Today's summary
+            content: |
+              - **Generation:** {% set v = state_attr('sensor.kirk_hill_wind_farm_generation_today_owner', 'raw_generation_kwh') %}{% if v is not none %}{% set n = v | float(0) %}{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}{% else %}—{% endif %}
+              - **Projected value:** {% set v = states('sensor.kirk_hill_wind_farm_generation_value_today_owner') %}{% if v and v != 'unknown' %}£{{ v }}{% else %}—{% endif %}
+
   - title: Finances
     path: finances
     icon: mdi:cash-multiple
@@ -176,6 +214,18 @@ views:
             heading: Finances
             heading_style: title
             icon: mdi:cash-multiple
+          - type: stat
+            name: Today's Earnings
+            state: sensor.kirk_hill_wind_farm_generation_value_today_owner
+            icon: mdi:cash
+          - type: stat
+            name: This Month
+            state: sensor.kirk_hill_wind_farm_generation_value_month_owner
+            icon: mdi:calendar-month
+          - type: stat
+            name: Year to Date
+            state: sensor.kirk_hill_wind_farm_generation_value_ytd_owner
+            icon: mdi:chart-timeline-variant
       - type: grid
         cards:
           - type: heading
@@ -222,6 +272,7 @@ views:
                 name: Year
               - entity: sensor.kirk_hill_wind_farm_generation_value_alltime_site
                 name: All time
+
   - title: Turbines
     path: turbines
     icon: mdi:wind-turbine
@@ -293,12 +344,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t1_power_site
                 name: Site power
-              - entity: sensor.turbine_t1_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t1_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t1_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t1_state
                 name: State
               - entity: binary_sensor.turbine_t1_active
@@ -310,12 +355,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t2_power_site
                 name: Site power
-              - entity: sensor.turbine_t2_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t2_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t2_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t2_state
                 name: State
               - entity: binary_sensor.turbine_t2_active
@@ -327,12 +366,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t3_power_site
                 name: Site power
-              - entity: sensor.turbine_t3_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t3_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t3_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t3_state
                 name: State
               - entity: binary_sensor.turbine_t3_active
@@ -344,12 +377,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t4_power_site
                 name: Site power
-              - entity: sensor.turbine_t4_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t4_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t4_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t4_state
                 name: State
               - entity: binary_sensor.turbine_t4_active
@@ -361,12 +388,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t5_power_site
                 name: Site power
-              - entity: sensor.turbine_t5_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t5_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t5_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t5_state
                 name: State
               - entity: binary_sensor.turbine_t5_active
@@ -378,12 +399,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t6_power_site
                 name: Site power
-              - entity: sensor.turbine_t6_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t6_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t6_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t6_state
                 name: State
               - entity: binary_sensor.turbine_t6_active
@@ -395,12 +410,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t7_power_site
                 name: Site power
-              - entity: sensor.turbine_t7_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t7_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t7_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t7_state
                 name: State
               - entity: binary_sensor.turbine_t7_active
@@ -412,12 +421,6 @@ views:
                 name: Owner power
               - entity: sensor.turbine_t8_power_site
                 name: Site power
-              - entity: sensor.turbine_t8_capacity_factor_owner
-                name: Owner capacity factor
-              - entity: sensor.turbine_t8_capacity_factor_site
-                name: Site capacity factor
-              - entity: sensor.turbine_t8_wind_speed
-                name: Wind speed
               - entity: sensor.turbine_t8_state
                 name: State
               - entity: binary_sensor.turbine_t8_active

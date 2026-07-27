@@ -8,3 +8,14 @@ reload_integration:
       required: false
       selector:
         text:
+
+reset_dashboard:
+  name: Reset dashboard
+  description: Reset the Kirk Hill Wind Farm dashboard to default layout, discarding any customisations.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID to reset. If omitted, the first entry is reset.
+      required: false
+      selector:
+        text:
