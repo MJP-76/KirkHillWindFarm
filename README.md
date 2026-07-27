@@ -217,7 +217,7 @@ MIT
 [badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
 [badge-ai]: https://img.shields.io/badge/Built_with-AI-black?logo=openai&logoColor=white
 [badge-release]: https://img.shields.io/github/v/release/MJP-76/KirkHillWindFarm?style=flat&label=Release
-[badge-status]: https://img.shields.io/badge/Status-stable-brightgreen
+[badge-status]: https://img.shields.io/badge/Status-experimental-yellow
 [badge-buy-me-a-coffee]: https://cdn.buymeacoffee.com/buttons/default-orange.png
 [home-assistant]: https://www.home-assistant.io/
 [hacs]: https://github.com/hacs/integration
