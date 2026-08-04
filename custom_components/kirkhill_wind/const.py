@@ -39,7 +39,6 @@ TIMEFRAME_TO_RANGE = {
     "week": "7d",
     "month": "30d",
     "ytd": "ytd",
-    "year": "year",
     "alltime": "all",
 }
 TIMEFRAME_ORDER = ("yesterday", "today", "week", "month", "ytd", "year", "alltime")

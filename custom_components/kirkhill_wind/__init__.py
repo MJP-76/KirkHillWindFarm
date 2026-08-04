@@ -328,6 +328,9 @@ def _card_match_key(card: dict) -> str | None:
     # Custom cards matched by type + title
     if ctype.startswith("custom:") and card.get("title"):
         return f"{ctype}:title:{card['title']}"
+    # ApexCharts cards store title in header.title
+    if ctype == "custom:apexcharts-card" and card.get("header", {}).get("title"):
+        return f"{ctype}:title:{card['header']['title']}"
     return None
 
 
@@ -583,6 +586,54 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             }
         )
 
+    turbine_status_barchart = {
+        "type": "custom:apexcharts-card",
+        "header": {
+            "show": True,
+            "title": "Turbine Status",
+            "show_states": True,
+            "colorize_states": True,
+        },
+        "apex_config": {
+            "chart": {
+                "type": "bar",
+                "height": 300,
+                "stacked": True,
+                "toolbar": {"show": False},
+            },
+            "plotOptions": {
+                "bar": {
+                    "horizontal": True,
+                    "barHeight": "60%",
+                    "borderRadius": 4,
+                    "dataLabels": {"show": False},
+                }
+            },
+            "xaxis": {
+                "categories": [f"T{i}" for i in range(1, 9)],
+            },
+            "yaxis": {
+                "min": 0,
+                "max": 1,
+                "title": {"text": "Status"},
+            },
+            "tooltip": {"enabled": False},
+            "legend": {"show": False},
+        },
+        "graph_span": "1d",
+        "update_interval": "30s",
+        "series": [
+            {
+                "entity": turbine(f"T{i}", "active"),
+                "type": "column",
+                "fill_raw": "last",
+                "transform": "return x === 1 ? 1 : 0;",
+                "color": "var(--paper-item-icon-color, #4caf50)",
+            }
+            for i in range(1, 9)
+        ],
+    }
+
     kpi_cards = [
         {
             "type": "stat",
@@ -603,12 +654,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             "min": 0,
             "max": 100,
             "severity": {"green": 50, "yellow": 20, "red": 0},
-        },
-        {
-            "type": "stat",
-            "name": "Active Turbines",
-            "state": farm("farm_active_turbines"),
-            "icon": "mdi:wind-turbine",
         },
         {
             "type": "stat",
@@ -907,19 +952,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                     {
                         "type": "vertical-stack",
                         "cards": [
-                            {
-                                "type": "entities",
-                                "title": "Turbine status overview",
-                                "show_header_toggle": False,
-                                "entities": [
-                                    {"entity": farm("farm_active_turbines"), "name": "Active turbines"},
-                                    {
-                                        "entity": farm("farm_inactive_turbines"),
-                                        "name": "Inactive turbines",
-                                    },
-                                    {"entity": farm("farm_alarm"), "name": "Alarm"},
-                                ],
-                            },
+                            turbine_status_barchart,
                             {
                                 "type": "custom:kirkhill-wind-turbine-map",
                                 "title": "Turbine map",

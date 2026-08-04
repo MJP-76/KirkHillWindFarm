@@ -6,7 +6,7 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     TextSelector,
@@ -154,6 +154,25 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> KirkHillWindOptionsFlow:
         """Return the options flow."""
         return KirkHillWindOptionsFlow(config_entry)
+
+    @classmethod
+    async def async_migrate_entry(
+        cls, hass: HomeAssistant, config_entry: config_entries.ConfigEntry
+    ) -> bool:
+        """Migrate config entries to the current version."""
+        if config_entry.version == cls.VERSION:
+            return True
+
+        data = dict(config_entry.data)
+
+        if config_entry.version < 3:
+            # Version 3 introduced the base_url field so users can target a
+            # non-default Kirk Hill dashboard instance.
+            data.setdefault(CONF_BASE_URL, DEFAULT_BASE_URL)
+
+        config_entry.data = data
+        config_entry.version = cls.VERSION
+        return True
 
 
 class KirkHillWindOptionsFlow(config_entries.OptionsFlow):

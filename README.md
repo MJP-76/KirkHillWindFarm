@@ -82,7 +82,7 @@ If you find this project useful, and would like to help support its continued de
 4. Add the integration via Settings -> Devices & Services -> Add Integration -> "Kirk Hill Wind Farm"
 5. Enter your API key, choose whether to create the dashboard automatically, and set a site name
 
->If you want to include your earnings from the Ethex Investment Platform, you will need to also add that reposity https://github/mjp-76/ha-ethex
+>If you want to include your earnings from the Ethex Investment Platform, you will need to also add that repository https://github.com/mjp-76/ha-ethex
 >Currently in testing awaitng the go live of Kirk Hill Wind Farm payments omn Ethex
 
 Polling interval can be changed later from the integration's **Configure** (Options) menu.

@@ -102,9 +102,10 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
         for scope in SCOPES:
             for timeframe in TIMEFRAME_ORDER:
-                range_value = TIMEFRAME_TO_RANGE[timeframe]
                 if timeframe == "year":
                     range_value = str(datetime.now().year)
+                else:
+                    range_value = TIMEFRAME_TO_RANGE[timeframe]
                 task = asyncio.create_task(
                     self.client.get_summary(session, scope=scope, range_value=range_value)
                 )
