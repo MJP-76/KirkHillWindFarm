@@ -26,8 +26,10 @@ from homeassistant.helpers import entity_registry as er
 from .const import (
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
+    CONF_GRAPH_HOURS,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
+    DEFAULT_GRAPH_HOURS,
     PLATFORMS,
 )
 from .coordinator import KirkHillWindCoordinator
@@ -586,52 +588,13 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             }
         )
 
+    graph_hours = entry.options.get(CONF_GRAPH_HOURS, DEFAULT_GRAPH_HOURS)
+
     turbine_status_barchart = {
-        "type": "custom:apexcharts-card",
-        "header": {
-            "show": True,
-            "title": "Turbine Status",
-            "show_states": True,
-            "colorize_states": True,
-        },
-        "apex_config": {
-            "chart": {
-                "type": "bar",
-                "height": 300,
-                "stacked": True,
-                "toolbar": {"show": False},
-            },
-            "plotOptions": {
-                "bar": {
-                    "horizontal": True,
-                    "barHeight": "60%",
-                    "borderRadius": 4,
-                    "dataLabels": {"show": False},
-                }
-            },
-            "xaxis": {
-                "categories": [f"T{i}" for i in range(1, 9)],
-            },
-            "yaxis": {
-                "min": 0,
-                "max": 1,
-                "title": {"text": "Status"},
-            },
-            "tooltip": {"enabled": False},
-            "legend": {"show": False},
-        },
-        "graph_span": "1d",
-        "update_interval": "30s",
-        "series": [
-            {
-                "entity": turbine(f"T{i}", "active"),
-                "type": "column",
-                "fill_raw": "last",
-                "transform": "return x === 1 ? 1 : 0;",
-                "color": "var(--paper-item-icon-color, #4caf50)",
-            }
-            for i in range(1, 9)
-        ],
+        "type": "history-graph",
+        "title": f"Turbine Activity — last {graph_hours}h",
+        "entities": [turbine(f"T{i}", "active") for i in range(1, 9)],
+        "hours_to_show": graph_hours,
     }
 
     kpi_cards = [

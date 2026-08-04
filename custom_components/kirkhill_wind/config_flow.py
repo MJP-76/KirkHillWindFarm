@@ -20,6 +20,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
+    CONF_GRAPH_HOURS,
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     CONF_OWNER_SHARE_PERCENT,
     CONF_OWNER_VALUE_RATE,
@@ -29,6 +30,7 @@ from .const import (
     DEFAULT_BASE_URL,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
+    DEFAULT_GRAPH_HOURS,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_OWNER_SHARE_PERCENT,
     DEFAULT_OWNER_VALUE_RATE,
@@ -213,6 +215,10 @@ class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
                             DEFAULT_ENABLE_PAYMENT_TRACKING,
                         ),
                     ): bool,
+                    vol.Required(
+                        CONF_GRAPH_HOURS,
+                        default=current.get(CONF_GRAPH_HOURS, DEFAULT_GRAPH_HOURS),
+                    ): vol.All(int, vol.Range(min=1, max=168)),
                     vol.Required(
                         CONF_OWNER_VALUE_RATE,
                         default=current.get(
