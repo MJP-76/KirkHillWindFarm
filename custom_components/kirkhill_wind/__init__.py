@@ -601,13 +601,13 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         {
             "type": "stat",
             "name": "Owner Power",
-            "state": farm_scoped("owner", "farm_power"),
+            "entity": farm_scoped("owner", "farm_power"),
             "icon": "mdi:flash",
         },
         {
             "type": "stat",
             "name": "Site Power",
-            "state": farm_scoped("site", "farm_power"),
+            "entity": farm_scoped("site", "farm_power"),
             "icon": "mdi:transmission-tower",
         },
         {
@@ -621,7 +621,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         {
             "type": "stat",
             "name": "Wind Speed",
-            "state": farm("farm_wind_speed"),
+            "entity": farm("farm_wind_speed"),
             "icon": "mdi:weather-windy",
         },
         {
@@ -648,19 +648,19 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         {
             "type": "stat",
             "name": "Today's Earnings",
-            "state": farm_scoped("owner", "farm_generation_value_today"),
+            "entity": farm_scoped("owner", "farm_generation_value_today"),
             "icon": "mdi:cash",
         },
         {
             "type": "stat",
             "name": "This Month",
-            "state": farm_scoped("owner", "farm_generation_value_month"),
+            "entity": farm_scoped("owner", "farm_generation_value_month"),
             "icon": "mdi:calendar-month",
         },
         {
             "type": "stat",
             "name": "Year to Date",
-            "state": farm_scoped("owner", "farm_generation_value_ytd"),
+            "entity": farm_scoped("owner", "farm_generation_value_ytd"),
             "icon": "mdi:chart-timeline-variant",
         },
     ]
