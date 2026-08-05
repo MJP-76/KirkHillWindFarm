@@ -11,7 +11,7 @@
  */
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 860, hMin: 520, hMax: 1600 };
+    return { w: 1240, h: 860, hMin: 1052, hMax: 1600 };
   }
 
   static get STATUS() {
@@ -200,9 +200,10 @@ class KirkHillWindScada extends HTMLElement {
     const legendY = H - 150;
     const tBottom = legendY - 60;
     const span = Math.max(320, tBottom - tTop);
+    const gap = Math.max(96, span / 8);
     return {
       H,
-      gap: span / 8,
+      gap,
       tTop,
       busY2: tBottom,
       busSummaryY: legendY - 24,
