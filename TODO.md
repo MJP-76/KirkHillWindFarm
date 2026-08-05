@@ -12,4 +12,5 @@
 
 ## Backlog
 
-- [ ] TBD
+- [ ] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)
+- [ ] Create a `CONTRIBUTING` file (GitHub auto-features it in the repo file list)
