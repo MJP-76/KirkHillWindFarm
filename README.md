@@ -24,33 +24,8 @@ It pulls current data for both OpenAPI scopes:
 
 Reference notes about the wind farm. Add or update these whenever we learn something new.
 
-### Overview
-
-Kirk Hill Wind Farm is an onshore wind facility in Kirkoswald, South Ayrshire, Scotland — the UK's largest consumer-owned wind farm, run on a community cooperative model.
-
-### Technical specifications
-
-- **Turbines:** 8 × Enercon E82 wind energy converters
-- **Total farm capacity:** 18.8 MW nameplate
-- **Per-turbine rating:** 2.35 MW each
-- **Peak output:** reached at wind speeds of 14 m/s (~31 mph) or higher
-- **Expected generation:** ~54,000–56,000 MWh per year, enough for ~20,000 households and businesses
-
-### Location & construction timeline
-
-- **Location:** near the coastal village of Kirkoswald, South Ayrshire, with views toward Ailsa Craig
-- **Turbine 2** is officially named **"Ailsa"** by co-op members
-- **Timeline:**
-  - Pre-construction works began early 2022
-  - First power synchronised to the grid April 2024
-  - Full commercial operations July 2024
-
-### Ownership & co-operative structure
-
-- **Shared ownership:** managed by Ripple Energy, funded by a £32 million co-operative investment
-- **Members:** 5,600+ households and small businesses across Scotland, England and Wales
-- **Financial return:** the green electricity generated stabilises/reduces owners' home energy bills instead of going to a corporate utility
-- Members buy "watts" of the farm equivalent to their annual household usage, offsetting up to 100% of their electricity footprint
+See [`WIND_FARM_INFO`][wind-farm-info] for the full reference (stored in the same
+plain-text style as the `LICENSE` file).
 
 ## Support me
 
@@ -283,3 +258,4 @@ MIT
 [releases]: https://github.com/MJP-76/KirkHillWindFarm/releases
 [badge-built-with-ai]: https://img.shields.io/badge/Built%20with-AI-black?logo=openai&logoColor=white
 [built-with-ai]: https://openai.com
+[wind-farm-info]: WIND_FARM_INFO
