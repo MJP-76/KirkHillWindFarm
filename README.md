@@ -278,10 +278,6 @@ When preparing a release:
 
 Release tags are generated as `vX.Y.Z` directly from `VERSION`.
 
-## License
-
-MIT
-
 [badge-home-assistant]: https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white
 [home-assistant]: https://www.home-assistant.io/
 [badge-hacs]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
