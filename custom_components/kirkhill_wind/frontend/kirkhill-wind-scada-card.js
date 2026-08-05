@@ -36,6 +36,7 @@ class KirkHillWindScada extends HTMLElement {
     this._hass = null;
     this._values = new Map();
     this._vbH = KirkHillWindScada.VIEWBOX.h;
+    this._turbineEntities = new Map();
   }
 
   connectedCallback() {
@@ -191,7 +192,33 @@ class KirkHillWindScada extends HTMLElement {
         </div>
       </ha-card>
     `;
+    this._bindClicks();
     this._update();
+  }
+
+  _bindClicks() {
+    const svg = this.shadowRoot.querySelector("svg");
+    if (!svg) return;
+    if (this._boundClick) svg.removeEventListener("click", this._boundClick);
+    this._boundClick = (ev) => {
+      const g = ev.target.closest("g.turbine");
+      if (!g) return;
+      const key = g.getAttribute("data-turbine");
+      const entityId = key ? this._turbineEntities.get(key) : null;
+      if (!entityId) return;
+      try {
+        window.dispatchEvent(
+          new CustomEvent("hass-more-info", {
+            bubbles: true,
+            composed: true,
+            detail: { entityId },
+          })
+        );
+      } catch (err) {
+        console.error("SCADA: failed to open more-info", err);
+      }
+    };
+    svg.addEventListener("click", this._boundClick);
   }
 
   _layout() {
@@ -250,10 +277,9 @@ class KirkHillWindScada extends HTMLElement {
       const cy = top + 40;
       const num = this._escape(t.id || `T${i + 1}`);
       const stateEntity = t.state_entity;
-      const openMoreInfo = stateEntity && this._escape(stateEntity) ? `window.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:'${this._escape(stateEntity)}'}}));return false;` : "";
-      const onclick = openMoreInfo ? ` onclick="${openMoreInfo}" style="cursor:pointer"` : "";
+      if (stateEntity) this._turbineEntities.set(t.id || `T${i + 1}`, stateEntity);
       turbinesHtml += `
-        <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}"${onclick}>
+        <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
           <rect class="node-rect" x="30" y="${top}" width="230" height="80" rx="8"/>
           <text class="t-id" x="44" y="${top + 16}">${num}</text>
           <rect class="status-pill" x="150" y="${top + 7}" width="96" height="20" rx="10"/>
