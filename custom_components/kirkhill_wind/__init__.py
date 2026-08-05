@@ -315,6 +315,11 @@ def _card_match_key(card: dict) -> str | None:
     # Headings are matched by heading text
     if ctype == "heading":
         return f"heading:{card.get('heading', '')}"
+    # Stat / gauge / tile cards matched by name (entity as fallback)
+    if ctype in ("stat", "gauge", "tile"):
+        key = card.get("name") or card.get("entity")
+        if key:
+            return f"{ctype}:name:{key}"
     # Entity / entities cards matched by title
     if card.get("title"):
         return f"{ctype}:title:{card['title']}"
@@ -336,12 +341,24 @@ def _card_match_key(card: dict) -> str | None:
     return None
 
 
+def _section_signature(section: dict) -> str:
+    """Structural signature for sections without a heading card."""
+    return "|".join(
+        key
+        for key in (_card_match_key(card) for card in section.get("cards", []))
+        if key is not None
+    )
+
+
 def _section_match_key(section: dict) -> str | None:
     """Return a key used to match sections across default updates."""
     for card in section.get("cards", []):
         if card.get("type") == "heading":
             return f"heading:{card.get('heading', '')}"
-    return None
+    # Managed sections without a heading (e.g. the KPI row) fall back to a
+    # structural signature so they can still be matched and updated.
+    signature = _section_signature(section)
+    return f"section:{signature}" if signature else None
 
 
 def _merge_cards(existing_cards: list[dict], new_cards: list[dict]) -> list[dict]:
@@ -361,18 +378,14 @@ def _merge_cards(existing_cards: list[dict], new_cards: list[dict]) -> list[dict
             merged.append(copy.deepcopy(new_card))
             continue
 
-        # Find and replace the matching existing card
-        found = False
-        for i, existing_card in enumerate(remaining_existing):
-            if _card_match_key(existing_card) == new_key:
-                merged.append(copy.deepcopy(new_card))
-                remaining_existing.pop(i)
-                found = True
-                break
-
-        if not found:
-            # No match in existing — add the new card
-            merged.append(copy.deepcopy(new_card))
+        # Replace the matching existing card(s). Replace all matches so any
+        # duplicates left behind by earlier versions are cleaned up too.
+        remaining_existing = [
+            existing_card
+            for existing_card in remaining_existing
+            if _card_match_key(existing_card) != new_key
+        ]
+        merged.append(copy.deepcopy(new_card))
 
     # Any remaining existing cards are user-added — preserve them at the end
     merged.extend(copy.deepcopy(remaining_existing))
@@ -410,17 +423,24 @@ def _merge_view(existing_view: dict, new_view: dict) -> dict:
                 merged_sections.append(copy.deepcopy(new_section))
                 continue
 
-            found = False
-            for i, existing_section in enumerate(remaining_existing):
-                if _section_match_key(existing_section) == new_key:
-                    merged_sections.append(
-                        _merge_section(existing_section, new_section)
-                    )
-                    remaining_existing.pop(i)
-                    found = True
-                    break
-
-            if not found:
+            # Merge into the first matching existing section and drop any
+            # further duplicates (e.g. KPI rows duplicated by older versions).
+            match = next(
+                (
+                    existing_section
+                    for existing_section in remaining_existing
+                    if _section_match_key(existing_section) == new_key
+                ),
+                None,
+            )
+            remaining_existing = [
+                existing_section
+                for existing_section in remaining_existing
+                if _section_match_key(existing_section) != new_key
+            ]
+            if match is not None:
+                merged_sections.append(_merge_section(match, new_section))
+            else:
                 merged_sections.append(copy.deepcopy(new_section))
 
         # Preserve user-added sections at the end
