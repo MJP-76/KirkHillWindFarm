@@ -316,11 +316,14 @@ def _card_match_key(card: dict) -> str | None:
     # Headings are matched by heading text
     if ctype == "heading":
         return f"heading:{card.get('heading', '')}"
-    # Stat / gauge / tile cards matched by name (entity as fallback)
-    if ctype in ("stat", "gauge", "tile"):
+    # Stat / gauge / tile / entity KPI cards matched by name (entity as
+    # fallback). The card type is deliberately excluded so that stored `stat`
+    # cards (removed in HA 2026.7) are replaced by the new `entity` cards on
+    # the next merge.
+    if ctype in ("stat", "gauge", "tile", "entity"):
         key = card.get("name") or card.get("entity")
         if key:
-            return f"{ctype}:name:{key}"
+            return f"kpi:name:{key}"
     # Entity / entities cards matched by title
     if card.get("title"):
         return f"{ctype}:title:{card['title']}"
@@ -631,13 +634,13 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
 
     kpi_cards = [
         {
-            "type": "stat",
+            "type": "entity",
             "name": "Owner Power",
             "entity": farm_scoped("owner", "farm_power"),
             "icon": "mdi:flash",
         },
         {
-            "type": "stat",
+            "type": "entity",
             "name": "Site Power",
             "entity": farm_scoped("site", "farm_power"),
             "icon": "mdi:transmission-tower",
@@ -651,7 +654,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             "severity": {"green": 50, "yellow": 20, "red": 0},
         },
         {
-            "type": "stat",
+            "type": "entity",
             "name": "Wind Speed",
             "entity": farm("farm_wind_speed"),
             "icon": "mdi:weather-windy",
@@ -678,19 +681,19 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
 
     financial_kpi_cards = [
         {
-            "type": "stat",
+            "type": "entity",
             "name": "Today's Earnings",
             "entity": farm_scoped("owner", "farm_generation_value_today"),
             "icon": "mdi:cash",
         },
         {
-            "type": "stat",
+            "type": "entity",
             "name": "This Month",
             "entity": farm_scoped("owner", "farm_generation_value_month"),
             "icon": "mdi:calendar-month",
         },
         {
-            "type": "stat",
+            "type": "entity",
             "name": "Year to Date",
             "entity": farm_scoped("owner", "farm_generation_value_ytd"),
             "icon": "mdi:chart-timeline-variant",

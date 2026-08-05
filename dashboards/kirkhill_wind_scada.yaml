@@ -9,11 +9,11 @@ views:
       - type: grid
         column_span: 2
         cards:
-          - type: stat
+          - type: entity
             name: Owner Power
             entity: sensor.kirk_hill_wind_farm_power_owner
             icon: mdi:flash
-          - type: stat
+          - type: entity
             name: Site Power
             entity: sensor.kirk_hill_wind_farm_power_site
             icon: mdi:transmission-tower
@@ -26,11 +26,11 @@ views:
               green: 50
               yellow: 20
               red: 0
-          - type: stat
+          - type: entity
             name: Active Turbines
             entity: sensor.kirk_hill_wind_farm_active_turbines
             icon: mdi:wind-turbine
-          - type: stat
+          - type: entity
             name: Wind Speed
             entity: sensor.kirk_hill_wind_farm_wind_speed
             icon: mdi:weather-windy
@@ -214,15 +214,15 @@ views:
             heading: Finances
             heading_style: title
             icon: mdi:cash-multiple
-          - type: stat
+          - type: entity
             name: Today's Earnings
             entity: sensor.kirk_hill_wind_farm_generation_value_today_owner
             icon: mdi:cash
-          - type: stat
+          - type: entity
             name: This Month
             entity: sensor.kirk_hill_wind_farm_generation_value_month_owner
             icon: mdi:calendar-month
-          - type: stat
+          - type: entity
             name: Year to Date
             entity: sensor.kirk_hill_wind_farm_generation_value_ytd_owner
             icon: mdi:chart-timeline-variant
