@@ -44,8 +44,9 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **AGM/published-books manual finance inputs removed** — owner/site projected figures remain available
 - **Open-Meteo forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative), using automatic farm-location lookup
 - **Optional experimental Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
-- **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, and active binary sensor for each of the 8 turbines
-- **Auto-generated Lovelace dashboard** — created automatically during setup with overview, finances, and turbines tabs containing:
+- **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, active binary sensor, generation today (site), generation all-time (site), and rotor speed for each of the 8 turbines
+- **SCADA tab** — the first tab on the auto-generated dashboard, a full-bleed animated single-line diagram (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; panel view so it fills the entire tab
+- **Auto-generated Lovelace dashboard** — created automatically during setup with SCADA (first), overview, finances, and turbines tabs containing:
   - A compact top-level icon-only reload control that triggers integration reload
   - Taller turbine map viewport so all turbines fit more reliably on-screen
   - Active/inactive turbine count and alarm status

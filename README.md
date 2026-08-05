@@ -69,6 +69,7 @@ If you find this project useful, and would like to help support its continued de
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes (6-hour history)
 - **Power vs Wind scatter plot** — correlation between wind speed and site power output (24-hour history)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
+- **SCADA tab** — the first tab on the dashboard, a full-bleed animated single-line diagram of the farm (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed
 - **Dashboard customisation preserved** — user-added cards, sections, and views are retained across integration reloads and updates
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores the dashboard to integration defaults
 
@@ -144,6 +145,10 @@ Per turbine device (`Turbine T1` ... `Turbine T8`):
 - Wind speed (m/s)
 - State text
 - Active (binary sensor)
+- Generation today (site) [kWh]
+- Generation all-time (site) [kWh]
+- Rotor speed [rpm]
+- Today's generation share attribute (`share_percent`)
 
 ## Dashboard
 
@@ -151,6 +156,7 @@ When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk
 
 The generated dashboard includes:
 - A compact top-level **icon-only reload control** that calls `kirkhill_wind.reload_integration`
+- A **SCADA tab** (the first tab) showing a full-bleed animated single-line diagram of the farm: 8 turbines feeding the site collection bus, through the step-up transformer, into the national grid. Each turbine shows live power, colour-coded status, last status time, today's generation and rotor speed; flow dots animate in proportion to power. Rendered as a panel view so it fills the entire tab.
 - Owner and site overview sections
 - Dashboard range controls aligned with the Kirk Hill dashboard UX (`Today`, `Yesterday`, `7 days`, `30 days`, `year`, `All time`)
 - Owner and site generation cards shown first in each overview section
