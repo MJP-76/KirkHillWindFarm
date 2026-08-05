@@ -28,6 +28,16 @@ from .exceptions import KirkHillApiError
 
 _LOGGER = logging.getLogger(__name__)
 
+# Tiered update intervals (in coordinator ticks; tick 1 primes everything)
+# Fast: every poll - current power + today/yesterday summaries
+# Medium: every 10 polls (~10 min) - turbines, wind-speed series, week/month summaries
+# Slow: every 60 polls (~1 hour) - Open-Meteo forecast, ytd/year/alltime summaries
+FAST_TIMEFRAMES = ("today", "yesterday")
+MEDIUM_TIMEFRAMES = ("week", "month")
+SLOW_TIMEFRAMES = ("ytd", "year", "alltime")
+
+ALL_TIMEFRAMES = FAST_TIMEFRAMES + MEDIUM_TIMEFRAMES + SLOW_TIMEFRAMES
+
 
 class KirkHillWindCoordinator(DataUpdateCoordinator):
     """Fetches current data from owner/site scopes on each tick."""
@@ -49,6 +59,10 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             base_url=entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         )
         self.open_meteo_client = OpenMeteoApiClient()
+        self._tick = 0
+        self._site_turbines: list[dict] = []
+        self._wind_speed_today: float | None = None
+        self._open_meteo_forecast: dict = {}
 
     def apply_options(self) -> None:
         """Re-apply scan interval when options change."""
@@ -60,20 +74,27 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict:
         """Fetch current owner/site data, turbine coordinates, and range summaries."""
+        self._tick += 1
         async with aiohttp.ClientSession() as session:
             try:
-                owner_data, site_data, site_turbines, timeframe_summaries, wind_speed_today = await asyncio.gather(
+                owner_data, site_data, timeframe_summaries = await asyncio.gather(
                     self.client.get_current(session, SCOPE_OWNER),
                     self.client.get_current(session, SCOPE_SITE),
-                    self.client.get_turbines(session, SCOPE_SITE),
-                    self._fetch_timeframe_summaries(session),
-                    self._fetch_latest_wind_speed(session),
+                    self._fetch_timeframe_summaries(session, self._tick),
                 )
             except KirkHillApiError as exc:
                 raise UpdateFailed(str(exc)) from exc
 
+            # Medium tier: turbines + today's wind-speed series (every 10 ticks)
+            if self._tick == 1 or self._tick % 10 == 0:
+                try:
+                    self._site_turbines = await self.client.get_turbines(session, SCOPE_SITE)
+                except KirkHillApiError as exc:
+                    raise UpdateFailed(str(exc)) from exc
+                self._wind_speed_today = await self._fetch_latest_wind_speed(session)
+
             coordinates: dict[str, dict[str, float | str | None]] = {}
-            for row in site_turbines:
+            for row in self._site_turbines:
                 turbine_id = row.get("id")
                 coord = row.get("coordinates") or {}
                 if turbine_id:
@@ -84,24 +105,37 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                         "openstreetmap_node_id": coord.get("openstreetmap_node_id"),
                     }
 
-            open_meteo_forecast = await self._fetch_open_meteo_forecast(session, coordinates)
+            # Slow tier: Open-Meteo forecast (every 60 ticks ~1 hour)
+            if self._tick == 1 or self._tick % 60 == 0:
+                self._open_meteo_forecast = await self._fetch_open_meteo_forecast(session, coordinates)
 
         return {
             SCOPE_OWNER: owner_data,
             SCOPE_SITE: site_data,
             "coordinates": coordinates,
             "timeframe_summaries": timeframe_summaries,
-            "wind_speed_today": wind_speed_today,
-            "open_meteo_forecast": open_meteo_forecast,
+            "wind_speed_today": self._wind_speed_today,
+            "open_meteo_forecast": self._open_meteo_forecast,
         }
 
     async def _fetch_timeframe_summaries(
-        self, session: aiohttp.ClientSession
+        self, session: aiohttp.ClientSession, tick: int
     ) -> dict[str, dict[str, dict]]:
         tasks: list[tuple[str, str, asyncio.Task]] = []
 
+        # Determine which timeframes to fetch this tick
+        if tick == 1 or tick % 60 == 0:
+            # Slow tier: every 60 ticks (~1 hour at 60s interval)
+            timeframes = ALL_TIMEFRAMES
+        elif tick % 10 == 0:
+            # Medium tier: every 10 ticks (~10 min)
+            timeframes = FAST_TIMEFRAMES + MEDIUM_TIMEFRAMES
+        else:
+            # Fast tier: every tick
+            timeframes = FAST_TIMEFRAMES
+
         for scope in SCOPES:
-            for timeframe in TIMEFRAME_ORDER:
+            for timeframe in timeframes:
                 if timeframe == "year":
                     range_value = str(datetime.now().year)
                 else:
@@ -134,11 +168,15 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         return summaries
 
     async def _fetch_latest_wind_speed(self, session: aiohttp.ClientSession) -> float | None:
-        payload = await self.client.get_wind_speed(
-            session,
-            scope=SCOPE_SITE,
-            range_value="today",
-        )
+        try:
+            payload = await self.client.get_wind_speed(
+                session,
+                scope=SCOPE_SITE,
+                range_value="today",
+            )
+        except KirkHillApiError as exc:
+            _LOGGER.warning("Failed to fetch wind-speed series: %s", exc)
+            return self._wind_speed_today
         series = payload.get("series", [])
         if not isinstance(series, list) or not series:
             return None

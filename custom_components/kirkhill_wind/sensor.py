@@ -464,8 +464,22 @@ class TurbineStateSensor(KirkHillTurbineEntity, SensorEntity):
         if t is None:
             return {}
         coords = self.coordinator.data.get("coordinates", {}).get(self._turbine_id, {})
+        state_text = t.get("state_text", "")
+        status_map = {
+            "Turbine in operation": "running",
+            "Turbine operational": "ready",
+            "Turbine starting": "starting",
+            "Turbine stopped: SCADA (bird and bat protection)": "curtailed",
+            "Lack of wind: Wind speed too low": "no_wind",
+            "Generator over temperature: Stator (measurement)": "fault_thermal",
+            "Event management: switched off": "stopped",
+            "Feeding fault: Pulse inhibit inverter 8": "fault_electrical",
+            "Calibration of load control": "maintenance",
+            "unavailable": "unavailable",
+        }
         return {
             "status": t.get("status"),
+            "status_category": status_map.get(state_text, "unknown"),
             "status_started_at": t.get("status_started_at"),
             "state_started_at": t.get("state_started_at"),
             "latitude": coords.get("latitude"),
