@@ -54,10 +54,17 @@ class KirkHillApiClient:
         return body["data"]
 
     async def get_turbines(
-        self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER
+        self,
+        session: aiohttp.ClientSession,
+        scope: str = SCOPE_OWNER,
+        range_value: str = "7d",
     ) -> list[dict[str, Any]]:
-        """GET /api/v1/turbines?scope={scope}."""
-        body = await self._get(session, "/api/v1/turbines", {"scope": scope})
+        """GET /api/v1/turbines?scope={scope}&range={range_value}."""
+        body = await self._get(
+            session,
+            "/api/v1/turbines",
+            {"scope": scope, "range": range_value},
+        )
         return body["data"]["turbines"]
 
     async def get_summary(

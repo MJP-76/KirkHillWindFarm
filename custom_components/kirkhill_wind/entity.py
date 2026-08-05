@@ -74,6 +74,12 @@ class KirkHillTurbineEntity(CoordinatorEntity, Entity):
                 return t
         return None
 
+    def _turbine_generation_data(self) -> dict:
+        """Return the per-turbine generation/rotor metrics dict, or empty if missing."""
+        return self.coordinator.data.get("turbine_generation", {}).get(
+            self._turbine_id, {}
+        )
+
     @property
     def available(self) -> bool:
         return self.coordinator.last_update_success

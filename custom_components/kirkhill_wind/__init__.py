@@ -44,6 +44,7 @@ _FRONTEND_CARDS: list[tuple[str, Path]] = [
     ("/kirkhill_wind/turbine-map-card.js", _FRONTEND_DIR / "kirkhill-wind-turbine-map.js"),
     ("/kirkhill_wind/apexcharts-card.js", _FRONTEND_DIR / "apexcharts-card.js"),
     ("/kirkhill_wind/plotly-graph-card.js", _FRONTEND_DIR / "plotly-graph-card.js"),
+    ("/kirkhill_wind/scada-card.js", _FRONTEND_DIR / "kirkhill-wind-scada-card.js"),
 ]
 
 
@@ -592,6 +593,17 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         for i in range(1, 9)
     ]
 
+    scada_turbines = [
+        {
+            "id": f"T{i}",
+            "power_entity": turbine(f"T{i}", "site_power"),
+            "state_entity": turbine(f"T{i}", "state_text"),
+            "generation_today_entity": turbine(f"T{i}", "generation_today"),
+            "rotor_entity": turbine(f"T{i}", "rotor_speed"),
+        }
+        for i in range(1, 9)
+    ]
+
     turbine_cards = []
     for i in range(1, 9):
         turbine_id = f"T{i}"
@@ -950,6 +962,22 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "square": False,
                         "cards": turbine_cards,
                     }
+                ],
+            },
+            {
+                "title": "SCADA",
+                "path": "scada",
+                "icon": "mdi:sitemap",
+                "cards": [
+                    {
+                        "type": "custom:kirkhill-wind-scada",
+                        "title": "Wind farm SCADA",
+                        "farm_power_entity": farm_scoped("site", "farm_power"),
+                        "grid_energy_entity": farm_scoped("site", "farm_generation_today"),
+                        "wind_speed_entity": farm("farm_wind_speed"),
+                        "active_entity": farm("farm_active_turbines"),
+                        "turbines": scada_turbines,
+                    },
                 ],
             },
         ],

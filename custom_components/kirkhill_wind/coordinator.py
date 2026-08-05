@@ -61,6 +61,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self.open_meteo_client = OpenMeteoApiClient()
         self._tick = 0
         self._site_turbines: list[dict] = []
+        self._turbine_generation: dict[str, dict] = {}
         self._wind_speed_today: float | None = None
         self._open_meteo_forecast: dict = {}
 
@@ -88,9 +89,18 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             # Medium tier: turbines + today's wind-speed series (every 10 ticks)
             if self._tick == 1 or self._tick % 10 == 0:
                 try:
-                    self._site_turbines = await self.client.get_turbines(session, SCOPE_SITE)
+                    today_turbines = await self.client.get_turbines(
+                        session, SCOPE_SITE, range_value="today"
+                    )
+                    alltime_turbines = await self.client.get_turbines(
+                        session, SCOPE_SITE, range_value="all"
+                    )
                 except KirkHillApiError as exc:
                     raise UpdateFailed(str(exc)) from exc
+                self._site_turbines = today_turbines
+                self._turbine_generation = self._build_turbine_generation(
+                    today_turbines, alltime_turbines
+                )
                 self._wind_speed_today = await self._fetch_latest_wind_speed(session)
 
             coordinates: dict[str, dict[str, float | str | None]] = {}
@@ -114,9 +124,33 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             SCOPE_SITE: site_data,
             "coordinates": coordinates,
             "timeframe_summaries": timeframe_summaries,
+            "turbine_generation": self._turbine_generation,
             "wind_speed_today": self._wind_speed_today,
             "open_meteo_forecast": self._open_meteo_forecast,
         }
+
+    def _build_turbine_generation(
+        self, today: list[dict], alltime: list[dict]
+    ) -> dict[str, dict]:
+        """Build a per-turbine generation/rotor map from the turbines API responses."""
+        result: dict[str, dict] = {}
+        for t in today:
+            turbine_id = t.get("id")
+            if not turbine_id:
+                continue
+            result[turbine_id] = {
+                "generation_today_kwh": t.get("generation_kwh"),
+                "generation_today_share_percent": t.get("generation_share_percent"),
+                "rotor_speed_rpm": t.get("latest_rotor_speed_rpm"),
+            }
+        for t in alltime:
+            turbine_id = t.get("id")
+            if turbine_id and turbine_id in result:
+                result[turbine_id]["generation_alltime_kwh"] = t.get("generation_kwh")
+                result[turbine_id]["generation_alltime_share_percent"] = t.get(
+                    "generation_share_percent"
+                )
+        return result
 
     async def _fetch_timeframe_summaries(
         self, session: aiohttp.ClientSession, tick: int

@@ -107,6 +107,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ]
         entities.append(TurbineWindSpeedSensor(coordinator, entry, tid))
         entities.append(TurbineStateSensor(coordinator, entry, tid))
+        entities.append(TurbineGenerationTodaySensor(coordinator, entry, tid))
+        entities.append(TurbineGenerationAlltimeSensor(coordinator, entry, tid))
+        entities.append(TurbineRotorSpeedSensor(coordinator, entry, tid))
 
     async_add_entities(entities)
 
@@ -487,3 +490,61 @@ class TurbineStateSensor(KirkHillTurbineEntity, SensorEntity):
             "location_source": coords.get("source"),
             "openstreetmap_node_id": coords.get("openstreetmap_node_id"),
         }
+
+
+class TurbineGenerationTodaySensor(KirkHillTurbineEntity, SensorEntity):
+    _attr_name = "Generation today"
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_icon = "mdi:chart-bar"
+
+    def __init__(self, coordinator, entry, turbine_id: str):
+        super().__init__(coordinator, entry, turbine_id, "generation_today")
+
+    @property
+    def native_value(self):
+        return _as_float(
+            self._turbine_generation_data().get("generation_today_kwh")
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        data = self._turbine_generation_data()
+        return {"share_percent": data.get("generation_today_share_percent")}
+
+
+class TurbineGenerationAlltimeSensor(KirkHillTurbineEntity, SensorEntity):
+    _attr_name = "Generation all-time"
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_icon = "mdi:chart-line"
+
+    def __init__(self, coordinator, entry, turbine_id: str):
+        super().__init__(coordinator, entry, turbine_id, "generation_alltime")
+
+    @property
+    def native_value(self):
+        return _as_float(
+            self._turbine_generation_data().get("generation_alltime_kwh")
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        data = self._turbine_generation_data()
+        return {"share_percent": data.get("generation_alltime_share_percent")}
+
+
+class TurbineRotorSpeedSensor(KirkHillTurbineEntity, SensorEntity):
+    _attr_name = "Rotor speed"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "rpm"
+    _attr_icon = "mdi:rotate-right"
+
+    def __init__(self, coordinator, entry, turbine_id: str):
+        super().__init__(coordinator, entry, turbine_id, "rotor_speed")
+
+    @property
+    def native_value(self):
+        return _as_float(self._turbine_generation_data().get("rotor_speed_rpm"))

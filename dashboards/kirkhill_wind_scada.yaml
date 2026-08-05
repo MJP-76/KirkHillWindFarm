@@ -425,3 +425,55 @@ views:
                 name: State
               - entity: binary_sensor.turbine_t8_active
                 name: Active
+
+  - title: SCADA
+    path: scada
+    icon: mdi:sitemap
+    cards:
+      - type: custom:kirkhill-wind-scada
+        title: Wind farm SCADA
+        farm_power_entity: sensor.kirk_hill_wind_farm_power_site
+        grid_energy_entity: sensor.kirk_hill_wind_farm_generation_today_site
+        wind_speed_entity: sensor.kirk_hill_wind_farm_wind_speed
+        active_entity: sensor.kirk_hill_wind_farm_active_turbines
+        turbines:
+          - id: T1
+            power_entity: sensor.turbine_t1_power_site
+            state_entity: sensor.turbine_t1_state
+            generation_today_entity: sensor.turbine_t1_generation_today
+            rotor_entity: sensor.turbine_t1_rotor_speed
+          - id: T2
+            power_entity: sensor.turbine_t2_power_site
+            state_entity: sensor.turbine_t2_state
+            generation_today_entity: sensor.turbine_t2_generation_today
+            rotor_entity: sensor.turbine_t2_rotor_speed
+          - id: T3
+            power_entity: sensor.turbine_t3_power_site
+            state_entity: sensor.turbine_t3_state
+            generation_today_entity: sensor.turbine_t3_generation_today
+            rotor_entity: sensor.turbine_t3_rotor_speed
+          - id: T4
+            power_entity: sensor.turbine_t4_power_site
+            state_entity: sensor.turbine_t4_state
+            generation_today_entity: sensor.turbine_t4_generation_today
+            rotor_entity: sensor.turbine_t4_rotor_speed
+          - id: T5
+            power_entity: sensor.turbine_t5_power_site
+            state_entity: sensor.turbine_t5_state
+            generation_today_entity: sensor.turbine_t5_generation_today
+            rotor_entity: sensor.turbine_t5_rotor_speed
+          - id: T6
+            power_entity: sensor.turbine_t6_power_site
+            state_entity: sensor.turbine_t6_state
+            generation_today_entity: sensor.turbine_t6_generation_today
+            rotor_entity: sensor.turbine_t6_rotor_speed
+          - id: T7
+            power_entity: sensor.turbine_t7_power_site
+            state_entity: sensor.turbine_t7_state
+            generation_today_entity: sensor.turbine_t7_generation_today
+            rotor_entity: sensor.turbine_t7_rotor_speed
+          - id: T8
+            power_entity: sensor.turbine_t8_power_site
+            state_entity: sensor.turbine_t8_state
+            generation_today_entity: sensor.turbine_t8_generation_today
+            rotor_entity: sensor.turbine_t8_rotor_speed
