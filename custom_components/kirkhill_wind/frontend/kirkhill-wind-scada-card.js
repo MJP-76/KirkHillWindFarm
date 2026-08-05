@@ -196,19 +196,31 @@ class KirkHillWindScada extends HTMLElement {
 
   _layout() {
     const H = this._vbH;
-    const tTop = 74;
+    const mid = Math.round(H / 2);
+    const tCount = this.config.turbines.length;
     const legendY = H - 150;
     const tBottom = legendY - 60;
-    const span = Math.max(320, tBottom - tTop);
-    const gap = Math.max(96, span / 8);
+
+    // Vertically centre the turbine stack around the mid-line so the whole
+    // flow path (turbines -> bus -> transformer -> grid) reads as one
+    // centred single-line diagram on any window size.
+    const bandTop = 72;
+    const band = Math.max(160, tBottom - bandTop);
+    const nodeH = 80;
+    const minRow = 82;
+    let gap = (band - nodeH) / Math.max(1, tCount - 1);
+    if (gap < minRow) gap = minRow;
+    const blockH = (tCount - 1) * gap + nodeH;
+    const tTop = bandTop + (band - blockH) / 2;
+
     return {
       H,
       gap,
       tTop,
+      mid,
       busY2: tBottom,
       busSummaryY: legendY - 24,
       legendY,
-      mid: Math.round(H / 2),
     };
   }
 
@@ -237,8 +249,11 @@ class KirkHillWindScada extends HTMLElement {
       const top = layout.tTop + i * layout.gap;
       const cy = top + 40;
       const num = this._escape(t.id || `T${i + 1}`);
+      const stateEntity = t.state_entity;
+      const openMoreInfo = stateEntity && this._escape(stateEntity) ? `window.dispatchEvent(new CustomEvent('hass-more-info',{bubbles:true,composed:true,detail:{entityId:'${this._escape(stateEntity)}'}}));return false;` : "";
+      const onclick = openMoreInfo ? ` onclick="${openMoreInfo}" style="cursor:pointer"` : "";
       turbinesHtml += `
-        <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
+        <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}"${onclick}>
           <rect class="node-rect" x="30" y="${top}" width="230" height="80" rx="8"/>
           <text class="t-id" x="44" y="${top + 16}">${num}</text>
           <rect class="status-pill" x="150" y="${top + 7}" width="96" height="20" rx="10"/>
