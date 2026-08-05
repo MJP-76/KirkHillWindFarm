@@ -9,9 +9,7 @@
 [![Built with AI][badge-built-with-ai]][built-with-ai]
 
 <details>
-<summary><strong>Wind farm Info</strong> — click to expand</summary>
-
-**Kirk Hill Wind Farm — Technical Reference**
+<summary><strong>Kirk Hill Wind Farm — Technical Reference</strong> — click to expand</summary>
 
 Onshore wind farm near Kirkoswald, South Ayrshire, Scotland. Coordinates: 55.3064, -4.7399.
 
