@@ -11,7 +11,7 @@
  */
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 860 };
+    return { w: 1240, h: 860, hMin: 520, hMax: 1600 };
   }
 
   static get STATUS() {
@@ -35,10 +35,22 @@ class KirkHillWindScada extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._hass = null;
     this._values = new Map();
+    this._vbH = KirkHillWindScada.VIEWBOX.h;
   }
 
   connectedCallback() {
     if (this.config) this._render();
+    if (!this._ro) {
+      this._ro = new ResizeObserver(() => this._fit());
+      this._ro.observe(this);
+    }
+  }
+
+  disconnectedCallback() {
+    if (this._ro) {
+      this._ro.disconnect();
+      this._ro = null;
+    }
   }
 
   setConfig(config) {
@@ -149,13 +161,14 @@ class KirkHillWindScada extends HTMLElement {
   _render() {
     if (!this.config || !this.shadowRoot) return;
     const vb = KirkHillWindScada.VIEWBOX;
+    const layout = this._layout();
     const header = this.config.title ? ` header="${this._escape(this.config.title)}"` : "";
-    const { turbinesHtml, linesHtml, dotsHtml } = this._buildStatic();
+    const { turbinesHtml, linesHtml, dotsHtml } = this._buildStatic(layout);
     this.shadowRoot.innerHTML = `
       <style>${this._styles()}</style>
       <ha-card${header}>
         <div class="shell">
-          <svg viewBox="0 0 ${vb.w} ${vb.h}" role="img" aria-label="Wind farm SCADA diagram">
+          <svg viewBox="0 0 ${vb.w} ${layout.H}" role="img" aria-label="Wind farm SCADA diagram">
             <defs>
               <pattern id="khscada-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.08)" stroke-width="1"/>
@@ -165,15 +178,15 @@ class KirkHillWindScada extends HTMLElement {
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8"/>
               </marker>
             </defs>
-            <rect class="bg" x="0" y="0" width="${vb.w}" height="${vb.h}" fill="url(#khscada-grid)"/>
+            <rect class="bg" x="0" y="0" width="${vb.w}" height="${layout.H}" fill="url(#khscada-grid)"/>
             ${linesHtml}
             ${dotsHtml}
             ${turbinesHtml}
-            ${this._buildBus()}
-            ${this._buildTransformer()}
-            ${this._buildGrid()}
+            ${this._buildBus(layout)}
+            ${this._buildTransformer(layout)}
+            ${this._buildGrid(layout)}
             ${this._buildHeaderChips()}
-            ${this._buildLegend()}
+            ${this._buildLegend(layout)}
           </svg>
         </div>
       </ha-card>
@@ -181,27 +194,57 @@ class KirkHillWindScada extends HTMLElement {
     this._update();
   }
 
-  _buildStatic() {
+  _layout() {
+    const H = this._vbH;
+    const tTop = 74;
+    const legendY = H - 150;
+    const tBottom = legendY - 60;
+    const span = Math.max(320, tBottom - tTop);
+    return {
+      H,
+      gap: span / 8,
+      tTop,
+      busY2: tBottom,
+      busSummaryY: legendY - 24,
+      legendY,
+      mid: Math.round(H / 2),
+    };
+  }
+
+  _fit() {
+    if (!this.config || !this.shadowRoot) return;
+    const shell = this.shadowRoot.querySelector(".shell");
+    if (!shell) return;
+    const r = shell.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const vb = KirkHillWindScada.VIEWBOX;
+    let h = Math.round(vb.w / (r.width / r.height));
+    h = Math.max(vb.hMin, Math.min(vb.hMax, h));
+    if (h === this._vbH) return;
+    this._vbH = h;
+    this._render();
+  }
+
+  _buildStatic(layout) {
     const turbines = this.config.turbines;
-    const startY = 84;
-    const gap = 96;
     let turbinesHtml = "";
     let linesHtml = "";
     let dotsHtml = "";
 
     turbines.forEach((t, i) => {
       const cx = 260;
-      const cy = startY + i * gap;
+      const top = layout.tTop + i * layout.gap;
+      const cy = top + 40;
       const num = this._escape(t.id || `T${i + 1}`);
       turbinesHtml += `
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
-          <rect class="node-rect" x="30" y="${cy - 40}" width="230" height="80" rx="8"/>
-          <text class="t-id" x="44" y="${cy - 24}">${num}</text>
-          <rect class="status-pill" x="150" y="${cy - 33}" width="96" height="20" rx="10"/>
-          <text class="t-status" x="198" y="${cy - 19}"></text>
-          <text class="t-power" x="44" y="${cy + 10}">—</text>
-          <text class="t-detail" x="44" y="${cy + 27}"></text>
-          <text class="t-last" x="44" y="${cy + 37}"></text>
+          <rect class="node-rect" x="30" y="${top}" width="230" height="80" rx="8"/>
+          <text class="t-id" x="44" y="${top + 16}">${num}</text>
+          <rect class="status-pill" x="150" y="${top + 7}" width="96" height="20" rx="10"/>
+          <text class="t-status" x="198" y="${top + 21}"></text>
+          <text class="t-power" x="44" y="${top + 50}">—</text>
+          <text class="t-detail" x="44" y="${top + 67}"></text>
+          <text class="t-last" x="44" y="${top + 77}"></text>
         </g>
       `;
       linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="600" y2="${cy}"/>`;
@@ -216,52 +259,54 @@ class KirkHillWindScada extends HTMLElement {
     return { turbinesHtml, linesHtml, dotsHtml };
   }
 
-  _buildBus() {
+  _buildBus(layout) {
     return `
       <g class="bus">
-        <rect x="600" y="30" width="60" height="800" rx="6"/>
+        <rect x="600" y="30" width="60" height="${layout.busY2 - 30}" rx="6"/>
         <text class="bus-title" x="630" y="20" text-anchor="middle">SITE COLLECTION BUS</text>
-        <rect class="bus-summary" x="530" y="828" width="200" height="30" rx="6"/>
-        <text class="bus-total" x="630" y="848" text-anchor="middle"></text>
+        <rect class="bus-summary" x="530" y="${layout.busSummaryY}" width="200" height="30" rx="6"/>
+        <text class="bus-total" x="630" y="${layout.busSummaryY + 20}" text-anchor="middle"></text>
       </g>
     `;
   }
 
-  _buildTransformer() {
+  _buildTransformer(layout) {
+    const cy = layout.mid;
     return `
       <g class="transformer">
-        <line class="feed-line" x1="660" y1="420" x2="830" y2="420" marker-end="url(#khscada-arrow)"/>
-        <rect x="830" y="350" width="130" height="140" rx="8"/>
-        <text class="xfmr-title" x="895" y="376" text-anchor="middle">TRANSFORMER</text>
-        <circle cx="895" cy="405" r="9"/>
-        <circle cx="872" cy="425" r="9"/>
-        <circle cx="918" cy="425" r="9"/>
-        <text class="xfmr-sub" x="895" y="462" text-anchor="middle">33 kV → 132 kV</text>
+        <line class="feed-line" x1="660" y1="${cy}" x2="830" y2="${cy}" marker-end="url(#khscada-arrow)"/>
+        <rect x="830" y="${cy - 70}" width="130" height="140" rx="8"/>
+        <text class="xfmr-title" x="895" y="${cy - 54}" text-anchor="middle">TRANSFORMER</text>
+        <circle cx="895" cy="${cy - 25}" r="9"/>
+        <circle cx="872" cy="${cy - 5}" r="9"/>
+        <circle cx="918" cy="${cy - 5}" r="9"/>
+        <text class="xfmr-sub" x="895" y="${cy + 32}" text-anchor="middle">33 kV → 132 kV</text>
         <circle class="flow-dot" data-flow="grid" r="5">
           <animateMotion dur="10s" repeatCount="indefinite"
-            path="M 660 420 L 830 420 L 960 420 L 1110 420"/>
+            path="M 660 ${cy} L 830 ${cy} L 960 ${cy} L 1110 ${cy}"/>
         </circle>
-        <line class="feed-line" x1="960" y1="420" x2="1110" y2="420" marker-end="url(#khscada-arrow)"/>
+        <line class="feed-line" x1="960" y1="${cy}" x2="1110" y2="${cy}" marker-end="url(#khscada-arrow)"/>
       </g>
     `;
   }
 
-  _buildGrid() {
+  _buildGrid(layout) {
+    const cy = layout.mid;
     return `
       <g class="grid">
-        <rect class="grid-rect" x="1110" y="250" width="120" height="360" rx="10"/>
-        <text class="grid-title" x="1170" y="286" text-anchor="middle">NATIONAL</text>
-        <text class="grid-title" x="1170" y="308" text-anchor="middle">GRID</text>
+        <rect class="grid-rect" x="1110" y="${cy - 180}" width="120" height="360" rx="10"/>
+        <text class="grid-title" x="1170" y="${cy - 144}" text-anchor="middle">NATIONAL</text>
+        <text class="grid-title" x="1170" y="${cy - 122}" text-anchor="middle">GRID</text>
         <g class="grid-icon">
-          <path d="M1162 330 h16 M1170 322 v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <path d="M1162 ${cy - 100} h16 M1170 ${cy - 108} v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
         </g>
-        <text class="grid-label" x="1170" y="370" text-anchor="middle">Export</text>
-        <text class="grid-power" x="1170" y="402" text-anchor="middle">—</text>
-        <text class="grid-unit" x="1170" y="420" text-anchor="middle">MW</text>
-        <line x1="1130" y1="445" x2="1210" y2="445" class="grid-divider"/>
-        <text class="grid-label" x="1170" y="472" text-anchor="middle">To grid today</text>
-        <text class="grid-energy" x="1170" y="500" text-anchor="middle">—</text>
-        <text class="grid-unit" x="1170" y="518" text-anchor="middle">kWh</text>
+        <text class="grid-label" x="1170" y="${cy - 60}" text-anchor="middle">Export</text>
+        <text class="grid-power" x="1170" y="${cy - 28}" text-anchor="middle">—</text>
+        <text class="grid-unit" x="1170" y="${cy - 10}" text-anchor="middle">MW</text>
+        <line x1="1130" y1="${cy + 15}" x2="1210" y2="${cy + 15}" class="grid-divider"/>
+        <text class="grid-label" x="1170" y="${cy + 42}" text-anchor="middle">To grid today</text>
+        <text class="grid-energy" x="1170" y="${cy + 70}" text-anchor="middle">—</text>
+        <text class="grid-unit" x="1170" y="${cy + 88}" text-anchor="middle">kWh</text>
       </g>
     `;
   }
@@ -279,11 +324,11 @@ class KirkHillWindScada extends HTMLElement {
     `;
   }
 
-  _buildLegend() {
+  _buildLegend(layout) {
     const entries = Object.entries(KirkHillWindScada.STATUS)
       .map(([key, v]) => `<span class="lg-item"><span class="lg-dot" style="background:${v.color}"></span>${v.label}</span>`)
       .join("");
-    return `<foreignObject x="700" y="700" width="480" height="120">
+    return `<foreignObject x="700" y="${layout.legendY}" width="480" height="120">
       <div xmlns="http://www.w3.org/1999/xhtml" class="legend">${entries}</div>
     </foreignObject>`;
   }
