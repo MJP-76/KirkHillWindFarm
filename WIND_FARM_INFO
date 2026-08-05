@@ -1,53 +1,34 @@
-Kirk Hill Wind Farm Info
+Kirk Hill Wind Farm — Technical Reference
 
-Reference notes about the wind farm. Add or update these whenever we learn
-something new about the farm.
+Onshore wind farm near Kirkoswald, South Ayrshire, Scotland.
+Coordinates: 55.3064, -4.7399.
 
-Overview
+Turbines
 
-Kirk Hill Wind Farm is an onshore wind facility located in Kirkoswald, South
-Ayrshire, Scotland. It is the UK's largest consumer-owned wind farm, run on a
-community cooperative model.
+- 8 x Enercon E92/2350 wind energy converters
+- Rated 2.35 MW each, 18.8 MW total nameplate capacity
+- Gearbox-free (direct drive) design, manufactured in Germany
+- Peak output reached at wind speeds of 14 m/s or more (27.2 knots)
 
-Technical Specifications
+Electrical / Grid Connection
 
-The site utilizes eight Enercon E82 wind energy converters. The total nameplate
-output is 18.8 Megawatts (MW), with each turbine rated at 2.35 MW. The turbines
-reach peak power output in wind speeds of 14 metres per second (approx. 31 mph)
-or higher. The farm is expected to generate roughly 54,000 to 56,000 Megawatt
-Hours (MWh) per year, which is enough clean energy to power approximately 20,000
-households and businesses.
+- 33 kV collection network
+- 33 kV switchgear
+- Client substation building on site
+- Underground cabling between turbines and substation, and to the point of
+  connection
+- Grid connection to the Scottish Power (SP Energy Networks) network via a new
+  substation
+- Connection route: ~6 km total, comprising overhead line (~5 km, 70 poles) and
+  ~1 km underground cable
 
-Location & Construction Timeline
+Civil / Balance of Plant
 
-The site is situated near the coastal village of Kirkoswald in South Ayrshire,
-offering distinctive views toward the Ailsa Craig volcanic island. Turbine 2 is
-officially named "Ailsa" by co-op members. Pre-construction works began in early
-2022. The first power was successfully generated and synchronized to the grid in
-April 2024, with full commercial operations launching in July 2024.
+- Eight turbine foundations and crane hard standings
+- ~4,000 m of new access tracks
+- New permanent site entrance
 
-Ownership & Co-operative Structure
+Performance
 
-Kirk Hill Wind Farm is owned and operated by Kirk Hill Wind Farm Ltd, a joint
-venture between Kirk Hill Coop Ltd (the majority shareholder, with 5,600+ members
-across the UK) and Bruntwood Ltd, a property company based in Manchester. Each
-member purchased a "wattage amount" of generation capacity for the 25-year
-lifetime of the project. Members benefit from zero carbon electricity delivered
-via the national grid and receive a share of the profit from the sale of their
-electricity to suppliers, less grid charges and the costs of running the farm —
-helping to stabilise their energy bills over time.
-
-The project was originally developed and managed by Ripple Energy Limited before
-it entered administration in March 2025. This did not affect the wind farm:
-ownership had already been transferred to Kirk Hill Wind Farm Ltd, with separate
-service contracts in place to manage the site day to day. Neither Ripple Energy
-Limited nor its administrators have any legal relationship with the wind farm,
-Kirk Hill Wind Farm Ltd or Kirk Hill Coop Ltd.
-
-The wind farm is now professionally managed by Communities for Renewables CIC
-(CfR) and will soon begin an onboarding process with member registrar Ethex.
-Kirk Hill Coop Limited is a co-operative society registered with the Financial
-Conduct Authority (registration number 4829), and is the majority shareholder in
-the UK's largest community wind farm project. Registered address: Communities
-for Renewables CIC, Redruth House, Business Park West, Scorrier, Cornwall,
-TR16 5EZ. Website: https://kirkhillcoop.org
+- Expected annual generation: ~54,000 MWh
+- Cumulative generation to end of June 2026: 118,175,429 kWh (per kirkhillcoop.org)
