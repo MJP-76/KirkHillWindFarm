@@ -410,7 +410,7 @@ class KirkHillWindScada extends HTMLElement {
   _styles() {
     return `
       :host { display: block; width: 100%; height: 100%; }
-      ha-card { overflow: hidden; height: 100%; }
+      ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; }
       .shell { padding: 12px; background: #0b1120; border-radius: 12px; height: 100%; box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; }
       .bg { fill: #0b1120; }
