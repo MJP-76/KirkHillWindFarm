@@ -429,6 +429,7 @@ views:
   - title: SCADA
     path: scada
     icon: mdi:sitemap
+    panel: true
     cards:
       - type: custom:kirkhill-wind-scada
         title: Wind farm SCADA

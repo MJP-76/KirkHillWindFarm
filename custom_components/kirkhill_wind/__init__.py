@@ -971,6 +971,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                 "title": "SCADA",
                 "path": "scada",
                 "icon": "mdi:sitemap",
+                "panel": True,
                 "cards": [
                     {
                         "type": "custom:kirkhill-wind-scada",
