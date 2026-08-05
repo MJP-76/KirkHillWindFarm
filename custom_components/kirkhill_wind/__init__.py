@@ -704,6 +704,23 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         "title": "Wind Farm",
         "views": [
             {
+                "title": "SCADA",
+                "path": "scada",
+                "icon": "mdi:sitemap",
+                "panel": True,
+                "cards": [
+                    {
+                        "type": "custom:kirkhill-wind-scada",
+                        "title": "Wind farm SCADA",
+                        "farm_power_entity": farm_scoped("site", "farm_power"),
+                        "grid_energy_entity": farm_scoped("site", "farm_generation_today"),
+                        "wind_speed_entity": farm("farm_wind_speed"),
+                        "active_entity": farm("farm_active_turbines"),
+                        "turbines": scada_turbines,
+                    },
+                ],
+            },
+            {
                 "title": "Overview",
                 "path": "overview",
                 "icon": "mdi:wind-turbine",
@@ -965,23 +982,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "square": False,
                         "cards": turbine_cards,
                     }
-                ],
-            },
-            {
-                "title": "SCADA",
-                "path": "scada",
-                "icon": "mdi:sitemap",
-                "panel": True,
-                "cards": [
-                    {
-                        "type": "custom:kirkhill-wind-scada",
-                        "title": "Wind farm SCADA",
-                        "farm_power_entity": farm_scoped("site", "farm_power"),
-                        "grid_energy_entity": farm_scoped("site", "farm_generation_today"),
-                        "wind_speed_entity": farm("farm_wind_speed"),
-                        "active_entity": farm("farm_active_turbines"),
-                        "turbines": scada_turbines,
-                    },
                 ],
             },
         ],
