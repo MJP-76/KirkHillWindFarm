@@ -40,7 +40,7 @@ Onshore wind farm near Kirkoswald, South Ayrshire, Scotland. Coordinates: 55.306
 - [Kirk Hill Co-op](https://kirkhillcoop.org) — official co-op site, turbines, performance and ownership info
 - [kirkhillcoop.org/our-story](https://kirkhillcoop.org/our-story) — project history and build timeline
 - [kirkhillcoop.org/the-windfarm](https://kirkhillcoop.org/the-windfarm) — turbine and site specifications
-- [Knight Brown — Kirk Hill Wind Farm](https://knightbrown.co.uk/project/kirk-hill-wind-farm/) — balance of plant works (substation, cabling, civils)
+- [Knights Brown — Kirk Hill Wind Farm](https://knightsbrown.co.uk/project/kirk-hill-wind-farm/) — balance of plant works (substation, cabling, civils)
 
 </details>
 
