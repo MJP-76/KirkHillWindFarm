@@ -2,6 +2,7 @@
 
 ## Release roll-out — SCADA v4.8.x
 
+- [x] Update README.md and info.md for the SCADA tab, panel view, and per-turbine sensors
 - [ ] Update production HA instance to v4.8.4 via HACS
 - [ ] Restart Home Assistant on production
 - [ ] Verify the SCADA tab is present, is the first tab, and fills the whole panel
