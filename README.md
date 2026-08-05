@@ -49,7 +49,7 @@ A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
-> - **Financial earnings figures are projected, not real-time dynamic values.**
+> - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
