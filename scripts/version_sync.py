@@ -106,7 +106,7 @@ def sync_versions() -> None:
     print(f"Synchronized manifest.json and pyproject.toml to {version}.")
 
 
-def run_release() -> None:
+def run_release(prerelease: bool, stable: bool) -> None:
     version = read_version()
     tag = f"v{version}"
 
@@ -124,11 +124,18 @@ def run_release() -> None:
         raise SystemExit(f"Tag {tag} already exists.")
 
     subprocess.run(["git", "tag", tag], cwd=ROOT, check=True)
-    subprocess.run(
-        ["gh", "release", "create", tag, "--title", tag, "--generate-notes"],
-        cwd=ROOT,
-        check=True,
-    )
+
+    cmd = ["gh", "release", "create", tag, "--title", tag, "--generate-notes"]
+    # Per project policy, releases are pre-releases by default; only --stable
+    # produces a normal release.
+    if prerelease and not stable:
+        cmd.append("--prerelease")
+    elif stable and not prerelease:
+        pass
+    else:
+        # neither flag: default to prerelease
+        cmd.append("--prerelease")
+    subprocess.run(cmd, cwd=ROOT, check=True)
     print(f"Created tag and release {tag}.")
 
 
@@ -139,9 +146,19 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("check", help="Validate all tracked versions match VERSION.")
     subparsers.add_parser("sync", help="Sync manifest.json and pyproject.toml from VERSION.")
-    subparsers.add_parser(
+    release_parser = subparsers.add_parser(
         "release",
         help="Create a v-prefixed tag and GitHub release from VERSION.",
+    )
+    release_parser.add_argument(
+        "--prerelease",
+        action="store_true",
+        help="Mark the release as a pre-release (default).",
+    )
+    release_parser.add_argument(
+        "--stable",
+        action="store_true",
+        help="Create a stable release (overrides the default pre-release behaviour).",
     )
     args = parser.parse_args()
 
@@ -153,7 +170,9 @@ def main() -> None:
         sync_versions()
         return
     if args.command == "release":
-        run_release()
+        if args.prerelease and args.stable:
+            raise SystemExit("--prerelease and --stable are mutually exclusive.")
+        run_release(prerelease=args.prerelease, stable=args.stable)
         return
 
     raise SystemExit(f"Unknown command: {args.command}")

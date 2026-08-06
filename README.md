@@ -108,7 +108,7 @@ If you find this project useful, and would like to help support its continued de
 
 ## Installation
 **Pre-Reqs**
-*Generate you Kirk Hill Wind Farm API by logging in to the dashboard https://dashboard.kirkhillcoop.org, clicking on your username / account in teh top right cornner, scroll down to the API section, press "Generate" and copy the API key*
+*Generate your Kirk Hill Wind Farm API key by logging in to the dashboard https://dashboard.kirkhillcoop.org, clicking on your username / account in the top right corner, scrolling down to the API section, pressing "Generate" and copying the API key*
 
 1. Add this repository to HACS (Custom Repositories)
 2. Install "Kirk Hill Wind Farm"
@@ -272,8 +272,8 @@ Release tags are generated as `vX.Y.Z` directly from `VERSION`.
 [hacs]: https://github.com/hacs/integration
 [badge-hacs-validation]: https://img.shields.io/badge/HACS%20Validation-passing-brightgreen
 [workflow-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
-[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/hassfest.yml?branch=main&label=Hassfest
-[workflow-hassfest]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/hassfest.yml
+[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/validate.yml?branch=main&label=Hassfest
+[workflow-hassfest]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
 [badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
 [workflow-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml
 [badge-release]: https://img.shields.io/github/v/release/MJP-76/KirkHillWindFarm?style=flat&label=Release
