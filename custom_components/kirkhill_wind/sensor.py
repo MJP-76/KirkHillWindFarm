@@ -288,6 +288,17 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
                 if parsed is not None:
                     return parsed
 
+        window = (
+            self.coordinator.data.get("timeframe_windows", {})
+            .get(self._scope, {})
+            .get("alltime")
+        )
+        if isinstance(window, dict):
+            for key in ("from", "start", "start_at", "start_date"):
+                parsed = self._parse_api_date(window.get(key))
+                if parsed is not None:
+                    return parsed
+
         return None
 
     def _projection_factor(self) -> float:

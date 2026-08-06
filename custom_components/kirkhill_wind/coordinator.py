@@ -78,7 +78,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self._tick += 1
         async with aiohttp.ClientSession() as session:
             try:
-                owner_data, site_data, timeframe_summaries = await asyncio.gather(
+                owner_data, site_data, (timeframe_summaries, timeframe_windows) = await asyncio.gather(
                     self.client.get_current(session, SCOPE_OWNER),
                     self.client.get_current(session, SCOPE_SITE),
                     self._fetch_timeframe_summaries(session, self._tick),
@@ -124,6 +124,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             SCOPE_SITE: site_data,
             "coordinates": coordinates,
             "timeframe_summaries": timeframe_summaries,
+            "timeframe_windows": timeframe_windows,
             "turbine_generation": self._turbine_generation,
             "wind_speed_today": self._wind_speed_today,
             "open_meteo_forecast": self._open_meteo_forecast,
@@ -154,7 +155,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
     async def _fetch_timeframe_summaries(
         self, session: aiohttp.ClientSession, tick: int
-    ) -> dict[str, dict[str, dict]]:
+    ) -> tuple[dict[str, dict[str, dict]], dict[str, dict[str, dict]]]:
         tasks: list[tuple[str, str, asyncio.Task]] = []
 
         # Determine which timeframes to fetch this tick
@@ -185,6 +186,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         )
 
         summaries: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
+        windows: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
         for (scope, timeframe, _), payload in zip(tasks, results):
             if isinstance(payload, Exception):
                 _LOGGER.warning(
@@ -194,12 +196,15 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     payload,
                 )
                 summaries[scope][timeframe] = {}
+                windows[scope][timeframe] = {}
                 continue
 
             summary = payload.get("summary")
             summaries[scope][timeframe] = summary if isinstance(summary, dict) else {}
+            window = payload.get("window")
+            windows[scope][timeframe] = window if isinstance(window, dict) else {}
 
-        return summaries
+        return summaries, windows
 
     async def _fetch_latest_wind_speed(self, session: aiohttp.ClientSession) -> float | None:
         try:
