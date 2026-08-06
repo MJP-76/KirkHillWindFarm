@@ -8,10 +8,19 @@ class KirkHillWindTurbineMap extends HTMLElement {
     this._pinchStart = null; // distance between fingers when pinch started
     this._needsRebuild = true;
     this._lastViewport = null; // {zoom, originX, originY} used for marker positions
+    // Window-level listeners are registered once and must be removed on
+    // disconnect; otherwise every rebuild stacked duplicates (multiplying
+    // pan speed and firing after the card is removed from the DOM).
+    this._windowMouseMove = null;
+    this._windowMouseUp = null;
   }
 
   connectedCallback() {
     this._render();
+  }
+
+  disconnectedCallback() {
+    this._removeWindowListeners();
   }
 
   setConfig(config) {
@@ -138,6 +147,34 @@ class KirkHillWindTurbineMap extends HTMLElement {
     const svg = this.shadowRoot.querySelector("svg.map");
     if (!svg) return;
 
+    // Track the current svg so the once-registered window listeners always
+    // operate on the latest element (rebuilt on every reload).
+    this._currentSvg = svg;
+
+    // Register the window-level listeners exactly once. svg is replaced on
+    // each rebuild, so those svg-attached listeners are fine to re-add, but
+    // window listeners would duplicate otherwise.
+    if (this._windowMouseMove === null) {
+      this._windowMouseMove = (e) => {
+        if (!this._drag) return;
+        const s = this._currentSvg;
+        if (!s) return;
+        this._panViewBox(e.clientX - this._drag.x, e.clientY - this._drag.y, s);
+        this._drag = { x: e.clientX, y: e.clientY };
+      };
+      window.addEventListener("mousemove", this._windowMouseMove);
+
+      this._windowMouseUp = () => {
+        if (!this._drag) return;
+        this._drag = null;
+        const s = this._currentSvg;
+        if (s) {
+          s.style.cursor = "grab";
+        }
+      };
+      window.addEventListener("mouseup", this._windowMouseUp);
+    }
+
     // Scroll wheel zoom
     svg.addEventListener("wheel", (e) => {
       e.preventDefault();
@@ -145,21 +182,12 @@ class KirkHillWindTurbineMap extends HTMLElement {
       this._zoomViewBox(factor, this._svgPoint(svg, e.clientX, e.clientY));
     }, { passive: false });
 
-    // Mouse drag
+    // Mouse drag start/end on the svg element itself (re-added per rebuild; the
+    // old svg is discarded so these do not leak).
     svg.addEventListener("mousedown", (e) => {
       e.preventDefault();
       this._drag = { x: e.clientX, y: e.clientY };
       svg.style.cursor = "grabbing";
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!this._drag) return;
-      this._panViewBox(e.clientX - this._drag.x, e.clientY - this._drag.y, svg);
-      this._drag = { x: e.clientX, y: e.clientY };
-    });
-    window.addEventListener("mouseup", () => {
-      if (!this._drag) return;
-      this._drag = null;
-      svg.style.cursor = "grab";
     });
 
     // Touch drag + pinch
@@ -205,6 +233,18 @@ class KirkHillWindTurbineMap extends HTMLElement {
         this._applyViewBox(svg);
       }
     });
+  }
+
+  _removeWindowListeners() {
+    if (this._windowMouseMove !== null) {
+      window.removeEventListener("mousemove", this._windowMouseMove);
+      this._windowMouseMove = null;
+    }
+    if (this._windowMouseUp !== null) {
+      window.removeEventListener("mouseup", this._windowMouseUp);
+      this._windowMouseUp = null;
+    }
+    this._currentSvg = null;
   }
 
   _svgPoint(svg, clientX, clientY) {

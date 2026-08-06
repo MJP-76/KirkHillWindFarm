@@ -302,29 +302,41 @@ def _owner_generation_markdown_line(
     )
 
 
-def _generation_markdown_card(title: str, entries: list[tuple[str, str]]) -> dict:
-    """Return a markdown card for formatted generation display."""
-    content = "\n".join(_generation_markdown_line(label, entity_id) for label, entity_id in entries)
+def _generation_markdown_card(title: str, entries: list[tuple[str, str | None]]) -> dict:
+    """Return a markdown card for formatted generation display.
+
+    Entries whose entity id is missing (None) are skipped so the card degrades
+    gracefully instead of referencing a non-existent entity.
+    """
+    lines = [
+        _generation_markdown_line(label, entity_id)
+        for label, entity_id in entries
+        if entity_id is not None
+    ]
     return {
         "type": "markdown",
         "title": title,
-        "content": content,
+        "content": "\n".join(lines),
     }
 
 
 def _owner_generation_markdown_card(
     title: str,
-    entries: list[tuple[str, str, str]],
+    entries: list[tuple[str, str | None, str | None]],
 ) -> dict:
-    """Return a markdown card for owner generation and value display."""
-    content = "\n".join(
+    """Return a markdown card for owner generation and value display.
+
+    Entries whose entity ids are missing (None) are skipped.
+    """
+    lines = [
         _owner_generation_markdown_line(label, generation_entity_id, value_entity_id)
         for label, generation_entity_id, value_entity_id in entries
-    )
+        if generation_entity_id is not None and value_entity_id is not None
+    ]
     return {
         "type": "markdown",
         "title": title,
-        "content": content,
+        "content": "\n".join(lines),
     }
 
 
@@ -520,14 +532,27 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
     """Generate the default storage dashboard config."""
     entity_ids = _entity_ids_for_entry(hass, entry)
 
-    def farm_scoped(scope: str, suffix: str) -> str:
-        return entity_ids[f"{entry.entry_id}_{scope}_{suffix}"]
+    def farm_scoped(scope: str, suffix: str) -> str | None:
+        return entity_ids.get(f"{entry.entry_id}_{scope}_{suffix}")
 
-    def farm(unique_suffix: str) -> str:
-        return entity_ids[f"{entry.entry_id}_{unique_suffix}"]
+    def farm(unique_suffix: str) -> str | None:
+        return entity_ids.get(f"{entry.entry_id}_{unique_suffix}")
 
-    def turbine(turbine_id: str, unique_suffix: str) -> str:
-        return entity_ids[f"{entry.entry_id}_turbine_{turbine_id}_{unique_suffix}"]
+    def turbine(turbine_id: str, unique_suffix: str) -> str | None:
+        return entity_ids.get(f"{entry.entry_id}_turbine_{turbine_id}_{unique_suffix}")
+
+    # Build the turbine list from the turbine ids that actually have entities
+    # in the registry, rather than hard-coding T1-T8. Turbine entities are only
+    # created for ids present in the API response, so the two can diverge and the
+    # hard-coded list raised KeyError when a turbine was missing.
+    turbine_prefix = f"{entry.entry_id}_turbine_"
+    present_turbine_ids = sorted(
+        {
+            uid[len(turbine_prefix):].split("_")[0]
+            for uid in entity_ids
+            if uid.startswith(turbine_prefix)
+        }
+    )
 
     owner_generation_entities = [
         (
@@ -609,38 +634,37 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
     ]
     turbine_map_entities = [
         {
-            "name": f"T{i}",
-            "state_entity": turbine(f"T{i}", "state_text"),
-            "power_entity": turbine(f"T{i}", "site_power"),
-            "capacity_entity": turbine(f"T{i}", "site_capacity_factor"),
-            "active_entity": turbine(f"T{i}", "active"),
+            "name": tid,
+            "state_entity": turbine(tid, "state_text"),
+            "power_entity": turbine(tid, "site_power"),
+            "capacity_entity": turbine(tid, "site_capacity_factor"),
+            "active_entity": turbine(tid, "active"),
         }
-        for i in range(1, 9)
+        for tid in present_turbine_ids
     ]
 
     scada_turbines = [
         {
-            "id": f"T{i}",
-            "power_entity": turbine(f"T{i}", "site_power"),
-            "state_entity": turbine(f"T{i}", "state_text"),
-            "generation_today_entity": turbine(f"T{i}", "generation_today"),
-            "rotor_entity": turbine(f"T{i}", "rotor_speed"),
+            "id": tid,
+            "power_entity": turbine(tid, "site_power"),
+            "state_entity": turbine(tid, "state_text"),
+            "generation_today_entity": turbine(tid, "generation_today"),
+            "rotor_entity": turbine(tid, "rotor_speed"),
         }
-        for i in range(1, 9)
+        for tid in present_turbine_ids
     ]
 
     turbine_cards = []
-    for i in range(1, 9):
-        turbine_id = f"T{i}"
+    for tid in present_turbine_ids:
         turbine_cards.append(
             {
                 "type": "entities",
-                "title": f"Turbine {turbine_id}",
+                "title": f"Turbine {tid}",
                 "entities": [
-                    {"entity": turbine(turbine_id, "owner_power"), "name": "Owner power"},
-                    {"entity": turbine(turbine_id, "site_power"), "name": "Site power"},
-                    {"entity": turbine(turbine_id, "state_text"), "name": "State"},
-                    {"entity": turbine(turbine_id, "active"), "name": "Active"},
+                    {"entity": turbine(tid, "owner_power"), "name": "Owner power"},
+                    {"entity": turbine(tid, "site_power"), "name": "Site power"},
+                    {"entity": turbine(tid, "state_text"), "name": "State"},
+                    {"entity": turbine(tid, "active"), "name": "Active"},
                 ],
             }
         )
@@ -650,7 +674,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
     turbine_status_barchart = {
         "type": "history-graph",
         "title": f"Turbine Activity — last {graph_hours}h",
-        "entities": [turbine(f"T{i}", "active") for i in range(1, 9)],
+        "entities": [
+            tid_entity
+            for tid_entity in (turbine(tid, "active") for tid in present_turbine_ids)
+            if tid_entity is not None
+        ],
         "hours_to_show": graph_hours,
     }
 
