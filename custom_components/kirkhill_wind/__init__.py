@@ -7,7 +7,10 @@ from pathlib import Path
 
 import voluptuous as vol
 from homeassistant.components import frontend
-from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.frontend import (
+    add_extra_js_url,
+    remove_extra_js_url,
+)
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.lovelace import (
     CONF_ICON,
@@ -38,6 +41,7 @@ from .services import async_setup_services, async_unload_services
 _LOGGER = logging.getLogger(__name__)
 _FRONTEND_DIR = Path(__file__).parent / "frontend"
 _FRONTEND_REGISTERED = "kirkhill_wind_frontend_registered"
+_FRONTEND_URLS = "kirkhill_wind_frontend_urls"
 _ETHEX_DOMAIN = "ethex"
 
 _FRONTEND_CARDS: list[tuple[str, Path]] = [
@@ -84,6 +88,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         entry.runtime_data = None
         await async_unload_services(hass)
+        # Remove any versioned JS URLs this integration registered so they don't
+        # linger in the frontend registry after the integration is unloaded.
+        for url in hass.data.pop(_FRONTEND_URLS, ()):
+            remove_extra_js_url(hass, url)
 
     return unload_ok
 
@@ -99,11 +107,25 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
         )
         hass.data[_FRONTEND_REGISTERED] = True
 
-    # Always (re-)add the versioned URLs so the browser picks up JS changes
-    # after an integration reload without needing a full HA restart.
+    # (Re-)add the versioned URLs so the browser picks up JS changes after an
+    # integration reload without needing a full HA restart. Track the URLs we
+    # previously registered so stale versions can be removed — otherwise each
+    # reload stacks duplicate `?v=<mtime>` URLs that HA keeps forever and the
+    # browser re-downloads every historical bundle (including ~4.7 MB charts).
+    registered_urls = hass.data.setdefault(_FRONTEND_URLS, set())
+    new_urls: set[str] = set()
+
     for url, path in _FRONTEND_CARDS:
         js_version = int(path.stat().st_mtime)
-        add_extra_js_url(hass, f"{url}?v={js_version}")
+        new_url = f"{url}?v={js_version}"
+        new_urls.add(new_url)
+        if new_url not in registered_urls:
+            add_extra_js_url(hass, new_url)
+
+    for stale in registered_urls - new_urls:
+        remove_extra_js_url(hass, stale)
+    registered_urls.clear()
+    registered_urls.update(new_urls)
 
 
 async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:
