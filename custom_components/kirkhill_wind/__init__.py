@@ -364,12 +364,23 @@ _OBSOLETE_CARD_KEYS: set[str] = {
     "kpi:name:Site Power",
     "kpi:name:Wind Speed",
     "kpi:name:Capacity Factor",
+    "kpi:name:Alarm",
+    "button:name:Reload integration",
     "entities:title:Owner projected earnings",
+    "entities:title:Site metrics",
+    "entities:title:Owner projected earnings by timeframe",
+    "entities:title:Site projected value by timeframe",
 }
 # Obsolete sections are scoped by view path because a heading can still be in
 # use elsewhere (e.g. "Charts" lives on again in the History view).
 _OBSOLETE_SECTION_KEYS: dict[str, set[str]] = {
-    "overview": {"heading:Wind Forecast", "heading:Charts"},
+    "overview": {
+        "heading:Wind Forecast",
+        "heading:Charts",
+        # KPI row (unheaded grid) from v4.8.12 and earlier
+        "section:kpi:name:Capacity Factor|kpi:name:Alarm|button:name:Reload integration",
+        "section:kpi:name:Owner Power|kpi:name:Site Power|kpi:name:Capacity Factor|kpi:name:Wind Speed|kpi:name:Alarm|button:name:Reload integration",
+    },
 }
 
 def _card_match_key(card: dict) -> str | None:
@@ -742,26 +753,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         "hours_to_show": graph_hours,
     }
 
-    kpi_cards = [
-        {
-            "type": "tile",
-            "entity": farm("farm_alarm"),
-            "name": "Alarm",
-            "icon": "mdi:alert",
-            "color": "red",
-        },
-        {
-            "type": "button",
-            "name": "Reload integration",
-            "icon": "mdi:reload",
-            "show_name": False,
-            "show_state": False,
-            "tap_action": {
-                "action": "call-service",
-                "service": "kirkhill_wind.reload_integration",
-            },
-        },
-    ]
+    kpi_cards = []
 
     financial_kpi_cards = [
         {
@@ -818,11 +810,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                 "sections": [
                     {
                         "type": "grid",
-                        "column_span": 2,
-                        "cards": kpi_cards,
-                    },
-                    {
-                        "type": "grid",
                         "cards": [
                             {
                                 "type": "heading",
@@ -847,21 +834,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "Site generation",
                                 site_generation_entities,
                             ),
-                            {
-                                "type": "entities",
-                                "title": "Site metrics",
-                                "show_header_toggle": False,
-                                "entities": [
-                                    {
-                                        "entity": farm_scoped("site", "farm_power"),
-                                        "name": "Site power",
-                                    },
-                                    {
-                                        "entity": farm("farm_wind_speed"),
-                                        "name": "Actual wind speed (Kirk Hill API)",
-                                    },
-                                ],
-                            },
                         ],
                     },
                 ],
@@ -993,12 +965,10 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading": "Owner finances",
                                 "heading_style": "title",
                             },
-                            {
-                                "type": "entities",
-                                "title": "Owner projected earnings by timeframe",
-                                "show_header_toggle": False,
-                                "entities": owner_value_entities,
-                            },
+                            _owner_generation_markdown_card(
+                                "Owner generation & projected earnings",
+                                owner_generation_entities,
+                            ),
                         ],
                     },
                     {
@@ -1009,12 +979,10 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading": "Site finances",
                                 "heading_style": "title",
                             },
-                            {
-                                "type": "entities",
-                                "title": "Site projected value by timeframe",
-                                "show_header_toggle": False,
-                                "entities": site_value_entities,
-                            },
+                            _generation_markdown_card(
+                                "Site generation",
+                                site_generation_entities,
+                            ),
                         ],
                     },
                 ],

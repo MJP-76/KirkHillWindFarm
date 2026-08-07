@@ -47,7 +47,6 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, active binary sensor, generation today (site), generation all-time (site), and rotor speed for each of the 8 turbines
 - **SCADA tab** — the first tab on the auto-generated dashboard, a full-bleed animated single-line diagram (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; national grid block shows Owner and Site export and to-grid-today, with wind/forecast chips and a flashing alarm indicator; panel view so it fills the entire tab
 - **Auto-generated Lovelace dashboard** — created automatically during setup with SCADA (first), overview, history, finances, and turbines tabs containing:
-  - A compact top-level icon-only reload control that triggers integration reload
   - Taller turbine map viewport so all turbines fit more reliably on-screen
   - Active/inactive turbine count and alarm status (alarm = actual thermal/electrical turbine fault)
   - An **interactive turbine map** showing all 8 turbines with T1–T8 labels, running/stopped legend, hover titles, live spin animation proportional to output, scroll/pinch zoom, drag-to-pan, and double-click to reset
@@ -59,6 +58,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
+- **Finances tab shows generation kWh + earnings** for all timeframes (Owner & Site)
 
 ## Requirements
 
