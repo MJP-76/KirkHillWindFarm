@@ -57,6 +57,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Power vs Wind scatter plot** — wind speed vs site power correlation
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
+- **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
 
 ## Requirements

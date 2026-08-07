@@ -221,13 +221,28 @@ The generated dashboard includes:
 
 ### Dashboard customisation
 
-User-added cards, sections, and views are **preserved** across integration reloads and updates. The integration only updates the cards it manages — anything you add yourself is kept.
+User-added cards, sections, and views are **preserved** across integration reloads and updates. The integration only updates the cards it manages — anything you add yourself is kept, and removed default cards are pruned without touching your additions.
 
-If you want to reset the dashboard to its default layout, use the `kirkhill_wind.reset_dashboard` service:
+### Factory reset the dashboard
+
+Your customisations stay until you **explicitly** wipe them. There are two ways to start over:
+
+**Option 1 — untick and rebuild from the integration**
+
+1. Go to **Settings → Devices & Services → Kirk Hill Wind Farm → Configure**.
+2. **Untick "Create dashboard automatically"** and save — the integration stops managing the dashboard, so nothing can be overwritten.
+3. In the dashboard editor, **delete the `Kirk Hill Wind Farm` tab**.
+4. **Re-tick "Create dashboard automatically"** (or reload the integration) — a fresh default dashboard is generated.
+
+**Option 2 — reset immediately**
+
+Call the `kirkhill_wind.reset_dashboard` service:
 
 ```yaml
 service: kirkhill_wind.reset_dashboard
 ```
+
+This restores the dashboard to the integration defaults and **discards all customisations**.
 
 ### Bundled chart cards
 
