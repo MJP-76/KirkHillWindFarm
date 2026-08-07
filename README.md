@@ -166,7 +166,7 @@ Farm hub device:
 - Wind speed [m/s]
 - Active turbines
 - Inactive turbines
-- Alarm (binary sensor)
+- Alarm (binary sensor) — on when any turbine is in an actual thermal or electrical fault state
 
 Timeframe generation entities keep a stable raw **kWh** state for reliability in Home Assistant. The generated dashboard formats those values for display with automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and rounds them to **2 decimal places**. Financial values are separate **projected** figures and are not calculated from live generation.
 
@@ -189,16 +189,19 @@ When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk
 
 The generated dashboard includes:
 - A compact top-level **icon-only reload control** that calls `kirkhill_wind.reload_integration`
-- A **SCADA tab** (the first tab) showing a full-bleed animated single-line diagram of the farm: 8 turbines feeding the site collection bus, through the step-up transformer, into the national grid. Each turbine shows live power, colour-coded status, last status time, today's generation and rotor speed; flow dots animate in proportion to power. Rendered as a panel view so it fills the entire tab.
+- A **SCADA tab** (the first tab) showing a full-bleed animated single-line diagram of the farm: 8 turbines feeding the site collection bus, through the step-up transformer, into the national grid. Each turbine shows live power, colour-coded status, last status time, today's generation and rotor speed; flow dots animate in proportion to power. The national grid block shows **Owner and Site** export power and to-grid-today side by side, the header shows live wind, active-turbine and next-hour forecast chips, and a **flashing ALARM indicator** appears while the farm alarm is on. Rendered as a panel view so it fills the entire tab.
 - Owner and site overview sections
 - Dashboard range controls aligned with the Kirk Hill dashboard UX (`Today`, `Yesterday`, `7 days`, `30 days`, `year`, `All time`)
 - Owner and site generation cards shown first in each overview section
 - Owner generation cards show actual generation energy values with automatic unit scaling (kWh, MWh, GWh, TWh, PWh, EWh)
-- Dedicated **Owner projected earnings** section listing projected monetary sensors for all timeframes
 - Dedicated **Finances** tab with:
   - **Owner finances** projected timeframe value sensors
   - **Site finances** projected timeframe value sensors
-- Open-Meteo forecast entities included directly in **Site metrics** alongside actual wind speed from Kirk Hill API
+- A **History** tab with the chart cards:
+  - **Combined Power and Wind** history graph — owner power, site power, and wind speed on a single chart
+  - **Dual-axis Power chart** (ApexCharts) — site power (MW) and owner power (kW) on separate Y-axes
+  - **Power vs Wind scatter plot** (Plotly) — wind speed (m/s) vs site power (MW) correlation
+- Open-Meteo forecast wind speed (next hour) shown as a **Forecast** chip on the SCADA tab
 - All owner/site generation timeframe entities
 - Live farm wind and turbine availability
 - A dedicated **Turbines** tab containing:
@@ -215,10 +218,6 @@ The generated dashboard includes:
     - **Double-click / double-tap** to reset to the default view
   - Per-turbine owner/site power, capacity, wind, state, and active status cards
 - Generation display cards that switch automatically between **kWh**, **MWh**, **GWh**, **TWh**, **PWh**, and **EWh**, showing **2 decimal places**
-- A **Charts** section with:
-  - **Combined Power and Wind** history graph — owner power, site power, and wind speed on a single chart
-  - **Dual-axis Power chart** (ApexCharts) — site power (MW) and owner power (kW) on separate Y-axes
-  - **Power vs Wind scatter plot** (Plotly) — wind speed (m/s) vs site power (MW) correlation
 
 ### Dashboard customisation
 
