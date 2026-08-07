@@ -363,6 +363,7 @@ _OBSOLETE_CARD_KEYS: set[str] = {
     "kpi:name:Owner Power",
     "kpi:name:Site Power",
     "kpi:name:Wind Speed",
+    "kpi:name:Capacity Factor",
     "entities:title:Owner projected earnings",
 }
 # Obsolete sections are scoped by view path because a heading can still be in
@@ -743,14 +744,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
 
     kpi_cards = [
         {
-            "type": "gauge",
-            "entity": farm_scoped("owner", "farm_capacity_factor"),
-            "name": "Capacity Factor",
-            "min": 0,
-            "max": 100,
-            "severity": {"green": 50, "yellow": 20, "red": 0},
-        },
-        {
             "type": "tile",
             "entity": farm("farm_alarm"),
             "name": "Alarm",
@@ -811,6 +804,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),
                         "alarm_entity": farm("farm_alarm"),
+                        "capacity_entity": farm_scoped("site", "farm_capacity_factor"),
                         "turbines": scada_turbines,
                     },
                 ],
@@ -861,10 +855,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     {
                                         "entity": farm_scoped("site", "farm_power"),
                                         "name": "Site power",
-                                    },
-                                    {
-                                        "entity": farm_scoped("site", "farm_capacity_factor"),
-                                        "name": "Site capacity factor",
                                     },
                                     {
                                         "entity": farm("farm_wind_speed"),

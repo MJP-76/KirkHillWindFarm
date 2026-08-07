@@ -306,8 +306,6 @@ class KirkHillWindScada extends HTMLElement {
       <g class="bus">
         <rect x="600" y="30" width="60" height="${layout.busY2 - 30}" rx="6"/>
         <text class="bus-title" x="630" y="20" text-anchor="middle">SITE COLLECTION BUS</text>
-        <rect class="bus-summary" x="530" y="${layout.busSummaryY}" width="200" height="30" rx="6"/>
-        <text class="bus-total" x="630" y="${layout.busSummaryY + 20}" text-anchor="middle"></text>
       </g>
     `;
   }
@@ -338,27 +336,21 @@ class KirkHillWindScada extends HTMLElement {
     const siteCx = 1210;
     return `
       <g class="grid">
-        <rect class="grid-rect" x="985" y="${cy - 180}" width="250" height="360" rx="10"/>
-        <text class="grid-title" x="1110" y="${cy - 152}" text-anchor="middle">NATIONAL</text>
-        <text class="grid-title" x="1110" y="${cy - 130}" text-anchor="middle">GRID</text>
-        <g class="grid-icon">
-          <path d="M1102 ${cy - 108} h16 M1110 ${cy - 116} v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-        </g>
-        <text class="grid-col" x="${ownerCx}" y="${cy - 88}" text-anchor="middle">OWNER</text>
-        <text class="grid-col" x="${siteCx}" y="${cy - 88}" text-anchor="middle">SITE</text>
-        <text class="grid-label" x="${ownerCx}" y="${cy - 68}" text-anchor="middle">Export</text>
-        <text class="grid-label" x="${siteCx}" y="${cy - 68}" text-anchor="middle">Export</text>
-        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy - 38}" text-anchor="middle">—</text>
-        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy - 38}" text-anchor="middle">—</text>
-        <text class="grid-unit" x="${ownerCx}" y="${cy - 20}" text-anchor="middle">MW</text>
-        <text class="grid-unit" x="${siteCx}" y="${cy - 20}" text-anchor="middle">MW</text>
-        <line x1="1000" y1="${cy + 8}" x2="1220" y2="${cy + 8}" class="grid-divider"/>
-        <text class="grid-label" x="${ownerCx}" y="${cy + 32}" text-anchor="middle">To grid today</text>
-        <text class="grid-label" x="${siteCx}" y="${cy + 32}" text-anchor="middle">To grid today</text>
-        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy + 62}" text-anchor="middle">—</text>
-        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy + 62}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy + 80}" text-anchor="middle">kWh</text>
-        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy + 80}" text-anchor="middle">kWh</text>
+        <rect class="grid-rect" x="985" y="${cy - 125}" width="250" height="250" rx="10"/>
+        <text class="grid-title" x="1110" y="${cy - 102}" text-anchor="middle">NATIONAL</text>
+        <text class="grid-title" x="1110" y="${cy - 80}" text-anchor="middle">GRID</text>
+        <text class="grid-col" x="${ownerCx}" y="${cy - 52}" text-anchor="middle">OWNER</text>
+        <text class="grid-col" x="${siteCx}" y="${cy - 52}" text-anchor="middle">SITE</text>
+        <line class="grid-divider" x1="1000" y1="${cy - 38}" x2="1220" y2="${cy - 38}"/>
+        <text class="grid-label" x="1110" y="${cy - 20}" text-anchor="middle">Export (MW)</text>
+        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy + 8}" text-anchor="middle">—</text>
+        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy + 8}" text-anchor="middle">—</text>
+        <line class="grid-divider" x1="1000" y1="${cy + 26}" x2="1220" y2="${cy + 26}"/>
+        <text class="grid-label" x="1110" y="${cy + 44}" text-anchor="middle">To grid today</text>
+        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy + 72}" text-anchor="middle">—</text>
+        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy + 72}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy + 90}" text-anchor="middle">kWh</text>
+        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy + 90}" text-anchor="middle">kWh</text>
       </g>
     `;
   }
@@ -366,19 +358,25 @@ class KirkHillWindScada extends HTMLElement {
   _buildHeaderChips() {
     return `
       <g class="chips">
+        <!-- Left side: Alarm + Active Turbines (above turbine list) -->
+        <g class="alarm" data-alarm="indicator">
+          <rect x="30" y="24" width="112" height="30" rx="15"/>
+          <text class="alarm-text" data-alarm="text" x="86" y="44" text-anchor="middle">OK</text>
+        </g>
+        <rect x="152" y="24" width="170" height="30" rx="15"/>
+        <text class="chip-label" x="164" y="44">Active Turbines</text>
+        <text class="chip-value" data-chip="active" x="310" y="44" text-anchor="end">—</text>
+
+        <!-- Right side: Current Wind, Forecast 1h, Site Capacity -->
         <rect x="700" y="60" width="160" height="30" rx="15"/>
-        <text class="chip-label" x="712" y="80">Wind</text>
+        <text class="chip-label" x="712" y="80">Current Wind</text>
         <text class="chip-value" data-chip="wind" x="852" y="80" text-anchor="end">—</text>
         <rect x="700" y="100" width="160" height="30" rx="15"/>
-        <text class="chip-label" x="712" y="120">Active</text>
-        <text class="chip-value" data-chip="active" x="852" y="120" text-anchor="end">—</text>
+        <text class="chip-label" x="712" y="120">Forecast 1h</text>
+        <text class="chip-value" data-chip="forecast" x="852" y="120" text-anchor="end">—</text>
         <rect x="700" y="140" width="160" height="30" rx="15"/>
-        <text class="chip-label" x="712" y="160">Forecast</text>
-        <text class="chip-value" data-chip="forecast" x="852" y="160" text-anchor="end">—</text>
-        <g class="alarm" data-alarm="indicator" opacity="0">
-          <rect x="880" y="60" width="132" height="30" rx="15"/>
-          <text class="alarm-text" x="946" y="80" text-anchor="middle">⚠ ALARM</text>
-        </g>
+        <text class="chip-label" x="712" y="160">Site Capacity</text>
+        <text class="chip-value" data-chip="capacity" x="852" y="160" text-anchor="end">—</text>
       </g>
     `;
   }
@@ -387,7 +385,7 @@ class KirkHillWindScada extends HTMLElement {
     const entries = Object.entries(KirkHillWindScada.STATUS)
       .map(([key, v]) => `<span class="lg-item"><span class="lg-dot" style="background:${v.color}"></span>${v.label}</span>`)
       .join("");
-    return `<foreignObject x="700" y="${layout.legendY}" width="480" height="120">
+    return `<foreignObject x="30" y="${layout.legendY}" width="500" height="120">
       <div xmlns="http://www.w3.org/1999/xhtml" class="legend">${entries}</div>
     </foreignObject>`;
   }
@@ -418,23 +416,23 @@ class KirkHillWindScada extends HTMLElement {
     this._setText(root, '[data-chip="active"]', active === null ? "—" : `${this._fmt(active, 0)} of ${config.turbines.length}`);
     const forecast = this._num(config.wind_forecast_entity);
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
+    const capacity = this._num(config.capacity_entity);
+    this._setText(root, '[data-chip="capacity"]', capacity === null ? "—" : `${this._fmt(capacity, 0)}%`);
 
-    // Flashing alarm indicator (actual turbine faults)
+    // Alarm indicator (always visible: OK or flashing ALARM)
     const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
     if (alarmIndicator) {
       const alarmOn = this._str(config.alarm_entity) === "on";
-      alarmIndicator.setAttribute("opacity", alarmOn ? "1" : "0");
-      alarmIndicator.classList.toggle("flash", alarmOn);
+      alarmIndicator.classList.toggle("fault", alarmOn);
+      this._setText(root, '[data-alarm="text"]', alarmOn ? "⚠ ALARM" : "OK");
     }
 
-    // Bus total
+    // Turbines
     const totalKw = config.turbines.reduce((sum, t) => {
       const p = this._num(t.power_entity);
       return sum + (Number.isFinite(p) ? p : 0);
     }, 0);
-    this._setText(root, ".bus-total", totalKw > 0 ? `Σ ${this._fmt(totalKw)} kW` : "Σ — kW");
 
-    // Turbines
     config.turbines.forEach((t, i) => {
       const node = root.querySelector(`[data-turbine="${CSS.escape(t.id || `T${i + 1}`)}"]`);
       if (!node) return;
@@ -505,10 +503,8 @@ class KirkHillWindScada extends HTMLElement {
       .t-last { fill: #64748b; font: 10px sans-serif; }
 
       /* Bus */
-      .bus rect:not(.bus-summary) { fill: #0f2742; stroke: #1d4ed8; stroke-width: 2; }
+      .bus rect { fill: #0f2742; stroke: #1d4ed8; stroke-width: 2; }
       .bus-title { fill: #60a5fa; font: bold 11px sans-serif; }
-      .bus-summary { fill: #111a2e; stroke: #1e293b; }
-      .bus-total { fill: #fbbf24; font: bold 14px sans-serif; }
 
       /* Transformer */
       .transformer rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
@@ -519,7 +515,6 @@ class KirkHillWindScada extends HTMLElement {
       /* Grid node */
       .grid-rect { fill: #1a2e05; stroke: #4d7c0f; stroke-width: 2; }
       .grid-title { fill: #a3e635; font: bold 16px sans-serif; }
-      .grid-icon { color: #a3e635; }
       .grid-col { fill: #a3e635; font: bold 11px sans-serif; }
       .grid-label { fill: #94a3b8; font: 11px sans-serif; }
       .grid-power { fill: #f8fafc; font: bold 22px sans-serif; }
@@ -532,10 +527,12 @@ class KirkHillWindScada extends HTMLElement {
       .chip-label { fill: #94a3b8; font: 11px sans-serif; }
       .chip-value { fill: #f8fafc; font: bold 12px sans-serif; }
 
-      /* Flashing alarm indicator */
-      .alarm rect { fill: #450a0a; stroke: #ef4444; stroke-width: 2; }
-      .alarm-text { fill: #fca5a5; font: bold 14px sans-serif; }
-      .alarm.flash { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
+      /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
+      .alarm rect { fill: #052e16; stroke: #22c55e; stroke-width: 2; }
+      .alarm-text { fill: #4ade80; font: bold 12px sans-serif; }
+      .alarm.fault rect { fill: #450a0a; stroke: #ef4444; stroke-width: 2; }
+      .alarm.fault .alarm-text { fill: #fca5a5; }
+      .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
       @keyframes khscada-alarm-flash {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.15; }

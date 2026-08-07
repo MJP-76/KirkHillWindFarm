@@ -53,6 +53,13 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.13 (stable)
+- **SCADA dashboard redesign**: alarm + active turbines moved above turbine list (left), always-visible alarm chip (OK / flashing ALARM), cleaner National Grid box, renamed wind chips (Current Wind / Forecast 1h), new Site Capacity chip
+- **Capacity Factor moved**: removed from Overview KPI row and Site metrics; added to SCADA dashboard as "Site Capacity"
+- **Bus summary removed** (redundant with National Grid box)
+- **Turbine status legend moved** to left side below turbine list
+- **Dashboard customisation preserved** with factory reset options documented
+
 ## Support me
 
 If you find this project useful, and would like to help support its continued development, you can do so here:
