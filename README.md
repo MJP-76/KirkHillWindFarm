@@ -53,6 +53,11 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.15 (stable)
+- **Overview tab removed**: dashboard now starts with SCADA, then Finances, History, Turbines
+- **Finances tab moved to second position** (after SCADA)
+- **Obsolete view cleanup**: Overview view automatically removed from existing dashboards on merge
+
 ## Version 4.8.14 (stable)
 - **Overview cleanup**: removed KPI row (Alarm tile, Reload button) and Site metrics card; Overview now shows only Owner/Site generation markdown cards
 - **Finances tab fixed**: now shows generation kWh alongside projected earnings for all timeframes (Owner & Site), not just monetary values

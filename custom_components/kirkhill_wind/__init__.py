@@ -371,8 +371,10 @@ _OBSOLETE_CARD_KEYS: set[str] = {
     "entities:title:Owner projected earnings by timeframe",
     "entities:title:Site projected value by timeframe",
 }
-# Obsolete sections are scoped by view path because a heading can still be in
-# use elsewhere (e.g. "Charts" lives on again in the History view).
+# Obsolete view paths — views with these paths are removed from existing dashboards on merge.
+_OBSOLETE_VIEW_PATHS: set[str] = {
+    "overview",
+}
 _OBSOLETE_SECTION_KEYS: dict[str, set[str]] = {
     "overview": {
         "heading:Wind Forecast",
@@ -607,8 +609,11 @@ def _merge_dashboard_config(existing: dict, new_default: dict) -> dict:
         if not found:
             merged_views.append(copy.deepcopy(new_view))
 
-    # Preserve user-added views
-    merged_views.extend(remaining_existing_views)
+    # Preserve user-added views (but drop obsolete ones)
+    merged_views.extend(
+        v for v in remaining_existing_views
+        if v.get("path") not in _OBSOLETE_VIEW_PATHS
+    )
     merged["views"] = merged_views
     return merged
 
@@ -802,22 +807,35 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                 ],
             },
             {
-                "title": "Overview",
-                "path": "overview",
-                "icon": "mdi:wind-turbine",
+                "title": "Finances",
+                "path": "finances",
+                "icon": "mdi:cash-multiple",
                 "type": "sections",
                 "max_columns": 2,
                 "sections": [
                     {
                         "type": "grid",
+                        "column_span": 2,
                         "cards": [
                             {
                                 "type": "heading",
-                                "heading": "Your share",
+                                "heading": "Finances",
+                                "heading_style": "title",
+                                "icon": "mdi:cash-multiple",
+                            },
+                            *financial_kpi_cards,
+                        ],
+                    },
+                    {
+                        "type": "grid",
+                        "cards": [
+                            {
+                                "type": "heading",
+                                "heading": "Owner finances",
                                 "heading_style": "title",
                             },
                             _owner_generation_markdown_card(
-                                "Owner generation",
+                                "Owner generation & projected earnings",
                                 owner_generation_entities,
                             ),
                         ],
@@ -827,7 +845,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "cards": [
                             {
                                 "type": "heading",
-                                "heading": "Whole site",
+                                "heading": "Site finances",
                                 "heading_style": "title",
                             },
                             _generation_markdown_card(
@@ -929,60 +947,9 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                         "title": "Wind (m/s)",
                                         "overlaying": "y",
                                         "side": "right",
-                                        "showgrid": False,
                                     },
                                 },
                             },
-                        ],
-                    },
-                ],
-            },
-            {
-                "title": "Finances",
-                "path": "finances",
-                "icon": "mdi:cash-multiple",
-                "type": "sections",
-                "max_columns": 2,
-                "sections": [
-                    {
-                        "type": "grid",
-                        "column_span": 2,
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Finances",
-                                "heading_style": "title",
-                                "icon": "mdi:cash-multiple",
-                            },
-                            *financial_kpi_cards,
-                        ],
-                    },
-                    {
-                        "type": "grid",
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Owner finances",
-                                "heading_style": "title",
-                            },
-                            _owner_generation_markdown_card(
-                                "Owner generation & projected earnings",
-                                owner_generation_entities,
-                            ),
-                        ],
-                    },
-                    {
-                        "type": "grid",
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Site finances",
-                                "heading_style": "title",
-                            },
-                            _generation_markdown_card(
-                                "Site generation",
-                                site_generation_entities,
-                            ),
                         ],
                     },
                 ],
