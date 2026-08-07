@@ -61,6 +61,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Finances tab shows generation kWh + earnings** for all timeframes (Owner & Site)
 - **Overview tab removed** — dashboard starts with SCADA, then Finances, History, Turbines
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
+- **Optimized fetch tiers** — "yesterday" moved to hourly tier (static once day ends); week/month/ytd/year/alltime also hourly; only "today" fetches every poll
 
 ## Requirements
 

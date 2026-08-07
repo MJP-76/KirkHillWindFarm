@@ -29,14 +29,13 @@ from .exceptions import KirkHillApiError, KirkHillAuthError
 _LOGGER = logging.getLogger(__name__)
 
 # Tiered update intervals (in coordinator ticks; tick 1 primes everything)
-# Fast: every poll - current power + today/yesterday summaries
-# Medium: every 10 polls (~10 min) - turbines, wind-speed series, week/month summaries
-# Slow: every 60 polls (~1 hour) - Open-Meteo forecast, ytd/year/alltime summaries
-FAST_TIMEFRAMES = ("today", "yesterday")
-MEDIUM_TIMEFRAMES = ("week", "month")
-SLOW_TIMEFRAMES = ("ytd", "year", "alltime")
+# Fast: every poll - current power + today summary
+# Slow: every 60 polls (~1 hour) - yesterday (static once day ends), week, month, ytd, year, alltime
+#       + Open-Meteo forecast, turbine data, wind-speed series
+FAST_TIMEFRAMES = ("today",)
+SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
 
-ALL_TIMEFRAMES = FAST_TIMEFRAMES + MEDIUM_TIMEFRAMES + SLOW_TIMEFRAMES
+ALL_TIMEFRAMES = FAST_TIMEFRAMES + SLOW_TIMEFRAMES
 
 
 class KirkHillWindCoordinator(DataUpdateCoordinator):
@@ -164,9 +163,6 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         if tick == 1 or tick % 60 == 0:
             # Slow tier: every 60 ticks (~1 hour at 60s interval)
             timeframes = ALL_TIMEFRAMES
-        elif tick % 10 == 0:
-            # Medium tier: every 10 ticks (~10 min)
-            timeframes = FAST_TIMEFRAMES + MEDIUM_TIMEFRAMES
         else:
             # Fast tier: every tick
             timeframes = FAST_TIMEFRAMES
