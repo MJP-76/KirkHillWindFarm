@@ -102,8 +102,9 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 self._turbine_generation = self._build_turbine_generation(
                     today_turbines, alltime_turbines
                 )
-                self._wind_speed_today = await self._fetch_latest_wind_speed(session)
-
+                # Medium tier: fetch site wind speed every 10 ticks (~10min)
+                if self._tick % 10 == 0:
+                    self._wind_speed_today = await self._fetch_latest_wind_speed(session)
             coordinates: dict[str, dict[str, float | str | None]] = {}
             for row in self._site_turbines:
                 turbine_id = row.get("id")
