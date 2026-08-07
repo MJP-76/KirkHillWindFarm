@@ -53,6 +53,11 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.18 (stable)
+- **Owner power fallback**: Calculates from site power × owner share % when API returns 0/None
+- **SCADA "Your Generation" panel** (top right): your generation (auto-scaled), last updated timestamp, your share in watts
+- **Owner capacity factor** and **owner today generation** entities added to SCADA
+
 ## Version 4.8.17 (stable)
 - **Optimized API fetch tiers**: "yesterday" moved to slow tier (hourly) since it's static once the day ends; removed medium tier (week/month now also hourly); only "today" fetches every poll
 - Reduces unnecessary API calls — yesterday/week/month/ytd/year/alltime now only fetch hourly
@@ -127,7 +132,7 @@ If you find this project useful, and would like to help support its continued de
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes (6-hour history)
 - **Power vs Wind scatter plot** — correlation between wind speed and site power output (24-hour history)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA tab** — the first tab on the dashboard, a full-bleed animated single-line diagram of the farm (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed
+- **SCADA tab** — the first tab on the dashboard, a full-bleed animated single-line diagram of the farm (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; **top-right "Your Generation" panel shows your generation (auto-scaled kWh/MWh/GWh), last updated timestamp, and your share in watts**
 - **Dashboard customisation preserved** — user-added cards, sections, and views are retained across integration reloads and updates
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores the dashboard to integration defaults
 
