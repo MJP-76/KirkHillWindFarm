@@ -367,15 +367,6 @@ class KirkHillWindScada extends HTMLElement {
         <text class="chip-label" x="164" y="44">Active Turbines</text>
         <text class="chip-value" data-chip="active" x="310" y="44" text-anchor="end">—</text>
 
-        <!-- Right side: Your Generation (top right) -->
-        <g class="user-gen" data-user-gen="panel">
-          <rect x="530" y="24" width="330" height="86" rx="8"/>
-          <text class="user-gen-title" x="542" y="42">Your generation</text>
-          <text class="user-gen-value" data-user-gen="energy" x="542" y="62">—</text>
-          <text class="user-gen-time" data-user-gen="time" x="542" y="80">Last updated: —</text>
-          <text class="user-gen-share" data-user-gen="share" x="542" y="100">Your share: —</text>
-        </g>
-
         <!-- Right side: Current Wind, Forecast 1h, Site Capacity -->
         <rect x="700" y="60" width="160" height="30" rx="15"/>
         <text class="chip-label" x="712" y="80">Current Wind</text>
@@ -386,6 +377,15 @@ class KirkHillWindScada extends HTMLElement {
         <rect x="700" y="140" width="160" height="30" rx="15"/>
         <text class="chip-label" x="712" y="160">Site Capacity</text>
         <text class="chip-value" data-chip="capacity" x="852" y="160" text-anchor="end">—</text>
+
+        <!-- Right side: Your Generation (far right) -->
+        <g class="user-gen" data-user-gen="panel">
+          <rect x="870" y="24" width="330" height="86" rx="8"/>
+          <text class="user-gen-title" x="882" y="42">Your generation</text>
+          <text class="user-gen-value" data-user-gen="energy" x="882" y="62">—</text>
+          <text class="user-gen-time" data-user-gen="time" x="882" y="80">Last updated: —</text>
+          <text class="user-gen-share" data-user-gen="share" x="882" y="100">Your share: —</text>
+        </g>
       </g>
     `;
   }
