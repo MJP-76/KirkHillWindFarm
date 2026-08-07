@@ -13,6 +13,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+    CONF_OWNER_SHARE_PERCENT,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -131,9 +132,35 @@ class FarmPowerSensor(KirkHillScopedEntity, SensorEntity):
             "MW" if scope == SCOPE_SITE else UnitOfPower.KILO_WATT
         )
 
+    def _owner_share_pct(self) -> float | None:
+        """Get owner share percentage from config entry options."""
+        try:
+            val = self._entry.options.get(CONF_OWNER_SHARE_PERCENT)
+            if val is None:
+                val = self._entry.data.get(CONF_OWNER_SHARE_PERCENT)
+            if val is not None:
+                return float(val)
+        except (TypeError, ValueError):
+            pass
+        return None
+
     @property
     def native_value(self):
-        value = _as_float(self._scope_data()["summary"].get("total_power_kw"))
+        scope_data = self._scope_data()
+        summary = scope_data.get("summary", {}) if isinstance(scope_data, dict) else {}
+        value = _as_float(summary.get("total_power_kw"))
+
+        # For owner scope: if API returns 0/None, calculate from site power × owner share
+        if self._scope == SCOPE_OWNER:
+            if value is None or value == 0:
+                site_summary = self.coordinator.data.get(SCOPE_SITE, {}).get("summary", {})
+                site_power = _as_float(site_summary.get("total_power_kw"))
+                if site_power is not None:
+                    owner_share = self._owner_share_pct()
+                    if owner_share and owner_share > 0:
+                        return round(site_power * owner_share / 100.0, 3)
+            return None
+
         if value is None:
             return None
         if self._scope == SCOPE_SITE:
@@ -204,7 +231,38 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
         value = _as_float(summary.get("total_generation_kwh"))
         if value is not None:
             return value
-        return _as_float(summary.get("total_kwh"))
+        value = _as_float(summary.get("total_kwh"))
+        if value is not None:
+            return value
+
+        # For owner scope, fall back to calculating from site data using owner share %
+        if self._scope == SCOPE_OWNER:
+            site_summary = (
+                self.coordinator.data.get("timeframe_summaries", {})
+                .get(SCOPE_SITE, {})
+                .get(self._timeframe, {})
+            )
+            site_value = _as_float(site_summary.get("total_generation_kwh"))
+            if site_value is None:
+                site_value = _as_float(site_summary.get("total_kwh"))
+            if site_value is not None:
+                owner_share = self._owner_share_pct()
+                if owner_share:
+                    return round(site_value * owner_share / 100.0, 3)
+
+        return None
+
+    def _owner_share_pct(self) -> float | None:
+        """Get owner share percentage from config entry options."""
+        try:
+            val = self._entry.options.get(CONF_OWNER_SHARE_PERCENT)
+            if val is None:
+                val = self._entry.data.get(CONF_OWNER_SHARE_PERCENT)
+            if val is not None:
+                return float(val)
+        except (TypeError, ValueError):
+            pass
+        return None
 
     @property
     def native_value(self):

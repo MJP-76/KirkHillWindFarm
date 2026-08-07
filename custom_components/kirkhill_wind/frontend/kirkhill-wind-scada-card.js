@@ -367,6 +367,15 @@ class KirkHillWindScada extends HTMLElement {
         <text class="chip-label" x="164" y="44">Active Turbines</text>
         <text class="chip-value" data-chip="active" x="310" y="44" text-anchor="end">—</text>
 
+        <!-- Right side: Your Generation (top right) -->
+        <g class="user-gen" data-user-gen="panel">
+          <rect x="530" y="24" width="330" height="86" rx="8"/>
+          <text class="user-gen-title" x="542" y="42">Your generation</text>
+          <text class="user-gen-value" data-user-gen="energy" x="542" y="62">—</text>
+          <text class="user-gen-time" data-user-gen="time" x="542" y="80">Last updated: —</text>
+          <text class="user-gen-share" data-user-gen="share" x="542" y="100">Your share: —</text>
+        </g>
+
         <!-- Right side: Current Wind, Forecast 1h, Site Capacity -->
         <rect x="700" y="60" width="160" height="30" rx="15"/>
         <text class="chip-label" x="712" y="80">Current Wind</text>
@@ -418,6 +427,33 @@ class KirkHillWindScada extends HTMLElement {
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
     const capacity = this._num(config.capacity_entity);
     this._setText(root, '[data-chip="capacity"]', capacity === null ? "—" : `${this._fmt(capacity, 0)}%`);
+
+    // Your generation panel (top right)
+    const ownerGenToday = this._num(config.owner_generation_today_entity);
+    if (ownerGenToday !== null) {
+      const scaled = this._scaleKwh(ownerGenToday);
+      this._setText(root, '[data-user-gen="energy"]', `${scaled.value} ${scaled.unit}`);
+    } else {
+      this._setText(root, '[data-user-gen="energy"]', "—");
+    }
+    const lastUpdated = this._attr(config.owner_generation_today_entity, "last_updated") ||
+                         this._attr(config.owner_generation_today_entity, "last_changed");
+    if (lastUpdated) {
+      this._setText(root, '[data-user-gen="time"]', `Last updated: ${this._fmtTime(lastUpdated)}`);
+    } else {
+      this._setText(root, '[data-user-gen="time"]', "Last updated: —");
+    }
+    const ownerPower = this._num(config.owner_power_entity);
+    const sitePower = this._num(config.farm_power_entity);
+    if (ownerPower !== null) {
+      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerPower, 0)} W`);
+    } else if (sitePower !== null) {
+      // Fallback: calculate from site power if owner share % available
+      // Note: owner share % would need to be passed or calculated
+      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerPower, 0)} W`);
+    } else {
+      this._setText(root, '[data-user-gen="share"]', "Your share: —");
+    }
 
     // Alarm indicator (always visible: OK or flashing ALARM)
     const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
@@ -526,6 +562,13 @@ class KirkHillWindScada extends HTMLElement {
       .chips rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
       .chip-label { fill: #94a3b8; font: 11px sans-serif; }
       .chip-value { fill: #f8fafc; font: bold 12px sans-serif; }
+
+      /* User generation panel (top right) */
+      .user-gen rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
+      .user-gen-title { fill: #94a3b8; font: bold 11px sans-serif; }
+      .user-gen-value { fill: #f8fafc; font: bold 18px sans-serif; }
+      .user-gen-time { fill: #64748b; font: 10px sans-serif; }
+      .user-gen-share { fill: #22c55e; font: bold 12px sans-serif; }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #052e16; stroke: #22c55e; stroke-width: 2; }
