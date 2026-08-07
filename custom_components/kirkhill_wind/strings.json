@@ -14,6 +14,13 @@
           "owner_value_rate": "Owner value rate (GBP per kWh, legacy)",
           "site_name": "Site name"
         }
+      },
+      "reauth": {
+        "title": "Reauthenticate Kirk Hill Wind Farm",
+        "description": "Your Kirk Hill API key is no longer valid. Enter a new API key.",
+        "data": {
+          "api_key": "API key"
+        }
       }
     },
     "error": {
@@ -22,7 +29,9 @@
       "unknown": "Unexpected error. Check the Home Assistant logs."
     },
     "abort": {
-      "single_instance_allowed": "Only a single instance of Kirk Hill Wind Farm is allowed."
+      "single_instance_allowed": "Only a single instance of Kirk Hill Wind Farm is allowed.",
+      "reauth_successful": "Reauthentication successful.",
+      "reauth_failed": "Reauthentication failed: the config entry could not be found."
     }
   },
   "options": {

@@ -14,7 +14,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = entry.runtime_data
 
     turbine_ids = [
-        t["id"] for t in coordinator.data[SCOPE_OWNER].get("turbines", [])
+        t.get("id")
+        for t in coordinator.data[SCOPE_OWNER].get("turbines", [])
+        if t.get("id") is not None
     ]
 
     entities: list = [FarmAlarmSensor(coordinator, entry)]

@@ -245,6 +245,10 @@ async def _async_setup_payment_tracking(hass: HomeAssistant, entry: ConfigEntry)
     if hass.config_entries.async_entries(_ETHEX_DOMAIN):
         return
 
+    if hass.config_entries.flow.async_progress_by_handler(_ETHEX_DOMAIN):
+        _LOGGER.info("Payment tracking enabled: Ethex config flow already in progress")
+        return
+
     _LOGGER.info("Payment tracking enabled: starting Ethex configuration flow")
     await hass.config_entries.flow.async_init(
         _ETHEX_DOMAIN,
@@ -264,6 +268,17 @@ def _entity_ids_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, 
     return entity_ids
 
 
+# Jinja fragment that formats a kWh value (already bound to `n`) with scaled units.
+_SCALED_ENERGY_JINJA = (
+    "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
+    "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
+    "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
+    "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
+    "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
+    "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
+)
+
+
 def _generation_markdown_line(label: str, entity_id: str) -> str:
     """Return a markdown line that formats generation with scaled energy units."""
     return (
@@ -271,13 +286,8 @@ def _generation_markdown_line(label: str, entity_id: str) -> str:
         f"{{% set v = state_attr('{entity_id}', 'raw_generation_kwh') %}}"
         "{% if v is not none %}"
         "{% set n = v | float(0) %}"
-        "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
-        "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
-        "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
-        "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
-        "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
-        "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
-        "{% else %}—{% endif %}"
+        + _SCALED_ENERGY_JINJA
+        + "{% else %}—{% endif %}"
     )
 
 
@@ -286,19 +296,20 @@ def _owner_generation_markdown_line(
     generation_entity_id: str,
     value_entity_id: str,
 ) -> str:
-    """Return a markdown line with actual owner generation."""
+    """Return a markdown line with actual owner generation and its value."""
     return (
         f"- **{label}:** "
         f"{{% set v = state_attr('{generation_entity_id}', 'raw_generation_kwh') %}}"
         "{% if v is not none %}"
         "{% set n = v | float(0) %}"
-        "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
-        "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
-        "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
-        "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
-        "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
-        "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
+        + _SCALED_ENERGY_JINJA
+        + "{% else %}—{% endif %}"
+        " ("
+        f"{{% set w = states('{value_entity_id}') %}}"
+        "{% if w not in ['unknown', 'unavailable', 'none', ''] %}"
+        "£{{ '%.2f' | format(w | float(0)) }}"
         "{% else %}—{% endif %}"
+        ")"
     )
 
 

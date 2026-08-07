@@ -71,7 +71,11 @@ def _display_energy_from_kwh(value_kwh: float | None) -> tuple[str, float | None
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = entry.runtime_data
 
-    turbine_ids = [t["id"] for t in coordinator.data[SCOPE_OWNER].get("turbines", [])]
+    turbine_ids = [
+        t.get("id")
+        for t in coordinator.data[SCOPE_OWNER].get("turbines", [])
+        if t.get("id") is not None
+    ]
 
     entities: list = [
         *[FarmPowerSensor(coordinator, entry, scope) for scope in SCOPES],
@@ -120,7 +124,7 @@ class FarmPowerSensor(KirkHillScopedEntity, SensorEntity):
 
     def __init__(self, coordinator, entry, scope: str):
         super().__init__(coordinator, entry, scope, "farm_power")
-        self._attr_name = f"Power ({scope})"
+        self._attr_name = f"Power ({scope.capitalize()})"
         self._attr_native_unit_of_measurement = (
             "MW" if scope == SCOPE_SITE else UnitOfPower.KILO_WATT
         )
@@ -142,7 +146,7 @@ class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
 
     def __init__(self, coordinator, entry, scope: str):
         super().__init__(coordinator, entry, scope, "farm_capacity_factor")
-        self._attr_name = f"Capacity factor ({scope})"
+        self._attr_name = f"Capacity factor ({scope.capitalize()})"
 
     @property
     def native_value(self):
@@ -422,7 +426,7 @@ class TurbinePowerSensor(KirkHillScopedTurbineEntity, SensorEntity):
 
     def __init__(self, coordinator, entry, turbine_id: str, scope: str):
         super().__init__(coordinator, entry, turbine_id, scope, "power")
-        self._attr_name = f"Power ({scope})"
+        self._attr_name = f"Power ({scope.capitalize()})"
 
     @property
     def native_value(self):
@@ -437,7 +441,7 @@ class TurbineCapacityFactorSensor(KirkHillScopedTurbineEntity, SensorEntity):
 
     def __init__(self, coordinator, entry, turbine_id: str, scope: str):
         super().__init__(coordinator, entry, turbine_id, scope, "capacity_factor")
-        self._attr_name = f"Capacity factor ({scope})"
+        self._attr_name = f"Capacity factor ({scope.capitalize()})"
 
     @property
     def native_value(self):

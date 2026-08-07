@@ -1,6 +1,7 @@
 """Config flow for the Kirk Hill Wind Farm integration."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import aiohttp
@@ -42,6 +43,8 @@ from .const import (
     MIN_SCAN_INTERVAL,
 )
 from .exceptions import KirkHillAuthError, KirkHillConnectionError
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -145,9 +148,43 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return {"base": "auth_failed"}
         except KirkHillConnectionError:
             return {"base": "cannot_connect"}
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.exception("Unexpected error validating Kirk Hill API key: %s", exc)
             return {"base": "unknown"}
         return {}
+
+    async def async_step_reauth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle reauthentication when the API key is no longer valid."""
+        entry_id = self.context.get("entry_id")
+        entry = self.hass.config_entries.async_get_entry(entry_id) if entry_id else None
+        if entry is None:
+            return self.async_abort(reason="reauth_failed")
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            errors = await self._validate_api_key(
+                user_input[CONF_API_KEY],
+                entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
+            )
+            if not errors:
+                data = dict(entry.data)
+                data[CONF_API_KEY] = user_input[CONF_API_KEY]
+                self.hass.config_entries.async_update_entry(entry, data=data)
+                return self.async_abort(reason="reauth_successful")
+
+        return self.async_show_form(
+            step_id="reauth",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): TextSelector(
+                        TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                    ),
+                }
+            ),
+            errors=errors,
+        )
 
     @staticmethod
     @callback

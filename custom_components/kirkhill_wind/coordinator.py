@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 
 import aiohttp
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryAuthFailed
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -24,7 +24,7 @@ from .const import (
     TIMEFRAME_ORDER,
     TIMEFRAME_TO_RANGE,
 )
-from .exceptions import KirkHillApiError
+from .exceptions import KirkHillApiError, KirkHillAuthError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,6 +83,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     self.client.get_current(session, SCOPE_SITE),
                     self._fetch_timeframe_summaries(session, self._tick),
                 )
+            except KirkHillAuthError as exc:
+                raise ConfigEntryAuthFailed(str(exc)) from exc
             except KirkHillApiError as exc:
                 raise UpdateFailed(str(exc)) from exc
 
@@ -250,7 +252,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
             except (aiohttp.ClientError, asyncio.TimeoutError, KirkHillApiError) as exc:
                 last_exc = exc
-                await asyncio.sleep(2 ** attempt)
+                if attempt < 2:
+                    await asyncio.sleep(1)
 
         _LOGGER.warning(
             "Open-Meteo forecast fetch failed (forecast-only, non-fatal): %s",
