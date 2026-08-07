@@ -53,6 +53,13 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.19 (stable)
+- **SCADA entity IDs fixed**: use actual registry IDs (fixes missing data)
+- **SCADA title removed** (saves space)
+- **Your Generation panel** (top right): your generation (auto-scaled), last updated, your share in watts
+- **Owner capacity factor** and **owner today generation** entities added to SCADA
+- **Owner power fallback**: calculates from site power × owner share % when API returns 0/None
+
 ## Version 4.8.18 (stable)
 - **Owner power fallback**: Calculates from site power × owner share % when API returns 0/None
 - **SCADA "Your Generation" panel** (top right): your generation (auto-scaled), last updated timestamp, your share in watts
