@@ -355,6 +355,22 @@ def _owner_generation_markdown_card(
 # Dashboard merge helpers — preserve user customisations across reloads
 # ---------------------------------------------------------------------------
 
+# Cards/sections removed from the managed default. The merge otherwise treats
+# any existing card or section without a default match as "user-added" and
+# preserves it forever, so removed defaults must be listed here to actually
+# disappear from installed dashboards on the next reload.
+_OBSOLETE_CARD_KEYS: set[str] = {
+    "kpi:name:Owner Power",
+    "kpi:name:Site Power",
+    "kpi:name:Wind Speed",
+    "entities:title:Owner projected earnings",
+}
+# Obsolete sections are scoped by view path because a heading can still be in
+# use elsewhere (e.g. "Charts" lives on again in the History view).
+_OBSOLETE_SECTION_KEYS: dict[str, set[str]] = {
+    "overview": {"heading:Wind Forecast", "heading:Charts"},
+}
+
 def _card_match_key(card: dict) -> str | None:
     """Return a stable key used to match a card across default updates."""
     ctype = card.get("type", "")
@@ -410,6 +426,41 @@ def _section_match_key(section: dict) -> str | None:
     return f"section:{signature}" if signature else None
 
 
+def _section_card_keys(section: dict) -> set[str]:
+    """Set of managed-card match keys contained in a section."""
+    return {
+        key
+        for key in (_card_match_key(card) for card in section.get("cards", []))
+        if key is not None
+    }
+
+
+def _sections_match(existing_section: dict, new_section: dict) -> bool:
+    """Match a stored section to a managed default section.
+
+    Headed sections match on heading text. Unheaded sections (e.g. the KPI
+    row) match when their card-key sets overlap with one as a subset of the
+    other, so cards removed from (or added to) a default don't orphan the old
+    section as "user-added" and leave stale cards behind.
+    """
+    existing_heading = _section_match_key(existing_section)
+    new_heading = _section_match_key(new_section)
+    if existing_heading and existing_heading.startswith("heading:"):
+        return existing_heading == new_heading
+    if new_heading and new_heading.startswith("heading:"):
+        return False
+
+    existing_keys = _section_card_keys(existing_section)
+    new_keys = _section_card_keys(new_section)
+    if not existing_keys or not new_keys:
+        return False
+    return (
+        existing_keys == new_keys
+        or existing_keys.issubset(new_keys)
+        or new_keys.issubset(existing_keys)
+    )
+
+
 def _merge_cards(existing_cards: list[dict], new_cards: list[dict]) -> list[dict]:
     """Replace managed cards and preserve user-added cards.
 
@@ -436,8 +487,13 @@ def _merge_cards(existing_cards: list[dict], new_cards: list[dict]) -> list[dict
         ]
         merged.append(copy.deepcopy(new_card))
 
-    # Any remaining existing cards are user-added — preserve them at the end
-    merged.extend(copy.deepcopy(remaining_existing))
+    # Any remaining existing cards are either user-added or obsolete defaults
+    # that were removed from the managed dashboard — drop the latter.
+    merged.extend(
+        copy.deepcopy(existing_card)
+        for existing_card in remaining_existing
+        if (_card_match_key(existing_card) or "") not in _OBSOLETE_CARD_KEYS
+    )
     return merged
 
 
@@ -478,22 +534,28 @@ def _merge_view(existing_view: dict, new_view: dict) -> dict:
                 (
                     existing_section
                     for existing_section in remaining_existing
-                    if _section_match_key(existing_section) == new_key
+                    if _sections_match(existing_section, new_section)
                 ),
                 None,
             )
             remaining_existing = [
                 existing_section
                 for existing_section in remaining_existing
-                if _section_match_key(existing_section) != new_key
+                if not _sections_match(existing_section, new_section)
             ]
             if match is not None:
                 merged_sections.append(_merge_section(match, new_section))
             else:
                 merged_sections.append(copy.deepcopy(new_section))
 
-        # Preserve user-added sections at the end
-        merged_sections.extend(remaining_existing)
+        # Preserve user-added sections at the end, dropping obsolete defaults
+        # that were removed from the managed dashboard for this view path.
+        obsolete_sections = _OBSOLETE_SECTION_KEYS.get(new_view.get("path") or "", set())
+        merged_sections.extend(
+            section
+            for section in remaining_existing
+            if (_section_match_key(section) or "") not in obsolete_sections
+        )
         merged["sections"] = merged_sections
 
     # Direct-cards views (e.g. Turbines)
@@ -629,20 +691,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ("Year", farm_scoped("site", "farm_generation_year")),
         ("All time", farm_scoped("site", "farm_generation_alltime")),
     ]
-    forecast_entities = [
-        {
-            "entity": farm("open_meteo_next_hour_wind_speed_mps"),
-            "name": "Forecast next hour (Open-Meteo)",
-        },
-        {
-            "entity": farm("open_meteo_next_3h_avg_wind_speed_mps"),
-            "name": "Forecast next 3h avg (Open-Meteo)",
-        },
-        {
-            "entity": farm("open_meteo_next_24h_avg_wind_speed_mps"),
-            "name": "Forecast next 24h avg (Open-Meteo)",
-        },
-    ]
     turbine_map_entities = [
         {
             "name": tid,
@@ -695,30 +743,12 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
 
     kpi_cards = [
         {
-            "type": "entity",
-            "name": "Owner Power",
-            "entity": farm_scoped("owner", "farm_power"),
-            "icon": "mdi:flash",
-        },
-        {
-            "type": "entity",
-            "name": "Site Power",
-            "entity": farm_scoped("site", "farm_power"),
-            "icon": "mdi:transmission-tower",
-        },
-        {
             "type": "gauge",
             "entity": farm_scoped("owner", "farm_capacity_factor"),
             "name": "Capacity Factor",
             "min": 0,
             "max": 100,
             "severity": {"green": 50, "yellow": 20, "red": 0},
-        },
-        {
-            "type": "entity",
-            "name": "Wind Speed",
-            "entity": farm("farm_wind_speed"),
-            "icon": "mdi:weather-windy",
         },
         {
             "type": "tile",
@@ -775,8 +805,12 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "title": "Wind farm SCADA",
                         "farm_power_entity": farm_scoped("site", "farm_power"),
                         "grid_energy_entity": farm_scoped("site", "farm_generation_today"),
+                        "owner_power_entity": farm_scoped("owner", "farm_power"),
+                        "owner_grid_energy_entity": farm_scoped("owner", "farm_generation_today"),
                         "wind_speed_entity": farm("farm_wind_speed"),
+                        "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),
+                        "alarm_entity": farm("farm_alarm"),
                         "turbines": scada_turbines,
                     },
                 ],
@@ -805,12 +839,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "Owner generation",
                                 owner_generation_entities,
                             ),
-                            {
-                                "type": "entities",
-                                "title": "Owner projected earnings",
-                                "show_header_toggle": False,
-                                "entities": owner_value_entities,
-                            },
                         ],
                     },
                     {
@@ -846,6 +874,15 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             },
                         ],
                     },
+                ],
+            },
+            {
+                "title": "History",
+                "path": "history",
+                "icon": "mdi:chart-line",
+                "type": "sections",
+                "max_columns": 2,
+                "sections": [
                     {
                         "type": "grid",
                         "column_span": 2,
@@ -934,34 +971,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                     },
                                 },
                             },
-                        ],
-                    },
-                    {
-                        "type": "grid",
-                        "column_span": 2,
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Wind Forecast",
-                                "heading_style": "title",
-                                "icon": "mdi:weather-partly-cloudy",
-                            },
-                            {
-                                "type": "entities",
-                                "title": "Open-Meteo forecasts",
-                                "show_header_toggle": False,
-                                "entities": forecast_entities,
-                            },
-                            _owner_generation_markdown_card(
-                                "Today's summary",
-                                [
-                                    (
-                                        "Generation",
-                                        farm_scoped("owner", "farm_generation_today"),
-                                        farm_scoped("owner", "farm_generation_value_today"),
-                                    ),
-                                ],
-                            ),
                         ],
                     },
                 ],

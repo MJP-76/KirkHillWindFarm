@@ -334,21 +334,31 @@ class KirkHillWindScada extends HTMLElement {
 
   _buildGrid(layout) {
     const cy = layout.mid;
+    const ownerCx = 1010;
+    const siteCx = 1210;
     return `
       <g class="grid">
-        <rect class="grid-rect" x="1110" y="${cy - 180}" width="120" height="360" rx="10"/>
-        <text class="grid-title" x="1170" y="${cy - 144}" text-anchor="middle">NATIONAL</text>
-        <text class="grid-title" x="1170" y="${cy - 122}" text-anchor="middle">GRID</text>
+        <rect class="grid-rect" x="985" y="${cy - 180}" width="250" height="360" rx="10"/>
+        <text class="grid-title" x="1110" y="${cy - 152}" text-anchor="middle">NATIONAL</text>
+        <text class="grid-title" x="1110" y="${cy - 130}" text-anchor="middle">GRID</text>
         <g class="grid-icon">
-          <path d="M1162 ${cy - 100} h16 M1170 ${cy - 108} v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <path d="M1102 ${cy - 108} h16 M1110 ${cy - 116} v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
         </g>
-        <text class="grid-label" x="1170" y="${cy - 60}" text-anchor="middle">Export</text>
-        <text class="grid-power" x="1170" y="${cy - 28}" text-anchor="middle">—</text>
-        <text class="grid-unit" x="1170" y="${cy - 10}" text-anchor="middle">MW</text>
-        <line x1="1130" y1="${cy + 15}" x2="1210" y2="${cy + 15}" class="grid-divider"/>
-        <text class="grid-label" x="1170" y="${cy + 42}" text-anchor="middle">To grid today</text>
-        <text class="grid-energy" x="1170" y="${cy + 70}" text-anchor="middle">—</text>
-        <text class="grid-unit" x="1170" y="${cy + 88}" text-anchor="middle">kWh</text>
+        <text class="grid-col" x="${ownerCx}" y="${cy - 88}" text-anchor="middle">OWNER</text>
+        <text class="grid-col" x="${siteCx}" y="${cy - 88}" text-anchor="middle">SITE</text>
+        <text class="grid-label" x="${ownerCx}" y="${cy - 68}" text-anchor="middle">Export</text>
+        <text class="grid-label" x="${siteCx}" y="${cy - 68}" text-anchor="middle">Export</text>
+        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy - 38}" text-anchor="middle">—</text>
+        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy - 38}" text-anchor="middle">—</text>
+        <text class="grid-unit" x="${ownerCx}" y="${cy - 20}" text-anchor="middle">MW</text>
+        <text class="grid-unit" x="${siteCx}" y="${cy - 20}" text-anchor="middle">MW</text>
+        <line x1="1000" y1="${cy + 8}" x2="1220" y2="${cy + 8}" class="grid-divider"/>
+        <text class="grid-label" x="${ownerCx}" y="${cy + 32}" text-anchor="middle">To grid today</text>
+        <text class="grid-label" x="${siteCx}" y="${cy + 32}" text-anchor="middle">To grid today</text>
+        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy + 62}" text-anchor="middle">—</text>
+        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy + 62}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy + 80}" text-anchor="middle">kWh</text>
+        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy + 80}" text-anchor="middle">kWh</text>
       </g>
     `;
   }
@@ -362,6 +372,13 @@ class KirkHillWindScada extends HTMLElement {
         <rect x="700" y="100" width="160" height="30" rx="15"/>
         <text class="chip-label" x="712" y="120">Active</text>
         <text class="chip-value" data-chip="active" x="852" y="120" text-anchor="end">—</text>
+        <rect x="700" y="140" width="160" height="30" rx="15"/>
+        <text class="chip-label" x="712" y="160">Forecast</text>
+        <text class="chip-value" data-chip="forecast" x="852" y="160" text-anchor="end">—</text>
+        <g class="alarm" data-alarm="indicator" opacity="0">
+          <rect x="880" y="60" width="132" height="30" rx="15"/>
+          <text class="alarm-text" x="946" y="80" text-anchor="middle">⚠ ALARM</text>
+        </g>
       </g>
     `;
   }
@@ -382,18 +399,33 @@ class KirkHillWindScada extends HTMLElement {
     const root = this.shadowRoot;
     const config = this.config;
 
-    // Farm / grid values
-    const gridPowerMw = this._num(config.farm_power_entity);
-    const gridEnergyKwh = this._num(config.grid_energy_entity);
-    this._setText(root, ".grid-power", gridPowerMw === null ? "—" : this._fmt(gridPowerMw));
-    const scaled = this._scaleKwh(gridEnergyKwh);
-    this._setText(root, ".grid-energy", scaled.value);
+    // National grid: owner & site export (MW) and to-grid-today
+    const ownerPowerKw = this._num(config.owner_power_entity);
+    const sitePowerMw = this._num(config.farm_power_entity);
+    this._setText(root, '[data-grid="owner-power"]', ownerPowerKw === null ? "—" : this._fmt(ownerPowerKw / 1000, 2));
+    this._setText(root, '[data-grid="site-power"]', sitePowerMw === null ? "—" : this._fmt(sitePowerMw, 2));
+    const ownerEnergy = this._scaleKwh(this._num(config.owner_grid_energy_entity));
+    const siteEnergy = this._scaleKwh(this._num(config.grid_energy_entity));
+    this._setText(root, '[data-grid="owner-energy"]', ownerEnergy.value);
+    this._setText(root, '[data-grid="site-energy"]', siteEnergy.value);
+    this._setText(root, '[data-grid="owner-energy-unit"]', ownerEnergy.unit);
+    this._setText(root, '[data-grid="site-energy-unit"]', siteEnergy.unit);
 
     // Header chips
     const wind = this._num(config.wind_speed_entity);
     this._setText(root, '[data-chip="wind"]', wind === null ? "—" : `${this._fmt(wind)} m/s`);
     const active = this._num(config.active_entity);
     this._setText(root, '[data-chip="active"]', active === null ? "—" : `${this._fmt(active, 0)} of ${config.turbines.length}`);
+    const forecast = this._num(config.wind_forecast_entity);
+    this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
+
+    // Flashing alarm indicator (actual turbine faults)
+    const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
+    if (alarmIndicator) {
+      const alarmOn = this._str(config.alarm_entity) === "on";
+      alarmIndicator.setAttribute("opacity", alarmOn ? "1" : "0");
+      alarmIndicator.classList.toggle("flash", alarmOn);
+    }
 
     // Bus total
     const totalKw = config.turbines.reduce((sum, t) => {
@@ -488,9 +520,10 @@ class KirkHillWindScada extends HTMLElement {
       .grid-rect { fill: #1a2e05; stroke: #4d7c0f; stroke-width: 2; }
       .grid-title { fill: #a3e635; font: bold 16px sans-serif; }
       .grid-icon { color: #a3e635; }
+      .grid-col { fill: #a3e635; font: bold 11px sans-serif; }
       .grid-label { fill: #94a3b8; font: 11px sans-serif; }
-      .grid-power { fill: #f8fafc; font: bold 34px sans-serif; }
-      .grid-energy { fill: #f8fafc; font: bold 26px sans-serif; }
+      .grid-power { fill: #f8fafc; font: bold 22px sans-serif; }
+      .grid-energy { fill: #f8fafc; font: bold 20px sans-serif; }
       .grid-unit { fill: #64748b; font: 11px sans-serif; }
       .grid-divider { stroke: #365314; stroke-width: 2; }
 
@@ -498,6 +531,15 @@ class KirkHillWindScada extends HTMLElement {
       .chips rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
       .chip-label { fill: #94a3b8; font: 11px sans-serif; }
       .chip-value { fill: #f8fafc; font: bold 12px sans-serif; }
+
+      /* Flashing alarm indicator */
+      .alarm rect { fill: #450a0a; stroke: #ef4444; stroke-width: 2; }
+      .alarm-text { fill: #fca5a5; font: bold 14px sans-serif; }
+      .alarm.flash { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
+      @keyframes khscada-alarm-flash {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.15; }
+      }
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }

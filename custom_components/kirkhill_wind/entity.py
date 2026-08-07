@@ -102,3 +102,22 @@ class KirkHillScopedTurbineEntity(KirkHillTurbineEntity):
     @property
     def extra_state_attributes(self) -> dict:
         return {"scope": self._scope}
+
+
+TURBINE_STATUS_MAP: dict[str, str] = {
+    "Turbine in operation": "running",
+    "Turbine operational": "ready",
+    "Turbine starting": "starting",
+    "Turbine stopped: SCADA (bird and bat protection)": "curtailed",
+    "Lack of wind: Wind speed too low": "no_wind",
+    "Generator over temperature: Stator (measurement)": "fault_thermal",
+    "Event management: switched off": "stopped",
+    "Feeding fault: Pulse inhibit inverter 8": "fault_electrical",
+    "Calibration of load control": "maintenance",
+    "unavailable": "unavailable",
+}
+
+
+def turbine_status_category(state_text: str | None) -> str:
+    """Map a turbine state text to a coarse status category."""
+    return TURBINE_STATUS_MAP.get(state_text or "", "unknown")

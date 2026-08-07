@@ -7,7 +7,7 @@ from homeassistant.components.binary_sensor import (
 )
 
 from .const import SCOPE_OWNER
-from .entity import KirkHillEntity, KirkHillTurbineEntity
+from .entity import KirkHillEntity, KirkHillTurbineEntity, turbine_status_category
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -26,7 +26,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class FarmAlarmSensor(KirkHillEntity, BinarySensorEntity):
-    """On when one or more turbines are inactive."""
+    """On when one or more turbines is in an actual fault state.
+
+    "Actual faults only" — the alarm ignores turbines that are merely
+    inactive, curtailed, or waiting for wind. It is driven by the per-turbine
+    status category and turns on when any turbine reports a thermal or
+    electrical fault.
+    """
 
     _attr_name = "Alarm"
     _attr_device_class = BinarySensorDeviceClass.SAFETY
@@ -36,10 +42,15 @@ class FarmAlarmSensor(KirkHillEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return (
-            self.coordinator.data[SCOPE_OWNER]["summary"].get("inactive_turbines", 0)
-            > 0
-        )
+        for turbine in self.coordinator.data.get(SCOPE_OWNER, {}).get(
+            "turbines", []
+        ):
+            if turbine_status_category(turbine.get("state_text")) in (
+                "fault_thermal",
+                "fault_electrical",
+            ):
+                return True
+        return False
 
 
 class TurbineActiveSensor(KirkHillTurbineEntity, BinarySensorEntity):
