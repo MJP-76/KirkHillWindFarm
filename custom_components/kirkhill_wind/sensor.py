@@ -9,6 +9,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpeed
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -162,11 +163,12 @@ class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
         return _as_float(self._scope_data()["summary"].get("capacity_factor_percent"))
 
 
-class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
+class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, RestoreEntity):
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_suggested_display_precision = 2
+    _attr_should_poll = False
 
     def __init__(self, coordinator, entry, scope: str, timeframe: str):
         super().__init__(coordinator, entry, scope, f"farm_generation_{timeframe}")
@@ -174,8 +176,26 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         scope_label = scope.capitalize()
         label = TIMEFRAME_LABELS.get(timeframe, f"Generation ({timeframe})")
         self._attr_name = f"{label} ({scope_label})"
+        self._restored_value: float | None = None
+        self._restored_attrs: dict | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore last known state on startup."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None:
+            try:
+                self._restored_value = float(last_state.state)
+                self._restored_attrs = dict(last_state.attributes)
+            except (ValueError, TypeError):
+                self._restored_value = None
+                self._restored_attrs = None
 
     def _generation_kwh(self) -> float | None:
+        # Use restored value if API data not yet available
+        if self._restored_value is not None:
+            return self._restored_value
+
         summary = (
             self.coordinator.data.get("timeframe_summaries", {})
             .get(self._scope, {})
@@ -194,12 +214,17 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
         value_kwh = self._generation_kwh()
-        display_unit, display_value = _display_energy_from_kwh(value_kwh)
-        attrs["timeframe"] = self._timeframe
-        attrs["generation_source"] = "api_dynamic"
-        attrs["raw_generation_kwh"] = value_kwh
-        attrs["display_unit"] = display_unit
-        attrs["display_value"] = display_value
+        if value_kwh is not None:
+            display_unit, display_value = _display_energy_from_kwh(value_kwh)
+            attrs["timeframe"] = self._timeframe
+            attrs["generation_source"] = "api_dynamic"
+            attrs["raw_generation_kwh"] = value_kwh
+            attrs["display_unit"] = display_unit
+            attrs["display_value"] = display_value
+        elif self._restored_attrs:
+            # Use restored attributes if available
+            attrs.update(self._restored_attrs)
+            attrs["generation_source"] = "restored"
         return attrs
 
 
@@ -496,48 +521,78 @@ class TurbineStateSensor(KirkHillTurbineEntity, SensorEntity):
         }
 
 
-class TurbineGenerationTodaySensor(KirkHillTurbineEntity, SensorEntity):
+class TurbineGenerationTodaySensor(KirkHillTurbineEntity, SensorEntity, RestoreEntity):
     _attr_name = "Generation today"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_icon = "mdi:chart-bar"
+    _attr_should_poll = False
 
     def __init__(self, coordinator, entry, turbine_id: str):
         super().__init__(coordinator, entry, turbine_id, "generation_today")
+        self._restored_value: float | None = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None:
+            try:
+                self._restored_value = float(last_state.state)
+            except (ValueError, TypeError):
+                self._restored_value = None
 
     @property
     def native_value(self):
-        return _as_float(
-            self._turbine_generation_data().get("generation_today_kwh")
-        )
+        val = _as_float(self._turbine_generation_data().get("generation_today_kwh"))
+        if val is not None:
+            return val
+        return self._restored_value
 
     @property
     def extra_state_attributes(self) -> dict:
         data = self._turbine_generation_data()
-        return {"share_percent": data.get("generation_today_share_percent")}
+        attrs = {"share_percent": data.get("generation_today_share_percent")}
+        if self._restored_value is not None and data.get("generation_today_kwh") is None:
+            attrs["generation_source"] = "restored"
+        return attrs
 
 
-class TurbineGenerationAlltimeSensor(KirkHillTurbineEntity, SensorEntity):
+class TurbineGenerationAlltimeSensor(KirkHillTurbineEntity, SensorEntity, RestoreEntity):
     _attr_name = "Generation all-time"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_icon = "mdi:chart-line"
+    _attr_should_poll = False
 
     def __init__(self, coordinator, entry, turbine_id: str):
         super().__init__(coordinator, entry, turbine_id, "generation_alltime")
+        self._restored_value: float | None = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None:
+            try:
+                self._restored_value = float(last_state.state)
+            except (ValueError, TypeError):
+                self._restored_value = None
 
     @property
     def native_value(self):
-        return _as_float(
-            self._turbine_generation_data().get("generation_alltime_kwh")
-        )
+        val = _as_float(self._turbine_generation_data().get("generation_alltime_kwh"))
+        if val is not None:
+            return val
+        return self._restored_value
 
     @property
     def extra_state_attributes(self) -> dict:
         data = self._turbine_generation_data()
-        return {"share_percent": data.get("generation_alltime_share_percent")}
+        attrs = {"share_percent": data.get("generation_alltime_share_percent")}
+        if self._restored_value is not None and data.get("generation_alltime_kwh") is None:
+            attrs["generation_source"] = "restored"
+        return attrs
 
 
 class TurbineRotorSpeedSensor(KirkHillTurbineEntity, SensorEntity):

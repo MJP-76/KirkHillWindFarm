@@ -53,6 +53,10 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.16 (stable)
+- **State restoration for generation sensors**: farm and turbine generation sensors now restore their last known values on Home Assistant restart, avoiding "—" gaps while waiting for slow-tier API fetches
+- Added `RestoreEntity` to `FarmGenerationByTimeframeSensor`, `TurbineGenerationTodaySensor`, `TurbineGenerationAlltimeSensor`
+
 ## Version 4.8.15 (stable)
 - **Overview tab removed**: dashboard now starts with SCADA, then Finances, History, Turbines
 - **Finances tab moved to second position** (after SCADA)

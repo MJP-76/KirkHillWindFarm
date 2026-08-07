@@ -60,6 +60,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
 - **Finances tab shows generation kWh + earnings** for all timeframes (Owner & Site)
 - **Overview tab removed** — dashboard starts with SCADA, then Finances, History, Turbines
+- **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
 
 ## Requirements
 
