@@ -53,6 +53,16 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.22 (stable)
+- **Turbine map mobile parity**: double-tap to reset the map view (matches the SCADA card, previously double-click only); legend hint updated to "Double-tap to reset"
+
+## Version 4.8.21 (stable)
+- **Mobile pinch-zoom and pan on the SCADA card**: two-finger pinch to zoom (up to 6x), one-finger drag to pan, double-tap to reset, `touch-action: none` so the browser does not hijack gestures
+- Turbine tap still opens more-info on touch devices
+
+## Version 4.8.20 (stable)
+- **"Your Generation" panel moved to the far right** of the SCADA card (after the wind/forecast/capacity chips)
+
 ## Version 4.8.19 (stable)
 - **SCADA entity IDs fixed**: use actual registry IDs (fixes missing data)
 - **SCADA title removed** (saves space)
