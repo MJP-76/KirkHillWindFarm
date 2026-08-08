@@ -14,6 +14,18 @@ class KirkHillWindScada extends HTMLElement {
     return { w: 1240, h: 860, hMin: 1052, hMax: 1600 };
   }
 
+  static get MAX_ZOOM() {
+    return 6;
+  }
+
+  static get TAP_MOVE_PX() {
+    return 8;
+  }
+
+  static get DOUBLE_TAP_MS() {
+    return 300;
+  }
+
   static get STATUS() {
     return {
       running: { label: "RUNNING", color: "#22c55e" },
@@ -37,6 +49,7 @@ class KirkHillWindScada extends HTMLElement {
     this._values = new Map();
     this._vbH = KirkHillWindScada.VIEWBOX.h;
     this._turbineEntities = new Map();
+    this._zoom = { k: 1, tx: 0, ty: 0 };
   }
 
   connectedCallback() {
@@ -180,19 +193,22 @@ class KirkHillWindScada extends HTMLElement {
               </marker>
             </defs>
             <rect class="bg" x="0" y="0" width="${vb.w}" height="${layout.H}" fill="url(#khscada-grid)"/>
-            ${linesHtml}
-            ${dotsHtml}
-            ${turbinesHtml}
-            ${this._buildBus(layout)}
-            ${this._buildTransformer(layout)}
-            ${this._buildGrid(layout)}
-            ${this._buildHeaderChips()}
-            ${this._buildLegend(layout)}
+            <g data-zoom="wrap" transform="translate(0 0) scale(1)">
+              ${linesHtml}
+              ${dotsHtml}
+              ${turbinesHtml}
+              ${this._buildBus(layout)}
+              ${this._buildTransformer(layout)}
+              ${this._buildGrid(layout)}
+              ${this._buildHeaderChips()}
+              ${this._buildLegend(layout)}
+            </g>
           </svg>
         </div>
       </ha-card>
     `;
     this._bindClicks();
+    this._bindZoom();
     this._update();
   }
 
@@ -203,22 +219,164 @@ class KirkHillWindScada extends HTMLElement {
     this._boundClick = (ev) => {
       const g = ev.target.closest("g.turbine");
       if (!g) return;
-      const key = g.getAttribute("data-turbine");
-      const entityId = key ? this._turbineEntities.get(key) : null;
-      if (!entityId) return;
-      try {
-        window.dispatchEvent(
-          new CustomEvent("hass-more-info", {
-            bubbles: true,
-            composed: true,
-            detail: { entityId },
-          })
-        );
-      } catch (err) {
-        console.error("SCADA: failed to open more-info", err);
-      }
+      this._openTurbine(g);
     };
     svg.addEventListener("click", this._boundClick);
+  }
+
+  _openTurbine(g) {
+    const key = g.getAttribute("data-turbine");
+    const entityId = key ? this._turbineEntities.get(key) : null;
+    if (!entityId) return;
+    try {
+      window.dispatchEvent(
+        new CustomEvent("hass-more-info", {
+          bubbles: true,
+          composed: true,
+          detail: { entityId },
+        })
+      );
+    } catch (err) {
+      console.error("SCADA: failed to open more-info", err);
+    }
+  }
+
+  // ---- mobile pan / pinch-zoom ----------------------------------------
+
+  _bindZoom() {
+    const svg = this.shadowRoot.querySelector("svg");
+    if (!svg) return;
+    this._zoomReset();
+    svg.addEventListener("touchstart", this._touchStart = this._touchStart.bind(this), { passive: false });
+    svg.addEventListener("touchmove", this._touchMove = this._touchMove.bind(this), { passive: false });
+    svg.addEventListener("touchend", this._touchEnd = this._touchEnd.bind(this), { passive: false });
+    svg.addEventListener("touchcancel", this._touchEnd = this._touchEnd.bind(this), { passive: false });
+  }
+
+  _zoomReset() {
+    this._zoom = { k: 1, tx: 0, ty: 0 };
+    this._pan = null;
+    this._pinch = null;
+    this._lastTap = null;
+    this._applyZoom();
+  }
+
+  _applyZoom() {
+    const g = this.shadowRoot?.querySelector('[data-zoom="wrap"]');
+    if (!g) return;
+    g.setAttribute(
+      "transform",
+      `translate(${this._zoom.tx} ${this._zoom.ty}) scale(${this._zoom.k})`
+    );
+  }
+
+  _svgMetrics() {
+    const svg = this.shadowRoot.querySelector("svg");
+    if (!svg) return null;
+    const r = svg.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return { r, w: KirkHillWindScada.VIEWBOX.w, h: this._vbH };
+  }
+
+  _touchStart(ev) {
+    ev.preventDefault();
+    const t = ev.touches;
+    if (t.length === 1) {
+      this._pinch = null;
+      this._pan = {
+        id: t[0].identifier,
+        lastX: t[0].clientX,
+        lastY: t[0].clientY,
+        startX: t[0].clientX,
+        startY: t[0].clientY,
+        moved: false,
+      };
+    } else if (t.length >= 2) {
+      this._pan = null;
+      const d = Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      this._pinch = { dist: d, k0: this._zoom.k };
+    }
+  }
+
+  _touchMove(ev) {
+    ev.preventDefault();
+    const m = this._svgMetrics();
+    if (!m) return;
+    const t = ev.touches;
+
+    if (this._pinch && t.length >= 2) {
+      const d = Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      if (!d) return;
+      const midX = (t[0].clientX + t[1].clientX) / 2;
+      const midY = (t[0].clientY + t[1].clientY) / 2;
+      const vx = ((midX - m.r.left) * m.w) / m.r.width;
+      const vy = ((midY - m.r.top) * m.h) / m.r.height;
+      const z = this._zoom;
+      const k2 = Math.min(
+        KirkHillWindScada.MAX_ZOOM,
+        Math.max(1, this._pinch.k0 * (d / this._pinch.dist))
+      );
+      const wx = (vx - z.tx) / z.k;
+      const wy = (vy - z.ty) / z.k;
+      z.k = k2;
+      z.tx = vx - wx * k2;
+      z.ty = vy - wy * k2;
+      this._applyZoom();
+    } else if (this._pan && t.length === 1 && t[0].identifier === this._pan.id) {
+      const dx = t[0].clientX - this._pan.lastX;
+      const dy = t[0].clientY - this._pan.lastY;
+      this._pan.lastX = t[0].clientX;
+      this._pan.lastY = t[0].clientY;
+      if (
+        Math.abs(t[0].clientX - this._pan.startX) > KirkHillWindScada.TAP_MOVE_PX ||
+        Math.abs(t[0].clientY - this._pan.startY) > KirkHillWindScada.TAP_MOVE_PX
+      ) {
+        this._pan.moved = true;
+      }
+      this._zoom.tx += (dx * m.w) / m.r.width;
+      this._zoom.ty += (dy * m.h) / m.r.height;
+      this._applyZoom();
+    }
+  }
+
+  _touchEnd(ev) {
+    const t = ev.touches;
+
+    if (this._pan && t.length === 0 && !this._pan.moved) {
+      const c = ev.changedTouches[0];
+      const now = Date.now();
+      const dt = this._lastTap ? now - this._lastTap.at : Infinity;
+      const dist = this._lastTap
+        ? Math.hypot(c.clientX - this._lastTap.x, c.clientY - this._lastTap.y)
+        : Infinity;
+      this._lastTap = { x: c.clientX, y: c.clientY, at: now };
+      if (dt < KirkHillWindScada.DOUBLE_TAP_MS && dist < 40) {
+        this._zoomReset();
+        this._pan = null;
+        return;
+      }
+      const el = this.shadowRoot.elementFromPoint(c.clientX, c.clientY);
+      const g = el && el.closest ? el.closest("g.turbine") : null;
+      if (g) this._openTurbine(g);
+      this._pan = null;
+      return;
+    }
+
+    if (t.length === 1) {
+      const f = t[0];
+      this._pinch = null;
+      this._pan = {
+        id: f.identifier,
+        lastX: f.clientX,
+        lastY: f.clientY,
+        startX: f.clientX,
+        startY: f.clientY,
+        moved: false,
+      };
+    } else if (t.length === 0) {
+      this._pan = null;
+      this._pinch = null;
+    }
   }
 
   _layout() {
@@ -517,10 +675,10 @@ class KirkHillWindScada extends HTMLElement {
 
   _styles() {
     return `
-      :host { display: block; width: 100%; height: 100%; }
+      :host { display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; }
       .shell { padding: 12px; background: #0b1120; border-radius: 12px; height: 100%; box-sizing: border-box; }
-      svg { width: 100%; height: 100%; display: block; }
+      svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
       .bg { fill: #0b1120; }
 
       /* Lines */
