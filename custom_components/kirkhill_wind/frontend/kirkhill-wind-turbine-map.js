@@ -6,6 +6,8 @@ class KirkHillWindTurbineMap extends HTMLElement {
     this._defaultVb = null; // viewBox at initial render (for reset)
     this._drag = null;      // {x, y} when dragging
     this._pinchStart = null; // distance between fingers when pinch started
+    this._tap = null;       // {x, y, at} for double-tap reset detection
+    this._lastTap = null;   // previous tap for double-tap detection
     this._needsRebuild = true;
     this._lastViewport = null; // {zoom, originX, originY} used for marker positions
     // Window-level listeners are registered once and must be removed on
@@ -119,7 +121,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
                 <span class="dot running"></span>Running
                 <span class="dot stopped"></span>Stopped
               </span>
-              <span>Scroll/pinch to zoom · Drag to pan · Double-click to reset</span>
+              <span>Scroll/pinch to zoom · Drag to pan · Double-tap to reset</span>
               <span>&copy; OpenStreetMap contributors</span>
             </div>
           </div>
@@ -196,15 +198,22 @@ class KirkHillWindTurbineMap extends HTMLElement {
       if (e.touches.length === 1) {
         this._drag = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         this._pinchStart = null;
+        this._tap = { x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now() };
       } else if (e.touches.length === 2) {
         this._drag = null;
         this._pinchStart = this._touchDist(e.touches);
+        this._tap = null;
       }
     }, { passive: false });
 
     svg.addEventListener("touchmove", (e) => {
       e.preventDefault();
       if (e.touches.length === 1 && this._drag) {
+        if (this._tap &&
+            (Math.abs(e.touches[0].clientX - this._tap.x) > 10 ||
+             Math.abs(e.touches[0].clientY - this._tap.y) > 10)) {
+          this._tap = null;
+        }
         this._panViewBox(
           e.touches[0].clientX - this._drag.x,
           e.touches[0].clientY - this._drag.y,
@@ -221,9 +230,25 @@ class KirkHillWindTurbineMap extends HTMLElement {
       }
     }, { passive: false });
 
-    svg.addEventListener("touchend", () => {
+    svg.addEventListener("touchend", (e) => {
+      const c = e.changedTouches && e.changedTouches[0];
+      if (c && this._tap) {
+        const now = Date.now();
+        const dt = this._lastTap ? now - this._lastTap.at : Infinity;
+        const dist = this._lastTap
+          ? Math.hypot(c.clientX - this._lastTap.x, c.clientY - this._lastTap.y)
+          : Infinity;
+        this._lastTap = { x: c.clientX, y: c.clientY, at: now };
+        if (dt < 300 && dist < 40) {
+          if (this._defaultVb) {
+            this._vb = { ...this._defaultVb };
+            this._applyViewBox(svg);
+          }
+        }
+      }
       this._drag = null;
       this._pinchStart = null;
+      this._tap = null;
     });
 
     // Double-click / double-tap resets to default view
