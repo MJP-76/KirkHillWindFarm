@@ -53,6 +53,12 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.35 (pre-release)
+- **Fully responsive SCADA card**: diagram now scales proportionally in both width and height to fit any container (mobile, panel view, side-by-side). ViewBox bounds 900–1800w × 1052–1600h. All coordinates derived from design width (1240) so layout stays intact at any size.
+- **Flow arrow to grid box center**: energy-to-grid flow line and animated dot now terminate at the center of the National Grid box (halfway up) instead of the left edge.
+- **Text/formatting polish**: Owner panel → "Capacity Factor (%)", "Your Share (W)", "Owner Capacity Factor (%)", "Share (‱)"; Site panel → "Site Capacity Factor (%)", "Site Power (MW)"; Wind panel → "Wind & Forecast", "Current Wind", "Forecast (1h)"; Grid → "To Grid Today". Finances tab headings title-cased. Turbine map legend spacing improved.
+- **Bug fix**: `sitePowerText` reassignment changed from `const` to `let` (prevented card render in strict mode).
+
 ## Version 4.8.34 (pre-release)
 - **Turbine staircase layout**: turbines now form a brick-wall staircase — T1 left, T2 right with its top level with T1's bottom, T3 left level with T2's bottom, and so on — so every feed line reaches the bus unobstructed. The block is spread to roughly match the bus bar height, and boxes are sized taller to leave room for more per-turbine details.
 

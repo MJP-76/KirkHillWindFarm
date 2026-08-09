@@ -11,7 +11,11 @@
  */
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 860, hMin: 1052, hMax: 1600 };
+    return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
+  }
+
+  static get DESIGN_W() {
+    return 1240;
   }
 
   static get MAX_ZOOM() {
@@ -47,6 +51,7 @@ class KirkHillWindScada extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._hass = null;
     this._values = new Map();
+    this._vbW = KirkHillWindScada.VIEWBOX.w;
     this._vbH = KirkHillWindScada.VIEWBOX.h;
     this._turbineEntities = new Map();
     this._zoom = { k: 1, tx: 0, ty: 0 };
@@ -191,7 +196,7 @@ class KirkHillWindScada extends HTMLElement {
       <style>${this._styles()}</style>
       <ha-card${header}>
         <div class="shell">
-          <svg viewBox="0 0 ${vb.w} ${layout.H}" role="img" aria-label="Wind farm SCADA diagram">
+          <svg viewBox="0 0 ${layout.W} ${layout.H}" role="img" aria-label="Wind farm SCADA diagram">
             <defs>
               <pattern id="khscada-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,116,139,0.25)" stroke-width="1"/>
@@ -201,7 +206,7 @@ class KirkHillWindScada extends HTMLElement {
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#0284c7"/>
               </marker>
             </defs>
-            <rect class="bg" x="0" y="0" width="${vb.w}" height="${layout.H}" fill="url(#khscada-grid)"/>
+            <rect class="bg" x="0" y="0" width="${layout.W}" height="${layout.H}" fill="url(#khscada-grid)"/>
             <g data-zoom="wrap" transform="translate(0 0) scale(1)">
               ${linesHtml}
               ${dotsHtml}
@@ -209,7 +214,7 @@ class KirkHillWindScada extends HTMLElement {
               ${this._buildBus(layout)}
               ${this._buildTransformer(layout)}
               ${this._buildGrid(layout)}
-              ${this._buildHeaderChips()}
+              ${this._buildHeaderChips(layout)}
               ${this._buildLegend(layout)}
             </g>
           </svg>
@@ -390,6 +395,8 @@ class KirkHillWindScada extends HTMLElement {
 
   _layout() {
     const H = this._vbH;
+    const W = this._vbW;
+    const scaleX = W / KirkHillWindScada.DESIGN_W;
     const tCount = this.config.turbines.length;
     const legendY = H - 150;
 
@@ -410,8 +417,45 @@ class KirkHillWindScada extends HTMLElement {
     );
     const pitch = bh;
 
+    // Scale horizontal positions from design width (1240) to current viewBox width
+    const busX = 600 * scaleX;
+    const leftColX = 30 * scaleX;
+    const rightColX = 290 * scaleX;
+    const boxW = 230 * scaleX;
+    const feedEndX = busX;
+    const transformerLineEndX = (975 + 132.5) * scaleX;
+    const transformerLineEndY = gridY - 135;
+    const gridRectX = 975 * scaleX;
+    const gridRectW = 265 * scaleX;
+    const ownerCx = 1015 * scaleX;
+    const siteCx = 1205 * scaleX;
+    const gridTitleX = 1110 * scaleX;
+    const gridDividerX1 = 985 * scaleX;
+    const gridDividerX2 = 1230 * scaleX;
+    const chipLeftColX = 30 * scaleX;
+    const chipRightColX = 152 * scaleX;
+    const chipActiveX = 310 * scaleX;
+    const chipUserGenX = 870 * scaleX;
+    const chipUserGenW = 330 * scaleX;
+    const chipUserGenTitleX = 882 * scaleX;
+    const chipUserGenValueX = 1200 * scaleX;
+    const chipSiteGenX = 870 * scaleX;
+    const chipSiteGenW = 330 * scaleX;
+    const chipSiteGenTitleX = 882 * scaleX;
+    const chipSiteGenValueX = 1200 * scaleX;
+    const chipWindX = 870 * scaleX;
+    const chipWindW = 330 * scaleX;
+    const chipWindTitleX = 882 * scaleX;
+    const chipWindValueX = 1200 * scaleX;
+    const legendX = 30 * scaleX;
+    const legendW = 500 * scaleX;
+    const xfmrTitleX = 630 * scaleX;
+    const xfmrRotateX = 630 * scaleX;
+
     return {
       H,
+      W,
+      scaleX,
       tTop,
       bh,
       pitch,
@@ -419,6 +463,39 @@ class KirkHillWindScada extends HTMLElement {
       busY2: gridY,
       busSummaryY: legendY - 24,
       legendY,
+      busX,
+      leftColX,
+      rightColX,
+      boxW,
+      feedEndX,
+      transformerLineEndX,
+      transformerLineEndY,
+      gridRectX,
+      gridRectW,
+      ownerCx,
+      siteCx,
+      gridTitleX,
+      gridDividerX1,
+      gridDividerX2,
+      chipLeftColX,
+      chipRightColX,
+      chipActiveX,
+      chipUserGenX,
+      chipUserGenW,
+      chipUserGenTitleX,
+      chipUserGenValueX,
+      chipSiteGenX,
+      chipSiteGenW,
+      chipSiteGenTitleX,
+      chipSiteGenValueX,
+      chipWindX,
+      chipWindW,
+      chipWindTitleX,
+      chipWindValueX,
+      legendX,
+      legendW,
+      xfmrTitleX,
+      xfmrRotateX,
     };
   }
 
@@ -429,9 +506,14 @@ class KirkHillWindScada extends HTMLElement {
     const r = shell.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const vb = KirkHillWindScada.VIEWBOX;
-    let h = Math.round(vb.w / (r.width / r.height));
+    const aspect = r.width / r.height;
+    let w = Math.round(aspect * this._vbH);
+    w = Math.max(vb.wMin, Math.min(vb.wMax, w));
+    let h = Math.round(w / aspect);
     h = Math.max(vb.hMin, Math.min(vb.hMax, h));
-    if (h === this._vbH) return;
+    w = Math.round(aspect * h);
+    if (w === this._vbW && h === this._vbH) return;
+    this._vbW = w;
     this._vbH = h;
     this._render();
   }
@@ -443,8 +525,8 @@ class KirkHillWindScada extends HTMLElement {
     let dotsHtml = "";
 
     turbines.forEach((t, i) => {
-      const x = i % 2 === 0 ? 30 : 290;
-      const cx = x + 230;
+      const x = i % 2 === 0 ? layout.leftColX : layout.rightColX;
+      const cx = x + layout.boxW;
       const top = layout.tTop + i * layout.pitch;
       const cy = top + layout.bh / 2;
       const num = this._escape(t.id || `T${i + 1}`);
@@ -452,20 +534,20 @@ class KirkHillWindScada extends HTMLElement {
       if (stateEntity) this._turbineEntities.set(t.id || `T${i + 1}`, stateEntity);
       turbinesHtml += `
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
-          <rect class="node-rect" x="${x}" y="${top}" width="230" height="${layout.bh}" rx="8"/>
-          <text class="t-id" x="${x + 14}" y="${top + 16}">${num}</text>
-          <rect class="status-pill" x="${x + 120}" y="${top + 7}" width="96" height="20" rx="10"/>
-          <text class="t-status" x="${x + 168}" y="${top + 21}"></text>
-          <text class="t-power" x="${x + 14}" y="${top + layout.bh - 34}">—</text>
-          <text class="t-detail" x="${x + 14}" y="${top + layout.bh - 18}"></text>
-          <text class="t-last" x="${x + 14}" y="${top + layout.bh - 8}"></text>
+          <rect class="node-rect" x="${x}" y="${top}" width="${layout.boxW}" height="${layout.bh}" rx="8"/>
+          <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 16}">${num}</text>
+          <rect class="status-pill" x="${x + 120 * layout.scaleX}" y="${top + 7}" width="${96 * layout.scaleX}" height="20" rx="10"/>
+          <text class="t-status" x="${x + 168 * layout.scaleX}" y="${top + 21}"></text>
+          <text class="t-power" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 34}">—</text>
+          <text class="t-detail" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 18}"></text>
+          <text class="t-last" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 8}"></text>
         </g>
       `;
-      linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="600" y2="${cy}"/>`;
+      linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="${layout.feedEndX}" y2="${cy}"/>`;
       dotsHtml += `
         <circle class="flow-dot" data-flow="t${i}" r="5">
           <animateMotion dur="10s" repeatCount="indefinite"
-            path="M ${cx} ${cy} L 600 ${cy}"/>
+            path="M ${cx} ${cy} L ${layout.feedEndX} ${cy}"/>
         </circle>
       `;
     });
@@ -476,21 +558,21 @@ class KirkHillWindScada extends HTMLElement {
   _buildBus(layout) {
     return `
       <g class="bus">
-        <rect x="600" y="30" width="60" height="${layout.busY2 - 30}" rx="6"/>
+        <rect x="${layout.busX}" y="30" width="${60 * layout.scaleX}" height="${layout.busY2 - 30}" rx="6"/>
       </g>
     `;
   }
 
   _buildTransformer(layout) {
     const cy = layout.gridY;
+    const busCenterY = (30 + cy) / 2;
     return `
       <g class="transformer">
-        <line class="feed-line" x1="660" y1="${cy}" x2="975" y2="${cy}" marker-end="url(#khscada-arrow)"/>
-        <text class="xfmr-title" transform="rotate(90 630 ${cy - 130})" x="630" y="${cy - 130}" text-anchor="middle">TRANSFORMER</text>
-        <text class="xfmr-sub" x="630" y="${cy - 52}" text-anchor="middle">33 kV</text>
+        <line class="feed-line" x1="${layout.busX + 60 * layout.scaleX}" y1="${cy}" x2="${layout.transformerLineEndX}" y2="${layout.transformerLineEndY}" marker-end="url(#khscada-arrow)"/>
+        <text class="xfmr-title" transform="rotate(90 ${layout.xfmrRotateX} ${busCenterY})" x="${layout.xfmrTitleX}" y="${busCenterY}" text-anchor="middle">TRANSFORMER — 33 kV</text>
         <circle class="flow-dot" data-flow="grid" r="5">
           <animateMotion dur="10s" repeatCount="indefinite"
-            path="M 660 ${cy} L 975 ${cy}"/>
+            path="M ${layout.busX + 60 * layout.scaleX} ${cy} L ${layout.transformerLineEndX} ${layout.transformerLineEndY}"/>
         </circle>
       </g>
     `;
@@ -498,67 +580,77 @@ class KirkHillWindScada extends HTMLElement {
 
   _buildGrid(layout) {
     const cy = layout.gridY;
-    const ownerCx = 1015;
-    const siteCx = 1205;
     return `
       <g class="grid">
-        <rect class="grid-rect" x="975" y="${cy - 270}" width="265" height="270" rx="10"/>
-        <text class="grid-title" x="1110" y="${cy - 245}" text-anchor="middle">NATIONAL</text>
-        <text class="grid-title" x="1110" y="${cy - 221}" text-anchor="middle">GRID</text>
-        <text class="grid-col" x="${ownerCx}" y="${cy - 193}" text-anchor="middle">OWNER</text>
-        <text class="grid-col" x="${siteCx}" y="${cy - 193}" text-anchor="middle">SITE</text>
-        <line class="grid-divider" x1="985" y1="${cy - 175}" x2="1230" y2="${cy - 175}"/>
-        <text class="grid-label" x="1110" y="${cy - 153}" text-anchor="middle">Export</text>
-        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy - 121}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-power-unit" x="${ownerCx}" y="${cy - 103}" text-anchor="middle"></text>
-        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy - 121}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="site-power-unit" x="${siteCx}" y="${cy - 103}" text-anchor="middle"></text>
-        <line class="grid-divider" x1="985" y1="${cy - 87}" x2="1230" y2="${cy - 87}"/>
-        <text class="grid-label" x="1110" y="${cy - 65}" text-anchor="middle">To grid today</text>
-        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy - 39}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
-        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy - 39}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
+        <rect class="grid-rect" x="${layout.gridRectX}" y="${cy - 270}" width="${layout.gridRectW}" height="270" rx="10"/>
+        <text class="grid-title" x="${layout.gridTitleX}" y="${cy - 245}" text-anchor="middle">NATIONAL</text>
+        <text class="grid-title" x="${layout.gridTitleX}" y="${cy - 221}" text-anchor="middle">GRID</text>
+        <text class="grid-col" x="${layout.ownerCx}" y="${cy - 193}" text-anchor="middle">OWNER</text>
+        <text class="grid-col" x="${layout.siteCx}" y="${cy - 193}" text-anchor="middle">SITE</text>
+        <line class="grid-divider" x1="${layout.gridDividerX1}" y1="${cy - 175}" x2="${layout.gridDividerX2}" y2="${cy - 175}"/>
+        <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 153}" text-anchor="middle">Export</text>
+        <text class="grid-power" data-grid="owner-power" x="${layout.ownerCx}" y="${cy - 121}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-power-unit" x="${layout.ownerCx}" y="${cy - 103}" text-anchor="middle"></text>
+        <text class="grid-power" data-grid="site-power" x="${layout.siteCx}" y="${cy - 121}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="site-power-unit" x="${layout.siteCx}" y="${cy - 103}" text-anchor="middle"></text>
+        <line class="grid-divider" x1="${layout.gridDividerX1}" y1="${cy - 87}" x2="${layout.gridDividerX2}" y2="${cy - 87}"/>
+        <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 65}" text-anchor="middle">To Grid Today</text>
+        <text class="grid-energy" data-grid="owner-energy" x="${layout.ownerCx}" y="${cy - 39}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-energy-unit" x="${layout.ownerCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
+        <text class="grid-energy" data-grid="site-energy" x="${layout.siteCx}" y="${cy - 39}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="site-energy-unit" x="${layout.siteCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
       </g>
     `;
   }
 
-  _buildHeaderChips() {
+_buildHeaderChips(layout) {
     return `
       <g class="chips">
         <!-- Left side: Alarm + Active Turbines (above turbine list) -->
         <g class="alarm" data-alarm="indicator">
-          <rect x="30" y="24" width="112" height="30" rx="15"/>
-          <text class="alarm-text" data-alarm="text" x="86" y="44" text-anchor="middle">OK</text>
+          <rect x="${layout.chipLeftColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
+          <text class="alarm-text" data-alarm="text" x="${layout.chipLeftColX + 86 * layout.scaleX}" y="44" text-anchor="middle">OK</text>
         </g>
-        <rect x="152" y="24" width="170" height="30" rx="15"/>
-        <text class="chip-label" x="164" y="44">Active Turbines</text>
-        <text class="chip-value" data-chip="active" x="310" y="44" text-anchor="end">—</text>
+        <rect x="${layout.chipRightColX}" y="24" width="${170 * layout.scaleX}" height="30" rx="15"/>
+        <text class="chip-label" x="${layout.chipRightColX + 12 * layout.scaleX}" y="44">Active Turbines</text>
+        <text class="chip-value" data-chip="active" x="${layout.chipActiveX}" y="44" text-anchor="end">—</text>
 
-        <!-- Right side: Generation & capacity (far right) -->
+        <!-- Right side: Owner Generation & Capacity (far right) -->
         <g class="user-gen" data-user-gen="panel">
-          <rect x="870" y="24" width="330" height="156" rx="8"/>
-          <text class="user-gen-title" x="882" y="48">Generation &amp; capacity</text>
-          <text class="user-gen-label" x="882" y="76">Generation</text>
-          <text class="user-gen-value" data-user-gen="energy" x="1200" y="76" text-anchor="end">—</text>
-          <text class="user-gen-label" x="882" y="100">Percentage</text>
-          <text class="user-gen-value" data-user-gen="pct" x="1200" y="100" text-anchor="end">—</text>
-          <text class="user-gen-label" x="882" y="124">Your share</text>
-          <text class="user-gen-value user-gen-share" data-user-gen="share" x="1200" y="124" text-anchor="end">—</text>
-          <text class="user-gen-label" x="882" y="148">Capacity</text>
-          <text class="user-gen-value" data-user-gen="capacity" x="1200" y="148" text-anchor="end">—</text>
-          <text class="user-gen-label" x="882" y="172">Share %</text>
-          <text class="user-gen-value" data-user-gen="sharepct" x="1200" y="172" text-anchor="end">—</text>
+          <rect x="${layout.chipUserGenX}" y="24" width="${layout.chipUserGenW}" height="180" rx="8"/>
+          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="48">Owner Generation & Capacity</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="76">Generation</text>
+          <text class="user-gen-value" data-user-gen="energy" x="${layout.chipUserGenValueX}" y="76" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="100">Capacity Factor (%)</text>
+          <text class="user-gen-value" data-user-gen="pct" x="${layout.chipUserGenValueX}" y="100" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="124">Your Share (W)</text>
+          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="124" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="148">Owner Capacity Factor (%)</text>
+          <text class="user-gen-value" data-user-gen="capacity" x="${layout.chipUserGenValueX}" y="148" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="172">Share (‱)</text>
+          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="172" text-anchor="end">—</text>
         </g>
 
-        <!-- Right side: Wind & forecast panel (below Generation & capacity) -->
+        <!-- Right side: Site Generation & Capacity (below Owner) -->
+        <g class="site-gen" data-site-gen="panel">
+          <rect x="${layout.chipSiteGenX}" y="214" width="${layout.chipSiteGenW}" height="120" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="238">Site Generation & Capacity</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="264">Generation</text>
+          <text class="site-gen-value" data-site-gen="energy" x="${layout.chipSiteGenValueX}" y="264" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="290">Site Capacity Factor (%)</text>
+          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="290" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="316">Site Power (MW)</text>
+          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="316" text-anchor="end">—</text>
+        </g>
+
+        <!-- Right side: Wind & Forecast panel (below Site Generation) -->
         <g class="wind-panel" data-wind="panel">
-          <rect x="870" y="190" width="330" height="82" rx="8"/>
-          <text class="wind-title" x="882" y="214">Wind &amp; forecast</text>
-          <text class="wind-label" x="882" y="240">Current wind</text>
-          <text class="wind-value" data-chip="wind" x="1200" y="240" text-anchor="end">—</text>
-          <text class="wind-label" x="882" y="264">Forecast 1h</text>
-          <text class="wind-value" data-chip="forecast" x="1200" y="264" text-anchor="end">—</text>
+          <rect x="${layout.chipWindX}" y="344" width="${layout.chipWindW}" height="82" rx="8"/>
+          <text class="wind-title" x="${layout.chipWindTitleX}" y="368">Wind & Forecast</text>
+          <text class="wind-label" x="${layout.chipWindTitleX}" y="394">Current Wind</text>
+          <text class="wind-value" data-chip="wind" x="${layout.chipWindValueX}" y="394" text-anchor="end">—</text>
+          <text class="wind-label" x="${layout.chipWindTitleX}" y="418">Forecast (1h)</text>
+          <text class="wind-value" data-chip="forecast" x="${layout.chipWindValueX}" y="418" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -568,7 +660,7 @@ class KirkHillWindScada extends HTMLElement {
     const entries = Object.entries(KirkHillWindScada.STATUS)
       .map(([key, v]) => `<span class="lg-item"><span class="lg-dot" style="background:${v.color}"></span>${v.label}</span>`)
       .join("");
-    return `<foreignObject x="30" y="${layout.legendY}" width="500" height="120">
+    return `<foreignObject x="${layout.legendX}" y="${layout.legendY}" width="${layout.legendW}" height="120">
       <div xmlns="http://www.w3.org/1999/xhtml" class="legend">${entries}</div>
     </foreignObject>`;
   }
@@ -602,7 +694,7 @@ class KirkHillWindScada extends HTMLElement {
     const ownerPowerText = this._powerText(ownerExportKw);
     this._setText(root, '[data-grid="owner-power"]', ownerPowerText.value);
     this._setText(root, '[data-grid="owner-power-unit"]', ownerPowerText.unit);
-    const sitePowerText =
+    let sitePowerText =
       sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-grid="site-power"]', sitePowerText.value);
     this._setText(root, '[data-grid="site-power-unit"]', sitePowerText.unit);
@@ -641,7 +733,19 @@ class KirkHillWindScada extends HTMLElement {
       ownerEnergyKwh !== null && siteEnergyKwh !== null && siteEnergyKwh > 0
         ? (ownerEnergyKwh / siteEnergyKwh) * 100
         : null;
-    this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct, 3)}%`);
+    this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct * 100, 2)}‱`);
+
+    // Site Generation & Capacity panel
+    const siteGenToday = this._num(config.grid_energy_entity);
+    if (siteGenToday !== null) {
+      const scaled = this._scaleKwh(siteGenToday);
+      this._setText(root, '[data-site-gen="energy"]', `${scaled.value} ${scaled.unit}`);
+    } else {
+      this._setText(root, '[data-site-gen="energy"]', "—");
+    }
+    this._setText(root, '[data-site-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
+    sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
+    this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
 
     // Alarm indicator (always visible: OK or flashing ALARM)
     const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
@@ -707,63 +811,68 @@ class KirkHillWindScada extends HTMLElement {
     return `
       :host { display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; }
-      .shell { padding: 12px; background: #f1f5f9; border-radius: 12px; height: 100%; box-sizing: border-box; }
+      .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; height: 100%; box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
-      .bg { fill: #f1f5f9; }
+      .bg { fill: var(--ha-card-background, #f1f5f9); }
 
       /* Lines */
       .feed-line { stroke: rgba(2,132,199,0.35); stroke-width: 3; }
       .flow-dot { fill: #0284c7; }
 
       /* Turbine nodes */
-      .node-rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .node-rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .node-rect[data-status] { opacity: 1; }
       .turbine:hover .node-rect { stroke: #0284c7; }
-      .t-id { fill: #0f172a; font: bold 17px sans-serif; }
+      .t-id { fill: var(--primary-text-color, #0f172a); font: bold 17px var(--font-family, sans-serif); }
       .status-pill { fill: #22c55e; }
-      .t-status { fill: #06121f; font: bold 10px sans-serif; text-anchor: middle; }
-      .t-power { fill: #0f172a; font: bold 23px sans-serif; }
-      .t-detail { fill: #475569; font: 11px sans-serif; }
-      .t-last { fill: #64748b; font: 10px sans-serif; }
+      .t-status { fill: #06121f; font: bold 10px var(--font-family, sans-serif); text-anchor: middle; }
+      .t-power { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .t-detail { fill: var(--secondary-text-color, #475569); font: 11px var(--font-family, sans-serif); }
+      .t-last { fill: var(--disabled-text-color, #64748b); font: 10px var(--font-family, sans-serif); }
 
       /* Bus */
       .bus rect { fill: #e0f2fe; stroke: #2563eb; stroke-width: 2; }
 
       /* Transformer label (overlaid down the site collection bus) */
-      .xfmr-title { fill: #0f172a; font: bold 16px sans-serif; }
-      .xfmr-sub { fill: #0f172a; font: bold 14px sans-serif; }
+      .xfmr-title { fill: var(--primary-text-color, #0f172a); font: bold 16px var(--font-family, sans-serif); }
 
       /* Grid node */
       .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }
-      .grid-title { fill: #4d7c0f; font: bold 20px sans-serif; }
-      .grid-col { fill: #4d7c0f; font: bold 20px sans-serif; }
-      .grid-label { fill: #475569; font: 20px sans-serif; }
-      .grid-power { fill: #0f172a; font: bold 20px sans-serif; }
-      .grid-energy { fill: #0f172a; font: bold 20px sans-serif; }
-      .grid-unit { fill: #64748b; font: 20px sans-serif; }
+      .grid-title { fill: #4d7c0f; font: bold 20px var(--font-family, sans-serif); }
+      .grid-col { fill: #4d7c0f; font: bold 20px var(--font-family, sans-serif); }
+      .grid-label { fill: var(--secondary-text-color, #475569); font: 20px var(--font-family, sans-serif); }
+      .grid-power { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
+      .grid-energy { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
+      .grid-unit { fill: var(--disabled-text-color, #64748b); font: 20px var(--font-family, sans-serif); }
       .grid-divider { stroke: #84cc16; stroke-width: 2; }
 
       /* Chips */
-      .chips rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
-      .chip-label { fill: #475569; font: 11px sans-serif; }
-      .chip-value { fill: #0f172a; font: bold 12px sans-serif; }
+      .chips rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
+      .chip-label { fill: var(--secondary-text-color, #475569); font: 11px var(--font-family, sans-serif); }
+      .chip-value { fill: var(--primary-text-color, #0f172a); font: bold 12px var(--font-family, sans-serif); }
 
       /* Generation & capacity panel (top right) */
-      .user-gen rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
-      .user-gen-title { fill: #475569; font: bold 20px sans-serif; }
-      .user-gen-label { fill: #475569; font: 18px sans-serif; }
-      .user-gen-value { fill: #0f172a; font: bold 18px sans-serif; }
-      .user-gen-share { fill: #16a34a; font: bold 18px sans-serif; }
+      .user-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
+      .user-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 17px var(--font-family, sans-serif); }
+      .user-gen-label { fill: var(--secondary-text-color, #475569); font: 11px var(--font-family, sans-serif); }
+      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .user-gen-share { fill: #16a34a; font: bold 23px var(--font-family, sans-serif); }
 
-      /* Wind & forecast panel (below Generation & capacity) */
-      .wind-panel rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
-      .wind-title { fill: #475569; font: bold 20px sans-serif; }
-      .wind-label { fill: #475569; font: 20px sans-serif; }
-      .wind-value { fill: #0f172a; font: bold 20px sans-serif; }
+      /* Site Generation & Capacity panel (below Owner) */
+      .site-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
+      .site-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 17px var(--font-family, sans-serif); }
+      .site-gen-label { fill: var(--secondary-text-color, #475569); font: 11px var(--font-family, sans-serif); }
+      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+
+      /* Wind & forecast panel (below Site Generation) */
+      .wind-panel rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
+      .wind-title { fill: var(--primary-text-color, #0f172a); font: bold 17px var(--font-family, sans-serif); }
+      .wind-label { fill: var(--secondary-text-color, #475569); font: 11px var(--font-family, sans-serif); }
+      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
-      .alarm-text { fill: #15803d; font: bold 12px sans-serif; }
+      .alarm-text { fill: #15803d; font: bold 12px var(--font-family, sans-serif); }
       .alarm.fault rect { fill: #fef2f2; stroke: #ef4444; stroke-width: 2; }
       .alarm.fault .alarm-text { fill: #b91c1c; }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
@@ -774,7 +883,7 @@ class KirkHillWindScada extends HTMLElement {
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
-      .lg-item { display: inline-flex; align-items: center; gap: 5px; color: #475569; font: 10px sans-serif; }
+      .lg-item { display: inline-flex; align-items: center; gap: 5px; color: var(--secondary-text-color, #475569); font: 10px var(--font-family, sans-serif); }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
       .empty { padding: 24px 16px; color: var(--secondary-text-color); }

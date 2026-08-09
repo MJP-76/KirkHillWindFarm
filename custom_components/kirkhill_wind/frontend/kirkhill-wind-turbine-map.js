@@ -121,7 +121,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
                 <span class="dot running"></span>Running
                 <span class="dot stopped"></span>Stopped
               </span>
-              <span>Scroll/pinch to zoom · Drag to pan · Double-tap to reset</span>
+              <span>Scroll / pinch to zoom · Drag to pan · Double-tap to reset</span>
               <span>&copy; OpenStreetMap contributors</span>
             </div>
           </div>
@@ -508,7 +508,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
         width: 100%;
         height: auto;
         display: block;
-        background: #cfe4f7;
+        background: var(--ha-card-background, #cfe4f7);
         cursor: grab;
         touch-action: none;
         user-select: none;
@@ -523,7 +523,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
         stroke-width: 2;
       }
       .marker.is-active .marker-disc { stroke: #22c55e; }
-      .marker.is-inactive .marker-disc { stroke: #94a3b8; opacity: 0.6; }
+      .marker.is-inactive .marker-disc { stroke: var(--disabled-text-color, #94a3b8); opacity: 0.6; }
 
       .rotor {
         transform-box: fill-box;
@@ -534,10 +534,10 @@ class KirkHillWindTurbineMap extends HTMLElement {
         animation-duration: inherit;
       }
 
-      .tower { stroke: #4b5563; stroke-width: 2.5; stroke-linecap: round; }
-      .hub { fill: #0f172a; }
-      .blade { fill: #f8fafc; stroke: #1f2937; stroke-width: 0.8; stroke-linejoin: round; }
-      .marker.is-inactive .blade { fill: #94a3b8; }
+      .tower { stroke: var(--disabled-text-color, #4b5563); stroke-width: 2.5; stroke-linecap: round; }
+      .hub { fill: var(--primary-text-color, #0f172a); }
+      .blade { fill: var(--ha-card-background, #f8fafc); stroke: var(--primary-text-color, #1f2937); stroke-width: 0.8; stroke-linejoin: round; }
+      .marker.is-inactive .blade { fill: var(--disabled-text-color, #94a3b8); }
 
       .label-bg {
         fill: rgba(0,0,0,0.65);
@@ -563,6 +563,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
         padding: 8px 12px 12px;
         font-size: 12px;
         color: var(--secondary-text-color);
+        font-family: var(--font-family, sans-serif);
       }
 
       .legend .status {
@@ -577,7 +578,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
         display: inline-block;
       }
       .legend .dot.running { background: #22c55e; }
-      .legend .dot.stopped { background: #94a3b8; }
+      .legend .dot.stopped { background: var(--disabled-text-color, #94a3b8); }
 
       .empty { padding: 24px 16px; color: var(--secondary-text-color); }
 

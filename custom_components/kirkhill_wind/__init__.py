@@ -843,7 +843,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading_style": "title",
                             },
                             _owner_generation_markdown_card(
-                                "Owner generation & projected earnings",
+                                "Owner Generation & Projected Earnings",
                                 owner_generation_entities,
                             ),
                         ],
@@ -857,7 +857,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                                 "heading_style": "title",
                             },
                             _generation_markdown_card(
-                                "Site generation",
+                                "Site Generation",
                                 site_generation_entities,
                             ),
                         ],
