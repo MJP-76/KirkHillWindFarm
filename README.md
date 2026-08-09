@@ -53,6 +53,9 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.25 (pre-release)
+- **Uniform right-side text**: every label, value and unit in the National Grid box and the "Your Generation" panel now uses a single 20px size (bold for values/titles) instead of the previous mix of 11–27px, so the right-hand figures read as one consistent block
+
 ## Version 4.8.24 (pre-release)
 - **Bigger right-side text**: National Grid box labels, values and units enlarged (title 16→20px, values 20–22→24–27px, labels/units 11→14px) and the top-right "Your Generation" panel enlarged, so both stay readable when the card is scaled down on phones
 - **Owner export auto-derived**: when the API reports no owner power (owner share is tiny), the National Grid "Export" row now shows the owner export computed as site export × owner's share of today's generation (in W), instead of "—"; the "Your share" line uses the same value

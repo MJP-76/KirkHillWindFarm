@@ -737,11 +737,11 @@ class KirkHillWindScada extends HTMLElement {
       /* Grid node */
       .grid-rect { fill: #1a2e05; stroke: #4d7c0f; stroke-width: 2; }
       .grid-title { fill: #a3e635; font: bold 20px sans-serif; }
-      .grid-col { fill: #a3e635; font: bold 15px sans-serif; }
-      .grid-label { fill: #94a3b8; font: 14px sans-serif; }
-      .grid-power { fill: #f8fafc; font: bold 27px sans-serif; }
-      .grid-energy { fill: #f8fafc; font: bold 24px sans-serif; }
-      .grid-unit { fill: #64748b; font: 14px sans-serif; }
+      .grid-col { fill: #a3e635; font: bold 20px sans-serif; }
+      .grid-label { fill: #94a3b8; font: 20px sans-serif; }
+      .grid-power { fill: #f8fafc; font: bold 20px sans-serif; }
+      .grid-energy { fill: #f8fafc; font: bold 20px sans-serif; }
+      .grid-unit { fill: #64748b; font: 20px sans-serif; }
       .grid-divider { stroke: #365314; stroke-width: 2; }
 
       /* Chips */
@@ -751,10 +751,10 @@ class KirkHillWindScada extends HTMLElement {
 
       /* User generation panel (top right) */
       .user-gen rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
-      .user-gen-title { fill: #94a3b8; font: bold 14px sans-serif; }
-      .user-gen-value { fill: #f8fafc; font: bold 22px sans-serif; }
-      .user-gen-time { fill: #64748b; font: 13px sans-serif; }
-      .user-gen-share { fill: #22c55e; font: bold 15px sans-serif; }
+      .user-gen-title { fill: #94a3b8; font: bold 20px sans-serif; }
+      .user-gen-value { fill: #f8fafc; font: bold 20px sans-serif; }
+      .user-gen-time { fill: #64748b; font: 20px sans-serif; }
+      .user-gen-share { fill: #22c55e; font: bold 20px sans-serif; }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #052e16; stroke: #22c55e; stroke-width: 2; }
