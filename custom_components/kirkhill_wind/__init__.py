@@ -176,7 +176,8 @@ async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> No
     new_default = _build_dashboard_config(hass, entry)
     try:
         existing_config = await lovelace_store.async_load()
-    except Exception:  # noqa: BLE001
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Failed to load existing dashboard config: %s; creating new default", err)
         existing_config = None
 
     if existing_config and "views" in existing_config:

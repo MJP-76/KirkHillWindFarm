@@ -5,6 +5,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import CONF_OWNER_SHARE_PERCENT
 from .device import get_farm_device_info, get_turbine_device_info
 
 
@@ -41,6 +42,18 @@ class KirkHillScopedEntity(KirkHillEntity):
     def _scope_data(self) -> dict:
         """Shortcut to the scoped payload from the coordinator."""
         return self.coordinator.data[self._scope]
+
+    def _owner_share_pct(self) -> float | None:
+        """Get owner share percentage from config entry options."""
+        try:
+            val = self._entry.options.get(CONF_OWNER_SHARE_PERCENT)
+            if val is None:
+                val = self._entry.data.get(CONF_OWNER_SHARE_PERCENT)
+            if val is not None:
+                return float(val)
+        except (TypeError, ValueError):
+            pass
+        return None
 
 
 class KirkHillTurbineEntity(CoordinatorEntity, Entity):

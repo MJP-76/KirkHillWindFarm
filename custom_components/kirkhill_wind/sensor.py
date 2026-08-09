@@ -132,18 +132,6 @@ class FarmPowerSensor(KirkHillScopedEntity, SensorEntity):
             "MW" if scope == SCOPE_SITE else UnitOfPower.KILO_WATT
         )
 
-    def _owner_share_pct(self) -> float | None:
-        """Get owner share percentage from config entry options."""
-        try:
-            val = self._entry.options.get(CONF_OWNER_SHARE_PERCENT)
-            if val is None:
-                val = self._entry.data.get(CONF_OWNER_SHARE_PERCENT)
-            if val is not None:
-                return float(val)
-        except (TypeError, ValueError):
-            pass
-        return None
-
     @property
     def native_value(self):
         scope_data = self._scope_data()
@@ -256,18 +244,6 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
         if live is not None:
             return live
         return self._restored_value
-
-    def _owner_share_pct(self) -> float | None:
-        """Get owner share percentage from config entry options."""
-        try:
-            val = self._entry.options.get(CONF_OWNER_SHARE_PERCENT)
-            if val is None:
-                val = self._entry.data.get(CONF_OWNER_SHARE_PERCENT)
-            if val is not None:
-                return float(val)
-        except (TypeError, ValueError):
-            pass
-        return None
 
     @property
     def native_value(self):
@@ -494,7 +470,7 @@ class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data[SCOPE_OWNER]["summary"].get("active_turbines")
+        return self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {}).get("active_turbines")
 
 class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Inactive turbines"
@@ -506,7 +482,7 @@ class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data[SCOPE_OWNER]["summary"].get("inactive_turbines")
+        return self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {}).get("inactive_turbines")
 
 class TurbinePowerSensor(KirkHillScopedTurbineEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.POWER
