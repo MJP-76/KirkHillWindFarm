@@ -414,6 +414,12 @@ def _card_match_key(card: dict) -> str | None:
     # Custom cards matched by type + title
     if ctype.startswith("custom:") and card.get("title"):
         return f"{ctype}:title:{card['title']}"
+    # The SCADA card is a single managed card in the panel view; its title is
+    # intentionally empty, so match purely by type. This ensures corrected
+    # defaults replace the stored copy (and avoids duplicate SCADA cards on
+    # reload) rather than being preserved as a separate "user-added" card.
+    if ctype == "custom:kirkhill-wind-scada":
+        return ctype
     # ApexCharts cards store title in header.title
     if ctype == "custom:apexcharts-card" and card.get("header", {}).get("title"):
         return f"{ctype}:title:{card['header']['title']}"
@@ -793,11 +799,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                     {
                         "type": "custom:kirkhill-wind-scada",
                         "title": "",
-                        "farm_power_entity": "sensor.kirk_hill_wind_farm_power_site",
-                        "grid_energy_entity": "sensor.kirk_hill_wind_farm_generation_today",
-                        "owner_power_entity": "sensor.kirk_hill_wind_farm_power_owner",
-                        "owner_grid_energy_entity": "sensor.kirk_hill_wind_farm_generation_today",
-                        "owner_generation_today_entity": "sensor.kirk_hill_wind_farm_generation_today",
+                        "farm_power_entity": farm_scoped("site", "farm_power"),
+                        "grid_energy_entity": farm_scoped("site", "farm_generation_today"),
+                        "owner_power_entity": farm_scoped("owner", "farm_power"),
+                        "owner_grid_energy_entity": farm_scoped("owner", "farm_generation_today"),
+                        "owner_generation_today_entity": farm_scoped("owner", "farm_generation_today"),
                         "wind_speed_entity": "sensor.kirk_hill_wind_farm_wind_speed",
                         "wind_forecast_entity": "sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_hour",
                         "active_entity": "sensor.kirk_hill_wind_farm_active_turbines",

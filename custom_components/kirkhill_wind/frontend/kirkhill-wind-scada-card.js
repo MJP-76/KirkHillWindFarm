@@ -601,14 +601,10 @@ class KirkHillWindScada extends HTMLElement {
     } else {
       this._setText(root, '[data-user-gen="time"]', "Last updated: —");
     }
+    // Owner export power is reported in kW; display the share in watts.
     const ownerPower = this._num(config.owner_power_entity);
-    const sitePower = this._num(config.farm_power_entity);
     if (ownerPower !== null) {
-      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerPower, 0)} W`);
-    } else if (sitePower !== null) {
-      // Fallback: calculate from site power if owner share % available
-      // Note: owner share % would need to be passed or calculated
-      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerPower, 0)} W`);
+      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerPower * 1000, 0)} W`);
     } else {
       this._setText(root, '[data-user-gen="share"]', "Your share: —");
     }
