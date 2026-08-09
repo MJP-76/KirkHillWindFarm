@@ -53,6 +53,10 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.33 (pre-release)
+- **Generation & capacity panel**: the top-right "Your generation" box is now "Generation & capacity" with separate lines for Generation (today), Percentage (owner capacity factor), Your share (live watts), Capacity (site capacity factor) and Share % (observed % of site generation today).
+- **Wind & forecast panel**: wind speed and next-hour forecast now live in their own box directly below Generation & capacity (site capacity moved up into the panel above).
+
 ## Version 4.8.32 (pre-release)
 - **Turbines staggered**: turbines are now arranged in two staggered columns (even on the left, odd on the right) instead of one tall column, so the turbine block fits in a much smaller top-to-bottom section.
 - **Transformer label on the bus**: "TRANSFORMER" and "33 kV" now sit directly on the site collection bus bar (bigger, bold) instead of floating beside it.

@@ -533,25 +533,30 @@ class KirkHillWindScada extends HTMLElement {
         <text class="chip-label" x="164" y="44">Active Turbines</text>
         <text class="chip-value" data-chip="active" x="310" y="44" text-anchor="end">—</text>
 
-        <!-- Right side: Your Generation (far right) -->
+        <!-- Right side: Generation & capacity (far right) -->
         <g class="user-gen" data-user-gen="panel">
-          <rect x="870" y="24" width="330" height="104" rx="8"/>
-          <text class="user-gen-title" x="882" y="46">Your generation</text>
-          <text class="user-gen-value" data-user-gen="energy" x="882" y="74">—</text>
-          <text class="user-gen-time" data-user-gen="time" x="882" y="96">Last updated: —</text>
-          <text class="user-gen-share" data-user-gen="share" x="882" y="120">Your share: —</text>
+          <rect x="870" y="24" width="330" height="156" rx="8"/>
+          <text class="user-gen-title" x="882" y="48">Generation &amp; capacity</text>
+          <text class="user-gen-label" x="882" y="76">Generation</text>
+          <text class="user-gen-value" data-user-gen="energy" x="1200" y="76" text-anchor="end">—</text>
+          <text class="user-gen-label" x="882" y="100">Percentage</text>
+          <text class="user-gen-value" data-user-gen="pct" x="1200" y="100" text-anchor="end">—</text>
+          <text class="user-gen-label" x="882" y="124">Your share</text>
+          <text class="user-gen-value user-gen-share" data-user-gen="share" x="1200" y="124" text-anchor="end">—</text>
+          <text class="user-gen-label" x="882" y="148">Capacity</text>
+          <text class="user-gen-value" data-user-gen="capacity" x="1200" y="148" text-anchor="end">—</text>
+          <text class="user-gen-label" x="882" y="172">Share %</text>
+          <text class="user-gen-value" data-user-gen="sharepct" x="1200" y="172" text-anchor="end">—</text>
         </g>
 
-        <!-- Right side: Wind & Capacity panel (below Your Generation) -->
+        <!-- Right side: Wind & forecast panel (below Generation & capacity) -->
         <g class="wind-panel" data-wind="panel">
-          <rect x="870" y="140" width="330" height="112" rx="8"/>
-          <text class="wind-title" x="882" y="164">Wind &amp; capacity</text>
-          <text class="wind-label" x="882" y="192">Current wind</text>
-          <text class="wind-value" data-chip="wind" x="1200" y="192" text-anchor="end">—</text>
-          <text class="wind-label" x="882" y="216">Forecast 1h</text>
-          <text class="wind-value" data-chip="forecast" x="1200" y="216" text-anchor="end">—</text>
-          <text class="wind-label" x="882" y="240">Site capacity</text>
-          <text class="wind-value" data-chip="capacity" x="1200" y="240" text-anchor="end">—</text>
+          <rect x="870" y="190" width="330" height="82" rx="8"/>
+          <text class="wind-title" x="882" y="214">Wind &amp; forecast</text>
+          <text class="wind-label" x="882" y="240">Current wind</text>
+          <text class="wind-value" data-chip="wind" x="1200" y="240" text-anchor="end">—</text>
+          <text class="wind-label" x="882" y="264">Forecast 1h</text>
+          <text class="wind-value" data-chip="forecast" x="1200" y="264" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -614,10 +619,8 @@ class KirkHillWindScada extends HTMLElement {
     this._setText(root, '[data-chip="active"]', active === null ? "—" : `${this._fmt(active, 0)} of ${config.turbines.length}`);
     const forecast = this._num(config.wind_forecast_entity);
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
-    const capacity = this._num(config.capacity_entity);
-    this._setText(root, '[data-chip="capacity"]', capacity === null ? "—" : `${this._fmt(capacity, 0)}%`);
 
-    // Your generation panel (top right)
+    // Generation & capacity panel (top right)
     const ownerGenToday = this._num(config.owner_generation_today_entity);
     if (ownerGenToday !== null) {
       const scaled = this._scaleKwh(ownerGenToday);
@@ -625,19 +628,18 @@ class KirkHillWindScada extends HTMLElement {
     } else {
       this._setText(root, '[data-user-gen="energy"]', "—");
     }
-    const lastUpdated = this._attr(config.owner_generation_today_entity, "last_updated") ||
-                         this._attr(config.owner_generation_today_entity, "last_changed");
-    if (lastUpdated) {
-      this._setText(root, '[data-user-gen="time"]', `Last updated: ${this._fmtTime(lastUpdated)}`);
-    } else {
-      this._setText(root, '[data-user-gen="time"]', "Last updated: —");
-    }
+    const ownerCap = this._num(config.owner_capacity_entity);
+    this._setText(root, '[data-user-gen="pct"]', ownerCap === null ? "—" : `${this._fmt(ownerCap, 1)}%`);
+    const siteCap = this._num(config.capacity_entity);
+    this._setText(root, '[data-user-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
     // Your share: owner export power is reported in kW; display in watts.
-    if (ownerExportKw !== null) {
-      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerExportKw * 1000, 0)} W`);
-    } else {
-      this._setText(root, '[data-user-gen="share"]', "Your share: —");
-    }
+    this._setText(root, '[data-user-gen="share"]', ownerExportKw === null ? "—" : `${this._fmt(ownerExportKw * 1000, 0)} W`);
+    // Your share as a % of the site's generation today (observed).
+    const sharePct =
+      ownerEnergyKwh !== null && siteEnergyKwh !== null && siteEnergyKwh > 0
+        ? (ownerEnergyKwh / siteEnergyKwh) * 100
+        : null;
+    this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct, 3)}%`);
 
     // Alarm indicator (always visible: OK or flashing ALARM)
     const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
@@ -744,14 +746,14 @@ class KirkHillWindScada extends HTMLElement {
       .chip-label { fill: #475569; font: 11px sans-serif; }
       .chip-value { fill: #0f172a; font: bold 12px sans-serif; }
 
-      /* User generation panel (top right) */
+      /* Generation & capacity panel (top right) */
       .user-gen rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
       .user-gen-title { fill: #475569; font: bold 20px sans-serif; }
-      .user-gen-value { fill: #0f172a; font: bold 20px sans-serif; }
-      .user-gen-time { fill: #64748b; font: 20px sans-serif; }
-      .user-gen-share { fill: #16a34a; font: bold 20px sans-serif; }
+      .user-gen-label { fill: #475569; font: 18px sans-serif; }
+      .user-gen-value { fill: #0f172a; font: bold 18px sans-serif; }
+      .user-gen-share { fill: #16a34a; font: bold 18px sans-serif; }
 
-      /* Wind & capacity panel (below Your Generation) */
+      /* Wind & forecast panel (below Generation & capacity) */
       .wind-panel rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
       .wind-title { fill: #475569; font: bold 20px sans-serif; }
       .wind-label { fill: #475569; font: 20px sans-serif; }
