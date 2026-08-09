@@ -390,14 +390,15 @@ class KirkHillWindScada extends HTMLElement {
 
   _layout() {
     const H = this._vbH;
-    const mid = Math.round(H / 2);
     const tCount = this.config.turbines.length;
     const legendY = H - 150;
     const tBottom = legendY - 60;
 
-    // Vertically centre the turbine stack around the mid-line so the whole
-    // flow path (turbines -> bus -> transformer -> grid) reads as one
-    // centred single-line diagram on any window size.
+    // Transformer + National Grid live at the bottom of the card; the bus
+    // runs down to them, so the flow reads turbines -> bus -> transformer ->
+    // grid as a vertical single-line diagram on any window size.
+    const gridY = H - 190;
+
     const bandTop = 72;
     const band = Math.max(160, tBottom - bandTop);
     const nodeH = 80;
@@ -411,8 +412,8 @@ class KirkHillWindScada extends HTMLElement {
       H,
       gap,
       tTop,
-      mid,
-      busY2: tBottom,
+      gridY,
+      busY2: gridY,
       busSummaryY: legendY - 24,
       legendY,
     };
@@ -478,7 +479,7 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   _buildTransformer(layout) {
-    const cy = layout.mid;
+    const cy = layout.gridY;
     return `
       <g class="transformer">
         <line class="feed-line" x1="660" y1="${cy}" x2="830" y2="${cy}" marker-end="url(#khscada-arrow)"/>
@@ -498,7 +499,7 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   _buildGrid(layout) {
-    const cy = layout.mid;
+    const cy = layout.gridY;
     const ownerCx = 1015;
     const siteCx = 1205;
     return `

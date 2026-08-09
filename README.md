@@ -53,6 +53,9 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.28 (pre-release)
+- **Transformer and National Grid moved to the bottom**: the single-line diagram now reads turbines → bus → transformer → grid flowing down the card, with the transformer and National Grid box at the bottom (below the turbine stack) instead of the vertical centre
+
 ## Version 4.8.27 (pre-release)
 - **Wind section uniform text**: "Current wind", "Forecast 1h" and "Site capacity" moved out of the small 11px chips into a proper "Wind & capacity" panel below "Your generation", now matching the same 20px size as the rest of the right-hand text
 
