@@ -392,26 +392,25 @@ class KirkHillWindScada extends HTMLElement {
     const H = this._vbH;
     const tCount = this.config.turbines.length;
     const legendY = H - 150;
-    const tBottom = legendY - 60;
 
-    // Transformer + National Grid live at the bottom of the card; the bus
+    // Transformer label + National Grid live at the bottom of the card; the bus
     // runs down to them, so the flow reads turbines -> bus -> transformer ->
     // grid as a vertical single-line diagram on any window size.
     const gridY = H - 190;
 
-    const bandTop = 72;
-    const band = Math.max(160, tBottom - bandTop);
-    const nodeH = 80;
-    const minRow = 82;
-    let gap = (band - nodeH) / Math.max(1, tCount - 1);
-    if (gap < minRow) gap = minRow;
-    const blockH = (tCount - 1) * gap + nodeH;
-    const tTop = bandTop + (band - blockH) / 2;
+    // Staggered turbine layout: even turbines on the left column, odd turbines
+    // on a right column, so the block fits in a smaller top-to-bottom section.
+    const tTop = 76;
+    const rows = Math.ceil(tCount / 2);
+    const rowH = Math.max(
+      48,
+      Math.min(56, Math.round((gridY - 150 - tTop) / Math.max(1, rows - 1)))
+    );
 
     return {
       H,
-      gap,
       tTop,
+      rowH,
       gridY,
       busY2: gridY,
       busSummaryY: legendY - 24,
@@ -440,21 +439,24 @@ class KirkHillWindScada extends HTMLElement {
     let dotsHtml = "";
 
     turbines.forEach((t, i) => {
-      const cx = 260;
-      const top = layout.tTop + i * layout.gap;
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const x = col === 0 ? 30 : 290;
+      const cx = x + 230;
+      const top = layout.tTop + row * layout.rowH;
       const cy = top + 40;
       const num = this._escape(t.id || `T${i + 1}`);
       const stateEntity = t.state_entity;
       if (stateEntity) this._turbineEntities.set(t.id || `T${i + 1}`, stateEntity);
       turbinesHtml += `
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
-          <rect class="node-rect" x="30" y="${top}" width="230" height="80" rx="8"/>
-          <text class="t-id" x="44" y="${top + 16}">${num}</text>
-          <rect class="status-pill" x="150" y="${top + 7}" width="96" height="20" rx="10"/>
-          <text class="t-status" x="198" y="${top + 21}"></text>
-          <text class="t-power" x="44" y="${top + 50}">—</text>
-          <text class="t-detail" x="44" y="${top + 67}"></text>
-          <text class="t-last" x="44" y="${top + 77}"></text>
+          <rect class="node-rect" x="${x}" y="${top}" width="230" height="80" rx="8"/>
+          <text class="t-id" x="${x + 14}" y="${top + 16}">${num}</text>
+          <rect class="status-pill" x="${x + 120}" y="${top + 7}" width="96" height="20" rx="10"/>
+          <text class="t-status" x="${x + 168}" y="${top + 21}"></text>
+          <text class="t-power" x="${x + 14}" y="${top + 50}">—</text>
+          <text class="t-detail" x="${x + 14}" y="${top + 67}"></text>
+          <text class="t-last" x="${x + 14}" y="${top + 77}"></text>
         </g>
       `;
       linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="600" y2="${cy}"/>`;
@@ -482,8 +484,8 @@ class KirkHillWindScada extends HTMLElement {
     return `
       <g class="transformer">
         <line class="feed-line" x1="660" y1="${cy}" x2="975" y2="${cy}" marker-end="url(#khscada-arrow)"/>
-        <text class="xfmr-title" transform="rotate(90 694 ${cy - 130})" x="694" y="${cy - 130}" text-anchor="middle">TRANSFORMER</text>
-        <text class="xfmr-sub" x="694" y="${cy - 52}" text-anchor="middle">33 kV</text>
+        <text class="xfmr-title" transform="rotate(90 630 ${cy - 130})" x="630" y="${cy - 130}" text-anchor="middle">TRANSFORMER</text>
+        <text class="xfmr-sub" x="630" y="${cy - 52}" text-anchor="middle">33 kV</text>
         <circle class="flow-dot" data-flow="grid" r="5">
           <animateMotion dur="10s" repeatCount="indefinite"
             path="M 660 ${cy} L 975 ${cy}"/>
@@ -723,9 +725,9 @@ class KirkHillWindScada extends HTMLElement {
       /* Bus */
       .bus rect { fill: #e0f2fe; stroke: #2563eb; stroke-width: 2; }
 
-      /* Transformer label (down the site collection bus) */
-      .xfmr-title { fill: #0f172a; font: bold 14px sans-serif; }
-      .xfmr-sub { fill: #475569; font: 12px sans-serif; }
+      /* Transformer label (overlaid down the site collection bus) */
+      .xfmr-title { fill: #0f172a; font: bold 16px sans-serif; }
+      .xfmr-sub { fill: #0f172a; font: bold 14px sans-serif; }
 
       /* Grid node */
       .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }

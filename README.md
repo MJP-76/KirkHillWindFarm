@@ -53,6 +53,10 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.32 (pre-release)
+- **Turbines staggered**: turbines are now arranged in two staggered columns (even on the left, odd on the right) instead of one tall column, so the turbine block fits in a much smaller top-to-bottom section.
+- **Transformer label on the bus**: "TRANSFORMER" and "33 kV" now sit directly on the site collection bus bar (bigger, bold) instead of floating beside it.
+
 ## Version 4.8.31 (pre-release)
 - **Simpler single-line diagram**: the separate transformer box is removed — "TRANSFORMER" now reads vertically down the site collection bus with a "33 kV" label, and the top "SITE COLLECTION BUS" wording is dropped. The National Grid box is moved up so its bottom edge lines up exactly with the bottom of the site collection bus, and the flow line enters the grid box there.
 
