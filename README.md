@@ -53,6 +53,9 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.27 (pre-release)
+- **Wind section uniform text**: "Current wind", "Forecast 1h" and "Site capacity" moved out of the small 11px chips into a proper "Wind & capacity" panel below "Your generation", now matching the same 20px size as the rest of the right-hand text
+
 ## Version 4.8.26 (pre-release)
 - **Fix state class warning**: turbine "Generation today" sensors now use `state_class: total` (with `device_class: energy`) instead of `measurement`, matching the farm-level today sensor and Home Assistant's validation, so the "state class 'measurement' is impossible considering device class 'energy'" warnings are gone
 

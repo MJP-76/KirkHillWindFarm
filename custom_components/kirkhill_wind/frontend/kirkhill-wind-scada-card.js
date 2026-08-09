@@ -536,17 +536,6 @@ class KirkHillWindScada extends HTMLElement {
         <text class="chip-label" x="164" y="44">Active Turbines</text>
         <text class="chip-value" data-chip="active" x="310" y="44" text-anchor="end">—</text>
 
-        <!-- Right side: Current Wind, Forecast 1h, Site Capacity -->
-        <rect x="700" y="60" width="160" height="30" rx="15"/>
-        <text class="chip-label" x="712" y="80">Current Wind</text>
-        <text class="chip-value" data-chip="wind" x="852" y="80" text-anchor="end">—</text>
-        <rect x="700" y="100" width="160" height="30" rx="15"/>
-        <text class="chip-label" x="712" y="120">Forecast 1h</text>
-        <text class="chip-value" data-chip="forecast" x="852" y="120" text-anchor="end">—</text>
-        <rect x="700" y="140" width="160" height="30" rx="15"/>
-        <text class="chip-label" x="712" y="160">Site Capacity</text>
-        <text class="chip-value" data-chip="capacity" x="852" y="160" text-anchor="end">—</text>
-
         <!-- Right side: Your Generation (far right) -->
         <g class="user-gen" data-user-gen="panel">
           <rect x="870" y="24" width="330" height="104" rx="8"/>
@@ -554,6 +543,18 @@ class KirkHillWindScada extends HTMLElement {
           <text class="user-gen-value" data-user-gen="energy" x="882" y="74">—</text>
           <text class="user-gen-time" data-user-gen="time" x="882" y="96">Last updated: —</text>
           <text class="user-gen-share" data-user-gen="share" x="882" y="120">Your share: —</text>
+        </g>
+
+        <!-- Right side: Wind & Capacity panel (below Your Generation) -->
+        <g class="wind-panel" data-wind="panel">
+          <rect x="870" y="140" width="330" height="112" rx="8"/>
+          <text class="wind-title" x="882" y="164">Wind &amp; capacity</text>
+          <text class="wind-label" x="882" y="192">Current wind</text>
+          <text class="wind-value" data-chip="wind" x="1200" y="192" text-anchor="end">—</text>
+          <text class="wind-label" x="882" y="216">Forecast 1h</text>
+          <text class="wind-value" data-chip="forecast" x="1200" y="216" text-anchor="end">—</text>
+          <text class="wind-label" x="882" y="240">Site capacity</text>
+          <text class="wind-value" data-chip="capacity" x="1200" y="240" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -755,6 +756,12 @@ class KirkHillWindScada extends HTMLElement {
       .user-gen-value { fill: #f8fafc; font: bold 20px sans-serif; }
       .user-gen-time { fill: #64748b; font: 20px sans-serif; }
       .user-gen-share { fill: #22c55e; font: bold 20px sans-serif; }
+
+      /* Wind & capacity panel (below Your Generation) */
+      .wind-panel rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
+      .wind-title { fill: #94a3b8; font: bold 20px sans-serif; }
+      .wind-label { fill: #94a3b8; font: 20px sans-serif; }
+      .wind-value { fill: #f8fafc; font: bold 20px sans-serif; }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #052e16; stroke: #22c55e; stroke-width: 2; }
