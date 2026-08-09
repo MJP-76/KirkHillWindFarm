@@ -165,8 +165,24 @@ async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> No
                 }
             )
         except (HomeAssistantError, vol.Invalid) as err:
-            _LOGGER.warning("Failed to create Lovelace dashboard: %s", err)
-            return
+            if "url_already_exists" in str(err):
+                # Race: another call created it. Re-fetch and continue.
+                _LOGGER.debug("Dashboard URL already exists (race), fetching existing item")
+                await dashboards_collection.async_load()
+                item = next(
+                    (
+                        existing
+                        for existing in dashboards_collection.async_items()
+                        if existing.get(CONF_URL_PATH) == url_path
+                    ),
+                    None,
+                )
+            else:
+                _LOGGER.warning("Failed to create Lovelace dashboard: %s", err)
+                return
+    if item is None:
+        _LOGGER.warning("Dashboard item not found after creation/lookup; aborting")
+        return
 
     lovelace_store = hass.data[LOVELACE_DATA].dashboards.get(url_path)
     if lovelace_store is None:
@@ -650,6 +666,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             if uid.startswith(turbine_prefix)
         }
     )
+    if not present_turbine_ids:
+        # No turbine entities registered yet (e.g. first poll hasn't completed).
+        # Fall back to T1-T8 so the SCADA card config doesn't throw.
+        _LOGGER.debug("No turbine entities registered yet; falling back to T1–T8")
+        present_turbine_ids = [f"T{i}" for i in range(1, 9)]
 
     owner_generation_entities = [
         (
@@ -805,12 +826,12 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "owner_power_entity": farm_scoped("owner", "farm_power"),
                         "owner_grid_energy_entity": farm_scoped("owner", "farm_generation_today"),
                         "owner_generation_today_entity": farm_scoped("owner", "farm_generation_today"),
-                        "wind_speed_entity": "sensor.kirk_hill_wind_farm_wind_speed",
-                        "wind_forecast_entity": "sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_hour",
-                        "active_entity": "sensor.kirk_hill_wind_farm_active_turbines",
-                        "alarm_entity": "binary_sensor.kirk_hill_wind_farm_alarm",
-                        "capacity_entity": "sensor.kirk_hill_wind_farm_capacity_factor_site",
-                        "owner_capacity_entity": "sensor.kirk_hill_wind_farm_capacity_factor_owner",
+                        "wind_speed_entity": farm("farm_wind_speed"),
+                        "wind_forecast_entity": farm("farm_open_meteo_forecast_wind_next_hour"),
+                        "active_entity": farm("farm_active_turbines"),
+                        "alarm_entity": farm("farm_alarm"),
+                        "capacity_entity": farm("farm_capacity_factor_site"),
+                        "owner_capacity_entity": farm("farm_capacity_factor_owner"),
                         "turbines": scada_turbines,
                     },
                 ],
