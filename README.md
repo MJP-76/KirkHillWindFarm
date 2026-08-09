@@ -53,6 +53,9 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.31 (pre-release)
+- **Simpler single-line diagram**: the separate transformer box is removed — "TRANSFORMER" now reads vertically down the site collection bus with a "33 kV" label, and the top "SITE COLLECTION BUS" wording is dropped. The National Grid box is moved up so its bottom edge lines up exactly with the bottom of the site collection bus, and the flow line enters the grid box there.
+
 ## Version 4.8.30 (pre-release)
 - **Light theme**: the SCADA card now uses a light background (slate-100 shell, white panels) with dark slate text and slightly deeper accent colours (sky/blue bus, green grid, status pills unchanged), replacing the near-black navy background that was hard to read. Flow dots, arrows and hover highlights use a darker sky blue that stands out on light.
 

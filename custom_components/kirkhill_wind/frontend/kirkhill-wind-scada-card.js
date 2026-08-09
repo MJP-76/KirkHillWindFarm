@@ -473,7 +473,6 @@ class KirkHillWindScada extends HTMLElement {
     return `
       <g class="bus">
         <rect x="600" y="30" width="60" height="${layout.busY2 - 30}" rx="6"/>
-        <text class="bus-title" x="630" y="20" text-anchor="middle">SITE COLLECTION BUS</text>
       </g>
     `;
   }
@@ -482,18 +481,13 @@ class KirkHillWindScada extends HTMLElement {
     const cy = layout.gridY;
     return `
       <g class="transformer">
-        <line class="feed-line" x1="660" y1="${cy}" x2="830" y2="${cy}" marker-end="url(#khscada-arrow)"/>
-        <rect x="830" y="${cy - 70}" width="130" height="140" rx="8"/>
-        <text class="xfmr-title" x="895" y="${cy - 54}" text-anchor="middle">TRANSFORMER</text>
-        <circle cx="895" cy="${cy - 25}" r="9"/>
-        <circle cx="872" cy="${cy - 5}" r="9"/>
-        <circle cx="918" cy="${cy - 5}" r="9"/>
-        <text class="xfmr-sub" x="895" y="${cy + 32}" text-anchor="middle">33 kV → 132 kV</text>
+        <line class="feed-line" x1="660" y1="${cy}" x2="975" y2="${cy}" marker-end="url(#khscada-arrow)"/>
+        <text class="xfmr-title" transform="rotate(90 694 ${cy - 130})" x="694" y="${cy - 130}" text-anchor="middle">TRANSFORMER</text>
+        <text class="xfmr-sub" x="694" y="${cy - 52}" text-anchor="middle">33 kV</text>
         <circle class="flow-dot" data-flow="grid" r="5">
           <animateMotion dur="10s" repeatCount="indefinite"
-            path="M 660 ${cy} L 830 ${cy} L 960 ${cy} L 1110 ${cy}"/>
+            path="M 660 ${cy} L 975 ${cy}"/>
         </circle>
-        <line class="feed-line" x1="960" y1="${cy}" x2="1110" y2="${cy}" marker-end="url(#khscada-arrow)"/>
       </g>
     `;
   }
@@ -504,23 +498,23 @@ class KirkHillWindScada extends HTMLElement {
     const siteCx = 1205;
     return `
       <g class="grid">
-        <rect class="grid-rect" x="975" y="${cy - 135}" width="265" height="270" rx="10"/>
-        <text class="grid-title" x="1110" y="${cy - 110}" text-anchor="middle">NATIONAL</text>
-        <text class="grid-title" x="1110" y="${cy - 86}" text-anchor="middle">GRID</text>
-        <text class="grid-col" x="${ownerCx}" y="${cy - 58}" text-anchor="middle">OWNER</text>
-        <text class="grid-col" x="${siteCx}" y="${cy - 58}" text-anchor="middle">SITE</text>
-        <line class="grid-divider" x1="985" y1="${cy - 40}" x2="1230" y2="${cy - 40}"/>
-        <text class="grid-label" x="1110" y="${cy - 18}" text-anchor="middle">Export</text>
-        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy + 14}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-power-unit" x="${ownerCx}" y="${cy + 32}" text-anchor="middle"></text>
-        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy + 14}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="site-power-unit" x="${siteCx}" y="${cy + 32}" text-anchor="middle"></text>
-        <line class="grid-divider" x1="985" y1="${cy + 48}" x2="1230" y2="${cy + 48}"/>
-        <text class="grid-label" x="1110" y="${cy + 70}" text-anchor="middle">To grid today</text>
-        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy + 96}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy + 114}" text-anchor="middle">kWh</text>
-        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy + 96}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy + 114}" text-anchor="middle">kWh</text>
+        <rect class="grid-rect" x="975" y="${cy - 270}" width="265" height="270" rx="10"/>
+        <text class="grid-title" x="1110" y="${cy - 245}" text-anchor="middle">NATIONAL</text>
+        <text class="grid-title" x="1110" y="${cy - 221}" text-anchor="middle">GRID</text>
+        <text class="grid-col" x="${ownerCx}" y="${cy - 193}" text-anchor="middle">OWNER</text>
+        <text class="grid-col" x="${siteCx}" y="${cy - 193}" text-anchor="middle">SITE</text>
+        <line class="grid-divider" x1="985" y1="${cy - 175}" x2="1230" y2="${cy - 175}"/>
+        <text class="grid-label" x="1110" y="${cy - 153}" text-anchor="middle">Export</text>
+        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy - 121}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-power-unit" x="${ownerCx}" y="${cy - 103}" text-anchor="middle"></text>
+        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy - 121}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="site-power-unit" x="${siteCx}" y="${cy - 103}" text-anchor="middle"></text>
+        <line class="grid-divider" x1="985" y1="${cy - 87}" x2="1230" y2="${cy - 87}"/>
+        <text class="grid-label" x="1110" y="${cy - 65}" text-anchor="middle">To grid today</text>
+        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy - 39}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
+        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy - 39}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
       </g>
     `;
   }
@@ -728,13 +722,10 @@ class KirkHillWindScada extends HTMLElement {
 
       /* Bus */
       .bus rect { fill: #e0f2fe; stroke: #2563eb; stroke-width: 2; }
-      .bus-title { fill: #1d4ed8; font: bold 11px sans-serif; }
 
-      /* Transformer */
-      .transformer rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
-      .transformer circle { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 1.5; }
-      .xfmr-title { fill: #0f172a; font: bold 12px sans-serif; }
-      .xfmr-sub { fill: #475569; font: 10px sans-serif; }
+      /* Transformer label (down the site collection bus) */
+      .xfmr-title { fill: #0f172a; font: bold 14px sans-serif; }
+      .xfmr-sub { fill: #475569; font: 12px sans-serif; }
 
       /* Grid node */
       .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }
