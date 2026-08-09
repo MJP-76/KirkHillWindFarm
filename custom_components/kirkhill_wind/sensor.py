@@ -582,7 +582,7 @@ class TurbineStateSensor(KirkHillTurbineEntity, SensorEntity):
 class TurbineGenerationTodaySensor(KirkHillTurbineEntity, SensorEntity, RestoreEntity):
     _attr_name = "Generation today"
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_icon = "mdi:chart-bar"
     _attr_should_poll = False

@@ -53,6 +53,9 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.26 (pre-release)
+- **Fix state class warning**: turbine "Generation today" sensors now use `state_class: total` (with `device_class: energy`) instead of `measurement`, matching the farm-level today sensor and Home Assistant's validation, so the "state class 'measurement' is impossible considering device class 'energy'" warnings are gone
+
 ## Version 4.8.25 (pre-release)
 - **Uniform right-side text**: every label, value and unit in the National Grid box and the "Your Generation" panel now uses a single 20px size (bold for values/titles) instead of the previous mix of 11–27px, so the right-hand figures read as one consistent block
 
