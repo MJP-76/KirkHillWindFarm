@@ -53,6 +53,9 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.30 (pre-release)
+- **Light theme**: the SCADA card now uses a light background (slate-100 shell, white panels) with dark slate text and slightly deeper accent colours (sky/blue bus, green grid, status pills unchanged), replacing the near-black navy background that was hard to read. Flow dots, arrows and hover highlights use a darker sky blue that stands out on light.
+
 ## Version 4.8.29 (pre-release)
 - **Fix farm generation counters stuck on stale values**: the farm "generation today / yesterday / week / month / year / all-time" sensors were permanently frozen at the value restored on startup — the restored value took priority over live API data forever, so e.g. "Generation today" stopped updating after the first restart and showed yesterday's total. Live API data now takes priority, with the restored value used only as a placeholder until the first fetch after startup.
 

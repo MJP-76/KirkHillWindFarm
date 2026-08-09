@@ -194,11 +194,11 @@ class KirkHillWindScada extends HTMLElement {
           <svg viewBox="0 0 ${vb.w} ${layout.H}" role="img" aria-label="Wind farm SCADA diagram">
             <defs>
               <pattern id="khscada-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.08)" stroke-width="1"/>
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,116,139,0.25)" stroke-width="1"/>
               </pattern>
               <marker id="khscada-arrow" viewBox="0 0 10 10" refX="9" refY="5"
                       markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#0284c7"/>
               </marker>
             </defs>
             <rect class="bg" x="0" y="0" width="${vb.w}" height="${layout.H}" fill="url(#khscada-grid)"/>
@@ -707,68 +707,68 @@ class KirkHillWindScada extends HTMLElement {
     return `
       :host { display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; }
-      .shell { padding: 12px; background: #0b1120; border-radius: 12px; height: 100%; box-sizing: border-box; }
+      .shell { padding: 12px; background: #f1f5f9; border-radius: 12px; height: 100%; box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
-      .bg { fill: #0b1120; }
+      .bg { fill: #f1f5f9; }
 
       /* Lines */
-      .feed-line { stroke: rgba(56,189,248,0.25); stroke-width: 3; }
-      .flow-dot { fill: #38bdf8; }
+      .feed-line { stroke: rgba(2,132,199,0.35); stroke-width: 3; }
+      .flow-dot { fill: #0284c7; }
 
       /* Turbine nodes */
-      .node-rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
+      .node-rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
       .node-rect[data-status] { opacity: 1; }
-      .turbine:hover .node-rect { stroke: #38bdf8; }
-      .t-id { fill: #e2e8f0; font: bold 17px sans-serif; }
+      .turbine:hover .node-rect { stroke: #0284c7; }
+      .t-id { fill: #0f172a; font: bold 17px sans-serif; }
       .status-pill { fill: #22c55e; }
       .t-status { fill: #06121f; font: bold 10px sans-serif; text-anchor: middle; }
-      .t-power { fill: #f8fafc; font: bold 23px sans-serif; }
-      .t-detail { fill: #94a3b8; font: 11px sans-serif; }
+      .t-power { fill: #0f172a; font: bold 23px sans-serif; }
+      .t-detail { fill: #475569; font: 11px sans-serif; }
       .t-last { fill: #64748b; font: 10px sans-serif; }
 
       /* Bus */
-      .bus rect { fill: #0f2742; stroke: #1d4ed8; stroke-width: 2; }
-      .bus-title { fill: #60a5fa; font: bold 11px sans-serif; }
+      .bus rect { fill: #e0f2fe; stroke: #2563eb; stroke-width: 2; }
+      .bus-title { fill: #1d4ed8; font: bold 11px sans-serif; }
 
       /* Transformer */
-      .transformer rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
-      .transformer circle { fill: #334155; stroke: #64748b; stroke-width: 1.5; }
-      .xfmr-title { fill: #e2e8f0; font: bold 12px sans-serif; }
-      .xfmr-sub { fill: #94a3b8; font: 10px sans-serif; }
+      .transformer rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .transformer circle { fill: #e2e8f0; stroke: #94a3b8; stroke-width: 1.5; }
+      .xfmr-title { fill: #0f172a; font: bold 12px sans-serif; }
+      .xfmr-sub { fill: #475569; font: 10px sans-serif; }
 
       /* Grid node */
-      .grid-rect { fill: #1a2e05; stroke: #4d7c0f; stroke-width: 2; }
-      .grid-title { fill: #a3e635; font: bold 20px sans-serif; }
-      .grid-col { fill: #a3e635; font: bold 20px sans-serif; }
-      .grid-label { fill: #94a3b8; font: 20px sans-serif; }
-      .grid-power { fill: #f8fafc; font: bold 20px sans-serif; }
-      .grid-energy { fill: #f8fafc; font: bold 20px sans-serif; }
+      .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }
+      .grid-title { fill: #4d7c0f; font: bold 20px sans-serif; }
+      .grid-col { fill: #4d7c0f; font: bold 20px sans-serif; }
+      .grid-label { fill: #475569; font: 20px sans-serif; }
+      .grid-power { fill: #0f172a; font: bold 20px sans-serif; }
+      .grid-energy { fill: #0f172a; font: bold 20px sans-serif; }
       .grid-unit { fill: #64748b; font: 20px sans-serif; }
-      .grid-divider { stroke: #365314; stroke-width: 2; }
+      .grid-divider { stroke: #84cc16; stroke-width: 2; }
 
       /* Chips */
-      .chips rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
-      .chip-label { fill: #94a3b8; font: 11px sans-serif; }
-      .chip-value { fill: #f8fafc; font: bold 12px sans-serif; }
+      .chips rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .chip-label { fill: #475569; font: 11px sans-serif; }
+      .chip-value { fill: #0f172a; font: bold 12px sans-serif; }
 
       /* User generation panel (top right) */
-      .user-gen rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
-      .user-gen-title { fill: #94a3b8; font: bold 20px sans-serif; }
-      .user-gen-value { fill: #f8fafc; font: bold 20px sans-serif; }
+      .user-gen rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .user-gen-title { fill: #475569; font: bold 20px sans-serif; }
+      .user-gen-value { fill: #0f172a; font: bold 20px sans-serif; }
       .user-gen-time { fill: #64748b; font: 20px sans-serif; }
-      .user-gen-share { fill: #22c55e; font: bold 20px sans-serif; }
+      .user-gen-share { fill: #16a34a; font: bold 20px sans-serif; }
 
       /* Wind & capacity panel (below Your Generation) */
-      .wind-panel rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
-      .wind-title { fill: #94a3b8; font: bold 20px sans-serif; }
-      .wind-label { fill: #94a3b8; font: 20px sans-serif; }
-      .wind-value { fill: #f8fafc; font: bold 20px sans-serif; }
+      .wind-panel rect { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
+      .wind-title { fill: #475569; font: bold 20px sans-serif; }
+      .wind-label { fill: #475569; font: 20px sans-serif; }
+      .wind-value { fill: #0f172a; font: bold 20px sans-serif; }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
-      .alarm rect { fill: #052e16; stroke: #22c55e; stroke-width: 2; }
-      .alarm-text { fill: #4ade80; font: bold 12px sans-serif; }
-      .alarm.fault rect { fill: #450a0a; stroke: #ef4444; stroke-width: 2; }
-      .alarm.fault .alarm-text { fill: #fca5a5; }
+      .alarm rect { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
+      .alarm-text { fill: #15803d; font: bold 12px sans-serif; }
+      .alarm.fault rect { fill: #fef2f2; stroke: #ef4444; stroke-width: 2; }
+      .alarm.fault .alarm-text { fill: #b91c1c; }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
       @keyframes khscada-alarm-flash {
         0%, 100% { opacity: 1; }
@@ -777,7 +777,7 @@ class KirkHillWindScada extends HTMLElement {
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
-      .lg-item { display: inline-flex; align-items: center; gap: 5px; color: #94a3b8; font: 10px sans-serif; }
+      .lg-item { display: inline-flex; align-items: center; gap: 5px; color: #475569; font: 10px sans-serif; }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
       .empty { padding: 24px 16px; color: var(--secondary-text-color); }
