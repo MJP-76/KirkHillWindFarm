@@ -218,11 +218,8 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
                 self._restored_value = None
                 self._restored_attrs = None
 
-    def _generation_kwh(self) -> float | None:
-        # Use restored value if API data not yet available
-        if self._restored_value is not None:
-            return self._restored_value
-
+    def _live_kwh(self) -> float | None:
+        """Return the live API value for this timeframe, or None if not yet available."""
         summary = (
             self.coordinator.data.get("timeframe_summaries", {})
             .get(self._scope, {})
@@ -252,6 +249,14 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
 
         return None
 
+    def _generation_kwh(self) -> float | None:
+        # Prefer live API data; only fall back to the restored value while
+        # waiting for the first summary fetch after a restart (avoids "—" gaps).
+        live = self._live_kwh()
+        if live is not None:
+            return live
+        return self._restored_value
+
     def _owner_share_pct(self) -> float | None:
         """Get owner share percentage from config entry options."""
         try:
@@ -271,12 +276,12 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
     @property
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
-        value_kwh = self._generation_kwh()
-        if value_kwh is not None:
-            display_unit, display_value = _display_energy_from_kwh(value_kwh)
+        live = self._live_kwh()
+        if live is not None:
+            display_unit, display_value = _display_energy_from_kwh(live)
             attrs["timeframe"] = self._timeframe
             attrs["generation_source"] = "api_dynamic"
-            attrs["raw_generation_kwh"] = value_kwh
+            attrs["raw_generation_kwh"] = live
             attrs["display_unit"] = display_unit
             attrs["display_value"] = display_value
         elif self._restored_attrs:

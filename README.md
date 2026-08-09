@@ -53,6 +53,9 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
+## Version 4.8.29 (pre-release)
+- **Fix farm generation counters stuck on stale values**: the farm "generation today / yesterday / week / month / year / all-time" sensors were permanently frozen at the value restored on startup — the restored value took priority over live API data forever, so e.g. "Generation today" stopped updating after the first restart and showed yesterday's total. Live API data now takes priority, with the restored value used only as a placeholder until the first fetch after startup.
+
 ## Version 4.8.28 (pre-release)
 - **Transformer and National Grid moved to the bottom**: the single-line diagram now reads turbines → bus → transformer → grid flowing down the card, with the transformer and National Grid box at the bottom (below the turbine stack) instead of the vertical centre
 
