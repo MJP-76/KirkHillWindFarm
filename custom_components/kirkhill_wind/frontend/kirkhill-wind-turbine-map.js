@@ -543,14 +543,14 @@ class KirkHillWindTurbineMap extends HTMLElement {
         fill: rgba(0,0,0,0.65);
       }
       .turbine-id {
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 700;
         fill: #fff;
         text-anchor: middle;
         dominant-baseline: middle;
       }
       .turbine-detail {
-        font-size: 9px;
+        font-size: 11px;
         fill: rgba(255,255,255,0.85);
         text-anchor: middle;
         dominant-baseline: middle;
@@ -561,7 +561,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
         justify-content: space-between;
         gap: 12px;
         padding: 8px 12px 12px;
-        font-size: 12px;
+        font-size: 14px;
         color: var(--secondary-text-color);
         font-family: var(--font-family, sans-serif);
       }
