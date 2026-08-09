@@ -398,19 +398,23 @@ class KirkHillWindScada extends HTMLElement {
     // grid as a vertical single-line diagram on any window size.
     const gridY = H - 190;
 
-    // Staggered turbine layout: even turbines on the left column, odd turbines
-    // on a right column, so the block fits in a smaller top-to-bottom section.
-    const tTop = 76;
-    const rows = Math.ceil(tCount / 2);
-    const rowH = Math.max(
-      48,
-      Math.min(56, Math.round((gridY - 150 - tTop) / Math.max(1, rows - 1)))
+    // Staircase turbine layout: T1 left, T2 right with its top level with T1's
+    // bottom, T3 left level with T2's bottom, and so on. Every turbine's feed
+    // line runs straight to the bus unobstructed, and the block is spread to
+    // roughly match the bus bar height. Boxes are sized to leave room for more
+    // per-turbine detail lines later.
+    const tTop = 64;
+    const bh = Math.max(
+      80,
+      Math.min(120, Math.floor((gridY - tTop - 30) / Math.max(1, tCount)))
     );
+    const pitch = bh;
 
     return {
       H,
       tTop,
-      rowH,
+      bh,
+      pitch,
       gridY,
       busY2: gridY,
       busSummaryY: legendY - 24,
@@ -439,24 +443,22 @@ class KirkHillWindScada extends HTMLElement {
     let dotsHtml = "";
 
     turbines.forEach((t, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const x = col === 0 ? 30 : 290;
+      const x = i % 2 === 0 ? 30 : 290;
       const cx = x + 230;
-      const top = layout.tTop + row * layout.rowH;
-      const cy = top + 40;
+      const top = layout.tTop + i * layout.pitch;
+      const cy = top + layout.bh / 2;
       const num = this._escape(t.id || `T${i + 1}`);
       const stateEntity = t.state_entity;
       if (stateEntity) this._turbineEntities.set(t.id || `T${i + 1}`, stateEntity);
       turbinesHtml += `
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
-          <rect class="node-rect" x="${x}" y="${top}" width="230" height="80" rx="8"/>
+          <rect class="node-rect" x="${x}" y="${top}" width="230" height="${layout.bh}" rx="8"/>
           <text class="t-id" x="${x + 14}" y="${top + 16}">${num}</text>
           <rect class="status-pill" x="${x + 120}" y="${top + 7}" width="96" height="20" rx="10"/>
           <text class="t-status" x="${x + 168}" y="${top + 21}"></text>
-          <text class="t-power" x="${x + 14}" y="${top + 50}">—</text>
-          <text class="t-detail" x="${x + 14}" y="${top + 67}"></text>
-          <text class="t-last" x="${x + 14}" y="${top + 77}"></text>
+          <text class="t-power" x="${x + 14}" y="${top + layout.bh - 34}">—</text>
+          <text class="t-detail" x="${x + 14}" y="${top + layout.bh - 18}"></text>
+          <text class="t-last" x="${x + 14}" y="${top + layout.bh - 8}"></text>
         </g>
       `;
       linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="600" y2="${cy}"/>`;
