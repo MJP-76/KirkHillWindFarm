@@ -122,6 +122,15 @@ class KirkHillWindScada extends HTMLElement {
     return { value: this._fmt(kwh, 0), unit: "kWh" };
   }
 
+  _powerText(kw) {
+    if (kw === null || kw === undefined || !Number.isFinite(kw)) {
+      return { value: "—", unit: "" };
+    }
+    // The owner's export is tiny (sub-kW), so fall back to watts below 1 kW.
+    if (Math.abs(kw) < 1) return { value: this._fmt(kw * 1000, 0), unit: "W" };
+    return { value: this._fmt(kw, 1), unit: "kW" };
+  }
+
   _fmtTime(iso) {
     if (!iso) return "—";
     const d = new Date(iso);
@@ -490,25 +499,27 @@ class KirkHillWindScada extends HTMLElement {
 
   _buildGrid(layout) {
     const cy = layout.mid;
-    const ownerCx = 1010;
-    const siteCx = 1210;
+    const ownerCx = 1015;
+    const siteCx = 1205;
     return `
       <g class="grid">
-        <rect class="grid-rect" x="985" y="${cy - 125}" width="250" height="250" rx="10"/>
-        <text class="grid-title" x="1110" y="${cy - 102}" text-anchor="middle">NATIONAL</text>
-        <text class="grid-title" x="1110" y="${cy - 80}" text-anchor="middle">GRID</text>
-        <text class="grid-col" x="${ownerCx}" y="${cy - 52}" text-anchor="middle">OWNER</text>
-        <text class="grid-col" x="${siteCx}" y="${cy - 52}" text-anchor="middle">SITE</text>
-        <line class="grid-divider" x1="1000" y1="${cy - 38}" x2="1220" y2="${cy - 38}"/>
-        <text class="grid-label" x="1110" y="${cy - 20}" text-anchor="middle">Export (MW)</text>
-        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy + 8}" text-anchor="middle">—</text>
-        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy + 8}" text-anchor="middle">—</text>
-        <line class="grid-divider" x1="1000" y1="${cy + 26}" x2="1220" y2="${cy + 26}"/>
-        <text class="grid-label" x="1110" y="${cy + 44}" text-anchor="middle">To grid today</text>
-        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy + 72}" text-anchor="middle">—</text>
-        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy + 72}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy + 90}" text-anchor="middle">kWh</text>
-        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy + 90}" text-anchor="middle">kWh</text>
+        <rect class="grid-rect" x="975" y="${cy - 135}" width="265" height="270" rx="10"/>
+        <text class="grid-title" x="1110" y="${cy - 110}" text-anchor="middle">NATIONAL</text>
+        <text class="grid-title" x="1110" y="${cy - 86}" text-anchor="middle">GRID</text>
+        <text class="grid-col" x="${ownerCx}" y="${cy - 58}" text-anchor="middle">OWNER</text>
+        <text class="grid-col" x="${siteCx}" y="${cy - 58}" text-anchor="middle">SITE</text>
+        <line class="grid-divider" x1="985" y1="${cy - 40}" x2="1230" y2="${cy - 40}"/>
+        <text class="grid-label" x="1110" y="${cy - 18}" text-anchor="middle">Export</text>
+        <text class="grid-power" data-grid="owner-power" x="${ownerCx}" y="${cy + 14}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-power-unit" x="${ownerCx}" y="${cy + 32}" text-anchor="middle"></text>
+        <text class="grid-power" data-grid="site-power" x="${siteCx}" y="${cy + 14}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="site-power-unit" x="${siteCx}" y="${cy + 32}" text-anchor="middle"></text>
+        <line class="grid-divider" x1="985" y1="${cy + 48}" x2="1230" y2="${cy + 48}"/>
+        <text class="grid-label" x="1110" y="${cy + 70}" text-anchor="middle">To grid today</text>
+        <text class="grid-energy" data-grid="owner-energy" x="${ownerCx}" y="${cy + 96}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="owner-energy-unit" x="${ownerCx}" y="${cy + 114}" text-anchor="middle">kWh</text>
+        <text class="grid-energy" data-grid="site-energy" x="${siteCx}" y="${cy + 96}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="site-energy-unit" x="${siteCx}" y="${cy + 114}" text-anchor="middle">kWh</text>
       </g>
     `;
   }
@@ -538,11 +549,11 @@ class KirkHillWindScada extends HTMLElement {
 
         <!-- Right side: Your Generation (far right) -->
         <g class="user-gen" data-user-gen="panel">
-          <rect x="870" y="24" width="330" height="86" rx="8"/>
-          <text class="user-gen-title" x="882" y="42">Your generation</text>
-          <text class="user-gen-value" data-user-gen="energy" x="882" y="62">—</text>
-          <text class="user-gen-time" data-user-gen="time" x="882" y="80">Last updated: —</text>
-          <text class="user-gen-share" data-user-gen="share" x="882" y="100">Your share: —</text>
+          <rect x="870" y="24" width="330" height="104" rx="8"/>
+          <text class="user-gen-title" x="882" y="46">Your generation</text>
+          <text class="user-gen-value" data-user-gen="energy" x="882" y="74">—</text>
+          <text class="user-gen-time" data-user-gen="time" x="882" y="96">Last updated: —</text>
+          <text class="user-gen-share" data-user-gen="share" x="882" y="120">Your share: —</text>
         </g>
       </g>
     `;
@@ -564,13 +575,35 @@ class KirkHillWindScada extends HTMLElement {
     const root = this.shadowRoot;
     const config = this.config;
 
-    // National grid: owner & site export (MW) and to-grid-today
+    // National grid: owner & site export and to-grid-today.
+    const ownerEnergyKwh = this._num(config.owner_grid_energy_entity);
+    const siteEnergyKwh = this._num(config.grid_energy_entity);
     const ownerPowerKw = this._num(config.owner_power_entity);
     const sitePowerMw = this._num(config.farm_power_entity);
-    this._setText(root, '[data-grid="owner-power"]', ownerPowerKw === null ? "—" : this._fmt(ownerPowerKw / 1000, 2));
-    this._setText(root, '[data-grid="site-power"]', sitePowerMw === null ? "—" : this._fmt(sitePowerMw, 2));
-    const ownerEnergy = this._scaleKwh(this._num(config.owner_grid_energy_entity));
-    const siteEnergy = this._scaleKwh(this._num(config.grid_energy_entity));
+
+    // Owner export is reported in kW, but the API often has no value for the
+    // tiny owner share. Fall back to scaling the site export by the owner's
+    // share of today's generation when owner power is unavailable.
+    let ownerExportKw = ownerPowerKw;
+    if (
+      ownerExportKw === null &&
+      sitePowerMw !== null &&
+      ownerEnergyKwh !== null &&
+      siteEnergyKwh !== null &&
+      siteEnergyKwh > 0
+    ) {
+      ownerExportKw = sitePowerMw * 1000 * (ownerEnergyKwh / siteEnergyKwh);
+    }
+    const ownerPowerText = this._powerText(ownerExportKw);
+    this._setText(root, '[data-grid="owner-power"]', ownerPowerText.value);
+    this._setText(root, '[data-grid="owner-power-unit"]', ownerPowerText.unit);
+    const sitePowerText =
+      sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
+    this._setText(root, '[data-grid="site-power"]', sitePowerText.value);
+    this._setText(root, '[data-grid="site-power-unit"]', sitePowerText.unit);
+
+    const ownerEnergy = this._scaleKwh(ownerEnergyKwh);
+    const siteEnergy = this._scaleKwh(siteEnergyKwh);
     this._setText(root, '[data-grid="owner-energy"]', ownerEnergy.value);
     this._setText(root, '[data-grid="site-energy"]', siteEnergy.value);
     this._setText(root, '[data-grid="owner-energy-unit"]', ownerEnergy.unit);
@@ -601,10 +634,9 @@ class KirkHillWindScada extends HTMLElement {
     } else {
       this._setText(root, '[data-user-gen="time"]', "Last updated: —");
     }
-    // Owner export power is reported in kW; display the share in watts.
-    const ownerPower = this._num(config.owner_power_entity);
-    if (ownerPower !== null) {
-      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerPower * 1000, 0)} W`);
+    // Your share: owner export power is reported in kW; display in watts.
+    if (ownerExportKw !== null) {
+      this._setText(root, '[data-user-gen="share"]', `Your share: ${this._fmt(ownerExportKw * 1000, 0)} W`);
     } else {
       this._setText(root, '[data-user-gen="share"]', "Your share: —");
     }
@@ -704,12 +736,12 @@ class KirkHillWindScada extends HTMLElement {
 
       /* Grid node */
       .grid-rect { fill: #1a2e05; stroke: #4d7c0f; stroke-width: 2; }
-      .grid-title { fill: #a3e635; font: bold 16px sans-serif; }
-      .grid-col { fill: #a3e635; font: bold 11px sans-serif; }
-      .grid-label { fill: #94a3b8; font: 11px sans-serif; }
-      .grid-power { fill: #f8fafc; font: bold 22px sans-serif; }
-      .grid-energy { fill: #f8fafc; font: bold 20px sans-serif; }
-      .grid-unit { fill: #64748b; font: 11px sans-serif; }
+      .grid-title { fill: #a3e635; font: bold 20px sans-serif; }
+      .grid-col { fill: #a3e635; font: bold 15px sans-serif; }
+      .grid-label { fill: #94a3b8; font: 14px sans-serif; }
+      .grid-power { fill: #f8fafc; font: bold 27px sans-serif; }
+      .grid-energy { fill: #f8fafc; font: bold 24px sans-serif; }
+      .grid-unit { fill: #64748b; font: 14px sans-serif; }
       .grid-divider { stroke: #365314; stroke-width: 2; }
 
       /* Chips */
@@ -719,10 +751,10 @@ class KirkHillWindScada extends HTMLElement {
 
       /* User generation panel (top right) */
       .user-gen rect { fill: #111a2e; stroke: #1e293b; stroke-width: 1.5; }
-      .user-gen-title { fill: #94a3b8; font: bold 11px sans-serif; }
-      .user-gen-value { fill: #f8fafc; font: bold 18px sans-serif; }
-      .user-gen-time { fill: #64748b; font: 10px sans-serif; }
-      .user-gen-share { fill: #22c55e; font: bold 12px sans-serif; }
+      .user-gen-title { fill: #94a3b8; font: bold 14px sans-serif; }
+      .user-gen-value { fill: #f8fafc; font: bold 22px sans-serif; }
+      .user-gen-time { fill: #64748b; font: 13px sans-serif; }
+      .user-gen-share { fill: #22c55e; font: bold 15px sans-serif; }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #052e16; stroke: #22c55e; stroke-width: 2; }
