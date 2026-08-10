@@ -845,6 +845,14 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),
                         "capacity_entity": farm_scoped("site", "farm_capacity_factor"),
+                        "owner_generation_entities": [
+                            {"name": name, "entity": entity}
+                            for name, entity, _ in owner_generation_entities
+                        ],
+                        "site_generation_entities": [
+                            {"name": name, "entity": entity}
+                            for name, entity in site_generation_entities
+                        ],
                         "turbines": scada_turbines,
                     },
                 ],

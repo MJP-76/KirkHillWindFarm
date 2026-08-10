@@ -172,11 +172,10 @@ class KirkHillWindScada extends HTMLElement {
   _dotDur(powerKw, lineLength) {
     const p = powerKw ?? 0;
     if (p < 1) return null; // no flow
-    // Base duration at a 250-unit reference line, falling as power rises:
-    // more energy produced = faster dot.
-    const base = Math.max(2.5, Math.min(26, 26 - (p / 2400) * 22));
-    // Scale by actual line length so every dot moves at the same speed for a
-    // given power level, whatever the turbine's distance from the bus.
+    // Use a square-root curve so low power gets more visual spread:
+    // 0 kW → 26s, ~500 kW → ~15s, 2400 kW → 2.5s.
+    const ratio = Math.min(p / 2400, 1);
+    const base = 2.5 + (1 - Math.sqrt(ratio)) * 23.5;
     const len = lineLength > 0 ? lineLength : 250;
     const t = Math.max(1.5, Math.min(60, base * (len / 250)));
     return `${t.toFixed(2)}s`;
@@ -423,10 +422,17 @@ class KirkHillWindScada extends HTMLElement {
     );
     const pitch = bh;
 
-    // Scale horizontal positions from design width (1240) to current viewBox width
+    // Scale horizontal positions from design width (1240) to current viewBox width.
+    // On wide screens keep the design gap between the two turbine columns; as
+    // the viewBox narrows, slide the right column in beside the left one so the
+    // block compresses instead of the columns staying pinned apart.
+    const collapse =
+      (KirkHillWindScada.DESIGN_W - W) /
+      (KirkHillWindScada.DESIGN_W - KirkHillWindScada.VIEWBOX.wMin);
+    const colGap = 70 - (70 - 8) * Math.max(0, Math.min(1, collapse));
     const busX = 600 * scaleX;
     const leftColX = 30 * scaleX;
-    const rightColX = 290 * scaleX;
+    const rightColX = (30 + 190 + colGap) * scaleX;
     const boxW = 190 * scaleX;
     const feedEndX = busX;
     const gridRectX = 975 * scaleX;
@@ -440,7 +446,10 @@ class KirkHillWindScada extends HTMLElement {
     const gridDividerX2 = 1230 * scaleX;
     const chipLeftColX = 30 * scaleX;
     const chipRightColX = 152 * scaleX;
-    const chipActiveX = 284 * scaleX;
+    const chipWindX = 430 * scaleX;
+    const chipWindW = 170 * scaleX;
+    const chipWindTitleX = 442 * scaleX;
+    const chipWindValueX = 590 * scaleX;
     const chipUserGenX = 870 * scaleX;
     const chipUserGenW = 330 * scaleX;
     const chipUserGenTitleX = 882 * scaleX;
@@ -449,10 +458,6 @@ class KirkHillWindScada extends HTMLElement {
     const chipSiteGenW = 330 * scaleX;
     const chipSiteGenTitleX = 882 * scaleX;
     const chipSiteGenValueX = 1200 * scaleX;
-    const chipWindX = 870 * scaleX;
-    const chipWindW = 330 * scaleX;
-    const chipWindTitleX = 882 * scaleX;
-    const chipWindValueX = 1200 * scaleX;
     const legendX = 30 * scaleX;
     const legendW = 500 * scaleX;
     const xfmrTitleX = 630 * scaleX;
@@ -485,7 +490,6 @@ class KirkHillWindScada extends HTMLElement {
       gridDividerX2,
       chipLeftColX,
       chipRightColX,
-      chipActiveX,
       chipUserGenX,
       chipUserGenW,
       chipUserGenTitleX,
@@ -541,9 +545,9 @@ class KirkHillWindScada extends HTMLElement {
       turbinesHtml += `
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
           <rect class="node-rect" x="${x}" y="${top}" width="${layout.boxW}" height="${layout.bh}" rx="8"/>
-          <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 16}">${num}</text>
-          <rect class="status-pill" x="${x + 100 * layout.scaleX}" y="${top + 7}" width="${76 * layout.scaleX}" height="20" rx="10"/>
-          <text class="t-status" x="${x + 138 * layout.scaleX}" y="${top + 21}"></text>
+          <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 18}">${num}</text>
+          <rect class="status-pill" x="${x + 100 * layout.scaleX}" y="${top + 5}" width="${76 * layout.scaleX}" height="20" rx="10"/>
+          <text class="t-status" x="${x + 138 * layout.scaleX}" y="${top + 19}"></text>
           <text class="t-power" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 50}">—</text>
           <text class="t-op" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + layout.bh - 50}" text-anchor="end">—</text>
           <text class="t-wind" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 34}">—</text>
@@ -594,20 +598,14 @@ class KirkHillWindScada extends HTMLElement {
         <rect class="grid-rect" x="${layout.gridRectX}" y="${cy - 270}" width="${layout.gridRectW}" height="270" rx="10"/>
         <text class="grid-title" x="${layout.gridTitleX}" y="${cy - 245}" text-anchor="middle">NATIONAL</text>
         <text class="grid-title" x="${layout.gridTitleX}" y="${cy - 221}" text-anchor="middle">GRID</text>
-        <text class="grid-col" x="${layout.ownerCx}" y="${cy - 193}" text-anchor="middle">OWNER</text>
-        <text class="grid-col" x="${layout.siteCx}" y="${cy - 193}" text-anchor="middle">SITE</text>
         <line class="grid-divider" x1="${layout.gridDividerX1}" y1="${cy - 175}" x2="${layout.gridDividerX2}" y2="${cy - 175}"/>
         <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 153}" text-anchor="middle">Export</text>
-        <text class="grid-power" data-grid="owner-power" x="${layout.ownerCx}" y="${cy - 121}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-power-unit" x="${layout.ownerCx}" y="${cy - 103}" text-anchor="middle"></text>
-        <text class="grid-power" data-grid="site-power" x="${layout.siteCx}" y="${cy - 121}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="site-power-unit" x="${layout.siteCx}" y="${cy - 103}" text-anchor="middle"></text>
+        <text class="grid-power" data-grid="power" x="${layout.gridTitleX}" y="${cy - 121}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="power-unit" x="${layout.gridTitleX}" y="${cy - 103}" text-anchor="middle"></text>
         <line class="grid-divider" x1="${layout.gridDividerX1}" y1="${cy - 87}" x2="${layout.gridDividerX2}" y2="${cy - 87}"/>
         <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 65}" text-anchor="middle">To Grid Today</text>
-        <text class="grid-energy" data-grid="owner-energy" x="${layout.ownerCx}" y="${cy - 39}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="owner-energy-unit" x="${layout.ownerCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
-        <text class="grid-energy" data-grid="site-energy" x="${layout.siteCx}" y="${cy - 39}" text-anchor="middle">—</text>
-        <text class="grid-unit" data-grid="site-energy-unit" x="${layout.siteCx}" y="${cy - 21}" text-anchor="middle">kWh</text>
+        <text class="grid-energy" data-grid="energy" x="${layout.gridTitleX}" y="${cy - 39}" text-anchor="middle">—</text>
+        <text class="grid-unit" data-grid="energy-unit" x="${layout.gridTitleX}" y="${cy - 21}" text-anchor="middle">kWh</text>
       </g>
     `;
   }
@@ -620,9 +618,19 @@ _buildHeaderChips(layout) {
           <rect x="${layout.chipLeftColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
           <text class="alarm-text" data-alarm="text" x="${layout.chipLeftColX + 56 * layout.scaleX}" y="44" text-anchor="middle">OK</text>
         </g>
-        <rect x="${layout.chipRightColX}" y="24" width="${140 * layout.scaleX}" height="30" rx="15"/>
-        <text class="chip-label" x="${layout.chipRightColX + 12 * layout.scaleX}" y="44">Active Turbines</text>
-        <text class="chip-value" data-chip="active" x="${layout.chipActiveX}" y="44" text-anchor="end">—</text>
+        <rect x="${layout.chipRightColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
+        <text class="chip-label" x="${layout.chipRightColX + 56 * layout.scaleX}" y="44" text-anchor="middle">Active Turbines</text>
+        <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 102 * layout.scaleX}" y="44" text-anchor="end">—</text>
+
+        <!-- Wind & Forecast panel (left of bus, right of turbines) -->
+        <g class="wind-panel" data-wind="panel">
+          <rect x="${layout.chipWindX}" y="24" width="${layout.chipWindW}" height="82" rx="8"/>
+          <text class="wind-title" x="${layout.chipWindTitleX}" y="38">Wind & Forecast</text>
+          <text class="wind-label" x="${layout.chipWindTitleX}" y="58">Current Wind</text>
+          <text class="wind-value" data-chip="wind" x="${layout.chipWindValueX}" y="58" text-anchor="end">—</text>
+          <text class="wind-label" x="${layout.chipWindTitleX}" y="78">Forecast (1h)</text>
+          <text class="wind-value" data-chip="forecast" x="${layout.chipWindValueX}" y="78" text-anchor="end">—</text>
+        </g>
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
         <g class="user-gen" data-user-gen="panel">
@@ -646,16 +654,6 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="260" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="286">Site Power (MW)</text>
           <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="286" text-anchor="end">—</text>
-        </g>
-
-        <!-- Right side: Wind & Forecast panel (below Site Generation) -->
-        <g class="wind-panel" data-wind="panel">
-          <rect x="${layout.chipWindX}" y="314" width="${layout.chipWindW}" height="82" rx="8"/>
-          <text class="wind-title" x="${layout.chipWindTitleX}" y="338">Wind & Forecast</text>
-          <text class="wind-label" x="${layout.chipWindTitleX}" y="364">Current Wind</text>
-          <text class="wind-value" data-chip="wind" x="${layout.chipWindValueX}" y="364" text-anchor="end">—</text>
-          <text class="wind-label" x="${layout.chipWindTitleX}" y="390">Forecast (1h)</text>
-          <text class="wind-value" data-chip="forecast" x="${layout.chipWindValueX}" y="390" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -697,19 +695,14 @@ _buildHeaderChips(layout) {
       ownerExportKw = sitePowerMw * 1000 * (ownerEnergyKwh / siteEnergyKwh);
     }
     const ownerPowerText = this._powerText(ownerExportKw);
-    this._setText(root, '[data-grid="owner-power"]', ownerPowerText.value);
-    this._setText(root, '[data-grid="owner-power-unit"]', ownerPowerText.unit);
     let sitePowerText =
       sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
-    this._setText(root, '[data-grid="site-power"]', sitePowerText.value);
-    this._setText(root, '[data-grid="site-power-unit"]', sitePowerText.unit);
+    this._setText(root, '[data-grid="power"]', sitePowerText.value);
+    this._setText(root, '[data-grid="power-unit"]', sitePowerText.unit);
 
-    const ownerEnergy = this._scaleKwh(ownerEnergyKwh);
     const siteEnergy = this._scaleKwh(siteEnergyKwh);
-    this._setText(root, '[data-grid="owner-energy"]', ownerEnergy.value);
-    this._setText(root, '[data-grid="site-energy"]', siteEnergy.value);
-    this._setText(root, '[data-grid="owner-energy-unit"]', ownerEnergy.unit);
-    this._setText(root, '[data-grid="site-energy-unit"]', siteEnergy.unit);
+    this._setText(root, '[data-grid="energy"]', siteEnergy.value);
+    this._setText(root, '[data-grid="energy-unit"]', siteEnergy.unit);
 
     // Header chips
     const wind = this._num(config.wind_speed_entity);
