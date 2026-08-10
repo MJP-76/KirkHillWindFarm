@@ -423,9 +423,9 @@ class KirkHillWindScada extends HTMLElement {
     const rightColX = 290 * scaleX;
     const boxW = 230 * scaleX;
     const feedEndX = busX;
+    const gridRectX = 975 * scaleX;
     const transformerLineEndX = gridRectX;
     const transformerLineEndY = gridY;
-    const gridRectX = 975 * scaleX;
     const gridRectW = 265 * scaleX;
     const ownerCx = 1015 * scaleX;
     const siteCx = 1205 * scaleX;

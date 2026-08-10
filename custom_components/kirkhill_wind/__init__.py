@@ -191,7 +191,7 @@ async def _async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> No
 
     new_default = _build_dashboard_config(hass, entry)
     try:
-        existing_config = await lovelace_store.async_load()
+        existing_config = await lovelace_store.async_load(False)
     except Exception as err:  # noqa: BLE001
         _LOGGER.warning("Failed to load existing dashboard config: %s; creating new default", err)
         existing_config = None
@@ -827,11 +827,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "owner_grid_energy_entity": farm_scoped("owner", "farm_generation_today"),
                         "owner_generation_today_entity": farm_scoped("owner", "farm_generation_today"),
                         "wind_speed_entity": farm("farm_wind_speed"),
-                        "wind_forecast_entity": farm("farm_open_meteo_forecast_wind_next_hour"),
+                        "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),
                         "alarm_entity": farm("farm_alarm"),
-                        "capacity_entity": farm("farm_capacity_factor_site"),
-                        "owner_capacity_entity": farm("farm_capacity_factor_owner"),
+                        "capacity_entity": farm_scoped("site", "farm_capacity_factor"),
+                        "owner_capacity_entity": farm_scoped("owner", "farm_capacity_factor"),
                         "turbines": scada_turbines,
                     },
                 ],
