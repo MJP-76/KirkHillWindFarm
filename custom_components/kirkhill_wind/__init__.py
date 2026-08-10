@@ -431,6 +431,19 @@ def _card_match_key(card: dict) -> str | None:
     # Custom cards matched by type + title
     if ctype.startswith("custom:") and card.get("title"):
         return f"{ctype}:title:{card['title']}"
+    # Container cards without a title (vertical-stack / horizontal-stack /
+    # grid) get a structural key derived from the ordered match keys of their
+    # child cards. Without this they are unmatchable, so _merge_cards appends
+    # a fresh copy on every reload while preserving the old one, duplicating
+    # them (seen on the Turbines view).
+    if ctype in ("vertical-stack", "horizontal-stack", "grid"):
+        child_keys = [
+            key
+            for key in (_card_match_key(child) for child in card.get("cards", []))
+            if key is not None
+        ]
+        if child_keys:
+            return f"container:{ctype}:{'|'.join(child_keys)}"
     # The SCADA card is a single managed card in the panel view; its title is
     # intentionally empty, so match purely by type. This ensures corrected
     # defaults replace the stored copy (and avoids duplicate SCADA cards on
@@ -754,6 +767,8 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             "state_entity": turbine(tid, "state_text"),
             "generation_today_entity": turbine(tid, "generation_today"),
             "rotor_entity": turbine(tid, "rotor_speed"),
+            "wind_speed_entity": turbine(tid, "wind_speed"),
+            "capacity_entity": turbine(tid, "site_capacity_factor"),
         }
         for tid in present_turbine_ids
     ]
@@ -829,9 +844,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "wind_speed_entity": farm("farm_wind_speed"),
                         "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),
-                        "alarm_entity": farm("farm_alarm"),
                         "capacity_entity": farm_scoped("site", "farm_capacity_factor"),
-                        "owner_capacity_entity": farm_scoped("owner", "farm_capacity_factor"),
                         "turbines": scada_turbines,
                     },
                 ],

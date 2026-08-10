@@ -15,50 +15,64 @@ views:
         wind_speed_entity: sensor.kirk_hill_wind_farm_wind_speed
         wind_forecast_entity: sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_hour
         active_entity: sensor.kirk_hill_wind_farm_active_turbines
-        alarm_entity: binary_sensor.kirk_hill_wind_farm_alarm
         capacity_entity: sensor.kirk_hill_wind_farm_capacity_factor_site
-        owner_capacity_entity: sensor.kirk_hill_wind_farm_capacity_factor_owner
         turbines:
           - id: T1
             power_entity: sensor.turbine_t1_power_site
             state_entity: sensor.turbine_t1_state
             generation_today_entity: sensor.turbine_t1_generation_today
             rotor_entity: sensor.turbine_t1_rotor_speed
+            wind_speed_entity: sensor.turbine_t1_wind_speed
+            capacity_entity: sensor.turbine_t1_capacity_factor_site
           - id: T2
             power_entity: sensor.turbine_t2_power_site
             state_entity: sensor.turbine_t2_state
             generation_today_entity: sensor.turbine_t2_generation_today
             rotor_entity: sensor.turbine_t2_rotor_speed
+            wind_speed_entity: sensor.turbine_t2_wind_speed
+            capacity_entity: sensor.turbine_t2_capacity_factor_site
           - id: T3
             power_entity: sensor.turbine_t3_power_site
             state_entity: sensor.turbine_t3_state
             generation_today_entity: sensor.turbine_t3_generation_today
             rotor_entity: sensor.turbine_t3_rotor_speed
+            wind_speed_entity: sensor.turbine_t3_wind_speed
+            capacity_entity: sensor.turbine_t3_capacity_factor_site
           - id: T4
             power_entity: sensor.turbine_t4_power_site
             state_entity: sensor.turbine_t4_state
             generation_today_entity: sensor.turbine_t4_generation_today
             rotor_entity: sensor.turbine_t4_rotor_speed
+            wind_speed_entity: sensor.turbine_t4_wind_speed
+            capacity_entity: sensor.turbine_t4_capacity_factor_site
           - id: T5
             power_entity: sensor.turbine_t5_power_site
             state_entity: sensor.turbine_t5_state
             generation_today_entity: sensor.turbine_t5_generation_today
             rotor_entity: sensor.turbine_t5_rotor_speed
+            wind_speed_entity: sensor.turbine_t5_wind_speed
+            capacity_entity: sensor.turbine_t5_capacity_factor_site
           - id: T6
             power_entity: sensor.turbine_t6_power_site
             state_entity: sensor.turbine_t6_state
             generation_today_entity: sensor.turbine_t6_generation_today
             rotor_entity: sensor.turbine_t6_rotor_speed
+            wind_speed_entity: sensor.turbine_t6_wind_speed
+            capacity_entity: sensor.turbine_t6_capacity_factor_site
           - id: T7
             power_entity: sensor.turbine_t7_power_site
             state_entity: sensor.turbine_t7_state
             generation_today_entity: sensor.turbine_t7_generation_today
             rotor_entity: sensor.turbine_t7_rotor_speed
+            wind_speed_entity: sensor.turbine_t7_wind_speed
+            capacity_entity: sensor.turbine_t7_capacity_factor_site
           - id: T8
             power_entity: sensor.turbine_t8_power_site
             state_entity: sensor.turbine_t8_state
             generation_today_entity: sensor.turbine_t8_generation_today
             rotor_entity: sensor.turbine_t8_rotor_speed
+            wind_speed_entity: sensor.turbine_t8_wind_speed
+            capacity_entity: sensor.turbine_t8_capacity_factor_site
   - title: Overview
     path: overview
     icon: mdi:wind-turbine

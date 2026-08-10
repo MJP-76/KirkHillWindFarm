@@ -169,11 +169,17 @@ class KirkHillWindScada extends HTMLElement {
     return "unknown";
   }
 
-  _dotDur(powerKw) {
+  _dotDur(powerKw, lineLength) {
     const p = powerKw ?? 0;
     if (p < 1) return null; // no flow
-    const t = Math.max(2.5, Math.min(26, 26 - (p / 2400) * 22));
-    return `${t.toFixed(1)}s`;
+    // Base duration at a 250-unit reference line, falling as power rises:
+    // more energy produced = faster dot.
+    const base = Math.max(2.5, Math.min(26, 26 - (p / 2400) * 22));
+    // Scale by actual line length so every dot moves at the same speed for a
+    // given power level, whatever the turbine's distance from the bus.
+    const len = lineLength > 0 ? lineLength : 250;
+    const t = Math.max(1.5, Math.min(60, base * (len / 250)));
+    return `${t.toFixed(2)}s`;
   }
 
   _escape(value) {
@@ -412,7 +418,7 @@ class KirkHillWindScada extends HTMLElement {
     // per-turbine detail lines later.
     const tTop = 64;
     const bh = Math.max(
-      80,
+      92,
       Math.min(120, Math.floor((gridY - tTop - 30) / Math.max(1, tCount)))
     );
     const pitch = bh;
@@ -421,11 +427,11 @@ class KirkHillWindScada extends HTMLElement {
     const busX = 600 * scaleX;
     const leftColX = 30 * scaleX;
     const rightColX = 290 * scaleX;
-    const boxW = 230 * scaleX;
+    const boxW = 190 * scaleX;
     const feedEndX = busX;
     const gridRectX = 975 * scaleX;
     const transformerLineEndX = gridRectX;
-    const transformerLineEndY = gridY;
+    const transformerLineEndY = gridY - 135;
     const gridRectW = 265 * scaleX;
     const ownerCx = 1015 * scaleX;
     const siteCx = 1205 * scaleX;
@@ -434,7 +440,7 @@ class KirkHillWindScada extends HTMLElement {
     const gridDividerX2 = 1230 * scaleX;
     const chipLeftColX = 30 * scaleX;
     const chipRightColX = 152 * scaleX;
-    const chipActiveX = 310 * scaleX;
+    const chipActiveX = 284 * scaleX;
     const chipUserGenX = 870 * scaleX;
     const chipUserGenW = 330 * scaleX;
     const chipUserGenTitleX = 882 * scaleX;
@@ -536,16 +542,18 @@ class KirkHillWindScada extends HTMLElement {
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
           <rect class="node-rect" x="${x}" y="${top}" width="${layout.boxW}" height="${layout.bh}" rx="8"/>
           <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 16}">${num}</text>
-          <rect class="status-pill" x="${x + 120 * layout.scaleX}" y="${top + 7}" width="${96 * layout.scaleX}" height="20" rx="10"/>
-          <text class="t-status" x="${x + 168 * layout.scaleX}" y="${top + 21}"></text>
-          <text class="t-power" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 34}">—</text>
-          <text class="t-detail" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 18}"></text>
-          <text class="t-last" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 8}"></text>
+          <rect class="status-pill" x="${x + 100 * layout.scaleX}" y="${top + 7}" width="${76 * layout.scaleX}" height="20" rx="10"/>
+          <text class="t-status" x="${x + 138 * layout.scaleX}" y="${top + 21}"></text>
+          <text class="t-power" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 50}">—</text>
+          <text class="t-op" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + layout.bh - 50}" text-anchor="end">—</text>
+          <text class="t-wind" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 34}">—</text>
+          <text class="t-detail" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 21}"></text>
+          <text class="t-last" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 10}"></text>
         </g>
       `;
       linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="${layout.feedEndX}" y2="${cy}"/>`;
       dotsHtml += `
-        <circle class="flow-dot" data-flow="t${i}" r="5">
+        <circle class="flow-dot" data-flow="t${i}" r="5" data-len="${layout.feedEndX - cx}">
           <animateMotion dur="10s" repeatCount="indefinite"
             path="M ${cx} ${cy} L ${layout.feedEndX} ${cy}"/>
         </circle>
@@ -566,13 +574,14 @@ class KirkHillWindScada extends HTMLElement {
   _buildTransformer(layout) {
     const cy = layout.gridY;
     const busCenterY = (30 + cy) / 2;
+    const lineY = layout.transformerLineEndY;
     return `
       <g class="transformer">
-        <line class="feed-line" x1="${layout.busX + 60 * layout.scaleX}" y1="${cy}" x2="${layout.transformerLineEndX}" y2="${layout.transformerLineEndY}" marker-end="url(#khscada-arrow)"/>
+        <line class="feed-line" x1="${layout.busX + 60 * layout.scaleX}" y1="${lineY}" x2="${layout.transformerLineEndX}" y2="${lineY}" marker-end="url(#khscada-arrow)"/>
         <text class="xfmr-title" transform="rotate(90 ${layout.xfmrRotateX} ${busCenterY})" x="${layout.xfmrTitleX}" y="${busCenterY}" text-anchor="middle">TRANSFORMER — 33 kV</text>
-        <circle class="flow-dot" data-flow="grid" r="5">
+        <circle class="flow-dot" data-flow="grid" r="5" data-len="${layout.transformerLineEndX - (layout.busX + 60 * layout.scaleX)}">
           <animateMotion dur="10s" repeatCount="indefinite"
-            path="M ${layout.busX + 60 * layout.scaleX} ${cy} L ${layout.transformerLineEndX} ${layout.transformerLineEndY}"/>
+            path="M ${layout.busX + 60 * layout.scaleX} ${lineY} L ${layout.transformerLineEndX} ${lineY}"/>
         </circle>
       </g>
     `;
@@ -609,48 +618,44 @@ _buildHeaderChips(layout) {
         <!-- Left side: Alarm + Active Turbines (above turbine list) -->
         <g class="alarm" data-alarm="indicator">
           <rect x="${layout.chipLeftColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
-          <text class="alarm-text" data-alarm="text" x="${layout.chipLeftColX + 86 * layout.scaleX}" y="44" text-anchor="middle">OK</text>
+          <text class="alarm-text" data-alarm="text" x="${layout.chipLeftColX + 56 * layout.scaleX}" y="44" text-anchor="middle">OK</text>
         </g>
-        <rect x="${layout.chipRightColX}" y="24" width="${170 * layout.scaleX}" height="30" rx="15"/>
+        <rect x="${layout.chipRightColX}" y="24" width="${140 * layout.scaleX}" height="30" rx="15"/>
         <text class="chip-label" x="${layout.chipRightColX + 12 * layout.scaleX}" y="44">Active Turbines</text>
         <text class="chip-value" data-chip="active" x="${layout.chipActiveX}" y="44" text-anchor="end">—</text>
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
         <g class="user-gen" data-user-gen="panel">
-          <rect x="${layout.chipUserGenX}" y="24" width="${layout.chipUserGenW}" height="180" rx="8"/>
+          <rect x="${layout.chipUserGenX}" y="24" width="${layout.chipUserGenW}" height="150" rx="8"/>
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="48">Owner Generation & Capacity</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="76">Generation</text>
-          <text class="user-gen-value" data-user-gen="energy" x="${layout.chipUserGenValueX}" y="76" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="100">Capacity Factor (%)</text>
-          <text class="user-gen-value" data-user-gen="pct" x="${layout.chipUserGenValueX}" y="100" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="124">Your Share (W)</text>
-          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="124" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="148">Owner Capacity Factor (%)</text>
-          <text class="user-gen-value" data-user-gen="capacity" x="${layout.chipUserGenValueX}" y="148" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="172">Share (‱)</text>
-          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="172" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="92">Generation</text>
+          <text class="user-gen-value" data-user-gen="energy" x="${layout.chipUserGenValueX}" y="92" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="128">Your Share (W)</text>
+          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="128" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="164">Share (‱)</text>
+          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="164" text-anchor="end">—</text>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
         <g class="site-gen" data-site-gen="panel">
-          <rect x="${layout.chipSiteGenX}" y="214" width="${layout.chipSiteGenW}" height="120" rx="8"/>
-          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="238">Site Generation & Capacity</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="264">Generation</text>
-          <text class="site-gen-value" data-site-gen="energy" x="${layout.chipSiteGenValueX}" y="264" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="290">Site Capacity Factor (%)</text>
-          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="290" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="316">Site Power (MW)</text>
-          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="316" text-anchor="end">—</text>
+          <rect x="${layout.chipSiteGenX}" y="184" width="${layout.chipSiteGenW}" height="120" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="208">Site Generation & Capacity</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="234">Generation</text>
+          <text class="site-gen-value" data-site-gen="energy" x="${layout.chipSiteGenValueX}" y="234" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="260">Site Capacity Factor (%)</text>
+          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="260" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="286">Site Power (MW)</text>
+          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="286" text-anchor="end">—</text>
         </g>
 
         <!-- Right side: Wind & Forecast panel (below Site Generation) -->
         <g class="wind-panel" data-wind="panel">
-          <rect x="${layout.chipWindX}" y="344" width="${layout.chipWindW}" height="82" rx="8"/>
-          <text class="wind-title" x="${layout.chipWindTitleX}" y="368">Wind & Forecast</text>
-          <text class="wind-label" x="${layout.chipWindTitleX}" y="394">Current Wind</text>
-          <text class="wind-value" data-chip="wind" x="${layout.chipWindValueX}" y="394" text-anchor="end">—</text>
-          <text class="wind-label" x="${layout.chipWindTitleX}" y="418">Forecast (1h)</text>
-          <text class="wind-value" data-chip="forecast" x="${layout.chipWindValueX}" y="418" text-anchor="end">—</text>
+          <rect x="${layout.chipWindX}" y="314" width="${layout.chipWindW}" height="82" rx="8"/>
+          <text class="wind-title" x="${layout.chipWindTitleX}" y="338">Wind & Forecast</text>
+          <text class="wind-label" x="${layout.chipWindTitleX}" y="364">Current Wind</text>
+          <text class="wind-value" data-chip="wind" x="${layout.chipWindValueX}" y="364" text-anchor="end">—</text>
+          <text class="wind-label" x="${layout.chipWindTitleX}" y="390">Forecast (1h)</text>
+          <text class="wind-value" data-chip="forecast" x="${layout.chipWindValueX}" y="390" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -722,10 +727,7 @@ _buildHeaderChips(layout) {
     } else {
       this._setText(root, '[data-user-gen="energy"]', "—");
     }
-    const ownerCap = this._num(config.owner_capacity_entity);
-    this._setText(root, '[data-user-gen="pct"]', ownerCap === null ? "—" : `${this._fmt(ownerCap, 1)}%`);
     const siteCap = this._num(config.capacity_entity);
-    this._setText(root, '[data-user-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
     // Your share: owner export power is reported in kW; display in watts.
     this._setText(root, '[data-user-gen="share"]', ownerExportKw === null ? "—" : `${this._fmt(ownerExportKw * 1000, 0)} W`);
     // Your share as a % of the site's generation today (observed).
@@ -747,12 +749,20 @@ _buildHeaderChips(layout) {
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
 
-    // Alarm indicator (always visible: OK or flashing ALARM)
+    // Alarm indicator (always visible: OK or flashing N FAULTS)
     const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
     if (alarmIndicator) {
-      const alarmOn = this._str(config.alarm_entity) === "on";
-      alarmIndicator.classList.toggle("fault", alarmOn);
-      this._setText(root, '[data-alarm="text"]', alarmOn ? "⚠ ALARM" : "OK");
+      const faultCount = config.turbines.reduce((count, t) => {
+        const category = this._attr(t.state_entity, "status_category");
+        return count + (category === "fault_thermal" || category === "fault_electrical" ? 1 : 0);
+      }, 0);
+      const inFault = faultCount > 0;
+      alarmIndicator.classList.toggle("fault", inFault);
+      this._setText(
+        root,
+        '[data-alarm="text"]',
+        inFault ? `${faultCount} FAULT${faultCount === 1 ? "" : "S"}` : "OK"
+      );
     }
 
     // Turbines
@@ -770,10 +780,14 @@ _buildHeaderChips(layout) {
       const status = this._statusFor(stateText, category);
       const today = this._scaleKwh(this._num(t.generation_today_entity));
       const rotor = this._num(t.rotor_entity);
+      const wind = this._num(t.wind_speed_entity);
+      const opPct = this._num(t.capacity_entity);
       const last = this._fmtTime(this._attr(t.state_entity, "status_started_at"));
 
       this._setText(node, ".t-power", power === null ? "—" : `${this._fmt(power, 0)} kW`);
       this._setText(node, ".t-status", status.label);
+      this._setText(node, ".t-op", opPct === null ? "—" : `${this._fmt(opPct, 1)}%`);
+      this._setText(node, ".t-wind", wind === null ? "—" : `${this._fmt(wind)} m/s`);
       this._setText(node, ".t-detail", `Today ${today.value} ${today.unit}${rotor !== null ? ` · ${this._fmt(rotor, 1)} rpm` : ""}`);
       this._setText(node, ".t-last", `Last status ${last}`);
       const pill = node.querySelector(".status-pill");
@@ -783,7 +797,8 @@ _buildHeaderChips(layout) {
       // Flow dot speed
       const dot = root.querySelector(`[data-flow="t${i}"]`);
       if (dot) {
-        const dur = this._dotDur(power);
+        const len = parseFloat(dot.getAttribute("data-len")) || 0;
+        const dur = this._dotDur(power, len);
         dot.setAttribute("opacity", dur ? "1" : "0");
         const motion = dot.querySelector("animateMotion");
         if (motion && dur) motion.setAttribute("dur", dur);
@@ -793,7 +808,8 @@ _buildHeaderChips(layout) {
     // Bus → grid flow dot
     const busDot = root.querySelector('[data-flow="grid"]');
     if (busDot) {
-      const dur = this._dotDur(totalKw);
+      const len = parseFloat(busDot.getAttribute("data-len")) || 0;
+      const dur = this._dotDur(totalKw, len);
       busDot.setAttribute("opacity", dur ? "1" : "0");
       const motion = busDot.querySelector("animateMotion");
       if (motion && dur) motion.setAttribute("dur", dur);
@@ -827,6 +843,8 @@ _buildHeaderChips(layout) {
       .status-pill { fill: #22c55e; }
       .t-status { fill: #06121f; font: bold 12px var(--font-family, sans-serif); text-anchor: middle; }
       .t-power { fill: var(--primary-text-color, #0f172a); font: bold 25px var(--font-family, sans-serif); }
+      .t-op { fill: var(--primary-text-color, #0f172a); font: bold 14px var(--font-family, sans-serif); }
+      .t-wind { fill: var(--secondary-text-color, #475569); font: 14px var(--font-family, sans-serif); }
       .t-detail { fill: var(--secondary-text-color, #475569); font: 14px var(--font-family, sans-serif); }
       .t-last { fill: var(--disabled-text-color, #64748b); font: 12px var(--font-family, sans-serif); }
 

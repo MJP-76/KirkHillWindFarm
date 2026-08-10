@@ -197,7 +197,7 @@ If you find this project useful, and would like to help support its continued de
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes (6-hour history)
 - **Power vs Wind scatter plot** — correlation between wind speed and site power output (24-hour history)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA tab** — the first tab on the dashboard, a full-bleed animated single-line diagram of the farm (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; **top-right "Your Generation" panel shows your generation (auto-scaled kWh/MWh/GWh), last updated timestamp, and your share in watts**
+- **SCADA tab** — the first tab on the dashboard, a full-bleed animated single-line diagram of the farm (turbines → bus → transformer → grid) with live per-turbine power, operating % of capacity, wind speed, status, today's generation and rotor speed, and energy flow dots whose speed is proportional to power output and line length; **top-right "Your Generation" panel shows your generation (auto-scaled kWh/MWh/GWh), last updated timestamp, and your share in watts**
 - **Dashboard customisation preserved** — user-added cards, sections, and views are retained across integration reloads and updates
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores the dashboard to integration defaults
 
