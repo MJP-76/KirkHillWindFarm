@@ -51,6 +51,13 @@ _FRONTEND_CARDS: list[tuple[str, Path]] = [
     ("/kirkhill_wind/scada-card.js", _FRONTEND_DIR / "kirkhill-wind-scada-card.js"),
 ]
 
+# Lazily-loaded assets: served over the same static path but NOT injected on
+# every page. The SCADA card loads these on demand (e.g. ApexCharts before
+# rendering the turbine detail modal charts).
+_FRONTEND_ASSETS: list[tuple[str, Path]] = [
+    ("/kirkhill_wind/apexcharts.js", _FRONTEND_DIR / "apexcharts.js"),
+]
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Kirk Hill Wind Farm from a config entry."""
@@ -102,7 +109,7 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
         await hass.http.async_register_static_paths(
             [
                 StaticPathConfig(url, str(path), False)
-                for url, path in _FRONTEND_CARDS
+                for url, path in _FRONTEND_CARDS + _FRONTEND_ASSETS
             ]
         )
         hass.data[_FRONTEND_REGISTERED] = True

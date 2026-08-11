@@ -2,6 +2,12 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.48 (stable)
+- **Fix turbine detail modal charts showing no data**: the modal depends on ApexCharts, which was never loaded, so `_renderCharts` silently returned and every chart stayed empty. ApexCharts (v4.4.0) is now bundled with the integration and lazy-loaded the first time the modal opens.
+- **"Active Turbines" pill compacted**: width 190 → 150, label 13px → 12px and value 14px → 13px so it no longer dominates the header row.
+- **Re-center button now level with the legend**: the status legend's two lines are vertically centred in their block, matching the button's height.
+- **National Grid box narrowed**: width 265 → 225 (right edge now at x1200 instead of the card edge). The Owner/Site panels re-align to the grid box's new right edge so the right column still lines up.
+
 ## Version 4.8.47 (stable)
 - **Turbine staircase collapse**: the gap between the two turbine columns starts smaller (40 instead of 70). As the card narrows, the right-hand column now slides under the left one until it merges into a single column.
 - **Gap between merged turbine boxes**: stacked boxes gain a small vertical gap as the columns merge, so they never touch once in single-column mode. Box height budget absorbs the gap so the block still clears the National Grid box.

@@ -358,11 +358,27 @@ class KirkHillWindScada extends HTMLElement {
     };
 
     try {
+      await this._ensureApexCharts();
       const history = await this._fetchHistory(entities, startISO, endISO);
       this._renderCharts(turbine.id, history);
     } catch (err) {
       console.error("Failed to load turbine history:", err);
     }
+  }
+
+  _ensureApexCharts() {
+    if (window.ApexCharts) return Promise.resolve();
+    if (this._apexLoadPromise) return this._apexLoadPromise;
+    const src = `${this._hass.connection.baseUrl}/kirkhill_wind/apexcharts.js`;
+    this._apexLoadPromise = new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(), 15000);
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = () => { clearTimeout(timer); resolve(); };
+      script.onerror = () => { clearTimeout(timer); resolve(); };
+      document.head.appendChild(script);
+    });
+    return this._apexLoadPromise;
   }
 
   async _fetchHistory(entities, start, end) {
@@ -781,12 +797,13 @@ class KirkHillWindScada extends HTMLElement {
     const gridRectX = 975 * scaleX;
     const transformerLineEndX = gridRectX;
     const transformerLineEndY = gridY - 135;
-    const gridRectW = 265 * scaleX;
+    const gridRectW = 225 * scaleX;
+    const gridRightX = gridRectX + gridRectW;
     const ownerCx = 1015 * scaleX;
     const siteCx = 1205 * scaleX;
-    const gridTitleX = 1110 * scaleX;
-    const gridDividerX1 = 985 * scaleX;
-    const gridDividerX2 = 1230 * scaleX;
+    const gridTitleX = (gridRectX + gridRightX) / 2;
+    const gridDividerX1 = gridRectX + 10 * scaleX;
+    const gridDividerX2 = gridRightX - 10 * scaleX;
     const chipLeftColX = 30 * scaleX;
     const chipRightColX = 152 * scaleX;
     const chipWindX = 400 * scaleX;
@@ -794,13 +811,13 @@ class KirkHillWindScada extends HTMLElement {
     const chipWindTitleX = 412 * scaleX;
     const chipWindValueX = chipWindX + chipWindW - 12;
     const chipUserGenX = 910 * scaleX;
-    const chipUserGenW = W - chipUserGenX;
+    const chipUserGenW = gridRightX - chipUserGenX;
     const chipUserGenTitleX = 922 * scaleX;
-    const chipUserGenValueX = W - 10 * scaleX;
+    const chipUserGenValueX = gridRightX - 10 * scaleX;
     const chipSiteGenX = 910 * scaleX;
-    const chipSiteGenW = W - chipSiteGenX;
+    const chipSiteGenW = gridRightX - chipSiteGenX;
     const chipSiteGenTitleX = 922 * scaleX;
-    const chipSiteGenValueX = W - 10 * scaleX;
+    const chipSiteGenValueX = gridRightX - 10 * scaleX;
     const resetBtnW = 44 * scaleX;
     const resetBtnH = 48;
     const resetBtnX = 30 * scaleX;
@@ -967,9 +984,9 @@ _buildHeaderChips(layout) {
           <rect x="${layout.chipLeftColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
           <text class="alarm-text" data-alarm="text" x="${layout.chipLeftColX + 56 * layout.scaleX}" y="44" text-anchor="middle">OK</text>
         </g>
-        <rect x="${layout.chipRightColX}" y="24" width="${190 * layout.scaleX}" height="30" rx="15"/>
-        <text class="chip-label" x="${layout.chipRightColX + 12 * layout.scaleX}" y="44" text-anchor="start">Active Turbines</text>
-        <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 178 * layout.scaleX}" y="44" text-anchor="end">—</text>
+        <rect x="${layout.chipRightColX}" y="24" width="${150 * layout.scaleX}" height="30" rx="15"/>
+        <text class="chip-label" x="${layout.chipRightColX + 10 * layout.scaleX}" y="44" text-anchor="start">Active Turbines</text>
+        <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 140 * layout.scaleX}" y="44" text-anchor="end">—</text>
 
         <!-- Wind & Forecast panel (left of bus, right of turbines) -->
         <g class="wind-panel" data-wind="panel">
@@ -1233,8 +1250,8 @@ _buildHeaderChips(layout) {
 
       /* Chips */
       .chips rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .chip-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
-      .chip-value { fill: var(--primary-text-color, #0f172a); font: bold 14px var(--font-family, sans-serif); }
+      .chip-label { fill: var(--secondary-text-color, #475569); font: 12px var(--font-family, sans-serif); }
+      .chip-value { fill: var(--primary-text-color, #0f172a); font: bold 13px var(--font-family, sans-serif); }
 
       /* Generation & capacity panel (top right) */
       .user-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
@@ -1267,7 +1284,7 @@ _buildHeaderChips(layout) {
       }
 
       /* Legend */
-      .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+      .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
       .lg-item { display: inline-flex; align-items: center; gap: 5px; color: var(--secondary-text-color, #475569); font: 12px var(--font-family, sans-serif); }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
