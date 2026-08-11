@@ -11,7 +11,7 @@
  */
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
+    return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 860, hMax: 1200 };
   }
 
   static get DESIGN_W() {
@@ -63,9 +63,17 @@ class KirkHillWindScada extends HTMLElement {
 
   connectedCallback() {
     if (this.config) this._render();
+    if (!this._ro) {
+      this._ro = new ResizeObserver(() => this._fit());
+      this._ro.observe(this);
+    }
   }
 
   disconnectedCallback() {
+    if (this._ro) {
+      this._ro.disconnect();
+      this._ro = null;
+    }
     if (this._mousePan) this._mousePan = null;
     document.removeEventListener("mousemove", this._onMouseMove);
     document.removeEventListener("mouseup", this._onMouseUp);
@@ -375,64 +383,22 @@ class KirkHillWindScada extends HTMLElement {
     return results;
   }
 
-  _apexTheme() {
-    const root = this.shadowRoot;
-    if (!root) return { mode: "light", colors: { primary: "#0284c7", amber: "#f59e0b", green: "#22c55e", emerald: "#059669", purple: "#8b5cf6", text: "#0f172a", textSecondary: "#475569", axis: "#cbd5e1" } };
-
-    const style = getComputedStyle(root);
-    const bg = style.getPropertyValue("--ha-card-background").trim() || "#ffffff";
-    const isDark = this._isDarkBg(bg);
-    const primary = style.getPropertyValue("--primary-color").trim() || "#0284c7";
-    const text = style.getPropertyValue("--primary-text-color").trim() || (isDark ? "#f8fafc" : "#0f172a");
-    const textSecondary = style.getPropertyValue("--secondary-text-color").trim() || (isDark ? "#cbd5e1" : "#475569");
-    const divider = style.getPropertyValue("--divider-color").trim() || (isDark ? "#334159" : "#cbd5e1");
-
-    return {
-      mode: isDark ? "dark" : "light",
-      colors: {
-        primary: "#0284c7",
-        amber: "#f59e0b",
-        green: "#22c55e",
-        emerald: "#059669",
-        purple: "#8b5cf6",
-        text,
-        textSecondary,
-        axis: divider,
-      },
-    };
-  }
-
-  _isDarkBg(bg) {
-    const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    if (!m) {
-      const hex = bg.replace("#", "");
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
-      return (r + g + b) / 3 < 100;
-    }
-    const [r, g, b] = [m[1], m[2], m[3]].map(Number);
-    return (r + g + b) / 3 < 100;
-  }
-
   _renderCharts(turbineId, history) {
     if (!window.ApexCharts) return;
 
     const charts = {};
-    const theme = this._apexTheme();
 
     // Power chart
     if (history.power?.length) {
       charts.power = new ApexCharts(this.shadowRoot.querySelector("#chart-power"), {
         series: [{ name: "Power (kW)", data: history.power.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
         chart: { type: "area", height: 300, toolbar: { show: false }, background: "transparent" },
-        theme: theme,
-        xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
-        yaxis: { title: { text: "kW", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
+        xaxis: { type: "datetime" },
+        yaxis: { title: { text: "kW" } },
         stroke: { curve: "smooth", width: 2 },
         fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1, stops: [0, 100] } },
-        colors: [theme.colors.primary],
-        tooltip: { x: { format: "HH:mm" }, style: { fontSize: "12px" }, theme: { mode: theme.mode } },
+        colors: ["#0284c7"],
+        tooltip: { x: { format: "HH:mm" } },
       });
       charts.power.render();
     }
@@ -452,11 +418,9 @@ class KirkHillWindScada extends HTMLElement {
         charts.windPower = new ApexCharts(this.shadowRoot.querySelector("#chart-wind-power"), {
           series: [{ name: "Wind vs Power", data: scatterData }],
           chart: { type: "scatter", height: 300, toolbar: { show: false }, background: "transparent" },
-          theme: theme,
-          xaxis: { title: { text: "Power (kW)", style: { color: theme.colors.textSecondary } }, labels: { style: { colors: theme.colors.textSecondary } } },
-          yaxis: { title: { text: "Wind (m/s)", style: { color: theme.colors.textSecondary } }, labels: { style: { colors: theme.colors.textSecondary } } },
-          colors: [theme.colors.amber],
-          tooltip: { theme: { mode: theme.mode } },
+          xaxis: { title: { text: "Power (kW)" } },
+          yaxis: { title: { text: "Wind (m/s)" } },
+          colors: ["#f59e0b"],
           markers: { size: 4 },
         });
         charts.windPower.render();
@@ -468,11 +432,10 @@ class KirkHillWindScada extends HTMLElement {
       charts.capacity = new ApexCharts(this.shadowRoot.querySelector("#chart-capacity"), {
         series: [{ name: "Capacity %", data: history.capacity.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
         chart: { type: "line", height: 250, toolbar: { show: false }, background: "transparent" },
-        theme: theme,
-        xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
-        yaxis: { title: { text: "%", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } }, max: 100 },
+        xaxis: { type: "datetime" },
+        yaxis: { title: { text: "%" }, max: 100 },
         stroke: { curve: "smooth", width: 2 },
-        colors: [theme.colors.green],
+        colors: ["#22c55e"],
       });
       charts.capacity.render();
     }
@@ -481,12 +444,11 @@ class KirkHillWindScada extends HTMLElement {
     if (history.rotor?.length) {
       charts.rotor = new ApexCharts(this.shadowRoot.querySelector("#chart-rotor"), {
         series: [{ name: "RPM", data: history.rotor.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
-          chart: { type: "line", height: 250, toolbar: { show: false }, background: "transparent" },
-          theme: theme,
-          xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
-          yaxis: { title: { text: "RPM", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
-          stroke: { curve: "smooth", width: 2 },
-          colors: [theme.colors.purple],
+        chart: { type: "line", height: 250, toolbar: { show: false }, background: "transparent" },
+        xaxis: { type: "datetime" },
+        yaxis: { title: { text: "RPM" } },
+        stroke: { curve: "smooth", width: 2 },
+        colors: ["#8b5cf6"],
       });
       charts.rotor.render();
     }
@@ -495,13 +457,12 @@ class KirkHillWindScada extends HTMLElement {
     if (history.wind?.length) {
       charts.wind = new ApexCharts(this.shadowRoot.querySelector("#chart-wind"), {
         series: [{ name: "Wind (m/s)", data: history.wind.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
-          chart: { type: "area", height: 250, toolbar: { show: false }, background: "transparent" },
-          theme: theme,
-          xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
-          yaxis: { title: { text: "m/s", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
-          stroke: { curve: "smooth", width: 2 },
-          fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05 } },
-          colors: [theme.colors.amber],
+        chart: { type: "area", height: 250, toolbar: { show: false }, background: "transparent" },
+        xaxis: { type: "datetime" },
+        yaxis: { title: { text: "m/s" } },
+        stroke: { curve: "smooth", width: 2 },
+        fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05 } },
+        colors: ["#f59e0b"],
       });
       charts.wind.render();
     }
@@ -511,11 +472,10 @@ class KirkHillWindScada extends HTMLElement {
       charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), {
         series: [{ name: "Generation (kWh)", data: history.generation.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
         chart: { type: "stepLine", height: 250, toolbar: { show: false }, background: "transparent" },
-        theme: theme,
-        xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
-        yaxis: { title: { text: "kWh", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
+        xaxis: { type: "datetime" },
+        yaxis: { title: { text: "kWh" } },
         stroke: { width: 2 },
-        colors: [theme.colors.emerald],
+        colors: ["#059669"],
       });
       charts.generation.render();
     }
@@ -888,10 +848,20 @@ class KirkHillWindScada extends HTMLElement {
 
   _fit() {
     if (!this.config || !this.shadowRoot) return;
+    const shell = this.shadowRoot.querySelector(".shell");
+    if (!shell) return;
+    const r = shell.getBoundingClientRect();
+    if (!r.width || !r.height) return;
     const vb = KirkHillWindScada.VIEWBOX;
-    if (this._vbW === vb.w && this._vbH === vb.h) return;
-    this._vbW = vb.w;
-    this._vbH = vb.h;
+    const aspect = r.width / r.height;
+    let w = Math.round(aspect * this._vbH);
+    w = Math.max(vb.wMin, Math.min(vb.wMax, w));
+    let h = Math.round(w / aspect);
+    h = Math.max(vb.hMin, Math.min(vb.hMax, h));
+    w = Math.round(aspect * h);
+    if (w === this._vbW && h === this._vbH) return;
+    this._vbW = w;
+    this._vbH = h;
     this._render();
   }
 
@@ -1211,9 +1181,9 @@ _buildHeaderChips(layout) {
   _styles() {
     return `
       :host { display: block; width: 100%; -webkit-tap-highlight-color: transparent; }
-      ha-card { overflow: hidden; box-sizing: border-box; }
-      .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; box-sizing: border-box; display: flex; flex-direction: column; }
-      svg { width: 100%; height: auto; aspect-ratio: 1240 / 860; display: block; touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 0; }
+      ha-card { overflow: hidden; box-sizing: border-box; height: 100%; min-height: 0; }
+      .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+      svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 1; }
       .bg { fill: var(--ha-card-background, #f1f5f9); }
 
       /* Lines */
@@ -1257,21 +1227,21 @@ _buildHeaderChips(layout) {
       /* Generation & capacity panel (top right) */
       .user-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .user-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .user-gen-label { fill: var(--secondary-text-color, #475569); font: 600 16px var(--font-family, sans-serif); }
-      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .user-gen-share { fill: #16a34a; font: bold 20px var(--font-family, sans-serif); }
+      .user-gen-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
+      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .user-gen-share { fill: #16a34a; font: bold 23px var(--font-family, sans-serif); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .site-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .site-gen-label { fill: var(--secondary-text-color, #475569); font: 600 16px var(--font-family, sans-serif); }
-      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
+      .site-gen-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
+      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .wind-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .wind-label { fill: var(--secondary-text-color, #475569); font: 600 16px var(--font-family, sans-serif); }
-      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
+      .wind-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
+      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
