@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.44 (stable)
+- **Fix overlapping layout elements**: viewBox minimum height restored to 1052 (was incorrectly lowered to 860 in v4.8.42). At 860 the National Grid box (top at `H−460`) collided with the Site Generation & Capacity panel, and the status legend (`H−150`) overlapped the bottom turbines (T7/T8). With `hMin: 1052` the grid box sits below the panels and the legend clears the turbine block again.
+- Card still bounded to the viewport (`calc(100vh - 64px)`) — the v4.8.43 fix is unchanged.
+
 ## Version 4.8.43 (stable)
 - **SCADA card no longer inflates past the screen**: restores viewport-bounded sizing — `ha-card` capped at `calc(100vh - 64px)` with `:host` filling the grid cell, so the card always fits on-screen regardless of grid size. The v4.8.41 change to `height: 100%` let the grid inflate the card beyond the viewport; reverted to the v4.8.38 approach.
 - All v4.8.40 features preserved: turbine detail modal, generation timeframes, mouse/pinch zoom, reset button, theme-aware ApexCharts.

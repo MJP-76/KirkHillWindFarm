@@ -11,7 +11,7 @@
  */
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 860, hMax: 1200 };
+    return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
   }
 
   static get DESIGN_W() {
