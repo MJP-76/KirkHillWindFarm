@@ -1213,7 +1213,7 @@ _buildHeaderChips(layout) {
       :host { display: block; width: 100%; -webkit-tap-highlight-color: transparent; }
       ha-card { overflow: hidden; box-sizing: border-box; }
       .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; box-sizing: border-box; display: flex; flex-direction: column; }
-      svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 0; }
+      svg { width: 100%; height: auto; aspect-ratio: 1240 / 860; display: block; touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 0; }
       .bg { fill: var(--ha-card-background, #f1f5f9); }
 
       /* Lines */
