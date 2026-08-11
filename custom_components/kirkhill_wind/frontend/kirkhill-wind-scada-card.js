@@ -753,23 +753,29 @@ class KirkHillWindScada extends HTMLElement {
     // roughly match the bus bar height. Boxes are sized to leave room for more
     // per-turbine detail lines later.
     const tTop = 64;
-    const bh = Math.max(
-      92,
-      Math.min(120, Math.floor((gridY - tTop - 30) / Math.max(1, tCount)))
+    const collapse = Math.max(
+      0,
+      Math.min(
+        1,
+        (KirkHillWindScada.DESIGN_W - W) /
+          (KirkHillWindScada.DESIGN_W - KirkHillWindScada.VIEWBOX.wMin)
+      )
     );
-    const pitch = bh;
+    const gapV = 10 * collapse;
+    const bh = Math.max(
+      88,
+      Math.min(120, Math.floor((gridY - tTop - 30 - (tCount - 1) * gapV) / Math.max(1, tCount)))
+    );
+    const pitch = bh + gapV;
 
     // Scale horizontal positions from design width (1240) to current viewBox width.
-    // On wide screens keep the design gap between the two turbine columns; as
-    // the viewBox narrows, slide the right column in beside the left one so the
-    // block compresses instead of the columns staying pinned apart.
-    const collapse =
-      (KirkHillWindScada.DESIGN_W - W) /
-      (KirkHillWindScada.DESIGN_W - KirkHillWindScada.VIEWBOX.wMin);
-    const colGap = 70 - (70 - 8) * Math.max(0, Math.min(1, collapse));
+    // The two columns start with a small gap (40) that shrinks to nothing, then the
+    // right column keeps sliding left until it sits directly under the left column,
+    // merging the staircase into a single column at narrow widths. The vertical
+    // pitch gains a small gap as the columns merge so stacked boxes never touch.
     const busX = 600 * scaleX;
     const leftColX = 30 * scaleX;
-    const rightColX = (30 + 190 + colGap) * scaleX;
+    const rightColX = (30 + (190 + 40) * (1 - collapse)) * scaleX;
     const boxW = 190 * scaleX;
     const feedEndX = busX;
     const gridRectX = 975 * scaleX;
