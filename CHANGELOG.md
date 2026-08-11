@@ -2,6 +2,12 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.45 (stable)
+- **Fix Wind & Forecast panel overlap**: the panel now ends 8px before the National Grid bus line, so it no longer overlaps the transformer/bus bar.
+- **Fix "Active Turbines" pill text overlap**: pill widened with label left-aligned and the "8 of 8" count right-aligned, so the label no longer collides with the value.
+- **Fix turbine status pill overflow**: pill widened so longer statuses (e.g. `THERMAL FAULT`, `MAINTENANCE`, `UNAVAILABLE`) no longer spill outside the pill at narrower card widths.
+- All v4.8.44 layout fixes preserved.
+
 ## Version 4.8.44 (pre-release)
 - **Fix overlapping layout elements**: viewBox minimum height restored to 1052 (was incorrectly lowered to 860 in v4.8.42). At 860 the National Grid box (top at `H−460`) collided with the Site Generation & Capacity panel, and the status legend (`H−150`) overlapped the bottom turbines (T7/T8). With `hMin: 1052` the grid box sits below the panels and the legend clears the turbine block again.
 - Card still bounded to the viewport (`calc(100vh - 64px)`) — the v4.8.43 fix is unchanged.

@@ -784,9 +784,9 @@ class KirkHillWindScada extends HTMLElement {
     const chipLeftColX = 30 * scaleX;
     const chipRightColX = 152 * scaleX;
     const chipWindX = 400 * scaleX;
-    const chipWindW = (210 - (210 - 160) * collapse) * scaleX;
+    const chipWindW = busX - chipWindX - 8;
     const chipWindTitleX = 412 * scaleX;
-    const chipWindValueX = (400 + (210 - (210 - 160) * collapse) - 12) * scaleX;
+    const chipWindValueX = chipWindX + chipWindW - 12;
     const chipUserGenX = 910 * scaleX;
     const chipUserGenW = 260 * scaleX;
     const chipUserGenTitleX = 922 * scaleX;
@@ -883,7 +883,7 @@ class KirkHillWindScada extends HTMLElement {
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
           <rect class="node-rect" x="${x}" y="${top}" width="${layout.boxW}" height="${layout.bh}" rx="8"/>
           <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 18}">${num}</text>
-          <rect class="status-pill" x="${x + 100 * layout.scaleX}" y="${top + 5}" width="${76 * layout.scaleX}" height="20" rx="10"/>
+          <rect class="status-pill" x="${x + 88 * layout.scaleX}" y="${top + 5}" width="${100 * layout.scaleX}" height="20" rx="10"/>
           <text class="t-status" x="${x + 138 * layout.scaleX}" y="${top + 19}"></text>
           <text class="t-power" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 50}">—</text>
           <text class="t-op" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + layout.bh - 50}" text-anchor="end">—</text>
@@ -955,9 +955,9 @@ _buildHeaderChips(layout) {
           <rect x="${layout.chipLeftColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
           <text class="alarm-text" data-alarm="text" x="${layout.chipLeftColX + 56 * layout.scaleX}" y="44" text-anchor="middle">OK</text>
         </g>
-        <rect x="${layout.chipRightColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
-        <text class="chip-label" x="${layout.chipRightColX + 56 * layout.scaleX}" y="44" text-anchor="middle">Active Turbines</text>
-        <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 102 * layout.scaleX}" y="44" text-anchor="end">—</text>
+        <rect x="${layout.chipRightColX}" y="24" width="${190 * layout.scaleX}" height="30" rx="15"/>
+        <text class="chip-label" x="${layout.chipRightColX + 12 * layout.scaleX}" y="44" text-anchor="start">Active Turbines</text>
+        <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 178 * layout.scaleX}" y="44" text-anchor="end">—</text>
 
         <!-- Wind & Forecast panel (left of bus, right of turbines) -->
         <g class="wind-panel" data-wind="panel">
