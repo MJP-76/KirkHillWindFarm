@@ -2,11 +2,11 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
-## Version 4.8.43-dev (pre-release)
+## Version 4.8.43 (stable)
 - **SCADA card no longer inflates past the screen**: restores viewport-bounded sizing — `ha-card` capped at `calc(100vh - 64px)` with `:host` filling the grid cell, so the card always fits on-screen regardless of grid size. The v4.8.41 change to `height: 100%` let the grid inflate the card beyond the viewport; reverted to the v4.8.38 approach.
 - All v4.8.40 features preserved: turbine detail modal, generation timeframes, mouse/pinch zoom, reset button, theme-aware ApexCharts.
 
-## Version 4.8.42-dev (pre-release)
+## Version 4.8.42 (stable)
 - **Fix vertical stretch**: VIEWBOX `hMin` changed 1052 → 860 (matches design height), `hMax` 1600 → 1200 (limits expansion).
 - ResizeObserver derives the viewBox from the actual container aspect ratio.
 - HA grid sizing via `getCardSize()`/`getGridOptions()`.
