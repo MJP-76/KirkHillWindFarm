@@ -230,8 +230,8 @@ class KirkHillWindScada extends HTMLElement {
               ${this._buildLegend(layout)}
             </g>
             <g class="zoom-overlay" data-zoom-reset="btn">
-              <rect x="${layout.W - 48 * layout.scaleX}" y="12" width="36" height="36" rx="6"/>
-              <text x="${layout.W - 30 * layout.scaleX}" y="32" text-anchor="middle" font-size="16">⟲</text>
+              <rect x="${layout.resetBtnX}" y="${layout.resetBtnY}" width="${44 * layout.scaleX}" height="48" rx="10"/>
+              <text x="${layout.resetBtnX + 22 * layout.scaleX}" y="${layout.resetBtnY + 32}" text-anchor="middle" font-size="18">⟲</text>
             </g>
           </svg>
         </div>
@@ -788,14 +788,18 @@ class KirkHillWindScada extends HTMLElement {
     const chipWindTitleX = 412 * scaleX;
     const chipWindValueX = chipWindX + chipWindW - 12;
     const chipUserGenX = 910 * scaleX;
-    const chipUserGenW = 260 * scaleX;
+    const chipUserGenW = W - chipUserGenX;
     const chipUserGenTitleX = 922 * scaleX;
-    const chipUserGenValueX = 1160 * scaleX;
+    const chipUserGenValueX = W - 10 * scaleX;
     const chipSiteGenX = 910 * scaleX;
-    const chipSiteGenW = 260 * scaleX;
+    const chipSiteGenW = W - chipSiteGenX;
     const chipSiteGenTitleX = 922 * scaleX;
-    const chipSiteGenValueX = 1160 * scaleX;
-    const legendX = 30 * scaleX;
+    const chipSiteGenValueX = W - 10 * scaleX;
+    const resetBtnW = 44 * scaleX;
+    const resetBtnH = 48;
+    const resetBtnX = 30 * scaleX;
+    const resetBtnY = legendY + (120 - resetBtnH) / 2;
+    const legendX = resetBtnX + resetBtnW + 12 * scaleX;
     const legendW = 500 * scaleX;
     const xfmrTitleX = 630 * scaleX;
     const xfmrRotateX = 630 * scaleX;
@@ -839,6 +843,8 @@ class KirkHillWindScada extends HTMLElement {
       chipWindW,
       chipWindTitleX,
       chipWindValueX,
+      resetBtnX,
+      resetBtnY,
       legendX,
       legendW,
       xfmrTitleX,

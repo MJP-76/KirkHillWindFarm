@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.46 (stable)
+- **Re-center button moved out of the top-right corner**: now sits at the bottom-left, immediately left of the status legend and vertically centred against it (height matches the legend's two lines).
+- **National Grid box now lines up with the Generation & Capacity panels**: the Owner and Site panels extend to the card's right edge (same right edge as the National Grid box), so the right-hand column aligns. Value columns moved to keep the same right padding.
+
 ## Version 4.8.45 (stable)
 - **Fix Wind & Forecast panel overlap**: the panel now ends 8px before the National Grid bus line, so it no longer overlaps the transformer/bus bar.
 - **Fix "Active Turbines" pill text overlap**: pill widened with label left-aligned and the "8 of 8" count right-aligned, so the label no longer collides with the value.
