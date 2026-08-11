@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.50 (stable)
+- **National Grid box fonts softened**: labels and units raised to 16px, values lowered to 20px bold (was 13/23), reducing the label/value size gap from 10px to 4px for a more balanced look. Title stays 20px bold.
+- All v4.8.49 features preserved.
+
 ## Version 4.8.49 (stable)
 - **National Grid box fonts aligned to the card-wide scale**: the box previously rendered every element at 22px (title, labels, values, units) — the only element that broke the size hierarchy. Title now bold 20px, labels 13px, values bold 23px and the "kWh" unit 13px, matching the Owner/Site/Wind panels exactly. Dead `.grid-col` rule removed.
 - All v4.8.48 features preserved.
