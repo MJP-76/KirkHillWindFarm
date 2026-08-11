@@ -215,7 +215,7 @@ class KirkHillWindScada extends HTMLElement {
               </pattern>
               <marker id="khscada-arrow" viewBox="0 0 10 10" refX="9" refY="5"
                       markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#0284c7"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--khscada-accent-color)"/>
               </marker>
             </defs>
             <rect class="bg" x="0" y="0" width="${layout.W}" height="${layout.H}" fill="url(#khscada-grid)"/>

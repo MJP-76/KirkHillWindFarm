@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.56 (stable)
+- **Arrow marker theme-aware**: flow arrow now uses `--khscada-accent-color` (maps to `--ha-primary-color`) instead of hardcoded blue.
+- All v4.8.55 features preserved.
+
 ## Version 4.8.55 (stable)
 - **All backgrounds theme-aware**: turbine boxes, bus bar, National Grid box, chips, panels, alarm, legend — all use HA semantic color variables (`--ha-card-background`, `--ha-primary-color`, `--ha-success-color`, `--ha-error-color`) via local `--khscada-*` aliases with `color-mix()` for subtle tints. No hardcoded hex colors remain.
 - Status pills & legend dots now use HA variables (success/accent/warn/error/disabled) instead of hex.
