@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.54 (stable)
+- **Full theme-aware SCADA card**: all fonts, colors, and styles now use HA CSS variables (`--ha-font-size-*`, `--ha-primary-text-color`, `--ha-secondary-text-color`, `--ha-card-background`, `--ha-divider-color`, `--ha-primary-color`, etc.) with local `--khscada-*` aliases. No hardcoded colors or absolute px remain. The card now fully responds to dashboard themes, font-size settings, and custom HA themes.
+- All v4.8.53 features preserved.
+
 ## Version 4.8.53 (stable)
 - **Shadow DOM fix for HA font tokens**: added `:host` variable inheritance so `--ha-font-size-*` tokens now penetrate the card's Shadow DOM. Generation panels, turbine nodes, and all text now respond to HA's global font-size setting.
 - All v4.8.52 features preserved.

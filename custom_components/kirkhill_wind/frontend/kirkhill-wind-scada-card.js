@@ -1217,73 +1217,84 @@ _buildHeaderChips(layout) {
         --ha-font-size-xlarge: var(--ha-font-size-xlarge, 18px);
         --ha-font-size-xxlarge: var(--ha-font-size-xxlarge, 20px);
         --ha-font-size-xxxlarge: var(--ha-font-size-xxxlarge, 24px);
+        --khscada-font-family: var(--font-family, var(--ha-font-family, inherit));
+        --khscada-primary-color: var(--primary-text-color, var(--ha-primary-text-color, #0f172a));
+        --khscada-secondary-color: var(--secondary-text-color, var(--ha-secondary-text-color, #475569));
+        --khscada-disabled-color: var(--disabled-text-color, var(--ha-disabled-text-color, #64748b));
+        --khscada-accent-color: var(--primary-color, var(--ha-primary-color, #0284c7));
+        --khscada-success-color: var(--success-color, var(--ha-label-badge-green, #16a34a));
+        --khscada-error-color: var(--error-color, var(--ha-label-badge-red, #ef4444));
+        --khscada-warn-color: var(--warning-color, var(--ha-label-badge-yellow, #f59e0b));
+        --khscada-card-bg: var(--ha-card-background, #f1f5f9);
+        --khscada-divider: var(--divider-color, #cbd5e1);
       }
-      ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; }
-      .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; height: 100%; box-sizing: border-box; }
+      ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; background: transparent; }
+      .shell { padding: 12px; background: var(--khscada-card-bg); border-radius: 12px; height: 100%; box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
-      .bg { fill: var(--ha-card-background, #f1f5f9); }
+      .bg { fill: var(--khscada-card-bg); }
+      text { font-family: var(--khscada-font-family); fill: var(--khscada-primary-color); }
 
       /* Lines */
-      .feed-line { stroke: rgba(2,132,199,0.35); stroke-width: 3; }
-      .flow-dot { fill: #0284c7; }
+      .feed-line { stroke: var(--khscada-accent-color); stroke-opacity: 0.35; stroke-width: 3; }
+      .flow-dot { fill: var(--khscada-accent-color); }
 
       /* Turbine nodes */
-      .node-rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
+      .node-rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
       .node-rect[data-status] { opacity: 1; }
-      .turbine:hover .node-rect { stroke: #0284c7; }
-      .t-id { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
-      .status-pill { fill: #22c55e; }
-      .t-status { fill: #06121f; font: bold var(--ha-font-size-small, 12px) var(--font-family, sans-serif); text-anchor: middle; }
-      .t-power { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
-      .t-op { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size, 14px) var(--font-family, sans-serif); }
-      .t-wind { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
-      .t-detail { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
-      .t-last { fill: var(--disabled-text-color, #64748b); font: var(--ha-font-size-small, 12px) var(--font-family, sans-serif); }
+      .turbine:hover .node-rect { stroke: var(--khscada-accent-color); }
+      .t-id { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .status-pill { fill: var(--khscada-success-color); }
+      .t-status { fill: #06121f; font: 600 var(--ha-font-size-small) var(--khscada-font-family); text-anchor: middle; }
+      .t-power { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
+      .t-op { font: 600 var(--ha-font-size) var(--khscada-font-family); }
+      .t-wind { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
+      .t-detail { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
+      .t-last { fill: var(--khscada-disabled-color); font: var(--ha-font-size-small) var(--khscada-font-family); }
 
       /* Bus */
-      .bus rect { fill: #e0f2fe; stroke: #2563eb; stroke-width: 2; }
+      .bus rect { fill: #e0f2fe; stroke: var(--khscada-accent-color); stroke-width: 2; }
 
       /* Transformer label (overlaid down the site collection bus) */
-      .xfmr-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xlarge, 18px) var(--font-family, sans-serif); }
+      .xfmr-title { font: 600 var(--ha-font-size-xlarge) var(--khscada-font-family); }
 
       /* Grid node */
       .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }
-      .grid-title { fill: #4d7c0f; font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
-      .grid-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size-large, 16px) var(--font-family, sans-serif); }
-      .grid-power { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
-      .grid-energy { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
-      .grid-unit { fill: var(--disabled-text-color, #64748b); font: var(--ha-font-size-large, 16px) var(--font-family, sans-serif); }
+      .grid-title { fill: #4d7c0f; font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .grid-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-large) var(--khscada-font-family); }
+      .grid-power { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .grid-energy { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .grid-unit { fill: var(--khscada-disabled-color); font: var(--ha-font-size-large) var(--khscada-font-family); }
       .grid-divider { stroke: #84cc16; stroke-width: 2; }
 
       /* Chips */
-      .chips rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .chip-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size-small, 12px) var(--font-family, sans-serif); }
-      .chip-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size, 14px) var(--font-family, sans-serif); }
+      .chips rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
+      .chip-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-small) var(--khscada-font-family); }
+      .chip-value { font: 600 var(--ha-font-size) var(--khscada-font-family); }
 
       /* Generation & capacity panel (top right) */
-      .user-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .user-gen-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
-      .user-gen-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
-      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
-      .user-gen-share { fill: #16a34a; font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
+      .user-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
+      .user-gen-title { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .user-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
+      .user-gen-value { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
+      .user-gen-share { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
-      .site-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .site-gen-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
-      .site-gen-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
-      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
+      .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
+      .site-gen-title { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .site-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
+      .site-gen-value { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
 
       /* Wind & forecast panel (below Site Generation) */
-      .wind-panel rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .wind-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
-      .wind-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
-      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
+      .wind-panel rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
+      .wind-title { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .wind-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
+      .wind-value { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
 
-      /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
-      .alarm rect { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
-      .alarm-text { fill: #15803d; font: bold var(--ha-font-size, 14px) var(--font-family, sans-serif); }
-      .alarm.fault rect { fill: #fef2f2; stroke: #ef4444; stroke-width: 2; }
-      .alarm.fault .alarm-text { fill: #b91c1c; }
+      /* Alarm indicator */
+      .alarm rect { fill: #dcfce7; stroke: var(--khscada-success-color); stroke-width: 2; }
+      .alarm-text { fill: var(--khscada-success-color); font: 600 var(--ha-font-size) var(--khscada-font-family); }
+      .alarm.fault rect { fill: #fef2f2; stroke: var(--khscada-error-color); stroke-width: 2; }
+      .alarm.fault .alarm-text { fill: var(--khscada-error-color); }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
       @keyframes khscada-alarm-flash {
         0%, 100% { opacity: 1; }
@@ -1292,30 +1303,30 @@ _buildHeaderChips(layout) {
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
-      .lg-item { display: inline-flex; align-items: center; gap: 5px; color: var(--secondary-text-color, #475569); font: var(--ha-font-size-small, 12px) var(--font-family, sans-serif); }
+      .lg-item { color: var(--khscada-secondary-color); font: var(--ha-font-size-small) var(--khscada-font-family); }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
-      .empty { padding: 24px 16px; color: var(--secondary-text-color); }
+      .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
 
       /* Turbine detail modal */
       .turbine-detail-modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
       .turbine-detail-modal .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
       .turbine-detail-modal .modal-content {
         position: relative; width: 95%; max-width: 1200px; max-height: 90vh;
-        background: var(--ha-card-background, #fff); border-radius: 12px;
+        background: var(--khscada-card-bg); border-radius: 12px;
         box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column;
         overflow: hidden;
       }
       .turbine-detail-modal .modal-header { display: flex; align-items: center; justify-content: space-between;
-        padding: 16px 20px; border-bottom: 1px solid var(--divider-color, #e2e8f0); }
-      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 var(--ha-font-size-xlarge, 18px) var(--font-family, sans-serif); color: var(--primary-text-color); }
-      .turbine-detail-modal .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--secondary-text-color); padding: 4px 8px; border-radius: 6px; }
-      .turbine-detail-modal .modal-close:hover { background: var(--divider-color); }
+        padding: 16px 20px; border-bottom: 1px solid var(--khscada-divider); }
+      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 var(--ha-font-size-xlarge) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .turbine-detail-modal .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--khscada-secondary-color); padding: 4px 8px; border-radius: 6px; }
+      .turbine-detail-modal .modal-close:hover { background: var(--khscada-divider); }
       .turbine-detail-modal .modal-body { padding: 16px; overflow-y: auto; max-height: calc(90vh - 70px); }
       .turbine-detail-modal .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
-      .turbine-detail-modal .chart-item { background: var(--ha-card-background, #fff); border: 1px solid var(--divider-color, #e2e8f0); border-radius: 8px; padding: 12px; }
+      .turbine-detail-modal .chart-item { background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 12px; }
       .turbine-detail-modal .chart-item.large { grid-column: span 2; }
-      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--font-family, sans-serif); color: var(--primary-text-color); }
+      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size) var(--khscada-font-family); color: var(--khscada-primary-color); }
       .turbine-detail-modal .apex-chart { width: 100%; height: 100%; min-height: 280px; }
       @media (max-width: 900px) {
         .turbine-detail-modal .chart-item.large { grid-column: span 1; }
@@ -1323,9 +1334,9 @@ _buildHeaderChips(layout) {
       }
 
       .zoom-overlay { cursor: pointer; }
-      .zoom-overlay rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; transition: stroke 0.2s; }
-      .zoom-overlay rect:hover { stroke: var(--primary-color, #0284c7); }
-      .zoom-overlay text { fill: var(--primary-text-color, #0f172a); font-family: var(--font-family, sans-serif); }
+      .zoom-overlay rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; transition: stroke 0.2s; }
+      .zoom-overlay rect:hover { stroke: var(--khscada-accent-color); }
+      .zoom-overlay text { fill: var(--khscada-primary-color); font-family: var(--khscada-font-family); }
     `;
   }
 }
