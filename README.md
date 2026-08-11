@@ -53,15 +53,6 @@ It pulls current data for both OpenAPI scopes:
 > - **Financial figures are projected, not real-time values and based on user-defined inputs.**
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
-## Changelog
-
-<details>
-<summary>See the changelog</summary>
-
-Full version history is kept in [`CHANGELOG.md`][changelog].
-
-</details>
-
 ## Support me
 
 If you find this project useful, and would like to help support its continued development, you can do so here:
@@ -288,6 +279,15 @@ When preparing a release:
    ```
 
 Release tags are generated as `vX.Y.Z` directly from `VERSION`.
+
+## Changelog
+
+<details>
+<summary>See the changelog</summary>
+
+Full version history is kept in [`CHANGELOG.md`][changelog].
+
+</details>
 
 [badge-home-assistant]: https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white
 [home-assistant]: https://www.home-assistant.io/
