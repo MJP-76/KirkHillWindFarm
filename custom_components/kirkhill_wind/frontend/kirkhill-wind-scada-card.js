@@ -1209,7 +1209,15 @@ _buildHeaderChips(layout) {
 
   _styles() {
     return `
-      :host { display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
+      :host {
+        display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent;
+        --ha-font-size-small: var(--ha-font-size-small, 12px);
+        --ha-font-size: var(--ha-font-size, 14px);
+        --ha-font-size-large: var(--ha-font-size-large, 16px);
+        --ha-font-size-xlarge: var(--ha-font-size-xlarge, 18px);
+        --ha-font-size-xxlarge: var(--ha-font-size-xxlarge, 20px);
+        --ha-font-size-xxxlarge: var(--ha-font-size-xxxlarge, 24px);
+      }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; }
       .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; height: 100%; box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }

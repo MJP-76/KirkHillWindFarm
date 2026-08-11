@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.53 (stable)
+- **Shadow DOM fix for HA font tokens**: added `:host` variable inheritance so `--ha-font-size-*` tokens now penetrate the card's Shadow DOM. Generation panels, turbine nodes, and all text now respond to HA's global font-size setting.
+- All v4.8.52 features preserved.
+
 ## Version 4.8.52 (stable)
 - **Full SCADA card uses HA native font tokens**: every text element now references `--ha-font-size-*` variables (small/large/xlarge/xxlarge/xxxlarge) instead of absolute px. The card now scales with the user's HA font-size setting and matches system hierarchy.
 - Turbine nodes, transformer, chips, panels, alarm, legend, and modal all converted.
