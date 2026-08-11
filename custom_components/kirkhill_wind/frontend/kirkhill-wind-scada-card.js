@@ -63,17 +63,9 @@ class KirkHillWindScada extends HTMLElement {
 
   connectedCallback() {
     if (this.config) this._render();
-    if (!this._ro) {
-      this._ro = new ResizeObserver(() => this._fit());
-      this._ro.observe(this);
-    }
   }
 
   disconnectedCallback() {
-    if (this._ro) {
-      this._ro.disconnect();
-      this._ro = null;
-    }
     if (this._mousePan) this._mousePan = null;
     document.removeEventListener("mousemove", this._onMouseMove);
     document.removeEventListener("mouseup", this._onMouseUp);
@@ -896,18 +888,10 @@ class KirkHillWindScada extends HTMLElement {
 
   _fit() {
     if (!this.config || !this.shadowRoot) return;
-    const shell = this.shadowRoot.querySelector(".shell");
-    if (!shell) return;
-    const r = shell.getBoundingClientRect();
-    if (!r.width || !r.height) return;
     const vb = KirkHillWindScada.VIEWBOX;
-    const aspect = r.width / r.height;
-    let w = Math.round(aspect * this._vbH);
-    w = Math.max(vb.wMin, Math.min(vb.wMax, w));
-    let h = Math.max(600, Math.round(w / aspect));
-    if (w === this._vbW && h === this._vbH) return;
-    this._vbW = w;
-    this._vbH = h;
+    if (this._vbW === vb.w && this._vbH === vb.h) return;
+    this._vbW = vb.w;
+    this._vbH = vb.h;
     this._render();
   }
 
@@ -1226,10 +1210,10 @@ _buildHeaderChips(layout) {
 
   _styles() {
     return `
-      :host { display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
-      ha-card { overflow: hidden; height: 100%; min-height: 0; box-sizing: border-box; }
-      .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; height: 100%; box-sizing: border-box; }
-      svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+      :host { display: block; width: 100%; -webkit-tap-highlight-color: transparent; }
+      ha-card { overflow: hidden; box-sizing: border-box; }
+      .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; box-sizing: border-box; display: flex; flex-direction: column; }
+      svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; flex-shrink: 0; }
       .bg { fill: var(--ha-card-background, #f1f5f9); }
 
       /* Lines */
