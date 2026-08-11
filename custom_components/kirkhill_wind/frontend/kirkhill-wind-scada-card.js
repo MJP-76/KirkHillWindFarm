@@ -1240,12 +1240,11 @@ _buildHeaderChips(layout) {
 
       /* Grid node */
       .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }
-      .grid-title { fill: #4d7c0f; font: bold 22px var(--font-family, sans-serif); }
-      .grid-col { fill: #4d7c0f; font: bold 22px var(--font-family, sans-serif); }
-      .grid-label { fill: var(--secondary-text-color, #475569); font: 22px var(--font-family, sans-serif); }
-      .grid-power { fill: var(--primary-text-color, #0f172a); font: bold 22px var(--font-family, sans-serif); }
-      .grid-energy { fill: var(--primary-text-color, #0f172a); font: bold 22px var(--font-family, sans-serif); }
-      .grid-unit { fill: var(--disabled-text-color, #64748b); font: 22px var(--font-family, sans-serif); }
+      .grid-title { fill: #4d7c0f; font: bold 20px var(--font-family, sans-serif); }
+      .grid-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
+      .grid-power { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .grid-energy { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .grid-unit { fill: var(--disabled-text-color, #64748b); font: 13px var(--font-family, sans-serif); }
       .grid-divider { stroke: #84cc16; stroke-width: 2; }
 
       /* Chips */

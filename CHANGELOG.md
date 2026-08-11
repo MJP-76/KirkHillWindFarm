@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.49 (stable)
+- **National Grid box fonts aligned to the card-wide scale**: the box previously rendered every element at 22px (title, labels, values, units) — the only element that broke the size hierarchy. Title now bold 20px, labels 13px, values bold 23px and the "kWh" unit 13px, matching the Owner/Site/Wind panels exactly. Dead `.grid-col` rule removed.
+- All v4.8.48 features preserved.
+
 ## Version 4.8.48 (stable)
 - **Fix turbine detail modal charts showing no data**: the modal depends on ApexCharts, which was never loaded, so `_renderCharts` silently returned and every chart stayed empty. ApexCharts (v4.4.0) is now bundled with the integration and lazy-loaded the first time the modal opens.
 - **"Active Turbines" pill compacted**: width 190 → 150, label 13px → 12px and value 14px → 13px so it no longer dominates the header row.
