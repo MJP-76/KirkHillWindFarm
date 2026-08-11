@@ -36,17 +36,17 @@ class KirkHillWindScada extends HTMLElement {
 
   static get STATUS() {
     return {
-      running: { label: "RUNNING", color: "#22c55e" },
-      ready: { label: "READY", color: "#84cc16" },
-      starting: { label: "STARTING", color: "#f59e0b" },
-      curtailed: { label: "CURTAILED", color: "#f97316" },
-      no_wind: { label: "NO WIND", color: "#38bdf8" },
-      stopped: { label: "STOPPED", color: "#94a3b8" },
-      fault_thermal: { label: "THERMAL FAULT", color: "#ef4444" },
-      fault_electrical: { label: "ELEC FAULT", color: "#dc2626" },
-      maintenance: { label: "MAINTENANCE", color: "#a855f7" },
-      unavailable: { label: "UNAVAILABLE", color: "#64748b" },
-      unknown: { label: "UNKNOWN", color: "#94a3b8" },
+      running: { label: "RUNNING", class: "status-running", color: "var(--khscada-success-color)" },
+      ready: { label: "READY", class: "status-ready", color: "var(--khscada-accent-color)" },
+      starting: { label: "STARTING", class: "status-starting", color: "var(--khscada-warn-color)" },
+      curtailed: { label: "CURTAILED", class: "status-curtailed", color: "var(--khscada-warn-color)" },
+      no_wind: { label: "NO WIND", class: "status-no-wind", color: "var(--khscada-accent-color)" },
+      stopped: { label: "STOPPED", class: "status-stopped", color: "var(--khscada-disabled-color)" },
+      fault_thermal: { label: "THERMAL FAULT", class: "status-fault", color: "var(--khscada-error-color)" },
+      fault_electrical: { label: "ELEC FAULT", class: "status-fault", color: "var(--khscada-error-color)" },
+      maintenance: { label: "MAINTENANCE", class: "status-maintenance", color: "var(--khscada-accent-color)" },
+      unavailable: { label: "UNAVAILABLE", class: "status-unavailable", color: "var(--khscada-disabled-color)" },
+      unknown: { label: "UNKNOWN", class: "status-unknown", color: "var(--khscada-disabled-color)" },
     };
   }
 
@@ -1175,7 +1175,10 @@ _buildHeaderChips(layout) {
       this._setText(node, ".t-detail", `Today ${today.value} ${today.unit}${rotor !== null ? ` · ${this._fmt(rotor, 1)} rpm` : ""}`);
       this._setText(node, ".t-last", `Last status ${last}`);
       const pill = node.querySelector(".status-pill");
-      if (pill) pill.setAttribute("fill", status.color);
+      if (pill) {
+        pill.className = "status-pill " + status.class;
+        pill.removeAttribute("fill");
+      }
       node.querySelectorAll(".node-rect").forEach((r) => r.setAttribute("data-status", status.label));
 
       // Flow dot speed
@@ -1225,8 +1228,13 @@ _buildHeaderChips(layout) {
         --khscada-success-color: var(--success-color, var(--ha-label-badge-green, #16a34a));
         --khscada-error-color: var(--error-color, var(--ha-label-badge-red, #ef4444));
         --khscada-warn-color: var(--warning-color, var(--ha-label-badge-yellow, #f59e0b));
-        --khscada-card-bg: var(--ha-card-background, #f1f5f9);
-        --khscada-divider: var(--divider-color, #cbd5e1);
+        --khscada-card-bg: var(--ha-card-background);
+        --khscada-panel-bg: var(--ha-card-background);
+        --khscada-bus-bg: color-mix(in srgb, var(--ha-primary-color) 8%, transparent);
+        --khscada-grid-bg: color-mix(in srgb, var(--ha-success-color) 8%, transparent);
+        --khscada-alarm-ok-bg: color-mix(in srgb, var(--ha-success-color) 10%, transparent);
+        --khscada-alarm-fault-bg: color-mix(in srgb, var(--ha-error-color) 10%, transparent);
+        --khscada-divider: var(--divider-color, var(--ha-divider-color, #cbd5e1));
       }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; background: transparent; }
       .shell { padding: 12px; background: var(--khscada-card-bg); border-radius: 12px; height: 100%; box-sizing: border-box; }
@@ -1244,7 +1252,17 @@ _buildHeaderChips(layout) {
       .turbine:hover .node-rect { stroke: var(--khscada-accent-color); }
       .t-id { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
       .status-pill { fill: var(--khscada-success-color); }
-      .t-status { fill: #06121f; font: 600 var(--ha-font-size-small) var(--khscada-font-family); text-anchor: middle; }
+      .status-pill.status-running { fill: var(--khscada-success-color); }
+      .status-pill.status-ready { fill: var(--khscada-accent-color); }
+      .status-pill.status-starting { fill: var(--khscada-warn-color); }
+      .status-pill.status-curtailed { fill: var(--khscada-warn-color); }
+      .status-pill.status-no-wind { fill: var(--khscada-accent-color); }
+      .status-pill.status-stopped { fill: var(--khscada-disabled-color); }
+      .status-pill.status-fault { fill: var(--khscada-error-color); }
+      .status-pill.status-maintenance { fill: var(--khscada-accent-color); }
+      .status-pill.status-unavailable { fill: var(--khscada-disabled-color); }
+      .status-pill.status-unknown { fill: var(--khscada-disabled-color); }
+      .t-status { fill: var(--khscada-primary-color); font: 600 var(--ha-font-size-small) var(--khscada-font-family); text-anchor: middle; }
       .t-power { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
       .t-op { font: 600 var(--ha-font-size) var(--khscada-font-family); }
       .t-wind { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
@@ -1252,19 +1270,19 @@ _buildHeaderChips(layout) {
       .t-last { fill: var(--khscada-disabled-color); font: var(--ha-font-size-small) var(--khscada-font-family); }
 
       /* Bus */
-      .bus rect { fill: #e0f2fe; stroke: var(--khscada-accent-color); stroke-width: 2; }
+      .bus rect { fill: var(--khscada-bus-bg); stroke: var(--khscada-accent-color); stroke-width: 2; }
 
       /* Transformer label (overlaid down the site collection bus) */
       .xfmr-title { font: 600 var(--ha-font-size-xlarge) var(--khscada-font-family); }
 
       /* Grid node */
-      .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }
-      .grid-title { fill: #4d7c0f; font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .grid-rect { fill: var(--khscada-grid-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
+      .grid-title { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
       .grid-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-large) var(--khscada-font-family); }
       .grid-power { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
       .grid-energy { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
       .grid-unit { fill: var(--khscada-disabled-color); font: var(--ha-font-size-large) var(--khscada-font-family); }
-      .grid-divider { stroke: #84cc16; stroke-width: 2; }
+      .grid-divider { stroke: var(--khscada-success-color); stroke-width: 2; }
 
       /* Chips */
       .chips rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
@@ -1291,9 +1309,9 @@ _buildHeaderChips(layout) {
       .wind-value { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
 
       /* Alarm indicator */
-      .alarm rect { fill: #dcfce7; stroke: var(--khscada-success-color); stroke-width: 2; }
+      .alarm rect { fill: var(--khscada-alarm-ok-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
       .alarm-text { fill: var(--khscada-success-color); font: 600 var(--ha-font-size) var(--khscada-font-family); }
-      .alarm.fault rect { fill: #fef2f2; stroke: var(--khscada-error-color); stroke-width: 2; }
+      .alarm.fault rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
       .alarm.fault .alarm-text { fill: var(--khscada-error-color); }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
       @keyframes khscada-alarm-flash {

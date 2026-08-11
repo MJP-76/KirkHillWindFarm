@@ -2,6 +2,11 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.55 (stable)
+- **All backgrounds theme-aware**: turbine boxes, bus bar, National Grid box, chips, panels, alarm, legend — all use HA semantic color variables (`--ha-card-background`, `--ha-primary-color`, `--ha-success-color`, `--ha-error-color`) via local `--khscada-*` aliases with `color-mix()` for subtle tints. No hardcoded hex colors remain.
+- Status pills & legend dots now use HA variables (success/accent/warn/error/disabled) instead of hex.
+- All v4.8.54 features preserved.
+
 ## Version 4.8.54 (stable)
 - **Full theme-aware SCADA card**: all fonts, colors, and styles now use HA CSS variables (`--ha-font-size-*`, `--ha-primary-text-color`, `--ha-secondary-text-color`, `--ha-card-background`, `--ha-divider-color`, `--ha-primary-color`, etc.) with local `--khscada-*` aliases. No hardcoded colors or absolute px remain. The card now fully responds to dashboard themes, font-size settings, and custom HA themes.
 - All v4.8.53 features preserved.
