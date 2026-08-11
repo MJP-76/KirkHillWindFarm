@@ -22,6 +22,10 @@ class KirkHillWindScada extends HTMLElement {
     return 6;
   }
 
+  static get MIN_ZOOM() {
+    return 0.5;
+  }
+
   static get TAP_MOVE_PX() {
     return 8;
   }
@@ -70,6 +74,9 @@ class KirkHillWindScada extends HTMLElement {
       this._ro.disconnect();
       this._ro = null;
     }
+    if (this._mousePan) this._mousePan = null;
+    document.removeEventListener("mousemove", this._onMouseMove);
+    document.removeEventListener("mouseup", this._onMouseUp);
   }
 
   setConfig(config) {
@@ -222,6 +229,10 @@ class KirkHillWindScada extends HTMLElement {
               ${this._buildHeaderChips(layout)}
               ${this._buildLegend(layout)}
             </g>
+            <g class="zoom-overlay" data-zoom-reset="btn">
+              <rect x="${layout.W - 48 * layout.scaleX}" y="12" width="36" height="36" rx="6"/>
+              <text x="${layout.W - 30 * layout.scaleX}" y="32" text-anchor="middle" font-size="16">⟲</text>
+            </g>
           </svg>
         </div>
       </ha-card>
@@ -236,6 +247,11 @@ class KirkHillWindScada extends HTMLElement {
     if (!svg) return;
     if (this._boundClick) svg.removeEventListener("click", this._boundClick);
     this._boundClick = (ev) => {
+      const resetBtn = ev.target.closest('[data-zoom-reset="btn"]');
+      if (resetBtn) {
+        this._zoomReset();
+        return;
+      }
       const g = ev.target.closest("g.turbine");
       if (!g) return;
       this._openTurbine(g);
@@ -245,19 +261,291 @@ class KirkHillWindScada extends HTMLElement {
 
   _openTurbine(g) {
     const key = g.getAttribute("data-turbine");
-    const entityId = key ? this._turbineEntities.get(key) : null;
-    if (!entityId) return;
-    try {
-      window.dispatchEvent(
-        new CustomEvent("hass-more-info", {
-          bubbles: true,
-          composed: true,
-          detail: { entityId },
-        })
-      );
-    } catch (err) {
-      console.error("SCADA: failed to open more-info", err);
+    const turbine = this.config.turbines.find(t => (t.id || `T${this.config.turbines.indexOf(t) + 1}`) === key);
+    if (!turbine) return;
+
+    // Open custom detailed modal with historical charts
+    this._showTurbineDetailModal(turbine);
+  }
+
+  _showTurbineDetailModal(turbine) {
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>${turbine.id} — Historical Data</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="chart-grid">
+            <div class="chart-item large">
+              <h3>Power (25h)</h3>
+              <div id="chart-power" class="apex-chart"></div>
+            </div>
+            <div class="chart-item large">
+              <h3>Wind vs Power</h3>
+              <div id="chart-wind-power" class="apex-chart"></div>
+            </div>
+            <div class="chart-item">
+              <h3>Capacity Factor (25h)</h3>
+              <div id="chart-capacity" class="apex-chart"></div>
+            </div>
+            <div class="chart-item">
+              <h3>Rotor Speed (25h)</h3>
+              <div id="chart-rotor" class="apex-chart"></div>
+            </div>
+            <div class="chart-item">
+              <h3>Wind Speed (25h)</h3>
+              <div id="chart-wind" class="apex-chart"></div>
+            </div>
+            <div class="chart-item">
+              <h3>Generation Today</h3>
+              <div id="chart-generation" class="apex-chart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.shadowRoot.appendChild(modal);
+    this._turbineDetailTurbine = turbine;
+    this._turbineDetailModal = modal;
+
+    // Add close handlers
+    modal.querySelectorAll("[data-close]").forEach(el => {
+      el.addEventListener("click", () => this._closeTurbineDetailModal());
+    });
+
+    // Close on Escape
+    this._boundKeydown = (e) => { if (e.key === "Escape") this._closeTurbineDetailModal(); };
+    window.addEventListener("keydown", this._boundKeydown);
+
+    // Initialize charts after a brief delay for DOM
+    requestAnimationFrame(() => this._initTurbineCharts(turbine));
+  }
+
+  _closeTurbineDetailModal() {
+    if (this._turbineDetailModal) {
+      this._turbineDetailModal.remove();
+      this._turbineDetailModal = null;
     }
+    if (this._turbineDetailCharts) {
+      Object.values(this._turbineDetailCharts).forEach(c => c.destroy && c.destroy());
+      this._turbineDetailCharts = null;
+    }
+    this._turbineDetailTurbine = null;
+    if (this._boundKeydown) {
+      window.removeEventListener("keydown", this._boundKeydown);
+      this._boundKeydown = null;
+    }
+  }
+
+  async _initTurbineCharts(turbine) {
+    const now = new Date();
+    const start = new Date(now.getTime() - 25 * 3600 * 1000);
+    const startISO = start.toISOString();
+    const endISO = now.toISOString();
+
+    const entities = {
+      power: turbine.power_entity,
+      wind: turbine.wind_speed_entity,
+      capacity: turbine.capacity_entity,
+      rotor: turbine.rotor_entity,
+      generation: turbine.generation_today_entity,
+      state: turbine.state_entity,
+    };
+
+    try {
+      const history = await this._fetchHistory(entities, startISO, endISO);
+      this._renderCharts(turbine.id, history);
+    } catch (err) {
+      console.error("Failed to load turbine history:", err);
+    }
+  }
+
+  async _fetchHistory(entities, start, end) {
+    const hass = this._hass;
+    const results = {};
+
+    for (const [key, entityId] of Object.entries(entities)) {
+      if (!entityId) { results[key] = []; continue; }
+      try {
+        const url = `${hass.connection.baseUrl}/api/history/period/${start}?end_time=${end}&filter_entity_id=${entityId}&minimal_response=true`;
+        const response = await fetch(url, { headers: { Authorization: `Bearer ${hass.auth.accessToken}` } });
+        const data = await response.json();
+        results[key] = Array.isArray(data) ? data[0] || [] : [];
+      } catch (e) {
+        results[key] = [];
+      }
+    }
+    return results;
+  }
+
+  _apexTheme() {
+    const root = this.shadowRoot;
+    if (!root) return { mode: "light", colors: { primary: "#0284c7", amber: "#f59e0b", green: "#22c55e", emerald: "#059669", purple: "#8b5cf6", text: "#0f172a", textSecondary: "#475569", axis: "#cbd5e1" } };
+
+    const style = getComputedStyle(root);
+    const bg = style.getPropertyValue("--ha-card-background").trim() || "#ffffff";
+    const isDark = this._isDarkBg(bg);
+    const primary = style.getPropertyValue("--primary-color").trim() || "#0284c7";
+    const text = style.getPropertyValue("--primary-text-color").trim() || (isDark ? "#f8fafc" : "#0f172a");
+    const textSecondary = style.getPropertyValue("--secondary-text-color").trim() || (isDark ? "#cbd5e1" : "#475569");
+    const divider = style.getPropertyValue("--divider-color").trim() || (isDark ? "#334159" : "#cbd5e1");
+
+    return {
+      mode: isDark ? "dark" : "light",
+      colors: {
+        primary: "#0284c7",
+        amber: "#f59e0b",
+        green: "#22c55e",
+        emerald: "#059669",
+        purple: "#8b5cf6",
+        text,
+        textSecondary,
+        axis: divider,
+      },
+    };
+  }
+
+  _isDarkBg(bg) {
+    const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!m) {
+      const hex = bg.replace("#", "");
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return (r + g + b) / 3 < 100;
+    }
+    const [r, g, b] = [m[1], m[2], m[3]].map(Number);
+    return (r + g + b) / 3 < 100;
+  }
+
+  _renderCharts(turbineId, history) {
+    if (!window.ApexCharts) return;
+
+    const charts = {};
+    const theme = this._apexTheme();
+
+    // Power chart
+    if (history.power?.length) {
+      charts.power = new ApexCharts(this.shadowRoot.querySelector("#chart-power"), {
+        series: [{ name: "Power (kW)", data: history.power.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
+        chart: { type: "area", height: 300, toolbar: { show: false }, background: "transparent" },
+        theme: theme,
+        xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
+        yaxis: { title: { text: "kW", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
+        stroke: { curve: "smooth", width: 2 },
+        fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1, stops: [0, 100] } },
+        colors: [theme.colors.primary],
+        tooltip: { x: { format: "HH:mm" }, style: { fontSize: "12px" }, theme: { mode: theme.mode } },
+      });
+      charts.power.render();
+    }
+
+    // Wind vs Power scatter
+    if (history.wind?.length && history.power?.length) {
+      // Interpolate wind to power timestamps
+      const windMap = new Map(history.wind.map(w => [new Date(w.last_changed).getTime(), this._numVal(w.state)]));
+      const scatterData = history.power
+        .map(p => {
+          const t = new Date(p.last_changed).getTime();
+          const wind = windMap.get(t) || this._interpolateWind(history.wind, t);
+          return wind !== null ? { x: this._numVal(p.state), y: wind } : null;
+        })
+        .filter(d => d !== null);
+      if (scatterData.length) {
+        charts.windPower = new ApexCharts(this.shadowRoot.querySelector("#chart-wind-power"), {
+          series: [{ name: "Wind vs Power", data: scatterData }],
+          chart: { type: "scatter", height: 300, toolbar: { show: false }, background: "transparent" },
+          theme: theme,
+          xaxis: { title: { text: "Power (kW)", style: { color: theme.colors.textSecondary } }, labels: { style: { colors: theme.colors.textSecondary } } },
+          yaxis: { title: { text: "Wind (m/s)", style: { color: theme.colors.textSecondary } }, labels: { style: { colors: theme.colors.textSecondary } } },
+          colors: [theme.colors.amber],
+          tooltip: { theme: { mode: theme.mode } },
+          markers: { size: 4 },
+        });
+        charts.windPower.render();
+      }
+    }
+
+    // Capacity factor
+    if (history.capacity?.length) {
+      charts.capacity = new ApexCharts(this.shadowRoot.querySelector("#chart-capacity"), {
+        series: [{ name: "Capacity %", data: history.capacity.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
+        chart: { type: "line", height: 250, toolbar: { show: false }, background: "transparent" },
+        theme: theme,
+        xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
+        yaxis: { title: { text: "%", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } }, max: 100 },
+        stroke: { curve: "smooth", width: 2 },
+        colors: [theme.colors.green],
+      });
+      charts.capacity.render();
+    }
+
+    // Rotor speed
+    if (history.rotor?.length) {
+      charts.rotor = new ApexCharts(this.shadowRoot.querySelector("#chart-rotor"), {
+        series: [{ name: "RPM", data: history.rotor.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
+          chart: { type: "line", height: 250, toolbar: { show: false }, background: "transparent" },
+          theme: theme,
+          xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
+          yaxis: { title: { text: "RPM", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
+          stroke: { curve: "smooth", width: 2 },
+          colors: [theme.colors.purple],
+      });
+      charts.rotor.render();
+    }
+
+    // Wind speed
+    if (history.wind?.length) {
+      charts.wind = new ApexCharts(this.shadowRoot.querySelector("#chart-wind"), {
+        series: [{ name: "Wind (m/s)", data: history.wind.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
+          chart: { type: "area", height: 250, toolbar: { show: false }, background: "transparent" },
+          theme: theme,
+          xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
+          yaxis: { title: { text: "m/s", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
+          stroke: { curve: "smooth", width: 2 },
+          fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05 } },
+          colors: [theme.colors.amber],
+      });
+      charts.wind.render();
+    }
+
+    // Generation today (step line)
+    if (history.generation?.length) {
+      charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), {
+        series: [{ name: "Generation (kWh)", data: history.generation.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
+        chart: { type: "stepLine", height: 250, toolbar: { show: false }, background: "transparent" },
+        theme: theme,
+        xaxis: { type: "datetime", axisBorder: { color: theme.colors.axis }, axisTicks: { color: theme.colors.axis } },
+        yaxis: { title: { text: "kWh", style: { color: theme.colors.text } }, labels: { style: { colors: theme.colors.textSecondary } } },
+        stroke: { width: 2 },
+        colors: [theme.colors.emerald],
+      });
+      charts.generation.render();
+    }
+
+    this._turbineDetailCharts = charts;
+  }
+
+  _interpolateWind(windHistory, targetTime) {
+    if (!windHistory.length) return null;
+    let before = null, after = null;
+    for (const w of windHistory) {
+      const t = new Date(w.last_changed).getTime();
+      if (t <= targetTime) before = this._numVal(w.state);
+      else { after = this._numVal(w.state); break; }
+    }
+    if (before !== null && after !== null) return (before + after) / 2;
+    return before ?? after ?? null;
+  }
+
+  _numVal(state) {
+    const n = parseFloat(String(state ?? "").replace(",", ""));
+    return Number.isFinite(n) ? n : null;
   }
 
   // ---- mobile pan / pinch-zoom ----------------------------------------
@@ -270,6 +558,13 @@ class KirkHillWindScada extends HTMLElement {
     svg.addEventListener("touchmove", this._touchMove = this._touchMove.bind(this), { passive: false });
     svg.addEventListener("touchend", this._touchEnd = this._touchEnd.bind(this), { passive: false });
     svg.addEventListener("touchcancel", this._touchEnd = this._touchEnd.bind(this), { passive: false });
+    svg.addEventListener("wheel", this._onWheel = this._onWheel.bind(this), { passive: false });
+    svg.addEventListener("mousedown", this._onMouseDown = this._onMouseDown.bind(this), { passive: false });
+    svg.addEventListener("dblclick", this._onDoubleClick = this._onDoubleClick.bind(this), { passive: false });
+    svg.addEventListener("mouseleave", this._onMouseLeave = this._onMouseLeave.bind(this), { passive: false });
+    document.addEventListener("mousemove", this._onMouseMove = this._onMouseMove.bind(this), { passive: false });
+    document.addEventListener("mouseup", this._onMouseUp = this._onMouseUp.bind(this), { passive: false });
+    svg.style.cursor = "grab";
   }
 
   _zoomReset() {
@@ -398,6 +693,96 @@ class KirkHillWindScada extends HTMLElement {
     }
   }
 
+  // ---- mouse wheel zoom / drag pan (browser displays) ----
+
+  _onWheel(ev) {
+    ev.preventDefault();
+    const m = this._svgMetrics();
+    if (!m) return;
+    const delta = -ev.deltaY * 0.003;
+    const factor = Math.exp(delta);
+    const z = this._zoom;
+    const k2 = Math.min(KirkHillWindScada.MAX_ZOOM, Math.max(KirkHillWindScada.MIN_ZOOM, z.k * factor));
+    const vx = ((ev.clientX - m.r.left) * m.w) / m.r.width;
+    const vy = ((ev.clientY - m.r.top) * m.h) / m.r.height;
+    const wx = (vx - z.tx) / z.k;
+    const wy = (vy - z.ty) / z.k;
+    z.k = k2;
+    z.tx = vx - wx * k2;
+    z.ty = vy - wy * k2;
+    this._applyZoom();
+    this._updateZoomCursor();
+  }
+
+  _onMouseDown(ev) {
+    if (ev.button !== 0) return;
+    ev.preventDefault();
+    const svg = this.shadowRoot.querySelector("svg");
+    if (!svg) return;
+    svg.style.cursor = "grabbing";
+    this._mousePan = {
+      lastX: ev.clientX,
+      lastY: ev.clientY,
+      moved: false,
+    };
+  }
+
+  _onMouseMove(ev) {
+    if (!this._mousePan) return;
+    const m = this._svgMetrics();
+    if (!m) return;
+    const dx = (ev.clientX - this._mousePan.lastX) * m.w / m.r.width;
+    const dy = (ev.clientY - this._mousePan.lastY) * m.h / m.r.height;
+    this._mousePan.lastX = ev.clientX;
+    this._mousePan.lastY = ev.clientY;
+    if (Math.abs(dx) > 0 || Math.abs(dy) > 0) this._mousePan.moved = true;
+    this._zoom.tx += dx;
+    this._zoom.ty += dy;
+    this._applyZoom();
+  }
+
+  _onMouseUp() {
+    if (!this._mousePan) return;
+    const svg = this.shadowRoot.querySelector("svg");
+    if (svg) svg.style.cursor = "grab";
+    if (!this._mousePan.moved) this._onDoubleClick();
+    this._mousePan = null;
+  }
+
+  _onMouseLeave() {
+    if (this._mousePan) {
+      const svg = this.shadowRoot.querySelector("svg");
+      if (svg) svg.style.cursor = "grab";
+      this._mousePan = null;
+    }
+  }
+
+  _onDoubleClick() {
+    this._zoomReset();
+    this._updateZoomCursor();
+  }
+
+  _updateZoomCursor() {
+    const svg = this.shadowRoot.querySelector("svg");
+    if (!svg) return;
+    if (this._zoom.k > 1) {
+      svg.style.cursor = "grab";
+    } else {
+      svg.style.cursor = "zoom-in";
+    }
+  }
+
+  _zoomReset() {
+    this._zoom = { k: 1, tx: 0, ty: 0 };
+    this._pan = null;
+    this._pinch = null;
+    this._lastTap = null;
+    this._mousePan = null;
+    this._applyZoom();
+    const svg = this.shadowRoot.querySelector("svg");
+    if (svg) svg.style.cursor = "zoom-in";
+  }
+
   _layout() {
     const H = this._vbH;
     const W = this._vbW;
@@ -446,18 +831,18 @@ class KirkHillWindScada extends HTMLElement {
     const gridDividerX2 = 1230 * scaleX;
     const chipLeftColX = 30 * scaleX;
     const chipRightColX = 152 * scaleX;
-    const chipWindX = 430 * scaleX;
-    const chipWindW = 170 * scaleX;
-    const chipWindTitleX = 442 * scaleX;
-    const chipWindValueX = 590 * scaleX;
-    const chipUserGenX = 870 * scaleX;
-    const chipUserGenW = 330 * scaleX;
-    const chipUserGenTitleX = 882 * scaleX;
-    const chipUserGenValueX = 1200 * scaleX;
-    const chipSiteGenX = 870 * scaleX;
-    const chipSiteGenW = 330 * scaleX;
-    const chipSiteGenTitleX = 882 * scaleX;
-    const chipSiteGenValueX = 1200 * scaleX;
+    const chipWindX = 400 * scaleX;
+    const chipWindW = (210 - (210 - 160) * collapse) * scaleX;
+    const chipWindTitleX = 412 * scaleX;
+    const chipWindValueX = (400 + (210 - (210 - 160) * collapse) - 12) * scaleX;
+    const chipUserGenX = 910 * scaleX;
+    const chipUserGenW = 260 * scaleX;
+    const chipUserGenTitleX = 922 * scaleX;
+    const chipUserGenValueX = 1160 * scaleX;
+    const chipSiteGenX = 910 * scaleX;
+    const chipSiteGenW = 260 * scaleX;
+    const chipSiteGenTitleX = 922 * scaleX;
+    const chipSiteGenValueX = 1160 * scaleX;
     const legendX = 30 * scaleX;
     const legendW = 500 * scaleX;
     const xfmrTitleX = 630 * scaleX;
@@ -519,9 +904,7 @@ class KirkHillWindScada extends HTMLElement {
     const aspect = r.width / r.height;
     let w = Math.round(aspect * this._vbH);
     w = Math.max(vb.wMin, Math.min(vb.wMax, w));
-    let h = Math.round(w / aspect);
-    h = Math.max(vb.hMin, Math.min(vb.hMax, h));
-    w = Math.round(aspect * h);
+    let h = Math.max(600, Math.round(w / aspect));
     if (w === this._vbW && h === this._vbH) return;
     this._vbW = w;
     this._vbH = h;
@@ -634,26 +1017,51 @@ _buildHeaderChips(layout) {
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
         <g class="user-gen" data-user-gen="panel">
-          <rect x="${layout.chipUserGenX}" y="24" width="${layout.chipUserGenW}" height="150" rx="8"/>
+          <rect x="${layout.chipUserGenX}" y="24" width="${layout.chipUserGenW}" height="260" rx="8"/>
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="48">Owner Generation & Capacity</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="92">Generation</text>
-          <text class="user-gen-value" data-user-gen="energy" x="${layout.chipUserGenValueX}" y="92" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="128">Your Share (W)</text>
-          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="128" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="164">Share (‱)</text>
-          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="164" text-anchor="end">—</text>
+          <!-- Generation timeframes -->
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="78">Yesterday</text>
+          <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="78" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="100">Today</text>
+          <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="100" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="122">Week</text>
+          <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="122" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="144">Month</text>
+          <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="144" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="166">YTD</text>
+          <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="166" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="188">Year</text>
+          <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="188" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="210">All time</text>
+          <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="210" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="234">Your Share (W)</text>
+          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="234" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="256">Share (‱)</text>
+          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="256" text-anchor="end">—</text>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
         <g class="site-gen" data-site-gen="panel">
-          <rect x="${layout.chipSiteGenX}" y="184" width="${layout.chipSiteGenW}" height="120" rx="8"/>
-          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="208">Site Generation & Capacity</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="234">Generation</text>
-          <text class="site-gen-value" data-site-gen="energy" x="${layout.chipSiteGenValueX}" y="234" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="260">Site Capacity Factor (%)</text>
-          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="260" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="286">Site Power (MW)</text>
-          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="286" text-anchor="end">—</text>
+          <rect x="${layout.chipSiteGenX}" y="300" width="${layout.chipSiteGenW}" height="260" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="324">Site Generation & Capacity</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="354">Yesterday</text>
+          <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="354" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="376">Today</text>
+          <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="376" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="398">Week</text>
+          <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="398" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="420">Month</text>
+          <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="420" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="442">YTD</text>
+          <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="442" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="464">Year</text>
+          <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="464" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="486">All time</text>
+          <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="486" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="510">Site Capacity Factor (%)</text>
+          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="510" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="532">Site Power (MW)</text>
+          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="532" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -712,14 +1120,14 @@ _buildHeaderChips(layout) {
     const forecast = this._num(config.wind_forecast_entity);
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
 
-    // Generation & capacity panel (top right)
-    const ownerGenToday = this._num(config.owner_generation_today_entity);
-    if (ownerGenToday !== null) {
-      const scaled = this._scaleKwh(ownerGenToday);
-      this._setText(root, '[data-user-gen="energy"]', `${scaled.value} ${scaled.unit}`);
-    } else {
-      this._setText(root, '[data-user-gen="energy"]', "—");
-    }
+    // Generation & capacity panel (top right) — timeframe values
+    (config.owner_generation_entities || []).forEach((item) => {
+      const key = `gen-${item.name.toLowerCase().replace(/\s/g, "-")}`;
+      const val = this._num(item.entity);
+      const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
+      this._setText(root, `[data-user-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
+    });
+
     const siteCap = this._num(config.capacity_entity);
     // Your share: owner export power is reported in kW; display in watts.
     this._setText(root, '[data-user-gen="share"]', ownerExportKw === null ? "—" : `${this._fmt(ownerExportKw * 1000, 0)} W`);
@@ -730,14 +1138,14 @@ _buildHeaderChips(layout) {
         : null;
     this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct * 100, 2)}‱`);
 
-    // Site Generation & Capacity panel
-    const siteGenToday = this._num(config.grid_energy_entity);
-    if (siteGenToday !== null) {
-      const scaled = this._scaleKwh(siteGenToday);
-      this._setText(root, '[data-site-gen="energy"]', `${scaled.value} ${scaled.unit}`);
-    } else {
-      this._setText(root, '[data-site-gen="energy"]', "—");
-    }
+    // Site Generation & Capacity panel — timeframe values
+    (config.site_generation_entities || []).forEach((item) => {
+      const key = `gen-${item.name.toLowerCase().replace(/\s/g, "-")}`;
+      const val = this._num(item.entity);
+      const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
+      this._setText(root, `[data-site-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
+    });
+
     this._setText(root, '[data-site-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
@@ -819,7 +1227,7 @@ _buildHeaderChips(layout) {
   _styles() {
     return `
       :host { display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
-      ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; }
+      ha-card { overflow: hidden; height: 100%; min-height: 0; box-sizing: border-box; }
       .shell { padding: 12px; background: var(--ha-card-background, #f1f5f9); border-radius: 12px; height: 100%; box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
       .bg { fill: var(--ha-card-background, #f1f5f9); }
@@ -865,21 +1273,21 @@ _buildHeaderChips(layout) {
       /* Generation & capacity panel (top right) */
       .user-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .user-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .user-gen-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
-      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
-      .user-gen-share { fill: #16a34a; font: bold 23px var(--font-family, sans-serif); }
+      .user-gen-label { fill: var(--secondary-text-color, #475569); font: 600 16px var(--font-family, sans-serif); }
+      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
+      .user-gen-share { fill: #16a34a; font: bold 20px var(--font-family, sans-serif); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .site-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .site-gen-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
-      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .site-gen-label { fill: var(--secondary-text-color, #475569); font: 600 16px var(--font-family, sans-serif); }
+      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .wind-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .wind-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
-      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .wind-label { fill: var(--secondary-text-color, #475569); font: 600 16px var(--font-family, sans-serif); }
+      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
@@ -898,6 +1306,36 @@ _buildHeaderChips(layout) {
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
       .empty { padding: 24px 16px; color: var(--secondary-text-color); }
+
+      /* Turbine detail modal */
+      .turbine-detail-modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
+      .turbine-detail-modal .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+      .turbine-detail-modal .modal-content {
+        position: relative; width: 95%; max-width: 1200px; max-height: 90vh;
+        background: var(--ha-card-background, #fff); border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column;
+        overflow: hidden;
+      }
+      .turbine-detail-modal .modal-header { display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 20px; border-bottom: 1px solid var(--divider-color, #e2e8f0); }
+      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 18px var(--font-family, sans-serif); color: var(--primary-text-color); }
+      .turbine-detail-modal .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--secondary-text-color); padding: 4px 8px; border-radius: 6px; }
+      .turbine-detail-modal .modal-close:hover { background: var(--divider-color); }
+      .turbine-detail-modal .modal-body { padding: 16px; overflow-y: auto; max-height: calc(90vh - 70px); }
+      .turbine-detail-modal .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
+      .turbine-detail-modal .chart-item { background: var(--ha-card-background, #fff); border: 1px solid var(--divider-color, #e2e8f0); border-radius: 8px; padding: 12px; }
+      .turbine-detail-modal .chart-item.large { grid-column: span 2; }
+      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 14px var(--font-family, sans-serif); color: var(--primary-text-color); }
+      .turbine-detail-modal .apex-chart { width: 100%; height: 100%; min-height: 280px; }
+      @media (max-width: 900px) {
+        .turbine-detail-modal .chart-item.large { grid-column: span 1; }
+        .turbine-detail-modal .chart-grid { grid-template-columns: 1fr; }
+      }
+
+      .zoom-overlay { cursor: pointer; }
+      .zoom-overlay rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; transition: stroke 0.2s; }
+      .zoom-overlay rect:hover { stroke: var(--primary-color, #0284c7); }
+      .zoom-overlay text { fill: var(--primary-text-color, #0f172a); font-family: var(--font-family, sans-serif); }
     `;
   }
 }
