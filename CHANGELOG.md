@@ -2,6 +2,11 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.52 (stable)
+- **Full SCADA card uses HA native font tokens**: every text element now references `--ha-font-size-*` variables (small/large/xlarge/xxlarge/xxxlarge) instead of absolute px. The card now scales with the user's HA font-size setting and matches system hierarchy.
+- Turbine nodes, transformer, chips, panels, alarm, legend, and modal all converted.
+- All v4.8.51 features preserved.
+
 ## Version 4.8.51 (stable)
 - **National Grid box uses HA native font tokens**: labels/units → `--ha-font-size-large` (16px), title/values → `--ha-font-size-xxlarge` (20px bold). Now scales with user's HA font-size setting and matches system hierarchy.
 - All v4.8.50 features preserved.

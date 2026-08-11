@@ -1223,20 +1223,20 @@ _buildHeaderChips(layout) {
       .node-rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
       .node-rect[data-status] { opacity: 1; }
       .turbine:hover .node-rect { stroke: #0284c7; }
-      .t-id { fill: var(--primary-text-color, #0f172a); font: bold 19px var(--font-family, sans-serif); }
+      .t-id { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
       .status-pill { fill: #22c55e; }
-      .t-status { fill: #06121f; font: bold 12px var(--font-family, sans-serif); text-anchor: middle; }
-      .t-power { fill: var(--primary-text-color, #0f172a); font: bold 25px var(--font-family, sans-serif); }
-      .t-op { fill: var(--primary-text-color, #0f172a); font: bold 14px var(--font-family, sans-serif); }
-      .t-wind { fill: var(--secondary-text-color, #475569); font: 14px var(--font-family, sans-serif); }
-      .t-detail { fill: var(--secondary-text-color, #475569); font: 14px var(--font-family, sans-serif); }
-      .t-last { fill: var(--disabled-text-color, #64748b); font: 12px var(--font-family, sans-serif); }
+      .t-status { fill: #06121f; font: bold var(--ha-font-size-small, 12px) var(--font-family, sans-serif); text-anchor: middle; }
+      .t-power { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
+      .t-op { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size, 14px) var(--font-family, sans-serif); }
+      .t-wind { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
+      .t-detail { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
+      .t-last { fill: var(--disabled-text-color, #64748b); font: var(--ha-font-size-small, 12px) var(--font-family, sans-serif); }
 
       /* Bus */
       .bus rect { fill: #e0f2fe; stroke: #2563eb; stroke-width: 2; }
 
       /* Transformer label (overlaid down the site collection bus) */
-      .xfmr-title { fill: var(--primary-text-color, #0f172a); font: bold 18px var(--font-family, sans-serif); }
+      .xfmr-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xlarge, 18px) var(--font-family, sans-serif); }
 
       /* Grid node */
       .grid-rect { fill: #ecfdf5; stroke: #4d7c0f; stroke-width: 2; }
@@ -1249,31 +1249,31 @@ _buildHeaderChips(layout) {
 
       /* Chips */
       .chips rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .chip-label { fill: var(--secondary-text-color, #475569); font: 12px var(--font-family, sans-serif); }
-      .chip-value { fill: var(--primary-text-color, #0f172a); font: bold 13px var(--font-family, sans-serif); }
+      .chip-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size-small, 12px) var(--font-family, sans-serif); }
+      .chip-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size, 14px) var(--font-family, sans-serif); }
 
       /* Generation & capacity panel (top right) */
       .user-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .user-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .user-gen-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
-      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
-      .user-gen-share { fill: #16a34a; font: bold 23px var(--font-family, sans-serif); }
+      .user-gen-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
+      .user-gen-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
+      .user-gen-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
+      .user-gen-share { fill: #16a34a; font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .site-gen-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .site-gen-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
-      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .site-gen-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
+      .site-gen-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
+      .site-gen-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--ha-card-background, #ffffff); stroke: var(--divider-color, #cbd5e1); stroke-width: 1.5; }
-      .wind-title { fill: var(--primary-text-color, #0f172a); font: bold 20px var(--font-family, sans-serif); }
-      .wind-label { fill: var(--secondary-text-color, #475569); font: 13px var(--font-family, sans-serif); }
-      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold 23px var(--font-family, sans-serif); }
+      .wind-title { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxlarge, 20px) var(--font-family, sans-serif); }
+      .wind-label { fill: var(--secondary-text-color, #475569); font: var(--ha-font-size, 14px) var(--font-family, sans-serif); }
+      .wind-value { fill: var(--primary-text-color, #0f172a); font: bold var(--ha-font-size-xxxlarge, 24px) var(--font-family, sans-serif); }
 
       /* Alarm indicator (always visible: OK = green, ALARM = flashing red) */
       .alarm rect { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
-      .alarm-text { fill: #15803d; font: bold 13px var(--font-family, sans-serif); }
+      .alarm-text { fill: #15803d; font: bold var(--ha-font-size, 14px) var(--font-family, sans-serif); }
       .alarm.fault rect { fill: #fef2f2; stroke: #ef4444; stroke-width: 2; }
       .alarm.fault .alarm-text { fill: #b91c1c; }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
@@ -1284,7 +1284,7 @@ _buildHeaderChips(layout) {
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
-      .lg-item { display: inline-flex; align-items: center; gap: 5px; color: var(--secondary-text-color, #475569); font: 12px var(--font-family, sans-serif); }
+      .lg-item { display: inline-flex; align-items: center; gap: 5px; color: var(--secondary-text-color, #475569); font: var(--ha-font-size-small, 12px) var(--font-family, sans-serif); }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
       .empty { padding: 24px 16px; color: var(--secondary-text-color); }
@@ -1300,14 +1300,14 @@ _buildHeaderChips(layout) {
       }
       .turbine-detail-modal .modal-header { display: flex; align-items: center; justify-content: space-between;
         padding: 16px 20px; border-bottom: 1px solid var(--divider-color, #e2e8f0); }
-      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 18px var(--font-family, sans-serif); color: var(--primary-text-color); }
+      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 var(--ha-font-size-xlarge, 18px) var(--font-family, sans-serif); color: var(--primary-text-color); }
       .turbine-detail-modal .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--secondary-text-color); padding: 4px 8px; border-radius: 6px; }
       .turbine-detail-modal .modal-close:hover { background: var(--divider-color); }
       .turbine-detail-modal .modal-body { padding: 16px; overflow-y: auto; max-height: calc(90vh - 70px); }
       .turbine-detail-modal .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
       .turbine-detail-modal .chart-item { background: var(--ha-card-background, #fff); border: 1px solid var(--divider-color, #e2e8f0); border-radius: 8px; padding: 12px; }
       .turbine-detail-modal .chart-item.large { grid-column: span 2; }
-      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 14px var(--font-family, sans-serif); color: var(--primary-text-color); }
+      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--font-family, sans-serif); color: var(--primary-text-color); }
       .turbine-detail-modal .apex-chart { width: 100%; height: 100%; min-height: 280px; }
       @media (max-width: 900px) {
         .turbine-detail-modal .chart-item.large { grid-column: span 1; }
