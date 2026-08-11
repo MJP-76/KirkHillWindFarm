@@ -1,6 +1,6 @@
 [project]
 name = "kirkhill-wind-farm"
-version = "4.8.42-dev"
+version = "4.8.43-dev"
 description = "Home Assistant integration for the Kirk Hill Wind Farm dashboard"
 
 [tool.black]
