@@ -1180,7 +1180,7 @@ _buildHeaderChips(layout) {
         pill.removeAttribute("fill");
       }
       const statusText = node.querySelector(".t-status");
-      if (statusText) statusText.setAttribute("fill", status.color);
+      if (statusText) statusText.style.fill = status.color;
       node.querySelectorAll(".node-rect").forEach((r) => r.setAttribute("data-status", status.label));
 
       // Flow dot speed

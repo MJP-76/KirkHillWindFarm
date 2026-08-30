@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.60 (stable)
+- **Fix status text color**: status text fill now uses `style.fill` instead of `setAttribute("fill", ...)` so CSS `var()` resolves correctly — text now shows the saturated status color (green/blue/red) against the pastel pill background.
+- All v4.8.59 features preserved.
+
 ## Version 4.8.59 (stable)
 - **Pastel status pills**: pill backgrounds now use `color-mix(in srgb, <status-color> 15%, card-bg)` instead of a solid saturated fill — gives a soft, muted pastel tint that works in both light and dark themes. Status text fill is set to the full status color via JS so it contrasts cleanly against the pastel pill.
 - All v4.8.58 features preserved.
