@@ -147,7 +147,7 @@ class FarmPowerSensor(KirkHillScopedEntity, SensorEntity):
                     owner_share = self._owner_share_pct()
                     if owner_share and owner_share > 0:
                         return round(site_power * owner_share / 100.0, 3)
-            return None
+            return value
 
         if value is None:
             return None
