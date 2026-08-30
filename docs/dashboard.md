@@ -11,10 +11,9 @@ the national grid. Each turbine shows live power, colour-coded status, last
 status time, today's generation and rotor speed; flow dots animate in proportion
 to power. The national grid block shows **Owner and Site** export power and
 to-grid-today side by side, the header shows live wind, active-turbine and
-next-hour forecast chips, and a **flashing ALARM indicator** appears while the
-farm alarm is on. Rendered as a panel view so it fills the entire tab.
+next-hour forecast chips. Rendered as a panel view so it fills the entire tab.
 
-### Alarm indicator vs turbine status pills
+### Alarm indicator
 
 The **alarm indicator** (top-left of the SCADA card) shows one of two states:
 
@@ -24,6 +23,8 @@ The **alarm indicator** (top-left of the SCADA card) shows one of two states:
 - **N FAULTS** (flashing red) — one or more turbines have a thermal or
   electrical fault (`status_category` of `fault_thermal` or `fault_electrical`).
 
+### Turbine status pills
+
 Each **turbine status pill** (on the turbine node) shows the individual
 turbine's operational state: RUNNING, READY, STARTING, CURTAILED, NO WIND,
 STOPPED, MAINTENANCE, UNAVAILABLE, or a fault label. The pill background is a
@@ -32,16 +33,13 @@ pastel tint of the status colour; the text is the saturated status colour.
 A turbine can be **curtailed** (bird/bat protection, grid constraint, etc.)
 while the alarm indicator still reads **OK** — curtailment is not a fault.
 
-A compact top-level **icon-only reload control** calls
-`kirkhill_wind.reload_integration`.
+### Restored generation values
 
-## Overview
-
-- Owner and site overview sections
-- Dashboard range controls aligned with the Kirk Hill dashboard UX (`Today`, `Yesterday`, `7 days`, `30 days`, `year`, `All time`)
-- Owner and site generation cards shown first in each overview section
-- Owner generation cards show actual generation energy values with automatic unit scaling (kWh, MWh, GWh, TWh, PWh, EWh)
-- Live farm wind and turbine availability
+After a Home Assistant restart, generation figures (yesterday, today, week,
+month, YTD, year, all time) are restored from the last known cached values
+while waiting for the next API fetch. Restored values are shown at **50%
+opacity** so you can distinguish them from live API reads. Once the integration
+fetches fresh data, the opacity returns to normal.
 
 ## Finances tab
 
@@ -56,7 +54,7 @@ A compact top-level **icon-only reload control** calls
 
 ## Turbines tab
 
-- **Turbine status overview** card — active turbines, inactive turbines, and alarm state
+- **Turbine activity history** — 24-hour active/inactive history for all 8 turbines
 - **Interactive turbine map** — a full-width animated map card with:
   - T1–T8 labels above each turbine marker
   - Turbine icons that spin in proportion to live site capacity factor
@@ -64,7 +62,7 @@ A compact top-level **icon-only reload control** calls
   - Running/stopped legend and per-turbine hover title
   - Fixed zoom level (15) centred on the farm
   - Scroll wheel zoom, drag-to-pan, pinch zoom, double-click/double-tap to reset
-- Per-turbine owner/site power, capacity, wind, state, and active status cards
+- Per-turbine owner/site power, state, and active status cards
 
 ## Dashboard customisation
 
@@ -104,10 +102,10 @@ dashboard charts.
 
 ## Frontend cards
 
-The animated map card and chart cards are bundled by the integration and loaded
-automatically with the dashboard. From **v4.5.2**, the dashboard and frontend
-cards are reloaded automatically whenever the integration starts or is reloaded
-— no manual page refresh or HA restart required.
+The animated SCADA card, turbine map card, and chart cards are bundled by the
+integration and loaded automatically with the dashboard. The frontend cards are
+reloaded automatically whenever the integration starts or is reloaded — no
+manual page refresh or HA restart required.
 
 For manual import or customization, a dashboard YAML is also provided at
 [`dashboards/kirkhill_wind_scada.yaml`][dashboard-yaml].
