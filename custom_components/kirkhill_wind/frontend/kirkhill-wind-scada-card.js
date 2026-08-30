@@ -1220,20 +1220,20 @@ _buildHeaderChips(layout) {
         
         
         
-        --khscada-font-family: var(--font-family, var(--ha-font-family, inherit));
-        --khscada-primary-color: var(--primary-text-color, var(--ha-primary-text-color, #0f172a));
-        --khscada-secondary-color: var(--secondary-text-color, var(--ha-secondary-text-color, #475569));
-        --khscada-disabled-color: var(--disabled-text-color, var(--ha-disabled-text-color, #64748b));
-        --khscada-accent-color: var(--primary-color, var(--ha-primary-color, #0284c7));
-        --khscada-success-color: var(--success-color, var(--ha-label-badge-green, #16a34a));
-        --khscada-error-color: var(--error-color, var(--ha-label-badge-red, #ef4444));
-        --khscada-warn-color: var(--warning-color, var(--ha-label-badge-yellow, #f59e0b));
-        --khscada-card-bg: var(--ha-card-background);
-        --khscada-panel-bg: var(--ha-card-background);
-        --khscada-bus-bg: color-mix(in srgb, var(--ha-primary-color) 8%, transparent);
-        --khscada-grid-bg: color-mix(in srgb, var(--ha-success-color) 8%, transparent);
-        --khscada-alarm-ok-bg: color-mix(in srgb, var(--ha-success-color) 10%, transparent);
-        --khscada-alarm-fault-bg: color-mix(in srgb, var(--ha-error-color) 10%, transparent);
+        --khscada-font-family: var(--primary-font-family, var(--font-family, Roboto, sans-serif));
+        --khscada-primary-color: var(--primary-text-color, var(--text-primary-color, #1c2026));
+        --khscada-secondary-color: var(--secondary-text-color, #546e7a);
+        --khscada-disabled-color: var(--disabled-text-color, var(--secondary-text-color, #9e9e9e));
+        --khscada-accent-color: var(--primary-color, #0284c7);
+        --khscada-success-color: var(--success-color, #16a34a);
+        --khscada-error-color: var(--error-color, #ef4444);
+        --khscada-warn-color: var(--warning-color, #f59e0b);
+        --khscada-card-bg: var(--card-background-color, var(--paper-card-background-color, #ffffff));
+        --khscada-panel-bg: var(--card-background-color, var(--paper-card-background-color, #ffffff));
+        --khscada-bus-bg: color-mix(in srgb, var(--primary-color, #0284c7) 8%, transparent);
+        --khscada-grid-bg: color-mix(in srgb, var(--success-color, #16a34a) 8%, transparent);
+        --khscada-alarm-ok-bg: color-mix(in srgb, var(--success-color, #4caf50) 10%, transparent);
+        --khscada-alarm-fault-bg: color-mix(in srgb, var(--error-color, #ef5350) 10%, transparent);
         --khscada-divider: var(--divider-color, var(--ha-divider-color, #cbd5e1));
       }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; background: transparent; }

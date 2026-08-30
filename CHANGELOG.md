@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.58 (stable)
+- **Fix black-on-black theme rendering**: the card's `:host` color aliases referenced `--ha-*`-prefixed tokens (`--ha-card-background`, `--ha-primary-color`, `--ha-primary-text-color`, etc.) that do not exist in Home Assistant's global theme scope, and v4.8.54 removed the inline fallbacks — so backgrounds resolved transparent (showing the black page behind) and text fell back to black. Aliases now read HA's real theme tokens (`--card-background-color`/`--paper-card-background-color`, `--primary-text-color`, `--secondary-text-color`, `--primary-color`, `--success-color`, `--error-color`, `--warning-color`, `--divider-color`) with readable fallbacks, verified in both light and dark themes. All `color-mix()` background tints updated to the same real tokens.
+- All v4.8.57 features preserved.
+
 ## Version 4.8.57 (stable)
 - **Fix render crash on all engines (including iOS/WebKit)**: status pill no longer writes `className` on its SVG `<rect>` (a read-only `SVGAnimatedString` getter — a guaranteed `TypeError` in strict mode). The pill class is now applied via `setAttribute("class", ...)`, so the card renders instead of throwing.
 - **Drop cyclic `--ha-font-size-*` tokens**: the self-referential `:host` definitions (e.g. `--ha-font-size: var(--ha-font-size, 14px)`) are guaranteed-invalid at computed-value time and silently broke font inheritance inside the Shadow DOM; they are removed so theme font tokens flow through normally.
