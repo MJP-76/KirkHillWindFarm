@@ -1179,6 +1179,8 @@ _buildHeaderChips(layout) {
         pill.setAttribute("class", "status-pill " + status.class);
         pill.removeAttribute("fill");
       }
+      const statusText = node.querySelector(".t-status");
+      if (statusText) statusText.setAttribute("fill", status.color);
       node.querySelectorAll(".node-rect").forEach((r) => r.setAttribute("data-status", status.label));
 
       // Flow dot speed
@@ -1251,17 +1253,17 @@ _buildHeaderChips(layout) {
       .node-rect[data-status] { opacity: 1; }
       .turbine:hover .node-rect { stroke: var(--khscada-accent-color); }
       .t-id { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
-      .status-pill { fill: var(--khscada-success-color); }
-      .status-pill.status-running { fill: var(--khscada-success-color); }
-      .status-pill.status-ready { fill: var(--khscada-accent-color); }
-      .status-pill.status-starting { fill: var(--khscada-warn-color); }
-      .status-pill.status-curtailed { fill: var(--khscada-warn-color); }
-      .status-pill.status-no-wind { fill: var(--khscada-accent-color); }
-      .status-pill.status-stopped { fill: var(--khscada-disabled-color); }
-      .status-pill.status-fault { fill: var(--khscada-error-color); }
-      .status-pill.status-maintenance { fill: var(--khscada-accent-color); }
-      .status-pill.status-unavailable { fill: var(--khscada-disabled-color); }
-      .status-pill.status-unknown { fill: var(--khscada-disabled-color); }
+      .status-pill { fill: color-mix(in srgb, var(--khscada-success-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-running { fill: color-mix(in srgb, var(--khscada-success-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-ready { fill: color-mix(in srgb, var(--khscada-accent-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-starting { fill: color-mix(in srgb, var(--khscada-warn-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-curtailed { fill: color-mix(in srgb, var(--khscada-warn-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-no-wind { fill: color-mix(in srgb, var(--khscada-accent-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-stopped { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-fault { fill: color-mix(in srgb, var(--khscada-error-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-maintenance { fill: color-mix(in srgb, var(--khscada-accent-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-unavailable { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
+      .status-pill.status-unknown { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
       .t-status { fill: var(--khscada-primary-color); font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); text-anchor: middle; }
       .t-power { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
       .t-op { font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); }

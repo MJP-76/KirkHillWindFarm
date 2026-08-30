@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.59 (stable)
+- **Pastel status pills**: pill backgrounds now use `color-mix(in srgb, <status-color> 15%, card-bg)` instead of a solid saturated fill — gives a soft, muted pastel tint that works in both light and dark themes. Status text fill is set to the full status color via JS so it contrasts cleanly against the pastel pill.
+- All v4.8.58 features preserved.
+
 ## Version 4.8.58 (stable)
 - **Fix black-on-black theme rendering**: the card's `:host` color aliases referenced `--ha-*`-prefixed tokens (`--ha-card-background`, `--ha-primary-color`, `--ha-primary-text-color`, etc.) that do not exist in Home Assistant's global theme scope, and v4.8.54 removed the inline fallbacks — so backgrounds resolved transparent (showing the black page behind) and text fell back to black. Aliases now read HA's real theme tokens (`--card-background-color`/`--paper-card-background-color`, `--primary-text-color`, `--secondary-text-color`, `--primary-color`, `--success-color`, `--error-color`, `--warning-color`, `--divider-color`) with readable fallbacks, verified in both light and dark themes. All `color-mix()` background tints updated to the same real tokens.
 - All v4.8.57 features preserved.
