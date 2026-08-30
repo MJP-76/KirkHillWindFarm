@@ -73,7 +73,7 @@ Get a WhatsApp message when a turbine goes down (or comes back online) — an ed
 
 ## Dashboard
 
-When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk-hill-wind-dashboard`) with a SCADA tab, overview, Finances, History, and Turbines tabs, plus an interactive turbine map and bundled chart cards. User additions are preserved across updates; reset with `kirkhill_wind.reset_dashboard`. See [Dashboard](https://MJP-76.github.io/KirkHillWindFarm/dashboard/) for details.
+When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk-hill-wind-dashboard`) with SCADA, Finances, History, and Turbines tabs, plus an interactive turbine map and bundled chart cards. User additions are preserved across updates; reset with `kirkhill_wind.reset_dashboard`. See [Dashboard](https://MJP-76.github.io/KirkHillWindFarm/dashboard/) for details.
 
 For manual import or customization, a dashboard YAML is also provided at [`dashboards/kirkhill_wind_scada.yaml`][dashboard-yaml].
 
