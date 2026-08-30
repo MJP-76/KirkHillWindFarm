@@ -157,7 +157,7 @@ class KirkHillWindScada extends HTMLElement {
 
   _statusFor(stateText, category) {
     const key = (category && KirkHillWindScada.STATUS[category]) ? category : this._guessStatus(stateText);
-    return KirkHillWindScada.STATUS[key] || KirkHillWindScada.STATUS.unknown;
+    return { key, ...(KirkHillWindScada.STATUS[key] || KirkHillWindScada.STATUS.unknown) };
   }
 
   _guessStatus(stateText) {
@@ -269,40 +269,89 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   _showTurbineDetailModal(turbine) {
+    const hass = this._hass;
+    const tid = turbine.id;
+    const stateText = this._str(turbine.state_entity);
+    const status = this._statusFor(stateText, this._attr(turbine.state_entity, "status_category"));
+
+    const power = this._num(turbine.power_entity);
+    const cf = this._num(turbine.capacity_entity);
+    const wind = this._num(turbine.wind_speed_entity);
+    const rotor = this._num(turbine.rotor_entity);
+    const genToday = this._num(turbine.generation_today_entity);
+    const genScaled = this._scaleKwh(genToday);
+    const powerText = this._powerText(power);
+
+    const statusStarted = this._attr(turbine.state_entity, "status_started_at");
+    const stateStarted = this._attr(turbine.state_entity, "state_started_at");
+    const lat = this._attr(turbine.state_entity, "latitude");
+    const lon = this._attr(turbine.state_entity, "longitude");
+    const coords = (lat != null && lon != null) ? `${lat}, ${lon}` : "\u2014";
+
     const modal = document.createElement("div");
     modal.className = "turbine-detail-modal";
     modal.innerHTML = `
       <div class="modal-backdrop" data-close="backdrop"></div>
       <div class="modal-content">
         <div class="modal-header">
-          <h2>${turbine.id} — Historical Data</h2>
-          <button class="modal-close" data-close="close" aria-label="Close">✕</button>
+          <h2>${this._escape(tid)} \u2014 Turbine Detail</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">\u2715</button>
         </div>
         <div class="modal-body">
-          <div class="chart-grid">
-            <div class="chart-item large">
-              <h3>Power (25h)</h3>
-              <div id="chart-power" class="apex-chart"></div>
+          <div class="td-section td-live">
+            <div class="td-status-badge" style="--badge-color: ${status.color}">
+              <span class="td-status-dot"></span>${status.label}
             </div>
-            <div class="chart-item large">
-              <h3>Wind vs Power</h3>
-              <div id="chart-wind-power" class="apex-chart"></div>
+            <div class="td-kpi-grid">
+              <div class="td-kpi"><span class="td-kpi-label">Power</span><span class="td-kpi-value">${powerText.value}</span><span class="td-kpi-unit">${powerText.unit}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Capacity</span><span class="td-kpi-value">${cf !== null ? cf.toFixed(1) : "\u2014"}</span><span class="td-kpi-unit">%</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Wind</span><span class="td-kpi-value">${wind !== null ? wind.toFixed(1) : "\u2014"}</span><span class="td-kpi-unit">m/s</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Rotor</span><span class="td-kpi-value">${rotor !== null ? rotor.toFixed(1) : "\u2014"}</span><span class="td-kpi-unit">rpm</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Gen Today</span><span class="td-kpi-value">${genScaled.value}</span><span class="td-kpi-unit">${genScaled.unit}</span></div>
             </div>
-            <div class="chart-item">
-              <h3>Capacity Factor (25h)</h3>
-              <div id="chart-capacity" class="apex-chart"></div>
+            <div class="td-state-line">${this._escape(stateText) || "\u2014"}</div>
+          </div>
+
+          <div class="td-section td-specs">
+            <h3>Specifications</h3>
+            <div class="td-spec-grid">
+              <div class="td-spec"><span class="td-spec-label">Model</span><span class="td-spec-value">Enercon E92/2350</span></div>
+              <div class="td-spec"><span class="td-spec-label">Rated Power</span><span class="td-spec-value">2.35 MW</span></div>
+              <div class="td-spec"><span class="td-spec-label">Design</span><span class="td-spec-value">Direct drive (gearbox-free)</span></div>
+              <div class="td-spec"><span class="td-spec-label">Peak Wind</span><span class="td-spec-value">\u2265 14 m/s (27.2 kn)</span></div>
+              <div class="td-spec"><span class="td-spec-label">Coordinates</span><span class="td-spec-value">${this._escape(coords)}</span></div>
+              <div class="td-spec"><span class="td-spec-label">Status since</span><span class="td-spec-value">${this._fmtTime(statusStarted)}</span></div>
+              <div class="td-spec"><span class="td-spec-label">State since</span><span class="td-spec-value">${this._fmtTime(stateStarted)}</span></div>
             </div>
-            <div class="chart-item">
-              <h3>Rotor Speed (25h)</h3>
-              <div id="chart-rotor" class="apex-chart"></div>
-            </div>
-            <div class="chart-item">
-              <h3>Wind Speed (25h)</h3>
-              <div id="chart-wind" class="apex-chart"></div>
-            </div>
-            <div class="chart-item">
-              <h3>Generation Today</h3>
-              <div id="chart-generation" class="apex-chart"></div>
+          </div>
+
+          <div class="td-section td-charts">
+            <h3>Historical Data (25h)</h3>
+            <div class="chart-grid">
+              <div class="chart-item large">
+                <h3>Power</h3>
+                <div id="chart-power" class="apex-chart"></div>
+              </div>
+              <div class="chart-item large">
+                <h3>Wind vs Power</h3>
+                <div id="chart-wind-power" class="apex-chart"></div>
+              </div>
+              <div class="chart-item">
+                <h3>Capacity Factor</h3>
+                <div id="chart-capacity" class="apex-chart"></div>
+              </div>
+              <div class="chart-item">
+                <h3>Rotor Speed</h3>
+                <div id="chart-rotor" class="apex-chart"></div>
+              </div>
+              <div class="chart-item">
+                <h3>Wind Speed</h3>
+                <div id="chart-wind" class="apex-chart"></div>
+              </div>
+              <div class="chart-item">
+                <h3>Generation Today</h3>
+                <div id="chart-generation" class="apex-chart"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -313,16 +362,13 @@ class KirkHillWindScada extends HTMLElement {
     this._turbineDetailTurbine = turbine;
     this._turbineDetailModal = modal;
 
-    // Add close handlers
     modal.querySelectorAll("[data-close]").forEach(el => {
       el.addEventListener("click", () => this._closeTurbineDetailModal());
     });
 
-    // Close on Escape
     this._boundKeydown = (e) => { if (e.key === "Escape") this._closeTurbineDetailModal(); };
     window.addEventListener("keydown", this._boundKeydown);
 
-    // Initialize charts after a brief delay for DOM
     requestAnimationFrame(() => this._initTurbineCharts(turbine));
   }
 
@@ -360,7 +406,18 @@ class KirkHillWindScada extends HTMLElement {
     try {
       await this._ensureApexCharts();
       const history = await this._fetchHistory(entities, startISO, endISO);
-      this._renderCharts(turbine.id, history);
+      if (window.ApexCharts) {
+        this._renderCharts(turbine.id, history);
+      } else {
+        this.shadowRoot.querySelectorAll(".apex-chart").forEach(el => {
+          el.style.display = "flex";
+          el.style.alignItems = "center";
+          el.style.justifyContent = "center";
+          el.style.color = "var(--khscada-secondary-color)";
+          el.style.fontSize = "13px";
+          el.textContent = "Charts unavailable — ApexCharts failed to load";
+        });
+      }
     } catch (err) {
       console.error("Failed to load turbine history:", err);
     }
@@ -370,13 +427,18 @@ class KirkHillWindScada extends HTMLElement {
     if (window.ApexCharts) return Promise.resolve();
     if (this._apexLoadPromise) return this._apexLoadPromise;
     const src = `${this._hass.connection.baseUrl}/kirkhill_wind/apexcharts.js`;
-    this._apexLoadPromise = new Promise((resolve) => {
-      const timer = setTimeout(() => resolve(), 15000);
+    this._apexLoadPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        console.warn("ApexCharts load timed out");
+        reject(new Error("ApexCharts load timed out"));
+      }, 15000);
       const script = document.createElement("script");
       script.src = src;
       script.onload = () => { clearTimeout(timer); resolve(); };
-      script.onerror = () => { clearTimeout(timer); resolve(); };
+      script.onerror = () => { clearTimeout(timer); reject(new Error("ApexCharts script failed to load")); };
       document.head.appendChild(script);
+    }).catch(err => {
+      console.warn("ApexCharts load error:", err.message);
     });
     return this._apexLoadPromise;
   }
@@ -1109,6 +1171,8 @@ _buildHeaderChips(layout) {
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-user-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
+      const el = root.querySelector(`[data-user-gen="${key}"]`);
+      if (el) el.style.opacity = this._attr(item.entity, "generation_source") === "restored" ? "0.5" : "1";
     });
 
     const siteCap = this._num(config.capacity_entity);
@@ -1127,6 +1191,8 @@ _buildHeaderChips(layout) {
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-site-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
+      const el = root.querySelector(`[data-site-gen="${key}"]`);
+      if (el) el.style.opacity = this._attr(item.entity, "generation_source") === "restored" ? "0.5" : "1";
     });
 
     this._setText(root, '[data-site-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
@@ -1343,14 +1409,52 @@ _buildHeaderChips(layout) {
       .turbine-detail-modal .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--khscada-secondary-color); padding: 4px 8px; border-radius: 6px; }
       .turbine-detail-modal .modal-close:hover { background: var(--khscada-divider); }
       .turbine-detail-modal .modal-body { padding: 16px; overflow-y: auto; max-height: calc(90vh - 70px); }
-      .turbine-detail-modal .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
-      .turbine-detail-modal .chart-item { background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 12px; }
-      .turbine-detail-modal .chart-item.large { grid-column: span 2; }
-      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); }
-      .turbine-detail-modal .apex-chart { width: 100%; height: 100%; min-height: 280px; }
+
+      /* Turbine detail sections */
+      .td-section { margin-bottom: 20px; }
+      .td-section:last-child { margin-bottom: 0; }
+      .td-section h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); text-transform: uppercase; letter-spacing: 0.5px; }
+
+      /* Status badge */
+      .td-status-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 14px; border-radius: 20px; margin-bottom: 14px;
+        font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family);
+        background: color-mix(in srgb, var(--badge-color) 15%, transparent);
+        color: var(--badge-color); border: 1px solid color-mix(in srgb, var(--badge-color) 30%, transparent);
+      }
+      .td-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--badge-color); }
+
+      /* KPI grid */
+      .td-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 10px; }
+      .td-kpi {
+        background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px;
+        padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;
+      }
+      .td-kpi-label { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
+      .td-kpi-value { font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .td-kpi-unit { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
+      .td-state-line { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); padding: 4px 0; }
+
+      /* Spec grid */
+      .td-spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+      .td-spec {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+        padding: 6px 0; border-bottom: 1px solid var(--khscada-divider);
+      }
+      .td-spec-label { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); white-space: nowrap; }
+      .td-spec-value { font: var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); text-align: right; }
+
+      /* Charts */
+      .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
+      .chart-item { background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 12px; }
+      .chart-item.large { grid-column: span 2; }
+      .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .apex-chart { width: 100%; height: 100%; min-height: 280px; }
       @media (max-width: 900px) {
-        .turbine-detail-modal .chart-item.large { grid-column: span 1; }
-        .turbine-detail-modal .chart-grid { grid-template-columns: 1fr; }
+        .chart-item.large { grid-column: span 1; }
+        .chart-grid { grid-template-columns: 1fr; }
+        .td-kpi-grid { grid-template-columns: repeat(2, 1fr); }
       }
 
       .zoom-overlay { cursor: pointer; }

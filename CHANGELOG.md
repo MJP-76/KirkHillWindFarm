@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.61 (stable)
+- **ApexCharts error handling**: turbine detail modal now shows a visible fallback message if ApexCharts fails to load (e.g., on iOS), instead of silently rendering empty chart placeholders. Load errors and timeouts are now logged to the browser console for diagnosis.
+- All v4.8.60 features preserved.
+
 ## Version 4.8.60 (stable)
 - **Fix status text color**: status text fill now uses `style.fill` instead of `setAttribute("fill", ...)` so CSS `var()` resolves correctly — text now shows the saturated status color (green/blue/red) against the pastel pill background.
 - All v4.8.59 features preserved.
