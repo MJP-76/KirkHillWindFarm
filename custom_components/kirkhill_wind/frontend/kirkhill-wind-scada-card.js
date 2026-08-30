@@ -1176,7 +1176,7 @@ _buildHeaderChips(layout) {
       this._setText(node, ".t-last", `Last status ${last}`);
       const pill = node.querySelector(".status-pill");
       if (pill) {
-        pill.className = "status-pill " + status.class;
+        pill.setAttribute("class", "status-pill " + status.class);
         pill.removeAttribute("fill");
       }
       node.querySelectorAll(".node-rect").forEach((r) => r.setAttribute("data-status", status.label));
@@ -1214,12 +1214,12 @@ _buildHeaderChips(layout) {
     return `
       :host {
         display: block; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent;
-        --ha-font-size-small: var(--ha-font-size-small, 12px);
-        --ha-font-size: var(--ha-font-size, 14px);
-        --ha-font-size-large: var(--ha-font-size-large, 16px);
-        --ha-font-size-xlarge: var(--ha-font-size-xlarge, 18px);
-        --ha-font-size-xxlarge: var(--ha-font-size-xxlarge, 20px);
-        --ha-font-size-xxxlarge: var(--ha-font-size-xxxlarge, 24px);
+        
+
+        
+        
+        
+        
         --khscada-font-family: var(--font-family, var(--ha-font-family, inherit));
         --khscada-primary-color: var(--primary-text-color, var(--ha-primary-text-color, #0f172a));
         --khscada-secondary-color: var(--secondary-text-color, var(--ha-secondary-text-color, #475569));
@@ -1250,7 +1250,7 @@ _buildHeaderChips(layout) {
       .node-rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
       .node-rect[data-status] { opacity: 1; }
       .turbine:hover .node-rect { stroke: var(--khscada-accent-color); }
-      .t-id { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
+      .t-id { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
       .status-pill { fill: var(--khscada-success-color); }
       .status-pill.status-running { fill: var(--khscada-success-color); }
       .status-pill.status-ready { fill: var(--khscada-accent-color); }
@@ -1262,55 +1262,55 @@ _buildHeaderChips(layout) {
       .status-pill.status-maintenance { fill: var(--khscada-accent-color); }
       .status-pill.status-unavailable { fill: var(--khscada-disabled-color); }
       .status-pill.status-unknown { fill: var(--khscada-disabled-color); }
-      .t-status { fill: var(--khscada-primary-color); font: 600 var(--ha-font-size-small) var(--khscada-font-family); text-anchor: middle; }
-      .t-power { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
-      .t-op { font: 600 var(--ha-font-size) var(--khscada-font-family); }
-      .t-wind { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
-      .t-detail { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
-      .t-last { fill: var(--khscada-disabled-color); font: var(--ha-font-size-small) var(--khscada-font-family); }
+      .t-status { fill: var(--khscada-primary-color); font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); text-anchor: middle; }
+      .t-power { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
+      .t-op { font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .t-wind { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .t-detail { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .t-last { fill: var(--khscada-disabled-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
 
       /* Bus */
       .bus rect { fill: var(--khscada-bus-bg); stroke: var(--khscada-accent-color); stroke-width: 2; }
 
       /* Transformer label (overlaid down the site collection bus) */
-      .xfmr-title { font: 600 var(--ha-font-size-xlarge) var(--khscada-font-family); }
+      .xfmr-title { font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); }
 
       /* Grid node */
       .grid-rect { fill: var(--khscada-grid-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
-      .grid-title { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
-      .grid-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-large) var(--khscada-font-family); }
-      .grid-power { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
-      .grid-energy { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
-      .grid-unit { fill: var(--khscada-disabled-color); font: var(--ha-font-size-large) var(--khscada-font-family); }
+      .grid-title { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .grid-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-large, 16px) var(--khscada-font-family); }
+      .grid-power { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .grid-energy { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .grid-unit { fill: var(--khscada-disabled-color); font: var(--ha-font-size-large, 16px) var(--khscada-font-family); }
       .grid-divider { stroke: var(--khscada-success-color); stroke-width: 2; }
 
       /* Chips */
       .chips rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .chip-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-small) var(--khscada-font-family); }
-      .chip-value { font: 600 var(--ha-font-size) var(--khscada-font-family); }
+      .chip-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
+      .chip-value { font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); }
 
       /* Generation & capacity panel (top right) */
       .user-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .user-gen-title { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
-      .user-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
-      .user-gen-value { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
-      .user-gen-share { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
+      .user-gen-title { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .user-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .user-gen-value { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
+      .user-gen-share { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .site-gen-title { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
-      .site-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
-      .site-gen-value { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
+      .site-gen-title { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .site-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .site-gen-value { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .wind-title { font: 600 var(--ha-font-size-xxlarge) var(--khscada-font-family); }
-      .wind-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size) var(--khscada-font-family); }
-      .wind-value { font: 600 var(--ha-font-size-xxxlarge) var(--khscada-font-family); }
+      .wind-title { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .wind-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .wind-value { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
 
       /* Alarm indicator */
       .alarm rect { fill: var(--khscada-alarm-ok-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
-      .alarm-text { fill: var(--khscada-success-color); font: 600 var(--ha-font-size) var(--khscada-font-family); }
+      .alarm-text { fill: var(--khscada-success-color); font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); }
       .alarm.fault rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
       .alarm.fault .alarm-text { fill: var(--khscada-error-color); }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
@@ -1321,7 +1321,7 @@ _buildHeaderChips(layout) {
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
-      .lg-item { color: var(--khscada-secondary-color); font: var(--ha-font-size-small) var(--khscada-font-family); }
+      .lg-item { color: var(--khscada-secondary-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
       .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
@@ -1337,14 +1337,14 @@ _buildHeaderChips(layout) {
       }
       .turbine-detail-modal .modal-header { display: flex; align-items: center; justify-content: space-between;
         padding: 16px 20px; border-bottom: 1px solid var(--khscada-divider); }
-      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 var(--ha-font-size-xlarge) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); color: var(--khscada-primary-color); }
       .turbine-detail-modal .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--khscada-secondary-color); padding: 4px 8px; border-radius: 6px; }
       .turbine-detail-modal .modal-close:hover { background: var(--khscada-divider); }
       .turbine-detail-modal .modal-body { padding: 16px; overflow-y: auto; max-height: calc(90vh - 70px); }
       .turbine-detail-modal .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
       .turbine-detail-modal .chart-item { background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 12px; }
       .turbine-detail-modal .chart-item.large { grid-column: span 2; }
-      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .turbine-detail-modal .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); }
       .turbine-detail-modal .apex-chart { width: 100%; height: 100%; min-height: 280px; }
       @media (max-width: 900px) {
         .turbine-detail-modal .chart-item.large { grid-column: span 1; }

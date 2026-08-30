@@ -2,6 +2,12 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.57 (stable)
+- **Fix render crash on all engines (including iOS/WebKit)**: status pill no longer writes `className` on its SVG `<rect>` (a read-only `SVGAnimatedString` getter — a guaranteed `TypeError` in strict mode). The pill class is now applied via `setAttribute("class", ...)`, so the card renders instead of throwing.
+- **Drop cyclic `--ha-font-size-*` tokens**: the self-referential `:host` definitions (e.g. `--ha-font-size: var(--ha-font-size, 14px)`) are guaranteed-invalid at computed-value time and silently broke font inheritance inside the Shadow DOM; they are removed so theme font tokens flow through normally.
+- **Restore font fallbacks**: every `font:` shorthand using `var(--ha-font-size-*)` now carries an inline px fallback (12/14/16/18/20/24px) so a missing theme token cannot invalidate the whole rule.
+- All v4.8.56 features preserved.
+
 ## Version 4.8.56 (stable)
 - **Arrow marker theme-aware**: flow arrow now uses `--khscada-accent-color` (maps to `--ha-primary-color`) instead of hardcoded blue.
 - All v4.8.55 features preserved.
