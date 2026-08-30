@@ -14,6 +14,24 @@ to-grid-today side by side, the header shows live wind, active-turbine and
 next-hour forecast chips, and a **flashing ALARM indicator** appears while the
 farm alarm is on. Rendered as a panel view so it fills the entire tab.
 
+### Alarm indicator vs turbine status pills
+
+The **alarm indicator** (top-left of the SCADA card) shows one of two states:
+
+- **OK** — no turbines are in a fault state. This includes normal operational
+  states such as curtailment, no-wind stops, maintenance, and scheduled stops.
+  These are not faults.
+- **N FAULTS** (flashing red) — one or more turbines have a thermal or
+  electrical fault (`status_category` of `fault_thermal` or `fault_electrical`).
+
+Each **turbine status pill** (on the turbine node) shows the individual
+turbine's operational state: RUNNING, READY, STARTING, CURTAILED, NO WIND,
+STOPPED, MAINTENANCE, UNAVAILABLE, or a fault label. The pill background is a
+pastel tint of the status colour; the text is the saturated status colour.
+
+A turbine can be **curtailed** (bird/bat protection, grid constraint, etc.)
+while the alarm indicator still reads **OK** — curtailment is not a fault.
+
 A compact top-level **icon-only reload control** calls
 `kirkhill_wind.reload_integration`.
 
