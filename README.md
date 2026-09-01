@@ -1,5 +1,6 @@
 # Kirk Hill Wind Farm Integration
 
+[![Documentation][badge-docs]][docs]
 [![Home Assistant][badge-home-assistant]][home-assistant]
 [![HACS][badge-hacs]][hacs]
 [![HACS Validation][badge-hacs-validation]][workflow-hacs-validation]
@@ -7,7 +8,6 @@
 [![CI][badge-ci]][workflow-ci]
 [![Release][badge-release]][releases]
 [![Built with AI][badge-built-with-ai]][built-with-ai]
-[![Docs][badge-docs]][docs]
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
@@ -85,22 +85,19 @@ All release versions are tracked from a single source-of-truth file: [`VERSION`]
 
 Full version history is kept in [`CHANGELOG.md`][changelog].
 
-[badge-docs]: https://img.shields.io/badge/Docs-MkDocs-41BDF5?style=flat&logo=materialdesignicons&logoColor=white
+[badge-docs]: https://img.shields.io/badge/Documentation-41BDF5?style=flat-square&logo=bookstack&logoColor=white
+[docs]: https://MJP-76.github.io/KirkHillWindFarm/
 [badge-home-assistant]: https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white
 [home-assistant]: https://www.home-assistant.io/
 [badge-hacs]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
 [hacs]: https://github.com/hacs/integration
 [badge-hacs-validation]: https://img.shields.io/badge/HACS%20Validation-passing-brightgreen
 [workflow-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
-[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/validate.yml?branch=main&label=Hassfest
-[workflow-hassfest]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
-[badge-ci]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/ci.yml/badge.svg
+[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/hassfest.yml?branch=main&label=Hassfest
+[workflow-hassfest]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/hassfest.yml
+[badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
 [workflow-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml
 [badge-release]: https://img.shields.io/github/v/release/MJP-76/KirkHillWindFarm?style=flat&label=Release
 [releases]: https://github.com/MJP-76/KirkHillWindFarm/releases
 [badge-built-with-ai]: https://img.shields.io/badge/Built%20with-AI-black?logo=openai&logoColor=white
 [built-with-ai]: https://openai.com
-[docs]: https://MJP-76.github.io/KirkHillWindFarm/
-[dashboard-yaml]: dashboards/kirkhill_wind_scada.yaml
-[version-file]: VERSION
-[changelog]: CHANGELOG.md
