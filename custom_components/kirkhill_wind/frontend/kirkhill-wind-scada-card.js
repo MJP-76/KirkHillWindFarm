@@ -1426,9 +1426,9 @@ _buildHeaderChips(layout) {
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .wind-title { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .wind-title { font: 600 var(--ha-font-size-large, 16px) var(--khscada-font-family); }
       .wind-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
-      .wind-value { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
+      .wind-value { font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); }
 
       /* Alarm indicator */
       .alarm rect { fill: var(--khscada-alarm-ok-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
