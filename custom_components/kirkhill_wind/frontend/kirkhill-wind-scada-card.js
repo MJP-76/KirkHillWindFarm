@@ -261,6 +261,11 @@ class KirkHillWindScada extends HTMLElement {
         this._zoomReset();
         return;
       }
+      const site = ev.target.closest("[data-site-gen='panel']");
+      if (site) {
+        this._openSiteDetail();
+        return;
+      }
       const g = ev.target.closest("g.turbine");
       if (!g) return;
       this._openTurbine(g);
@@ -395,6 +400,212 @@ class KirkHillWindScada extends HTMLElement {
       window.removeEventListener("keydown", this._boundKeydown);
       this._boundKeydown = null;
     }
+  }
+
+  // ---- Site / Owner detail modal --------------------------------------
+
+  _openSiteDetail() {
+    this._showSiteDetailModal();
+  }
+
+  _showSiteDetailModal() {
+    const config = this.config;
+    const ownerPowerKw = this._num(config.owner_power_entity);
+    const sitePowerMw = this._num(config.farm_power_entity);
+    const siteCap = this._num(config.capacity_entity);
+    const ownerGenToday = this._num(config.owner_generation_today_entity);
+    const siteGenToday = this._num(config.grid_energy_entity);
+
+    const ownerPowerText = this._powerText(ownerPowerKw);
+    const sitePowerText =
+      sitePowerMw === null ? { value: "—", unit: "MW" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
+    const ownerGenScaled = this._scaleKwh(ownerGenToday);
+    const siteGenScaled = this._scaleKwh(siteGenToday);
+
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Site Generation &amp; Capacity</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="td-section td-live">
+            <div class="td-kpi-grid">
+              <div class="td-kpi"><span class="td-kpi-label">Owner Power</span><span class="td-kpi-value">${ownerPowerText.value}</span><span class="td-kpi-unit">${ownerPowerText.unit}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Site Power</span><span class="td-kpi-value">${sitePowerText.value}</span><span class="td-kpi-unit">${sitePowerText.unit}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Site Capacity</span><span class="td-kpi-value">${siteCap !== null ? this._fmt(siteCap, 1) : "—"}</span><span class="td-kpi-unit">%</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Owner Gen Today</span><span class="td-kpi-value">${ownerGenScaled.value}</span><span class="td-kpi-unit">${ownerGenScaled.unit}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Site Gen Today</span><span class="td-kpi-value">${siteGenScaled.value}</span><span class="td-kpi-unit">${siteGenScaled.unit}</span></div>
+            </div>
+          </div>
+
+          <div class="td-section td-charts">
+            <h3>Historical Data (25h)</h3>
+            <div class="chart-grid">
+              <div class="chart-item large">
+                <h3>Site Power (MW)</h3>
+                <div id="site-chart-power" class="apex-chart"></div>
+              </div>
+              <div class="chart-item large">
+                <h3>Owner Power (kW)</h3>
+                <div id="site-chart-owner-power" class="apex-chart"></div>
+              </div>
+              <div class="chart-item">
+                <h3>Site Capacity Factor</h3>
+                <div id="site-chart-capacity" class="apex-chart"></div>
+              </div>
+              <div class="chart-item large">
+                <h3>Generation Today (Owner vs Site)</h3>
+                <div id="site-chart-generation" class="apex-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.shadowRoot.appendChild(modal);
+    this._siteDetailModal = modal;
+
+    modal.querySelectorAll("[data-close]").forEach(el => {
+      el.addEventListener("click", () => this._closeSiteDetailModal());
+    });
+
+    this._siteBoundKeydown = (e) => { if (e.key === "Escape") this._closeSiteDetailModal(); };
+    window.addEventListener("keydown", this._siteBoundKeydown);
+
+    requestAnimationFrame(() => this._initSiteCharts());
+  }
+
+  _closeSiteDetailModal() {
+    if (this._siteDetailModal) {
+      this._siteDetailModal.remove();
+      this._siteDetailModal = null;
+    }
+    if (this._siteDetailCharts) {
+      Object.values(this._siteDetailCharts).forEach(c => c.destroy && c.destroy());
+      this._siteDetailCharts = null;
+    }
+    if (this._siteBoundKeydown) {
+      window.removeEventListener("keydown", this._siteBoundKeydown);
+      this._siteBoundKeydown = null;
+    }
+  }
+
+  async _initSiteCharts() {
+    if (this._siteDetailCharts) {
+      Object.values(this._siteDetailCharts).forEach(c => c.destroy && c.destroy());
+      this._siteDetailCharts = null;
+    }
+
+    const config = this.config;
+    const now = new Date();
+    const start = new Date(now.getTime() - 25 * 3600 * 1000);
+    const startISO = start.toISOString();
+    const endISO = now.toISOString();
+
+    const entities = {
+      sitePower: config.farm_power_entity,
+      ownerPower: config.owner_power_entity,
+      capacity: config.capacity_entity,
+      genSite: config.grid_energy_entity,
+      genOwner: config.owner_generation_today_entity,
+    };
+
+    try {
+      await this._ensureApexCharts();
+      const history = await this._fetchHistory(entities, startISO, endISO);
+      if (window.ApexCharts) {
+        this._renderSiteCharts(history);
+      } else {
+        this._showChartError("Charts unavailable — ApexCharts failed to load");
+      }
+    } catch (err) {
+      console.error("Failed to load site history:", err);
+      this._showChartError(`Charts unavailable — ${err.message || "unknown error"}`);
+    }
+  }
+
+  _renderSiteCharts(history) {
+    if (!window.ApexCharts) return;
+
+    const charts = {};
+    const chartOpts = { toolbar: { show: false }, background: "transparent", legend: { show: true, position: "bottom" } };
+    const line = (name, color) => ({
+      chart: { type: "line", height: 250, ...chartOpts },
+      xaxis: { type: "datetime" },
+      stroke: { curve: "smooth", width: 2 },
+      markers: { size: 0 },
+      colors: [color],
+      tooltip: { x: { format: "HH:mm" } },
+    });
+
+    // Site Power (MW)
+    const sitePowerData = (history.sitePower || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (sitePowerData.length) {
+      charts.power = new ApexCharts(this.shadowRoot.querySelector("#site-chart-power"), {
+        series: [{ name: "Site Power (MW)", data: sitePowerData }],
+        ...line("Site Power (MW)", "#0284c7"),
+        yaxis: { title: { text: "MW" } },
+      });
+      charts.power.render();
+    }
+
+    // Owner Power (kW)
+    const ownerPowerData = (history.ownerPower || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (ownerPowerData.length) {
+      charts.ownerPower = new ApexCharts(this.shadowRoot.querySelector("#site-chart-owner-power"), {
+        series: [{ name: "Owner Power (kW)", data: ownerPowerData }],
+        ...line("Owner Power (kW)", "#10b981"),
+        yaxis: { title: { text: "kW" } },
+      });
+      charts.ownerPower.render();
+    }
+
+    // Site Capacity Factor %
+    const capData = (history.capacity || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (capData.length) {
+      charts.capacity = new ApexCharts(this.shadowRoot.querySelector("#site-chart-capacity"), {
+        series: [{ name: "Capacity %", data: capData }],
+        ...line("Capacity %", "#22c55e"),
+        yaxis: { title: { text: "%" }, max: 100 },
+      });
+      charts.capacity.render();
+    }
+
+    // Generation today — Owner vs Site (step lines, dual scale)
+    const genOwnerData = (history.genOwner || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    const genSiteData = (history.genSite || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (genOwnerData.length || genSiteData.length) {
+      const series = [];
+      if (genSiteData.length) series.push({ name: "Site (kWh)", data: genSiteData });
+      if (genOwnerData.length) series.push({ name: "Owner (kWh)", data: genOwnerData });
+      charts.generation = new ApexCharts(this.shadowRoot.querySelector("#site-chart-generation"), {
+        series,
+        chart: { type: "stepLine", height: 250, ...chartOpts },
+        xaxis: { type: "datetime" },
+        yaxis: { title: { text: "kWh" } },
+        stroke: { width: 2 },
+        colors: ["#0284c7", "#10b981"],
+        tooltip: { x: { format: "HH:mm" } },
+      });
+      charts.generation.render();
+    }
+
+    this._siteDetailCharts = charts;
   }
 
   async _initTurbineCharts(turbine) {
@@ -745,8 +956,12 @@ class KirkHillWindScada extends HTMLElement {
         return;
       }
       const el = this.shadowRoot.elementFromPoint(c.clientX, c.clientY);
-      const g = el && el.closest ? el.closest("g.turbine") : null;
-      if (g) this._openTurbine(g);
+      if (el && el.closest && el.closest("[data-site-gen='panel']")) {
+        this._openSiteDetail();
+      } else {
+        const g = el && el.closest ? el.closest("g.turbine") : null;
+        if (g) this._openTurbine(g);
+      }
       this._pan = null;
       return;
     }
@@ -1419,7 +1634,8 @@ _buildHeaderChips(layout) {
       .user-gen-share { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
-      .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
+      .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
+      .site-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
       .site-gen-title { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
       .site-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
       .site-gen-value { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
