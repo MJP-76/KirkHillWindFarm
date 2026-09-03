@@ -59,10 +59,12 @@ class KirkHillWindScada extends HTMLElement {
     this._vbH = KirkHillWindScada.VIEWBOX.h;
     this._turbineEntities = new Map();
     this._zoom = { k: 1, tx: 0, ty: 0 };
+    this._fitRaf = null;
+    this._updateRaf = null;
   }
 
   connectedCallback() {
-    if (this.config) this._render();
+    if (this.config && !this.shadowRoot.innerHTML.trim()) this._render();
     if (!this._ro) {
       this._ro = new ResizeObserver(() => this._fit());
       this._ro.observe(this);
@@ -74,6 +76,8 @@ class KirkHillWindScada extends HTMLElement {
       this._ro.disconnect();
       this._ro = null;
     }
+    if (this._fitRaf) { cancelAnimationFrame(this._fitRaf); this._fitRaf = null; }
+    if (this._updateRaf) { cancelAnimationFrame(this._updateRaf); this._updateRaf = null; }
     if (this._mousePan) this._mousePan = null;
     document.removeEventListener("mousemove", this._onMouseMove);
     document.removeEventListener("mouseup", this._onMouseUp);
@@ -89,7 +93,12 @@ class KirkHillWindScada extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    if (this.config) this._update();
+    if (this.config && !this._updateRaf) {
+      this._updateRaf = requestAnimationFrame(() => {
+        this._updateRaf = null;
+        this._update();
+      });
+    }
   }
 
   getCardSize() {
@@ -389,6 +398,12 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   async _initTurbineCharts(turbine) {
+    // Destroy any lingering charts from a previous open
+    if (this._turbineDetailCharts) {
+      Object.values(this._turbineDetailCharts).forEach(c => c.destroy && c.destroy());
+      this._turbineDetailCharts = null;
+    }
+
     const now = new Date();
     const start = new Date(now.getTime() - 25 * 3600 * 1000);
     const startISO = start.toISOString();
@@ -409,68 +424,74 @@ class KirkHillWindScada extends HTMLElement {
       if (window.ApexCharts) {
         this._renderCharts(turbine.id, history);
       } else {
-        this.shadowRoot.querySelectorAll(".apex-chart").forEach(el => {
-          el.style.display = "flex";
-          el.style.alignItems = "center";
-          el.style.justifyContent = "center";
-          el.style.color = "var(--khscada-secondary-color)";
-          el.style.fontSize = "13px";
-          el.textContent = "Charts unavailable — ApexCharts failed to load";
-        });
+        this._showChartError("Charts unavailable — ApexCharts failed to load");
       }
     } catch (err) {
       console.error("Failed to load turbine history:", err);
+      this._showChartError(`Charts unavailable — ${err.message || "unknown error"}`);
     }
   }
 
   _ensureApexCharts() {
     if (window.ApexCharts) return Promise.resolve();
     if (this._apexLoadPromise) return this._apexLoadPromise;
-    const src = `${this._hass.connection.baseUrl}/kirkhill_wind/apexcharts.js`;
+    const src = `${this._hass.auth.data.hassUrl}/kirkhill_wind/apexcharts.js`;
     this._apexLoadPromise = new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        console.warn("ApexCharts load timed out");
+        this._apexLoadPromise = null;
         reject(new Error("ApexCharts load timed out"));
       }, 15000);
       const script = document.createElement("script");
       script.src = src;
       script.onload = () => { clearTimeout(timer); resolve(); };
-      script.onerror = () => { clearTimeout(timer); reject(new Error("ApexCharts script failed to load")); };
+      script.onerror = () => { clearTimeout(timer); this._apexLoadPromise = null; reject(new Error("ApexCharts script failed to load")); };
       document.head.appendChild(script);
-    }).catch(err => {
-      console.warn("ApexCharts load error:", err.message);
     });
     return this._apexLoadPromise;
   }
 
   async _fetchHistory(entities, start, end) {
     const hass = this._hass;
-    const results = {};
+    const entries = Object.entries(entities);
 
-    for (const [key, entityId] of Object.entries(entities)) {
-      if (!entityId) { results[key] = []; continue; }
+    const results = await Promise.all(entries.map(async ([key, entityId]) => {
+      if (!entityId) return [key, []];
       try {
-        const url = `${hass.connection.baseUrl}/api/history/period/${start}?end_time=${end}&filter_entity_id=${entityId}&minimal_response=true`;
-        const response = await fetch(url, { headers: { Authorization: `Bearer ${hass.auth.accessToken}` } });
-        const data = await response.json();
-        results[key] = Array.isArray(data) ? data[0] || [] : [];
-      } catch (e) {
-        results[key] = [];
+        const path = `history/period/${start}?end_time=${end}&filter_entity_id=${entityId}&minimal_response=true`;
+        const data = await hass.callApi("GET", path);
+        return [key, Array.isArray(data) ? data[0] || [] : []];
+      } catch {
+        return [key, []];
       }
-    }
-    return results;
+    }));
+
+    return Object.fromEntries(results);
   }
 
   _renderCharts(turbineId, history) {
     if (!window.ApexCharts) return;
 
     const charts = {};
+    const chartOpts = { toolbar: { show: false }, background: "transparent" };
+
+    // Pre-compute wind lookup once for the scatter chart
+    const windMap = new Map();
+    if (history.wind?.length) {
+      for (const w of history.wind) {
+        const t = new Date(w.last_changed).getTime();
+        const v = this._numVal(w.state);
+        if (v !== null) windMap.set(t, v);
+      }
+    }
 
     // Power chart
-    if (history.power?.length) {
+    const powerData = (history.power || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (powerData.length) {
       charts.power = new ApexCharts(this.shadowRoot.querySelector("#chart-power"), {
-        series: [{ name: "Power (kW)", data: history.power.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
-        chart: { type: "area", height: 300, toolbar: { show: false }, background: "transparent" },
+        series: [{ name: "Power (kW)", data: powerData }],
+        chart: { type: "area", height: 300, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "kW" } },
         stroke: { curve: "smooth", width: 2 },
@@ -482,20 +503,20 @@ class KirkHillWindScada extends HTMLElement {
     }
 
     // Wind vs Power scatter
-    if (history.wind?.length && history.power?.length) {
-      // Interpolate wind to power timestamps
-      const windMap = new Map(history.wind.map(w => [new Date(w.last_changed).getTime(), this._numVal(w.state)]));
+    if (windMap.size && powerData.length) {
       const scatterData = history.power
         .map(p => {
           const t = new Date(p.last_changed).getTime();
-          const wind = windMap.get(t) || this._interpolateWind(history.wind, t);
-          return wind !== null ? { x: this._numVal(p.state), y: wind } : null;
+          const pv = this._numVal(p.state);
+          if (pv === null) return null;
+          const wv = windMap.get(t) ?? this._interpolateWind(history.wind, t);
+          return wv !== null ? { x: pv, y: wv } : null;
         })
         .filter(d => d !== null);
       if (scatterData.length) {
         charts.windPower = new ApexCharts(this.shadowRoot.querySelector("#chart-wind-power"), {
           series: [{ name: "Wind vs Power", data: scatterData }],
-          chart: { type: "scatter", height: 300, toolbar: { show: false }, background: "transparent" },
+          chart: { type: "scatter", height: 300, ...chartOpts },
           xaxis: { title: { text: "Power (kW)" } },
           yaxis: { title: { text: "Wind (m/s)" } },
           colors: ["#f59e0b"],
@@ -506,10 +527,13 @@ class KirkHillWindScada extends HTMLElement {
     }
 
     // Capacity factor
-    if (history.capacity?.length) {
+    const capData = (history.capacity || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (capData.length) {
       charts.capacity = new ApexCharts(this.shadowRoot.querySelector("#chart-capacity"), {
-        series: [{ name: "Capacity %", data: history.capacity.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
-        chart: { type: "line", height: 250, toolbar: { show: false }, background: "transparent" },
+        series: [{ name: "Capacity %", data: capData }],
+        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "%" }, max: 100 },
         stroke: { curve: "smooth", width: 2 },
@@ -519,10 +543,13 @@ class KirkHillWindScada extends HTMLElement {
     }
 
     // Rotor speed
-    if (history.rotor?.length) {
+    const rotorData = (history.rotor || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (rotorData.length) {
       charts.rotor = new ApexCharts(this.shadowRoot.querySelector("#chart-rotor"), {
-        series: [{ name: "RPM", data: history.rotor.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
-        chart: { type: "line", height: 250, toolbar: { show: false }, background: "transparent" },
+        series: [{ name: "RPM", data: rotorData }],
+        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "RPM" } },
         stroke: { curve: "smooth", width: 2 },
@@ -532,10 +559,13 @@ class KirkHillWindScada extends HTMLElement {
     }
 
     // Wind speed
-    if (history.wind?.length) {
+    const windData = (history.wind || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (windData.length) {
       charts.wind = new ApexCharts(this.shadowRoot.querySelector("#chart-wind"), {
-        series: [{ name: "Wind (m/s)", data: history.wind.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
-        chart: { type: "area", height: 250, toolbar: { show: false }, background: "transparent" },
+        series: [{ name: "Wind (m/s)", data: windData }],
+        chart: { type: "area", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "m/s" } },
         stroke: { curve: "smooth", width: 2 },
@@ -546,10 +576,13 @@ class KirkHillWindScada extends HTMLElement {
     }
 
     // Generation today (step line)
-    if (history.generation?.length) {
+    const genData = (history.generation || [])
+      .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
+      .filter(d => d[1] !== null);
+    if (genData.length) {
       charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), {
-        series: [{ name: "Generation (kWh)", data: history.generation.map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]) }],
-        chart: { type: "stepLine", height: 250, toolbar: { show: false }, background: "transparent" },
+        series: [{ name: "Generation (kWh)", data: genData }],
+        chart: { type: "stepLine", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "kWh" } },
         stroke: { width: 2 },
@@ -576,6 +609,18 @@ class KirkHillWindScada extends HTMLElement {
   _numVal(state) {
     const n = parseFloat(String(state ?? "").replace(",", ""));
     return Number.isFinite(n) ? n : null;
+  }
+
+  _showChartError(msg) {
+    if (!this.shadowRoot) return;
+    this.shadowRoot.querySelectorAll(".apex-chart").forEach(el => {
+      el.style.display = "flex";
+      el.style.alignItems = "center";
+      el.style.justifyContent = "center";
+      el.style.color = "var(--khscada-secondary-color)";
+      el.style.fontSize = "13px";
+      el.textContent = msg;
+    });
   }
 
   // ---- mobile pan / pinch-zoom ----------------------------------------
@@ -938,6 +983,15 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   _fit() {
+    if (!this.config || !this.shadowRoot) return;
+    if (this._fitRaf) return;
+    this._fitRaf = requestAnimationFrame(() => {
+      this._fitRaf = null;
+      this._fitNow();
+    });
+  }
+
+  _fitNow() {
     if (!this.config || !this.shadowRoot) return;
     const shell = this.shadowRoot.querySelector(".shell");
     if (!shell) return;
