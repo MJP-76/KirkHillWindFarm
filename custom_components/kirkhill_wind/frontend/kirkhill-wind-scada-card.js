@@ -109,6 +109,37 @@ class KirkHillWindScada extends HTMLElement {
     return { columns: 12, rows: 12, min_rows: 8, max_rows: 16 };
   }
 
+  // ---- global timeframe control -----------------------------------------
+
+  _TIME_RANGES() {
+    return [
+      { key: "6h", label: "6H", ms: 6 * 3600 * 1000 },
+      { key: "12h", label: "12H", ms: 12 * 3600 * 1000 },
+      { key: "1d", label: "24H", ms: 24 * 3600 * 1000 },
+      { key: "1w", label: "1W", ms: 7 * 24 * 3600 * 1000 },
+      { key: "1m", label: "1M", ms: 30 * 24 * 3600 * 1000 },
+      { key: "6m", label: "6M", ms: 180 * 24 * 3600 * 1000 },
+      { key: "1y", label: "1Y", ms: 365 * 24 * 3600 * 1000 },
+    ];
+  }
+
+  _timeRangeWindow() {
+    if (!this._timeRange) this._timeRange = "1d";
+    const found = this._TIME_RANGES().find(r => r.key === this._timeRange);
+    return found ? found : this._TIME_RANGES()[2];
+  }
+
+  _setTimeRange(key) {
+    if (this._timeRange === key) return;
+    this._timeRange = key;
+    const bar = this.shadowRoot.querySelector(".time-range-bar");
+    if (bar) {
+      bar.querySelectorAll("[data-range]").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-range") === key);
+      });
+    }
+  }
+
   // ---- value helpers ----------------------------------------------------
 
   _num(entityId) {
@@ -216,6 +247,12 @@ class KirkHillWindScada extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>${this._styles()}</style>
       <ha-card${header}>
+        <div class="time-range-bar">
+          <span class="time-range-label">Chart timeframe</span>
+          ${this._TIME_RANGES().map(r =>
+            `<button class="time-range-btn${r.key === this._timeRange ? " active" : ""}" data-range="${r.key}">${r.label}</button>`
+          ).join("")}
+        </div>
         <div class="shell">
           <svg viewBox="0 0 ${layout.W} ${layout.H}" role="img" aria-label="Wind farm SCADA diagram">
             <defs>
@@ -254,6 +291,12 @@ class KirkHillWindScada extends HTMLElement {
   _bindClicks() {
     const svg = this.shadowRoot.querySelector("svg");
     if (!svg) return;
+    this.shadowRoot.querySelectorAll(".time-range-btn").forEach(btn => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        this._setTimeRange(btn.getAttribute("data-range"));
+      });
+    });
     if (this._boundClick) svg.removeEventListener("click", this._boundClick);
     this._boundClick = (ev) => {
       const resetBtn = ev.target.closest('[data-zoom-reset="btn"]');
@@ -339,7 +382,7 @@ class KirkHillWindScada extends HTMLElement {
           </div>
 
           <div class="td-section td-charts">
-            <h3>Historical Data (25h)</h3>
+            <h3>Historical Data (${this._timeRangeWindow().label})</h3>
             <div class="chart-grid">
               <div class="chart-item large">
                 <h3>Power</h3>
@@ -435,7 +478,7 @@ class KirkHillWindScada extends HTMLElement {
             </div>
           </div>
           <div class="td-section td-charts">
-            <h3>Historical Data (25h)</h3>
+            <h3>Historical Data (${this._timeRangeWindow().label})</h3>
             <div class="chart-grid">
               <div class="chart-item large">
                 <h3>Site Power (MW)</h3>
@@ -472,7 +515,7 @@ class KirkHillWindScada extends HTMLElement {
     if (this._siteDetailCharts) { Object.values(this._siteDetailCharts).forEach(c => c.destroy?.()); this._siteDetailCharts = null; }
     const config = this.config;
     const now = new Date();
-    const startISO = new Date(now.getTime() - 25 * 3600 * 1000).toISOString();
+    const startISO = new Date(now.getTime() - this._timeRangeWindow().ms).toISOString();
     const entities = {
       sitePower: config.farm_power_entity,
       capacity: config.capacity_entity,
@@ -561,7 +604,7 @@ class KirkHillWindScada extends HTMLElement {
             </div>
           </div>
           <div class="td-section td-charts">
-            <h3>Historical Data (25h)</h3>
+            <h3>Historical Data (${this._timeRangeWindow().label})</h3>
             <div class="chart-grid">
               <div class="chart-item large">
                 <h3>Owner Power (kW)</h3>
@@ -594,7 +637,7 @@ class KirkHillWindScada extends HTMLElement {
     if (this._ownerDetailCharts) { Object.values(this._ownerDetailCharts).forEach(c => c.destroy?.()); this._ownerDetailCharts = null; }
     const config = this.config;
     const now = new Date();
-    const startISO = new Date(now.getTime() - 25 * 3600 * 1000).toISOString();
+    const startISO = new Date(now.getTime() - this._timeRangeWindow().ms).toISOString();
     const entities = {
       ownerPower: config.owner_power_entity,
       genOwner: config.owner_generation_today_entity,
@@ -652,7 +695,7 @@ class KirkHillWindScada extends HTMLElement {
     }
 
     const now = new Date();
-    const start = new Date(now.getTime() - 25 * 3600 * 1000);
+    const start = new Date(now.getTime() - this._timeRangeWindow().ms);
     const startISO = start.toISOString();
     const endISO = now.toISOString();
 
@@ -1612,8 +1655,15 @@ _buildHeaderChips(layout) {
         --khscada-divider: var(--divider-color, var(--ha-divider-color, #cbd5e1));
       }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; background: transparent; }
-      .shell { padding: 12px; background: var(--khscada-card-bg); border-radius: 12px; height: 100%; box-sizing: border-box; }
+      .shell { padding: 12px; background: var(--khscada-card-bg); border-radius: 12px; height: calc(100% - 48px); box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+
+      /* Global chart timeframe bar */
+      .time-range-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: var(--khscada-card-bg); border-radius: 12px; margin-bottom: 8px; }
+      .time-range-label { font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); margin-right: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .time-range-btn { font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 4px 12px; cursor: pointer; }
+      .time-range-btn:hover { color: var(--khscada-primary-color); }
+      .time-range-btn.active { background: color-mix(in srgb, var(--khscada-accent-color) 20%, transparent); color: var(--khscada-accent-color); }
       .bg { fill: var(--khscada-card-bg); }
       text { font-family: var(--khscada-font-family); fill: var(--khscada-primary-color); }
 
