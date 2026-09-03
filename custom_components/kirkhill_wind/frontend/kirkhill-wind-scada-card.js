@@ -1293,7 +1293,7 @@ _buildHeaderChips(layout) {
       this._setText(node, ".t-op", opPct === null ? "—" : `${this._fmt(opPct, 1)}%`);
       this._setText(node, ".t-wind", wind === null ? "—" : `${this._fmt(wind)} m/s`);
       this._setText(node, ".t-detail", `Today ${today.value} ${today.unit}${rotor !== null ? ` · ${this._fmt(rotor, 1)} rpm` : ""}`);
-      this._setText(node, ".t-last", `Last status ${last}`);
+      this._setText(node, ".t-last", `Status since ${last}`);
       const pill = node.querySelector(".status-pill");
       if (pill) {
         pill.setAttribute("class", "status-pill " + status.class);

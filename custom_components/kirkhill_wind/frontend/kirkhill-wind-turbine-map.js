@@ -429,7 +429,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
         ? `${turbine.power.toFixed(2)} kW`
         : turbine.stateText;
     const statusText = turbine.active ? "Running" : "Stopped";
-    const statusAt = turbine.statusStartedAt ? ` at ${this._formatShortDateTime(turbine.statusStartedAt)}` : "";
+    const statusAt = turbine.statusStartedAt ? ` · status since ${this._formatShortDateTime(turbine.statusStartedAt)}` : "";
     const titleText = `${turbine.name}: ${statusText} · ${detail}${statusAt}`;
     const animStyle = duration ? `animation-duration:${duration.toFixed(2)}s;` : "";
     const activeClass = turbine.active ? "is-active" : "is-inactive";
