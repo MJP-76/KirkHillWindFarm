@@ -472,7 +472,7 @@ class KirkHillWindScada extends HTMLElement {
     if (!window.ApexCharts) return;
 
     const charts = {};
-    const chartOpts = { toolbar: { show: false }, background: "transparent" };
+    const chartOpts = { toolbar: { show: false }, background: "transparent", legend: { show: false } };
 
     // Pre-compute wind lookup once for the scatter chart
     const windMap = new Map();
