@@ -108,7 +108,8 @@ class KirkHillTurbineEntity(CoordinatorEntity, Entity):
 
     @property
     def device_info(self) -> DeviceInfo:
-        return get_turbine_device_info(self._entry, self._turbine_id)
+        hub_device_id = getattr(self.coordinator, "farm_device_id", None)
+        return get_turbine_device_info(self._entry, self._turbine_id, hub_device_id)
 
     def _turbine_data(self, scope: str) -> dict | None:
         """Return the turbine dict for the given scope, or None if missing."""

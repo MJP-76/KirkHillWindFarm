@@ -22,6 +22,7 @@ from .const import (
     SCOPES,
     TIMEFRAME_ORDER,
 )
+from .device import get_farm_device_id
 from .entity import (
     KirkHillEntity,
     KirkHillScopedEntity,
@@ -73,6 +74,8 @@ def _display_energy_from_kwh(value_kwh: float | None) -> tuple[str, float | None
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = entry.runtime_data
+
+    coordinator.farm_device_id = await get_farm_device_id(hass, entry)
 
     turbine_ids = [
         t.get("id")
