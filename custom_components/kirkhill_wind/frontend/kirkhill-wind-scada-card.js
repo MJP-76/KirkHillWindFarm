@@ -491,11 +491,11 @@ class KirkHillWindScada extends HTMLElement {
     if (powerData.length) {
       charts.power = new ApexCharts(this.shadowRoot.querySelector("#chart-power"), {
         series: [{ name: "Power (kW)", data: powerData }],
-        chart: { type: "area", height: 300, ...chartOpts },
+        chart: { type: "line", height: 300, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "kW" } },
         stroke: { curve: "smooth", width: 2 },
-        fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1, stops: [0, 100] } },
+        markers: { size: 0 },
         colors: ["#0284c7"],
         tooltip: { x: { format: "HH:mm" } },
       });
@@ -565,11 +565,11 @@ class KirkHillWindScada extends HTMLElement {
     if (windData.length) {
       charts.wind = new ApexCharts(this.shadowRoot.querySelector("#chart-wind"), {
         series: [{ name: "Wind (m/s)", data: windData }],
-        chart: { type: "area", height: 250, ...chartOpts },
+        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "m/s" } },
         stroke: { curve: "smooth", width: 2 },
-        fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05 } },
+        markers: { size: 0 },
         colors: ["#f59e0b"],
       });
       charts.wind.render();
