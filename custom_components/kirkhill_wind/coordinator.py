@@ -21,7 +21,6 @@ from .const import (
     SCOPE_OWNER,
     SCOPE_SITE,
     SCOPES,
-    TIMEFRAME_ORDER,
     TIMEFRAME_TO_RANGE,
 )
 from .exceptions import KirkHillApiError, KirkHillAuthError
