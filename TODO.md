@@ -14,3 +14,5 @@
 
 - [ ] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)
 - [ ] Create a `CONTRIBUTING` file (GitHub auto-features it in the repo file list)
+- [ ] External review #1 — submit to the official HACS default repository so users can find the integration in the HA UI without pasting a URL
+- [ ] External review #4 — add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app.
