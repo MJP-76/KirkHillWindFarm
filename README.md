@@ -95,8 +95,8 @@ Full version history is kept in [`CHANGELOG.md`][changelog].
 [hacs]: https://github.com/hacs/integration
 [badge-hacs-validation]: https://img.shields.io/badge/HACS%20Validation-passing-brightgreen
 [workflow-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
-[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/hassfest.yml?branch=main&label=Hassfest
-[workflow-hassfest]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/hassfest.yml
+[badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/validate.yml?branch=main&label=Hassfest
+[workflow-hassfest]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
 [badge-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml/badge.svg
 [workflow-ci]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/ci.yml
 [badge-release]: https://img.shields.io/github/v/release/MJP-76/KirkHillWindFarm?style=flat&label=Release
