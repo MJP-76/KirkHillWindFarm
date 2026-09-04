@@ -2,6 +2,18 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.65 (stable)
+- **Resolve the farm hub device id once per setup**: `get_farm_device_id` is now
+  called a single time in `__init__.py::async_setup_entry` (where the coordinator
+  is created) instead of redundantly from both the sensor and binary_sensor
+  platforms. No user-facing behavior change.
+- **Code health**: removed dead local variables (`owner_value_entities`,
+  `site_value_entities`, `kpi_cards`) and unused imports in `__init__.py`,
+  `coordinator.py` and `sensor.py`, and wrapped an over-long string literal —
+  this clears the ruff lint step in the HACS validation workflow. No runtime
+  behavior change.
+- All v4.8.64 features preserved.
+
 ## Version 4.8.64 (stable)
 - **Deprecated `via_device` replacement**: turbine devices now link to the farm
   hub via the resolved hub device registry id (`via_device_id`) instead of the

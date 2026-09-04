@@ -52,7 +52,7 @@ decision changes.
 ## Deployment state
 
 - **2026-09-04 — Production manifest is one release behind the repository**
-  (prod `4.8.63`, repo/`VERSION` `4.8.64`). The frontend is live in prod
+  (prod `4.8.63`, repo/`VERSION` `4.8.65`). The frontend is live in prod
   (SCADA JS byte-identical to the repo); the Python changes are staged but not
   active until the pending full restart. `CHANGELOG.md` is the authoritative
   version history.
