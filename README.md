@@ -12,6 +12,7 @@
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
 It pulls current data for both OpenAPI scopes:
+
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
@@ -26,60 +27,41 @@ If you find this project useful, and would like to help support its continued de
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=ffffff)](https://ko-fi.com/mjp76)
 [![Octopus Energy — you get £50, I get £50](https://img.shields.io/badge/Octopus%20Energy-%E2%80%94%20you%20get%20%C2%A350%2C%20I%20get%20%C2%A350-14294A?style=for-the-badge&logo=octopus-energy&logoColor=ffffff)](https://share.octopus.energy/iron-moose-196)
 
-## Features
+## Quick start
 
-- Live API polling (`cloud_polling` integration)
-- Farm-level owner/site scoped sensors for: power, capacity factor, and generation by timeframe (yesterday, today, week, month, ytd, year, alltime), plus projected value by timeframe (GBP)
-- Farm-level physical sensors (scope-independent): wind speed, active/inactive turbines, alarm binary sensor
-- Per-turbine sensors for each of T1–T8: power, capacity factor, wind speed, state text, active state, today's generation
-- Config flow with masked API key validation
-- Optional automatic dashboard creation during setup
-- Open-Meteo forecast integration (forecast only; not authoritative actual generation)
-- Optional experimental Ethex payment-tracking onboarding toggle
-- Configurable polling interval via Options
-- Auto-generated dashboard: SCADA single-line diagram, interactive turbine map, and bundled ApexCharts/Plotly chart cards
-- Dashboard customisations preserved across reloads/updates; `kirkhill_wind.reset_dashboard` restores defaults
+1. Add this repository to **HACS → Settings → Custom Repositories** as an integration.
+2. Install **Kirk Hill Wind Farm**.
+3. Restart Home Assistant.
+4. Add the integration via **Settings → Devices & Services → Add Integration → "Kirk Hill Wind Farm"**.
+5. Enter your API key, choose whether to create the dashboard automatically, and set a site name.
 
-## Installation
+> Pre-req: generate your Kirk Hill Wind Farm API key by logging in to the
+> dashboard <https://dashboard.kirkhillcoop.org>, click your username in the top
+> right, scroll to the API section, select **Generate**, and copy the key.
 
-**Pre-Reqs**
-*Generate your Kirk Hill Wind Farm API key by logging in to the dashboard https://dashboard.kirkhillcoop.org, clicking on your username / account in the top right corner, scrolling down to the API section, pressing "Generate" and copying the API key*
+> Want to include earnings from the Ethex Investment Platform? Add
+> <https://github.com/mjp-76/ha-ethex> too (experimental; awaiting Ethex go-live).
 
-1. Add this repository to HACS (Custom Repositories)
-2. Install "Kirk Hill Wind Farm"
-3. Restart Home Assistant
-4. Add the integration via Settings -> Devices & Services -> Add Integration -> "Kirk Hill Wind Farm"
-5. Enter your API key, choose whether to create the dashboard automatically, and set a site name
+## Feature highlights
 
->If you want to include your earnings from the Ethex Investment Platform, you will need to also add that repository https://github.com/mjp-76/ha-ethex
->Currently in testing awaiting the go live of Kirk Hill Wind Farm payments on Ethex
+- Live `cloud_polling` integration for owner/site power, capacity factor, and generation by timeframe
+- Per-turbine sensors for T1–T8 (power, capacity factor, wind speed, state, active, generation)
+- Projected owner/site value by timeframe (GBP), config flow, and optional auto-dashboard
+- Auto-generated Lovelace dashboard: SCADA single-line diagram, interactive turbine map, and bundled ApexCharts/Plotly chart cards
 
-Polling interval can be changed later from the integration's **Configure** (Options) menu.
-See the [docs](https://MJP-76.github.io/KirkHillWindFarm/installation/) for the full list of setup fields and options.
+## Documentation
 
-## Sensors
+Full documentation is available at **[https://MJP-76.github.io/KirkHillWindFarm/][docs]**
 
-Timeframe generation entities keep a stable raw **kWh** state; the generated dashboard formats them with automatic unit scaling (kWh → MWh → GWh) rounded to 2 decimal places. Financial values are separate **projected** figures, not calculated from live generation.
+| Topic | Link |
+|---|---|
+| Install and configure | [Installation](https://MJP-76.github.io/KirkHillWindFarm/installation/) |
+| All sensor entities | [Sensors](https://MJP-76.github.io/KirkHillWindFarm/sensors/) |
+| Dashboard tabs and cards | [Dashboard](https://MJP-76.github.io/KirkHillWindFarm/dashboard/) |
+| Turbine down/recovery notifications | [WhatsApp alerts](https://MJP-76.github.io/KirkHillWindFarm/whatsapp-alerts/) |
+| Version history | [Changelog](https://MJP-76.github.io/KirkHillWindFarm/changelog/) |
 
-Farm hub device: owner/site power and capacity factor, generation for all timeframes (owner + site), Open-Meteo forecast wind, wind speed, active/inactive turbines, and an alarm binary sensor (on when any turbine is in a thermal or electrical fault state).
-
-Per-turbine devices (`Turbine T1` … `Turbine T8`): owner/site power and capacity factor, wind speed, state text, active binary sensor, today's and all-time site generation, rotor speed.
-
-For the full entity reference see [Sensors](https://MJP-76.github.io/KirkHillWindFarm/sensors/).
-
-## Notifications
-
-Get a WhatsApp message when a turbine goes down (or comes back online) — an edge-triggered example setup using this integration's entities is in the [WhatsApp alerts guide](https://MJP-76.github.io/KirkHillWindFarm/whatsapp-alerts/).
-
-## Dashboard
-
-When you add the integration, it can auto-create a Lovelace dashboard tab (`kirk-hill-wind-dashboard`) with SCADA, Finances, History, and Turbines tabs, plus an interactive turbine map and bundled chart cards. User additions are preserved across updates; reset with `kirkhill_wind.reset_dashboard`. See [Dashboard](https://MJP-76.github.io/KirkHillWindFarm/dashboard/) for details.
-
-For manual import or customization, a dashboard YAML is also provided at [`dashboards/kirkhill_wind_scada.yaml`][dashboard-yaml].
-
-## Version management
-
-All release versions are tracked from a single source-of-truth file: [`VERSION`][version-file]. The release flow (branch strategy and `version_sync.py` step) is documented in [Release management](https://MJP-76.github.io/KirkHillWindFarm/development/release-management/).
+For manual dashboard import or customization, see [`dashboards/kirkhill_wind_scada.yaml`][dashboard-yaml].
 
 ## Changelog
 
@@ -101,3 +83,5 @@ Full version history is kept in [`CHANGELOG.md`][changelog].
 [releases]: https://github.com/MJP-76/KirkHillWindFarm/releases
 [badge-built-with-ai]: https://img.shields.io/badge/Built%20with-AI-black?logo=openai&logoColor=white
 [built-with-ai]: https://openai.com
+[dashboard-yaml]: https://github.com/MJP-76/KirkHillWindFarm/blob/main/dashboards/kirkhill_wind_scada.yaml
+[changelog]: https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md

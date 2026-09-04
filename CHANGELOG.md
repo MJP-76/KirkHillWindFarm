@@ -2,6 +2,38 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.64 (stable)
+- **Deprecated `via_device` replacement**: turbine devices now link to the farm
+  hub via the resolved hub device registry id (`via_device_id`) instead of the
+  deprecated `via_device=(DOMAIN, entry.entry_id)` identifier tuple. Resolved
+  once per setup via `get_farm_device_id(hass, entry)` and stored on the
+  coordinator. Required for Home Assistant Core 2027.8 compatibility (needs a
+  full HA restart for the Python `custom_components/` change to take effect).
+- **Global chart timeframe control**: a "Chart timeframe" bar at the top of the
+  SCADA card (6H / 12H / 24H / 1W / 1M / 6M / 1Y, 24H default). All modal charts
+  (turbine, site, owner) now honour the selected range instead of a fixed 25h
+  window. Range is stored per-card and headings show the active range.
+- **Separate Site and Owner detail modals**: the Generation & Capacity panel now
+  opens a dedicated detail modal for the selected scope (site or owner) with its
+  own ApexCharts 25h-series charts, split from the single combined modal.
+- All v4.8.63 features preserved.
+
+## Version 4.8.63 (stable)
+- **Hide default ApexCharts legend** in turbine modal charts (no duplicate legend).
+- **Relabel per-turbine timestamp to "Status since"** so it is not mistaken for
+  stale data — the value is the time the current status began.
+- **Fix wind-panel text overflow**: title 16px, value 18px so content stays inside
+  its box on the SCADA card.
+- All v4.8.62 features preserved.
+
+## Version 4.8.62 (stable)
+- **Turbine Power and Wind Speed charts as line graphs** instead of area charts.
+- **Fix blank modal charts**: ApexCharts and history are now loaded via
+  `hassUrl`/`callApi` (`history/period`) so turbine modal charts render.
+- **Simplify shipped dashboard**: collapse the redundant 25h chart stack in the
+  Overview Charts section.
+- All v4.8.61 features preserved.
+
 ## Version 4.8.61 (stable)
 - **ApexCharts error handling**: turbine detail modal now shows a visible fallback message if ApexCharts fails to load (e.g., on iOS), instead of silently rendering empty chart placeholders. Load errors and timeouts are now logged to the browser console for diagnosis.
 - All v4.8.60 features preserved.

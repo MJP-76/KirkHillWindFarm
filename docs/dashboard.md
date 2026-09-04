@@ -41,6 +41,20 @@ while waiting for the next API fetch. Restored values are shown at **50%
 opacity** so you can distinguish them from live API reads. Once the integration
 fetches fresh data, the opacity returns to normal.
 
+### Chart timeframe control
+
+A **"Chart timeframe"** bar sits at the top of the SCADA card, offering
+**6H / 12H / 24H / 1W / 1M / 6M / 1Y** (24H default). The selected range drives
+**every** modal chart (turbine, site, and owner alike) instead of a fixed 25-hour
+window. Modal headings show the active range (e.g. "Historical Data (1W)").
+
+### Site and Owner detail modals
+
+Clicking the **Generation & Capacity** panel opens a dedicated detail modal for
+the scope you clicked — a separate **Site** modal and a separate **Owner** modal,
+each with its own ApexCharts series for the selected timeframe. The panels have a
+cursor/hover affordance to signal they are clickable.
+
 ## Finances tab
 
 - **Owner finances** projected timeframe value sensors
