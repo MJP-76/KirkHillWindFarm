@@ -2,6 +2,17 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.67 (stable)
+- **Fix: config-entry migration actually runs now.** The 4.8.66 migration
+  handler was placed in `config_flow.py`, but Home Assistant looks up
+  `async_migrate_entry` on the integration's `__init__.py` module (via
+  `hasattr(component, "async_migrate_entry")`), not on the config flow. As a
+  result the stored config entry stayed at version 3, the platforms never set
+  up, and the new `owner_share` sensor and `number` entities from 4.8.66 never
+  registered. The handler is now a module-level function in `__init__.py` and
+  the version updates correctly to 4.
+- No other user-facing changes in this release.
+
 ## Version 4.8.66 (stable)
 - **Owner share now derived from the live API watt figures**: the owner share
   percentage is computed from the farm's `capacity_watts` ratio
@@ -17,6 +28,8 @@ All notable changes to the Kirk Hill Wind Farm integration.
   earnings (GBP) are now exposed as `number` entities on the integration. Users
   can adjust them live (values persist across restarts) instead of
   reconfiguring, e.g. when new share figures become available.
+  - *Note: this release's auto-migration did not run (see 4.8.67); install
+    4.8.67 instead, or it upgrades cleanly to it.*
 
 ## Version 4.8.65 (stable)
 - **Resolve the farm hub device id once per setup**: `get_farm_device_id` is now

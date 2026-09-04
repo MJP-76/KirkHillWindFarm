@@ -177,32 +177,6 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return KirkHillWindOptionsFlow(config_entry)
 
 
-async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: config_entries.ConfigEntry
-) -> bool:
-    """Migrate config entries to the current version."""
-    if config_entry.version == KirkHillWindConfigFlow.VERSION:
-        return True
-
-    data = dict(config_entry.data)
-
-    if config_entry.version < 3:
-        # Version 3 introduced the base_url field so users can target a
-        # non-default Kirk Hill dashboard instance.
-        data.setdefault(CONF_BASE_URL, DEFAULT_BASE_URL)
-
-    if config_entry.version < 4:
-        # Version 4 removed the redundant owner_share_percent (now derived
-        # from the API's capacity_watts ratio) and the unused legacy
-        # owner_value_rate field.
-        data.pop("owner_share_percent", None)
-        data.pop("owner_value_rate", None)
-
-    config_entry.data = data
-    config_entry.version = KirkHillWindConfigFlow.VERSION
-    return True
-
-
 class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
     """Handle options: adjust the polling interval post-setup."""
 

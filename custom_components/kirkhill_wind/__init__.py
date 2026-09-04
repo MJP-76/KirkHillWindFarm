@@ -27,11 +27,13 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
+    CONF_BASE_URL,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_GRAPH_HOURS,
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+    DEFAULT_BASE_URL,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_GRAPH_HOURS,
@@ -64,6 +66,37 @@ _FRONTEND_CARDS: list[tuple[str, Path]] = [
 _FRONTEND_ASSETS: list[tuple[str, Path]] = [
     ("/kirkhill_wind/apexcharts.js", _FRONTEND_DIR / "apexcharts.js"),
 ]
+
+# Keep in sync with the VERSION in config_flow.py. Home Assistant calls this
+# module-level handler when a stored config entry's version is behind.
+_CONFIG_ENTRY_VERSION = 4
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> bool:
+    """Migrate a stored config entry to the current version."""
+    if config_entry.version == _CONFIG_ENTRY_VERSION:
+        return True
+
+    data = dict(config_entry.data)
+
+    if config_entry.version < 3:
+        # Version 3 introduced the base_url field so users can target a
+        # non-default Kirk Hill dashboard instance.
+        data.setdefault(CONF_BASE_URL, DEFAULT_BASE_URL)
+
+    if config_entry.version < 4:
+        # Version 4 removed the redundant owner_share_percent (now derived from
+        # the API's capacity_watts ratio) and the unused legacy
+        # owner_value_rate field.
+        data.pop("owner_share_percent", None)
+        data.pop("owner_value_rate", None)
+
+    hass.config_entries.async_update_entry(
+        config_entry, data=data, version=_CONFIG_ENTRY_VERSION
+    )
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
