@@ -42,12 +42,32 @@ If you find this project useful, and would like to help support its continued de
 > Want to include earnings from the Ethex Investment Platform? Add
 > <https://github.com/mjp-76/ha-ethex> too (experimental; awaiting Ethex go-live).
 
-## Feature highlights
+## Features
 
-- Live `cloud_polling` integration for owner/site power, capacity factor, and generation by timeframe
-- Per-turbine sensors for T1–T8 (power, capacity factor, wind speed, state, active, generation)
-- Projected owner/site value by timeframe (GBP), config flow, and optional auto-dashboard
-- Auto-generated Lovelace dashboard: SCADA single-line diagram, interactive turbine map, and bundled ApexCharts/Plotly chart cards
+The integration polls the Kirk Hill Wind Farm API and turns it into live sensors
+and an animated dashboard.
+
+- **Owner & Site scopes** — pulls data for both your ownership share (`owner`)
+  and the whole farm (`site`), covering power, capacity factor, and generation
+  for yesterday, today, week, month, YTD, year, and all time — plus projected
+  owner/site value in GBP for each timeframe.
+- **Live SCADA dashboard** — auto-creates a Lovelace dashboard tab with an
+  animated single-line diagram: 8 turbines feeding the site collection bus, the
+  step-up transformer, and the national grid. It shows **Owner and Site**
+  generation details, live wind speed, active-turbine count, next-hour forecast,
+  and an alarm indicator for any turbine in a fault state.
+- **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
+  wind speed, state text, active status, and generation (today + all-time), with
+  colour-coded status pills. Click the detail panels for ApexCharts history with
+  a configurable chart timeframe (6H/12H/24H/1W/1M/6M/1Y).
+- **Interactive turbine map** — a full-width animated map with T1–T8 markers,
+  spinning icons proportional to live capacity factor, and active/inactive
+  colouring.
+- **Notifiable** — entities support a WhatsApp alert guide for turbine
+  down/recovery.
+- **Config flow & options** — masked API key entry, optional auto-dashboard, and
+  configurable polling interval. Customisations and user-added cards are
+  preserved across reloads and updates.
 
 ## Documentation
 
