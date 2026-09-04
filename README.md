@@ -27,21 +27,6 @@ If you find this project useful, and would like to help support its continued de
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=ffffff)](https://ko-fi.com/mjp76)
 [![Octopus Energy — you get £50, I get £50](https://img.shields.io/badge/Octopus%20Energy-%E2%80%94%20you%20get%20%C2%A350%2C%20I%20get%20%C2%A350-14294A?style=for-the-badge&logo=octopus-energy&logoColor=ffffff)](https://share.octopus.energy/iron-moose-196)
 
-## Quick start
-
-1. Add this repository to **HACS → Settings → Custom Repositories** as an integration.
-2. Install **Kirk Hill Wind Farm**.
-3. Restart Home Assistant.
-4. Add the integration via **Settings → Devices & Services → Add Integration → "Kirk Hill Wind Farm"**.
-5. Enter your API key, choose whether to create the dashboard automatically, and set a site name.
-
-> Pre-req: generate your Kirk Hill Wind Farm API key by logging in to the
-> dashboard <https://dashboard.kirkhillcoop.org>, click your username in the top
-> right, scroll to the API section, select **Generate**, and copy the key.
-
-> Want to include earnings from the Ethex Investment Platform? Add
-> <https://github.com/mjp-76/ha-ethex> too (experimental; awaiting Ethex go-live).
-
 ## Features
 
 The integration polls the Kirk Hill Wind Farm API and turns it into live sensors
@@ -68,6 +53,21 @@ and an animated dashboard.
 - **Config flow & options** — masked API key entry, optional auto-dashboard, and
   configurable polling interval. Customisations and user-added cards are
   preserved across reloads and updates.
+
+## Quick start
+
+1. Add this repository to **HACS → Settings → Custom Repositories** as an integration.
+2. Install **Kirk Hill Wind Farm**.
+3. Restart Home Assistant.
+4. Add the integration via **Settings → Devices & Services → Add Integration → "Kirk Hill Wind Farm"**.
+5. Enter your API key, choose whether to create the dashboard automatically, and set a site name.
+
+> Pre-req: generate your Kirk Hill Wind Farm API key by logging in to the
+> dashboard <https://dashboard.kirkhillcoop.org>, click your username in the top
+> right, scroll to the API section, select **Generate**, and copy the key.
+
+> Want to include earnings from the Ethex Investment Platform? Add
+> <https://github.com/mjp-76/ha-ethex> too (experimental; awaiting Ethex go-live).
 
 ## Documentation
 
