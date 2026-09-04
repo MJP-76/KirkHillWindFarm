@@ -1528,11 +1528,17 @@ _buildHeaderChips(layout) {
     const siteCap = this._num(config.capacity_entity);
     // Your share: owner export power is reported in kW; display in watts.
     this._setText(root, '[data-user-gen="share"]', ownerExportKw === null ? "—" : `${this._fmt(ownerExportKw * 1000, 0)} W`);
-    // Your share as a % of the site's generation today (observed).
+    // Owner share (per myriad, ‱) as the single source of truth. Prefer the
+    // capacity-derived owner_share entity (in %) when set; it is the fixed share
+    // of watts bought and does not vary with generation or capacity factor.
+    // Fall back to today's observed owner/site generation ratio.
+    const ownerSharePct = this._num(config.owner_share_entity);
     const sharePct =
-      ownerEnergyKwh !== null && siteEnergyKwh !== null && siteEnergyKwh > 0
-        ? (ownerEnergyKwh / siteEnergyKwh) * 100
-        : null;
+      ownerSharePct !== null
+        ? ownerSharePct
+        : ownerEnergyKwh !== null && siteEnergyKwh !== null && siteEnergyKwh > 0
+          ? (ownerEnergyKwh / siteEnergyKwh) * 100
+          : null;
     this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct * 100, 2)}‱`);
 
     // Site Generation & Capacity panel — timeframe values

@@ -895,6 +895,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "owner_power_entity": farm_scoped("owner", "farm_power"),
                         "owner_grid_energy_entity": farm_scoped("owner", "farm_generation_today"),
                         "owner_generation_today_entity": farm_scoped("owner", "farm_generation_today"),
+                        "owner_share_entity": farm_scoped("owner", "farm_owner_share"),
                         "wind_speed_entity": farm("farm_wind_speed"),
                         "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),

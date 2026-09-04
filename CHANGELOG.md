@@ -2,6 +2,18 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.68 (stable)
+- **SCADA card owner share now uses the authoritative sensor.** The SCADA card's
+  "Share (‱)" readout used to derive the share from today's observed
+  owner/site generation ratio, which could drift from the real figure by a large
+  factor. It now prefers the capacity-derived
+  `sensor.kirk_hill_wind_farm_owner_share` (the fixed share of watts bought) and
+  only falls back to the observed-generation calculation if that entity is
+  unavailable. Per-myriad (‱) display is unchanged, so the card now shows the
+  true share (e.g. 1.36‱).
+- The `dashboards/kirkhill_wind_scada.yaml` reference and the auto-built
+  dashboard both receive the new `owner_share_entity` config.
+
 ## Version 4.8.67 (stable)
 - **Fix: config-entry migration actually runs now.** The 4.8.66 migration
   handler was placed in `config_flow.py`, but Home Assistant looks up
