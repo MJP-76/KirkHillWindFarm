@@ -54,4 +54,5 @@ nav:
   - Farm reference: farm-reference.md
   - Development:
       - Release management: development/release-management.md
+      - Development decisions: development/decisions.md
   - Changelog: changelog.md
