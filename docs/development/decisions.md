@@ -49,6 +49,21 @@ decision changes.
   in `__init__.py`, and unused imports in `coordinator.py` / `sensor.py`. All
   were confirmed unused (single occurrence each); no live references.
 
+## Owner share and earnings figures
+
+- **2026-09-04 — Owner share % is watt-based and derived from the API, not
+  configured.** The share equals `owner capacity_watts / site capacity_watts`
+  from `/api/v1/current`. Buying more watts raises it automatically. The old
+  `owner_share_percent` config field was removed (config version 3 → 4) because
+  a user-entered % would go stale and because the previous generation-ratio
+  derivation was cached forever.
+- **2026-09-04 — The projected annual earnings (GBP) are live-editable via
+  `number` entities, not only config.** Owner and site projected-earnings are
+  exposed as integration `number` entities seeded from the config entry, and
+  the financial sensors read them live from the coordinator. Values persist
+  across restarts (`RestoreEntity`), so a user can adjust figures without
+  reconfiguring when new share/watt data becomes available.
+
 ## Deployment state
 
 - **2026-09-04 — Production manifest is one release behind the repository**

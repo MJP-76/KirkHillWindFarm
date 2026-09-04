@@ -30,10 +30,16 @@ from .const import (
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_GRAPH_HOURS,
+    CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+    CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_GRAPH_HOURS,
+    DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+    DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     PLATFORMS,
+    SCOPE_OWNER,
+    SCOPE_SITE,
 )
 from .coordinator import KirkHillWindCoordinator
 from .device import get_farm_device_id
@@ -69,6 +75,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = coordinator
 
     coordinator.farm_device_id = await get_farm_device_id(hass, entry)
+
+    # Seed the user-adjustable projected-earnings figures that the number
+    # platform exposes. The default (config) values are only the starting point;
+    # users override them live via the number entities, which write back here.
+    coordinator.projected_annual_earnings_gbp = {
+        SCOPE_OWNER: float(
+            entry.options.get(
+                CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+                entry.data.get(
+                    CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+                    DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+                ),
+            )
+        ),
+        SCOPE_SITE: float(
+            entry.options.get(
+                CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+                entry.data.get(
+                    CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+                    DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+                ),
+            )
+        ),
+    }
 
     await async_setup_services(hass)
 

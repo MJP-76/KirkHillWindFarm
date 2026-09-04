@@ -82,6 +82,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities: list = [
         *[FarmPowerSensor(coordinator, entry, scope) for scope in SCOPES],
         *[FarmCapacityFactorSensor(coordinator, entry, scope) for scope in SCOPES],
+        FarmOwnerShareSensor(coordinator, entry),
         *[
             FarmGenerationByTimeframeSensor(coordinator, entry, scope, timeframe)
             for scope in SCOPES
@@ -153,6 +154,21 @@ class FarmPowerSensor(KirkHillScopedEntity, SensorEntity):
         if self._scope == SCOPE_SITE:
             return value / 1000
         return value
+
+
+class FarmOwnerShareSensor(KirkHillScopedEntity, SensorEntity):
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_icon = "mdi:account-cash"
+    _attr_suggested_display_precision = 4
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, SCOPE_OWNER, "farm_owner_share")
+        self._attr_name = "Owner share"
+
+    @property
+    def native_value(self):
+        return self._owner_share_pct()
 
 
 class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
@@ -281,6 +297,11 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         self._attr_name = f"{label} projected value ({scope_label})"
 
     def _annual_projected_gbp(self) -> float:
+        values = getattr(self.coordinator, "projected_annual_earnings_gbp", None)
+        if values:
+            live = values.get(self._scope)
+            if live is not None:
+                return float(live)
         if self._scope == SCOPE_OWNER:
             key = CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP
             default = DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP

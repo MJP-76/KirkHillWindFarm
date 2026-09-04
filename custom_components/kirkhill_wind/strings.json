@@ -9,9 +9,7 @@
           "create_dashboard": "Create dashboard automatically",
           "enable_payment_tracking": "Enable payment tracking onboarding (Ethex, experimental)",
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
-          "owner_share_percent": "Owner share (%)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
-          "owner_value_rate": "Owner value rate (GBP per kWh, legacy)",
           "site_name": "Site name"
         }
       },
@@ -43,9 +41,7 @@
           "create_dashboard": "Create dashboard automatically",
           "enable_payment_tracking": "Enable payment tracking onboarding (Ethex, experimental)",
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
-          "owner_share_percent": "Owner share (%)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
-          "owner_value_rate": "Owner value rate (GBP per kWh, legacy)",
           "scan_interval": "Poll interval (seconds)",
           "graph_hours": "Turbine activity chart timeframe (hours)"
         }

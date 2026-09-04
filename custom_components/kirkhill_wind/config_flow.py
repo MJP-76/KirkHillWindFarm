@@ -23,8 +23,6 @@ from .const import (
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_GRAPH_HOURS,
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-    CONF_OWNER_SHARE_PERCENT,
-    CONF_OWNER_VALUE_RATE,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -33,8 +31,6 @@ from .const import (
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_GRAPH_HOURS,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-    DEFAULT_OWNER_SHARE_PERCENT,
-    DEFAULT_OWNER_VALUE_RATE,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SITE_NAME,
     DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -50,7 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for the Kirk Hill Wind Farm integration."""
 
-    VERSION = 3
+    VERSION = 4
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -78,12 +74,6 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_ENABLE_PAYMENT_TRACKING: user_input.get(
                             CONF_ENABLE_PAYMENT_TRACKING,
                             DEFAULT_ENABLE_PAYMENT_TRACKING,
-                        ),
-                        CONF_OWNER_VALUE_RATE: user_input.get(
-                            CONF_OWNER_VALUE_RATE, DEFAULT_OWNER_VALUE_RATE
-                        ),
-                        CONF_OWNER_SHARE_PERCENT: user_input.get(
-                            CONF_OWNER_SHARE_PERCENT, DEFAULT_OWNER_SHARE_PERCENT
                         ),
                         CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP: user_input.get(
                             CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -115,14 +105,6 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_ENABLE_PAYMENT_TRACKING,
                         default=DEFAULT_ENABLE_PAYMENT_TRACKING,
                     ): bool,
-                    vol.Optional(
-                        CONF_OWNER_VALUE_RATE,
-                        default=DEFAULT_OWNER_VALUE_RATE,
-                    ): vol.All(vol.Coerce(float), vol.Range(min=0)),
-                    vol.Optional(
-                        CONF_OWNER_SHARE_PERCENT,
-                        default=DEFAULT_OWNER_SHARE_PERCENT,
-                    ): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
                     vol.Optional(
                         CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
                         default=DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -209,6 +191,13 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # non-default Kirk Hill dashboard instance.
             data.setdefault(CONF_BASE_URL, DEFAULT_BASE_URL)
 
+        if config_entry.version < 4:
+            # Version 4 removed the redundant owner_share_percent (now derived
+            # from the API's capacity_watts ratio) and the unused legacy
+            # owner_value_rate field.
+            data.pop("owner_share_percent", None)
+            data.pop("owner_value_rate", None)
+
         config_entry.data = data
         config_entry.version = cls.VERSION
         return True
@@ -256,20 +245,6 @@ class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
                         CONF_GRAPH_HOURS,
                         default=current.get(CONF_GRAPH_HOURS, DEFAULT_GRAPH_HOURS),
                     ): vol.All(int, vol.Range(min=1, max=168)),
-                    vol.Required(
-                        CONF_OWNER_VALUE_RATE,
-                        default=current.get(
-                            CONF_OWNER_VALUE_RATE,
-                            DEFAULT_OWNER_VALUE_RATE,
-                        ),
-                    ): vol.All(vol.Coerce(float), vol.Range(min=0)),
-                    vol.Required(
-                        CONF_OWNER_SHARE_PERCENT,
-                        default=current.get(
-                            CONF_OWNER_SHARE_PERCENT,
-                            DEFAULT_OWNER_SHARE_PERCENT,
-                        ),
-                    ): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
                     vol.Required(
                         CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
                         default=current.get(

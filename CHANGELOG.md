@@ -2,6 +2,22 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.66 (stable)
+- **Owner share now derived from the live API watt figures**: the owner share
+  percentage is computed from the farm's `capacity_watts` ratio
+  (`owner / site`). Since owner shares are watt-based, buying more watts raises
+  the percentage automatically — no manual entry required, and the value is
+  recomputed every poll instead of being cached forever.
+- **New sensor**: `owner_share` (%) entity exposing the watt-derived share.
+- **Removed redundant config fields**: `owner_share_percent` (now auto-derived)
+  and the unused legacy `owner_value_rate` were dropped from the config and
+  options flows. Existing entries are migrated automatically (config version 3
+  → 4).
+- **Editable projected-earnings figures**: the owner and site projected annual
+  earnings (GBP) are now exposed as `number` entities on the integration. Users
+  can adjust them live (values persist across restarts) instead of
+  reconfiguring, e.g. when new share figures become available.
+
 ## Version 4.8.65 (stable)
 - **Resolve the farm hub device id once per setup**: `get_farm_device_id` is now
   called a single time in `__init__.py::async_setup_entry` (where the coordinator
