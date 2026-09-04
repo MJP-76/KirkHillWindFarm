@@ -123,21 +123,63 @@ class KirkHillWindScada extends HTMLElement {
     ];
   }
 
-  _timeRangeWindow() {
-    if (!this._timeRange) this._timeRange = "1d";
-    const found = this._TIME_RANGES().find(r => r.key === this._timeRange);
+  _modalTime(key) {
+    if (!this._modalTimeRanges) this._modalTimeRanges = {};
+    if (!this._modalTimeRanges[key]) this._modalTimeRanges[key] = "1d";
+    return this._modalTimeRanges[key];
+  }
+
+  _timeRangeWindow(key) {
+    const rk = this._modalTime(key);
+    const found = this._TIME_RANGES().find(r => r.key === rk);
     return found ? found : this._TIME_RANGES()[2];
   }
 
-  _setTimeRange(key) {
-    if (this._timeRange === key) return;
-    this._timeRange = key;
-    const bar = this.shadowRoot.querySelector(".time-range-bar");
-    if (bar) {
+  _turbineModalKey(tid) {
+    return `turbine__${tid}`;
+  }
+
+  _setModalTimeRange(key, rangeKey) {
+    if (!this._modalTimeRanges) this._modalTimeRanges = {};
+    this._modalTimeRanges[key] = rangeKey;
+    this.shadowRoot.querySelectorAll(`.time-range-bar[data-key="${key}"]`).forEach(bar => {
       bar.querySelectorAll("[data-range]").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-range") === key);
+        btn.classList.toggle("active", btn.getAttribute("data-range") === rangeKey);
       });
-    }
+    });
+  }
+
+  _modalTimeRangeHTML(key) {
+    const active = this._modalTime(key);
+    return `
+      <div class="time-range-bar modal-time-range" data-key="${key}">
+        <span class="time-range-label">Chart timeframe</span>
+        ${this._TIME_RANGES().map(r =>
+          `<button class="time-range-btn${r.key === active ? " active" : ""}" data-range="${r.key}">${r.label}</button>`
+        ).join("")}
+      </div>`;
+  }
+
+  _bindModalTimeRange(key, refresh) {
+    this.shadowRoot.querySelectorAll(`.time-range-bar[data-key="${key}"] button[data-range]`).forEach(btn => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const rk = btn.getAttribute("data-range");
+        if (rk === this._modalTime(key)) return;
+        this._setModalTimeRange(key, rk);
+        this._updateModalChartLabel(key);
+        if (refresh) refresh();
+      });
+    });
+  }
+
+  _updateModalChartLabel(key) {
+    const range = this._timeRangeWindow(key);
+    this.shadowRoot.querySelectorAll(`.time-range-bar[data-key="${key}"] .time-range-label`).forEach(l => {
+      l.textContent = `Chart timeframe`;
+    });
+    const titles = this.shadowRoot.querySelectorAll(`.td-charts[data-key="${key}"] > h3`);
+    titles.forEach(t => { t.textContent = `Historical Data (${range.label})`; });
   }
 
   // ---- value helpers ----------------------------------------------------
@@ -247,12 +289,6 @@ class KirkHillWindScada extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>${this._styles()}</style>
       <ha-card${header}>
-        <div class="time-range-bar">
-          <span class="time-range-label">Chart timeframe</span>
-          ${this._TIME_RANGES().map(r =>
-            `<button class="time-range-btn${r.key === this._timeRange ? " active" : ""}" data-range="${r.key}">${r.label}</button>`
-          ).join("")}
-        </div>
         <div class="shell">
           <svg viewBox="0 0 ${layout.W} ${layout.H}" role="img" aria-label="Wind farm SCADA diagram">
             <defs>
@@ -291,12 +327,6 @@ class KirkHillWindScada extends HTMLElement {
   _bindClicks() {
     const svg = this.shadowRoot.querySelector("svg");
     if (!svg) return;
-    this.shadowRoot.querySelectorAll(".time-range-btn").forEach(btn => {
-      btn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        this._setTimeRange(btn.getAttribute("data-range"));
-      });
-    });
     if (this._boundClick) svg.removeEventListener("click", this._boundClick);
     this._boundClick = (ev) => {
       const resetBtn = ev.target.closest('[data-zoom-reset="btn"]');
@@ -381,8 +411,9 @@ class KirkHillWindScada extends HTMLElement {
             </div>
           </div>
 
-          <div class="td-section td-charts">
-            <h3>Historical Data (${this._timeRangeWindow().label})</h3>
+          <div class="td-section td-charts" data-key="${this._turbineModalKey(tid)}">
+            ${this._modalTimeRangeHTML(this._turbineModalKey(tid))}
+            <h3>Historical Data (${this._timeRangeWindow(this._turbineModalKey(tid)).label})</h3>
             <div class="chart-grid">
               <div class="chart-item large">
                 <h3>Power</h3>
@@ -417,13 +448,14 @@ class KirkHillWindScada extends HTMLElement {
     this.shadowRoot.appendChild(modal);
     this._turbineDetailTurbine = turbine;
     this._turbineDetailModal = modal;
-
     modal.querySelectorAll("[data-close]").forEach(el => {
       el.addEventListener("click", () => this._closeTurbineDetailModal());
     });
 
     this._boundKeydown = (e) => { if (e.key === "Escape") this._closeTurbineDetailModal(); };
     window.addEventListener("keydown", this._boundKeydown);
+
+    this._bindModalTimeRange(this._turbineModalKey(turbine.id), () => this._initTurbineCharts(turbine));
 
     requestAnimationFrame(() => this._initTurbineCharts(turbine));
   }
@@ -477,8 +509,9 @@ class KirkHillWindScada extends HTMLElement {
               <div class="td-kpi"><span class="td-kpi-label">Gen Today</span><span class="td-kpi-value">${siteGenScaled.value}</span><span class="td-kpi-unit">${siteGenScaled.unit}</span></div>
             </div>
           </div>
-          <div class="td-section td-charts">
-            <h3>Historical Data (${this._timeRangeWindow().label})</h3>
+          <div class="td-section td-charts" data-key="site">
+            ${this._modalTimeRangeHTML("site")}
+            <h3>Historical Data (${this._timeRangeWindow("site").label})</h3>
             <div class="chart-grid">
               <div class="chart-item large">
                 <h3>Site Power (MW)</h3>
@@ -502,6 +535,7 @@ class KirkHillWindScada extends HTMLElement {
       el.addEventListener("click", () => this._closeSiteDetailModal()));
     this._siteBoundKeydown = (e) => { if (e.key === "Escape") this._closeSiteDetailModal(); };
     window.addEventListener("keydown", this._siteBoundKeydown);
+    this._bindModalTimeRange("site", () => this._initSiteCharts());
     requestAnimationFrame(() => this._initSiteCharts());
   }
 
@@ -515,7 +549,7 @@ class KirkHillWindScada extends HTMLElement {
     if (this._siteDetailCharts) { Object.values(this._siteDetailCharts).forEach(c => c.destroy?.()); this._siteDetailCharts = null; }
     const config = this.config;
     const now = new Date();
-    const startISO = new Date(now.getTime() - this._timeRangeWindow().ms).toISOString();
+    const startISO = new Date(now.getTime() - this._timeRangeWindow("site").ms).toISOString();
     const entities = {
       sitePower: config.farm_power_entity,
       capacity: config.capacity_entity,
@@ -603,8 +637,9 @@ class KirkHillWindScada extends HTMLElement {
               <div class="td-kpi"><span class="td-kpi-label">Gen Today</span><span class="td-kpi-value">${ownerGenScaled.value}</span><span class="td-kpi-unit">${ownerGenScaled.unit}</span></div>
             </div>
           </div>
-          <div class="td-section td-charts">
-            <h3>Historical Data (${this._timeRangeWindow().label})</h3>
+          <div class="td-section td-charts" data-key="owner">
+            ${this._modalTimeRangeHTML("owner")}
+            <h3>Historical Data (${this._timeRangeWindow("owner").label})</h3>
             <div class="chart-grid">
               <div class="chart-item large">
                 <h3>Owner Power (kW)</h3>
@@ -624,6 +659,7 @@ class KirkHillWindScada extends HTMLElement {
       el.addEventListener("click", () => this._closeOwnerDetailModal()));
     this._ownerBoundKeydown = (e) => { if (e.key === "Escape") this._closeOwnerDetailModal(); };
     window.addEventListener("keydown", this._ownerBoundKeydown);
+    this._bindModalTimeRange("owner", () => this._initOwnerCharts());
     requestAnimationFrame(() => this._initOwnerCharts());
   }
 
@@ -637,7 +673,7 @@ class KirkHillWindScada extends HTMLElement {
     if (this._ownerDetailCharts) { Object.values(this._ownerDetailCharts).forEach(c => c.destroy?.()); this._ownerDetailCharts = null; }
     const config = this.config;
     const now = new Date();
-    const startISO = new Date(now.getTime() - this._timeRangeWindow().ms).toISOString();
+    const startISO = new Date(now.getTime() - this._timeRangeWindow("owner").ms).toISOString();
     const entities = {
       ownerPower: config.owner_power_entity,
       genOwner: config.owner_generation_today_entity,
@@ -695,7 +731,7 @@ class KirkHillWindScada extends HTMLElement {
     }
 
     const now = new Date();
-    const start = new Date(now.getTime() - this._timeRangeWindow().ms);
+    const start = new Date(now.getTime() - this._timeRangeWindow(this._turbineModalKey(turbine.id)).ms);
     const startISO = start.toISOString();
     const endISO = now.toISOString();
 
@@ -1661,10 +1697,11 @@ _buildHeaderChips(layout) {
         --khscada-divider: var(--divider-color, var(--ha-divider-color, #cbd5e1));
       }
       ha-card { overflow: hidden; height: calc(100vh - 64px); box-sizing: border-box; background: transparent; }
-      .shell { padding: 12px; background: var(--khscada-card-bg); border-radius: 12px; height: calc(100% - 48px); box-sizing: border-box; }
+      .shell { padding: 12px; background: var(--khscada-card-bg); border-radius: 12px; height: 100%; box-sizing: border-box; }
       svg { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
 
-      /* Global chart timeframe bar */
+      /* Modal chart timeframe bar */
+      .time-range-bar.modal-time-range { margin: 10px 0 6px; padding: 6px 10px; }
       .time-range-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: var(--khscada-card-bg); border-radius: 12px; margin-bottom: 8px; }
       .time-range-label { font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); margin-right: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
       .time-range-btn { font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 4px 12px; cursor: pointer; }
