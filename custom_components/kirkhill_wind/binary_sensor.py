@@ -7,14 +7,11 @@ from homeassistant.components.binary_sensor import (
 )
 
 from .const import SCOPE_OWNER
-from .device import get_farm_device_id
 from .entity import KirkHillEntity, KirkHillTurbineEntity, turbine_status_category
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = entry.runtime_data
-
-    coordinator.farm_device_id = await get_farm_device_id(hass, entry)
 
     turbine_ids = [
         t.get("id")

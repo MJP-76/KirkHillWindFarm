@@ -24,10 +24,10 @@ decision changes.
 
 - **2026-09-04 — Turbines link to the farm hub via `via_device_id`, not the
   deprecated `via_device=(DOMAIN, entry.entry_id)` tuple.** The hub device id is
-  resolved once per setup with `get_farm_device_id(hass, entry)`
-  (`async_get_or_create`) and stored on the coordinator. Required for HA Core
-  2027.8 compatibility. Both `sensor.py` and `binary_sensor.py` set it
-  idempotently, so platform setup order does not matter.
+  resolved **once** during `async_setup_entry` in `__init__.py` via
+  `get_farm_device_id(hass, entry)` (`async_get_or_create`) and stored on the
+  coordinator, before platform setups are forwarded. Required for HA Core
+  2027.8 compatibility.
 - **2026-09-04 — The farm hub is a `SERVICE` device** (`entry_type=SERVICE`,
   identifiers `(DOMAIN, entry.entry_id)`); turbines are separate physical
   devices linked to it via `via_device_id`.

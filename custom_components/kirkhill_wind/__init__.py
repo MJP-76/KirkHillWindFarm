@@ -36,6 +36,7 @@ from .const import (
     PLATFORMS,
 )
 from .coordinator import KirkHillWindCoordinator
+from .device import get_farm_device_id
 from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
@@ -66,6 +67,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
+
+    coordinator.farm_device_id = await get_farm_device_id(hass, entry)
 
     await async_setup_services(hass)
 
