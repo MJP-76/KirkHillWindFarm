@@ -2,6 +2,14 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.70
+- **SCADA card shows the running card version** in the bottom-left corner
+  (e.g. `v4.8.70`). Because the card JS is cached by the browser, the badge
+  makes it obvious when an old bundle is still loaded — if the shown version is
+  behind the installed one, a hard refresh (Ctrl+Shift+R / clear cache / pull
+  down in the companion app) is needed. `scripts/version_sync.py` keeps the
+  badge version aligned with the rest of the release.
+
 ## Version 4.8.68 (stable)
 - **SCADA card owner share now uses the authoritative sensor.** The SCADA card's
   "Share (‱)" readout used to derive the share from today's observed

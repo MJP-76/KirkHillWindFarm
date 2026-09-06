@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 VERSION_FILE = ROOT / "VERSION"
 MANIFEST_FILE = ROOT / "custom_components" / "kirkhill_wind" / "manifest.json"
 PYPROJECT_FILE = ROOT / "pyproject.toml"
+SCADA_CARD_FILE = ROOT / "custom_components" / "kirkhill_wind" / "frontend" / "kirkhill-wind-scada-card.js"
 
 
 def normalize_version(raw: str) -> str:
@@ -49,6 +50,18 @@ def read_pyproject_version() -> str:
     raise ValueError("Could not find [project].version in pyproject.toml.")
 
 
+def read_scada_version() -> str:
+    text = SCADA_CARD_FILE.read_text(encoding="utf-8")
+    match = re.search(
+        r'KIRKHILL_WIND_SCADA_VERSION\s*=\s*"([^"]+)"', text, re.MULTILINE
+    )
+    if not match:
+        raise ValueError("Could not find KIRKHILL_WIND_SCADA_VERSION in the SCADA card JS.")
+    if match.group(1) == "@VERSION@":
+        return ""
+    return normalize_version(match.group(1))
+
+
 def write_manifest_version(version: str) -> None:
     manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))
     manifest["version"] = version
@@ -78,16 +91,35 @@ def write_pyproject_version(version: str) -> None:
     PYPROJECT_FILE.write_text("".join(lines), encoding="utf-8")
 
 
+def write_scada_version(version: str) -> None:
+    text = SCADA_CARD_FILE.read_text(encoding="utf-8")
+    replaced, count = re.subn(
+        r'(KIRKHILL_WIND_SCADA_VERSION\s*=\s*)"[^"]*"',
+        rf'\g<1>"{version}"',
+        text,
+        count=1,
+    )
+    if count != 1:
+        raise ValueError(
+            "Could not update KIRKHILL_WIND_SCADA_VERSION in the SCADA card JS."
+        )
+    SCADA_CARD_FILE.write_text(replaced, encoding="utf-8")
+
+
 def check_versions() -> bool:
     source = read_version()
     manifest = read_manifest_version()
     pyproject = read_pyproject_version()
+    scada = read_scada_version()
 
     mismatches: list[str] = []
     if manifest != source:
         mismatches.append(f"manifest.json={manifest} != VERSION={source}")
     if pyproject != source:
         mismatches.append(f"pyproject.toml={pyproject} != VERSION={source}")
+    if scada != source:
+        label = scada or "@VERSION@ placeholder"
+        mismatches.append(f"scada-card.js={label} != VERSION={source}")
 
     if mismatches:
         print("Version mismatch detected:")
@@ -103,7 +135,8 @@ def sync_versions() -> None:
     version = read_version()
     write_manifest_version(version)
     write_pyproject_version(version)
-    print(f"Synchronized manifest.json and pyproject.toml to {version}.")
+    write_scada_version(version)
+    print(f"Synchronized manifest.json, pyproject.toml and scada-card.js to {version}.")
 
 
 def run_release(prerelease: bool, stable: bool) -> None:

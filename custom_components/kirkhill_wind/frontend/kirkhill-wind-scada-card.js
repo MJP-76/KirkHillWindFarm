@@ -8,7 +8,11 @@
  * proportional to the power being transferred.
  *
  * Card type: custom:kirkhill-wind-scada
+ *
+ * Replace "@VERSION@" with the current release version before shipping; this
+ * is done automatically by scripts/version_sync.py.
  */
+const KIRKHILL_WIND_SCADA_VERSION = "4.8.70";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
@@ -315,6 +319,7 @@ class KirkHillWindScada extends HTMLElement {
               <rect x="${layout.resetBtnX}" y="${layout.resetBtnY}" width="${44 * layout.scaleX}" height="48" rx="10"/>
               <text x="${layout.resetBtnX + 22 * layout.scaleX}" y="${layout.resetBtnY + 32}" text-anchor="middle" font-size="18">⟲</text>
             </g>
+            <text class="card-version" x="${layout.resetBtnX}" y="${layout.H - 14}">v${KIRKHILL_WIND_SCADA_VERSION}</text>
           </svg>
         </div>
       </ha-card>
@@ -1793,6 +1798,9 @@ _buildHeaderChips(layout) {
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
       .lg-item { color: var(--khscada-secondary-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+      /* Version badge */
+      .card-version { fill: var(--khscada-disabled-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); opacity: 0.7; }
 
       .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
 
