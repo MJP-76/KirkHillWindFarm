@@ -294,7 +294,7 @@ class KirkHillWindScada extends HTMLElement {
       <style>${this._styles()}</style>
       <ha-card${header}>
         <div class="shell">
-          <svg viewBox="0 0 ${layout.W} ${layout.H}" role="img" aria-label="Wind farm SCADA diagram">
+          <svg viewBox="0 0 ${layout.W} ${layout.H}" style="--khscada-fs: ${Math.min(1, layout.scaleX).toFixed(3)}" role="img" aria-label="Wind farm SCADA diagram">
             <defs>
               <pattern id="khscada-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,116,139,0.25)" stroke-width="1"/>
@@ -317,7 +317,7 @@ class KirkHillWindScada extends HTMLElement {
             </g>
             <g class="zoom-overlay" data-zoom-reset="btn">
               <rect x="${layout.resetBtnX}" y="${layout.resetBtnY}" width="${44 * layout.scaleX}" height="48" rx="10"/>
-              <text x="${layout.resetBtnX + 22 * layout.scaleX}" y="${layout.resetBtnY + 32}" text-anchor="middle" font-size="18">⟲</text>
+              <text x="${layout.resetBtnX + 22 * layout.scaleX}" y="${layout.resetBtnY + 32}" text-anchor="middle" style="font-size: calc(18px * var(--khscada-fs, 1))">⟲</text>
             </g>
             <text class="card-version" x="${layout.resetBtnX}" y="${layout.H - 14}">v${KIRKHILL_WIND_SCADA_VERSION}</text>
           </svg>
@@ -1723,7 +1723,7 @@ _buildHeaderChips(layout) {
       .node-rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
       .node-rect[data-status] { opacity: 1; }
       .turbine:hover .node-rect { stroke: var(--khscada-accent-color); }
-      .t-id { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
+      .t-id { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .status-pill { fill: color-mix(in srgb, var(--khscada-success-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-running { fill: color-mix(in srgb, var(--khscada-success-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-ready { fill: color-mix(in srgb, var(--khscada-accent-color) 15%, var(--khscada-card-bg)); }
@@ -1735,57 +1735,57 @@ _buildHeaderChips(layout) {
       .status-pill.status-maintenance { fill: color-mix(in srgb, var(--khscada-accent-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-unavailable { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-unknown { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
-      .t-status { fill: var(--khscada-primary-color); font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); text-anchor: middle; }
-      .t-power { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
-      .t-op { font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); }
-      .t-wind { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
-      .t-detail { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
-      .t-last { fill: var(--khscada-disabled-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
+      .t-status { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); text-anchor: middle; }
+      .t-power { font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-op { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-wind { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-detail { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-last { fill: var(--khscada-disabled-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Bus */
       .bus rect { fill: var(--khscada-bus-bg); stroke: var(--khscada-accent-color); stroke-width: 2; }
 
       /* Transformer label (overlaid down the site collection bus) */
-      .xfmr-title { font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); }
+      .xfmr-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Grid node */
       .grid-rect { fill: var(--khscada-grid-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
-      .grid-title { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
-      .grid-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-large, 16px) var(--khscada-font-family); }
-      .grid-power { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
-      .grid-energy { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
-      .grid-unit { fill: var(--khscada-disabled-color); font: var(--ha-font-size-large, 16px) var(--khscada-font-family); }
+      .grid-title { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .grid-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .grid-power { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .grid-energy { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .grid-unit { fill: var(--khscada-disabled-color); font: calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .grid-divider { stroke: var(--khscada-success-color); stroke-width: 2; }
 
       /* Chips */
       .chips rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .chip-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
-      .chip-value { font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .chip-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .chip-value { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Generation & capacity panel (top right) */
       .user-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
       .user-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
-      .user-gen-title { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
-      .user-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
-      .user-gen-value { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
-      .user-gen-share { fill: var(--khscada-success-color); font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
+      .user-gen-title { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-value { font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-share { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
       .site-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
-      .site-gen-title { font: 600 var(--ha-font-size-xxlarge, 20px) var(--khscada-font-family); }
-      .site-gen-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
-      .site-gen-value { font: 600 var(--ha-font-size-xxxlarge, 24px) var(--khscada-font-family); }
+      .site-gen-title { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-value { font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .wind-title { font: 600 var(--ha-font-size-large, 16px) var(--khscada-font-family); }
-      .wind-label { fill: var(--khscada-secondary-color); font: var(--ha-font-size, 14px) var(--khscada-font-family); }
-      .wind-value { font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); }
+      .wind-title { font: 600 calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .wind-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .wind-value { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Alarm indicator */
       .alarm rect { fill: var(--khscada-alarm-ok-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
-      .alarm-text { fill: var(--khscada-success-color); font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); }
+      .alarm-text { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .alarm.fault rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
       .alarm.fault .alarm-text { fill: var(--khscada-error-color); }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
@@ -1796,11 +1796,11 @@ _buildHeaderChips(layout) {
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
-      .lg-item { color: var(--khscada-secondary-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
+      .lg-item { color: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
       /* Version badge */
-      .card-version { fill: var(--khscada-disabled-color); font: var(--ha-font-size-small, 12px) var(--khscada-font-family); opacity: 0.7; }
+      .card-version { fill: var(--khscada-disabled-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); opacity: 0.7; }
 
       .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
 
