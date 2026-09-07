@@ -2,6 +2,15 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.71
+- **Fix duplicate plotly charts on the History view.** Until now the plotly
+  "Power & Wind (25h)" card stored its title inside `layout.title`, so the
+  merge machinery could not match it and each restart left the old copy in
+  place as a "user-added" card while appending a fresh one — duplicates
+  compounded over time (13 copies were deployed). `_card_match_key` now falls
+  back to `layout.title` for custom cards, so the merge replaces all legacy
+  copies with the single managed card on the next reload.
+
 ## Version 4.8.70
 - **SCADA card shows the running card version** in the bottom-left corner
   (e.g. `v4.8.70`). Because the card JS is cached by the browser, the badge

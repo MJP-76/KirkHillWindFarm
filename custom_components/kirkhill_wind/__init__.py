@@ -502,9 +502,14 @@ def _card_match_key(card: dict) -> str | None:
     # History-graph matched by title
     if ctype == "history-graph" and card.get("title"):
         return f"history-graph:title:{card['title']}"
-    # Custom cards matched by type + title
-    if ctype.startswith("custom:") and card.get("title"):
-        return f"{ctype}:title:{card['title']}"
+    # Custom cards matched by type + title. Plotly cards store their title
+    # inside layout.title rather than at the top level — fall back to that
+    # so legacy duplicates (which lack a top-level title) can be matched and
+    # deduplicated by _merge_cards.
+    if ctype.startswith("custom:"):
+        card_title = card.get("title") or card.get("layout", {}).get("title")
+        if card_title:
+            return f"{ctype}:title:{card_title}"
     # Container cards without a title (vertical-stack / horizontal-stack /
     # grid) get a structural key derived from the ordered match keys of their
     # child cards. Without this they are unmatchable, so _merge_cards appends
