@@ -11,7 +11,10 @@ the national grid. Each turbine shows live power, colour-coded status, last
 status time, today's generation and rotor speed; flow dots animate in proportion
 to power. The national grid block shows **Owner and Site** export power and
 to-grid-today side by side, the header shows live wind, active-turbine and
-next-hour forecast chips. Rendered as a panel view so it fills the entire tab.
+next-hour forecast chips. Your **share of bought watts** is shown in per-myriad
+(‱) form (e.g. `1.36‱`) via the owner-share entity, falling back to the observed
+generation ratio if that entity is unavailable. Rendered as a panel view so it
+fills the entire tab.
 
 ### Alarm indicator
 
@@ -41,12 +44,14 @@ while waiting for the next API fetch. Restored values are shown at **50%
 opacity** so you can distinguish them from live API reads. Once the integration
 fetches fresh data, the opacity returns to normal.
 
-### Chart timeframe control
+### Per-pop-out chart timeframe control
 
-A **"Chart timeframe"** bar sits at the top of the SCADA card, offering
-**6H / 12H / 24H / 1W / 1M / 6M / 1Y** (24H default). The selected range drives
-**every** modal chart (turbine, site, and owner alike) instead of a fixed 25-hour
-window. Modal headings show the active range (e.g. "Historical Data (1W)").
+Each **Owner** and **Site** detail modal (and every turbine pop-out) has its own
+timeframe selector offering **6H / 12H / 24H / 1W / 1M / 6M / 1Y** (24H
+default). The selected range is remembered per pop-out type (owner, site,
+turbine) and drives that modal's charts independently — there is no single
+global timeframe control. Modal headings show the active range (e.g.
+"Historical Data (1W)").
 
 ### Site and Owner detail modals
 
@@ -64,7 +69,7 @@ cursor/hover affordance to signal they are clickable.
 
 - **Combined Power and Wind** history graph — owner power, site power, and wind speed on a single chart
 - **Dual-axis Power chart** (ApexCharts) — site power (MW) and owner power (kW) on separate Y-axes
-- **Power vs Wind scatter plot** (Plotly) — wind speed (m/s) vs site power (MW) correlation
+- **Power & Wind (25h)** time-series (Plotly) — owner power (kW), site power (kW), and wind speed (m/s) on shared/right axes
 
 ## Turbines tab
 
