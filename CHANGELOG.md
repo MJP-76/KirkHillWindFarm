@@ -2,6 +2,18 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.72
+- **Keep last-known data during API outages, marked as stale.** When the
+  upstream summary fetch fails, the generation/capacity values are no longer
+  blanked out — the last known figures stay on screen and the SCADA card turns
+  them red so it is obvious they are stale rather than live. The affected
+  sensors expose a `data_stale` attribute and `generation_source=stale`.
+- **Retry failed summaries on a backoff schedule.** Timeframes that failed to
+  fetch are retried sooner than the next hourly slow-tier slot, at escalating
+  intervals (1, 2, 4, ... ticks capped at ~1 hour) so a transient API blip
+  recovers quickly without hammering the endpoint, and each failure is logged
+  as a warning with the scheduled retry tick.
+
 ## Version 4.8.71
 - **Fix duplicate plotly charts on the History view.** Until now the plotly
   "Power & Wind (25h)" card stored its title inside `layout.title`, so the

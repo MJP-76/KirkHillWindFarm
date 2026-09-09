@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.8.71";
+const KIRKHILL_WIND_SCADA_VERSION = "4.8.72";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
@@ -201,6 +201,19 @@ class KirkHillWindScada extends HTMLElement {
 
   _attr(entityId, key) {
     return this._hass?.states?.[entityId]?.attributes?.[key];
+  }
+
+  _isStale(entityId) {
+    return this._attr(entityId, "data_stale") === true;
+  }
+
+  _setChipStale(el, entityId) {
+    // Last-known data shown in red instead of being hidden, so a stale value
+    // is obvious but the number stays visible.
+    if (!el) return;
+    const stale = this._isStale(entityId);
+    el.style.fill = stale ? "var(--khscada-error-color)" : "";
+    el.style.opacity = stale ? "1" : this._attr(entityId, "generation_source") === "restored" ? "0.5" : "1";
   }
 
   _fmt(n, decimals = 1) {
@@ -1562,8 +1575,7 @@ _buildHeaderChips(layout) {
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-user-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
-      const el = root.querySelector(`[data-user-gen="${key}"]`);
-      if (el) el.style.opacity = this._attr(item.entity, "generation_source") === "restored" ? "0.5" : "1";
+      this._setChipStale(root.querySelector(`[data-user-gen="${key}"]`), item.entity);
     });
 
     const siteCap = this._num(config.capacity_entity);
@@ -1588,11 +1600,11 @@ _buildHeaderChips(layout) {
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-site-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
-      const el = root.querySelector(`[data-site-gen="${key}"]`);
-      if (el) el.style.opacity = this._attr(item.entity, "generation_source") === "restored" ? "0.5" : "1";
+      this._setChipStale(root.querySelector(`[data-site-gen="${key}"]`), item.entity);
     });
 
     this._setText(root, '[data-site-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
+    this._setChipStale(root.querySelector('[data-site-gen="capacity"]'), config.capacity_entity);
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
 

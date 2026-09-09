@@ -34,8 +34,6 @@ _LOGGER = logging.getLogger(__name__)
 FAST_TIMEFRAMES = ("today",)
 SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
 
-ALL_TIMEFRAMES = FAST_TIMEFRAMES + SLOW_TIMEFRAMES
-
 
 class KirkHillWindCoordinator(DataUpdateCoordinator):
     """Fetches current data from owner/site scopes on each tick."""
@@ -62,6 +60,17 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self._turbine_generation: dict[str, dict] = {}
         self._wind_speed_today: float | None = None
         self._open_meteo_forecast: dict = {}
+        # Last known-good summaries/windows per (scope, timeframe), kept so a
+        # failed refresh keeps showing old data (marked stale) instead of blanking.
+        self._last_summaries: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
+        self._last_windows: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
+        # Backoff retry state: consecutive failure count and the tick at which a
+        # (scope, timeframe) should be retried again after a failure.
+        self._summary_failures: dict[tuple[str, str], int] = {}
+        self._summary_retry_at: dict[tuple[str, str], int] = {}
+        self._summary_stale: dict[str, dict[str, bool]] = {
+            scope: {} for scope in SCOPES
+        }
 
     def apply_options(self) -> None:
         """Re-apply scan interval when options change."""
@@ -126,6 +135,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "coordinates": coordinates,
             "timeframe_summaries": timeframe_summaries,
             "timeframe_windows": timeframe_windows,
+            "summary_stale": self._summary_stale,
             "turbine_generation": self._turbine_generation,
             "wind_speed_today": self._wind_speed_today,
             "open_meteo_forecast": self._open_meteo_forecast,
@@ -159,13 +169,16 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
     ) -> tuple[dict[str, dict[str, dict]], dict[str, dict[str, dict]]]:
         tasks: list[tuple[str, str, asyncio.Task]] = []
 
-        # Determine which timeframes to fetch this tick
+        # Determine which timeframes to fetch this tick. The slow tier normally
+        # runs every 60 ticks (~1 hour); a timeframe that failed on a slow/last
+        # tick gets retried on a backoff schedule instead of waiting for the
+        # next hourly slot.
+        timeframes = set(FAST_TIMEFRAMES)
         if tick == 1 or tick % 60 == 0:
-            # Slow tier: every 60 ticks (~1 hour at 60s interval)
-            timeframes = ALL_TIMEFRAMES
-        else:
-            # Fast tier: every tick
-            timeframes = FAST_TIMEFRAMES
+            timeframes.update(SLOW_TIMEFRAMES)
+        for (scope, timeframe), retry_at in self._summary_retry_at.items():
+            if tick >= retry_at:
+                timeframes.add(timeframe)
 
         for scope in SCOPES:
             for timeframe in timeframes:
@@ -183,24 +196,46 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             return_exceptions=True,
         )
 
-        summaries: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
-        windows: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
+        summaries: dict[str, dict[str, dict]] = {
+            scope: dict(self._last_summaries[scope]) for scope in SCOPES
+        }
+        windows: dict[str, dict[str, dict]] = {
+            scope: dict(self._last_windows[scope]) for scope in SCOPES
+        }
         for (scope, timeframe, _), payload in zip(tasks, results):
+            key = (scope, timeframe)
             if isinstance(payload, Exception):
+                failures = self._summary_failures.get(key, 0) + 1
+                self._summary_failures[key] = failures
+                # Backoff: retry after 1, 2, 4, ... ticks, capped at the 60-tick
+                # hourly slot so we never hammer the API during an outage.
+                retry_at = tick + min(2 ** (failures - 1), 60)
+                self._summary_retry_at[key] = retry_at
+                self._summary_stale[scope][timeframe] = True
                 _LOGGER.warning(
-                    "Failed to fetch summary for scope=%s timeframe=%s: %s",
+                    "Failed to fetch summary for scope=%s timeframe=%s: %s "
+                    "(keeping last known data, marked stale; next retry tick %s)",
                     scope,
                     timeframe,
                     payload,
+                    retry_at,
                 )
-                summaries[scope][timeframe] = {}
-                windows[scope][timeframe] = {}
+                # Keep the last good values instead of blanking the dashboard.
+                summaries[scope][timeframe] = self._last_summaries[scope].get(timeframe, {})
+                windows[scope][timeframe] = self._last_windows[scope].get(timeframe, {})
                 continue
 
             summary = payload.get("summary")
-            summaries[scope][timeframe] = summary if isinstance(summary, dict) else {}
+            summary_out = summary if isinstance(summary, dict) else {}
             window = payload.get("window")
-            windows[scope][timeframe] = window if isinstance(window, dict) else {}
+            window_out = window if isinstance(window, dict) else {}
+            summaries[scope][timeframe] = summary_out
+            windows[scope][timeframe] = window_out
+            self._last_summaries[scope][timeframe] = summary_out
+            self._last_windows[scope][timeframe] = window_out
+            self._summary_failures.pop(key, None)
+            self._summary_retry_at.pop(key, None)
+            self._summary_stale[scope][timeframe] = False
 
         return summaries, windows
 

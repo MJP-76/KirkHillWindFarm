@@ -192,6 +192,12 @@ class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
             return value
         return _as_float(self._scope_data()["summary"].get("capacity_factor_percent"))
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs = super().extra_state_attributes
+        attrs["data_stale"] = self._summary_is_stale("today")
+        return attrs
+
 
 class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, RestoreEntity):
     _attr_device_class = SensorDeviceClass.ENERGY
@@ -268,10 +274,11 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
         live = self._live_kwh()
+        stale = self._summary_is_stale(self._timeframe)
         if live is not None:
             display_unit, display_value = _display_energy_from_kwh(live)
             attrs["timeframe"] = self._timeframe
-            attrs["generation_source"] = "api_dynamic"
+            attrs["generation_source"] = "stale" if stale else "api_dynamic"
             attrs["raw_generation_kwh"] = live
             attrs["display_unit"] = display_unit
             attrs["display_value"] = display_value
@@ -279,6 +286,7 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
             # Use restored attributes if available
             attrs.update(self._restored_attrs)
             attrs["generation_source"] = "restored"
+        attrs["data_stale"] = stale
         return attrs
 
 

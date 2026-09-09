@@ -57,6 +57,14 @@ class KirkHillScopedEntity(KirkHillEntity):
         """Shortcut to the scoped payload from the coordinator."""
         return self.coordinator.data[self._scope]
 
+    def _summary_is_stale(self, timeframe: str) -> bool:
+        """Return True when a timeframe summary is showing stale (last known) data."""
+        return bool(
+            self.coordinator.data.get("summary_stale", {})
+            .get(self._scope, {})
+            .get(timeframe, False)
+        )
+
     def _owner_share_pct(self) -> float | None:
         """Owner share percentage, computed live from the API's capacity_watts.
 
