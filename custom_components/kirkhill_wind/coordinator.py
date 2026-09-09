@@ -139,6 +139,15 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "turbine_generation": self._turbine_generation,
             "wind_speed_today": self._wind_speed_today,
             "open_meteo_forecast": self._open_meteo_forecast,
+            "tick": self._tick,
+            "summary_failures": {
+                f"{scope}:{timeframe}": count
+                for (scope, timeframe), count in self._summary_failures.items()
+            },
+            "summary_retry_at": {
+                f"{scope}:{timeframe}": retry_at
+                for (scope, timeframe), retry_at in self._summary_retry_at.items()
+            },
         }
 
     def _build_turbine_generation(
@@ -179,6 +188,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         for (scope, timeframe), retry_at in self._summary_retry_at.items():
             if tick >= retry_at:
                 timeframes.add(timeframe)
+        _LOGGER.debug("Tick %s: fetching summaries for timeframes=%s", tick, sorted(timeframes))
 
         for scope in SCOPES:
             for timeframe in timeframes:
@@ -229,6 +239,13 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             summary_out = summary if isinstance(summary, dict) else {}
             window = payload.get("window")
             window_out = window if isinstance(window, dict) else {}
+            _LOGGER.debug(
+                "Fetched summary scope=%s timeframe=%s stale_data=%s failures_prev=%s",
+                scope,
+                timeframe,
+                self._summary_stale[scope].get(timeframe, False),
+                self._summary_failures.get(key, 0),
+            )
             summaries[scope][timeframe] = summary_out
             windows[scope][timeframe] = window_out
             self._last_summaries[scope][timeframe] = summary_out

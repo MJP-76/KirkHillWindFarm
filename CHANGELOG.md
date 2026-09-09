@@ -2,6 +2,21 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.73
+- **Debug logging on every API request.** Each Kirk Hill API call now logs its
+  endpoint, query params and round-trip latency at debug level, and failures
+  log the path and elapsed time before the exception is raised — so rate-limit
+  or slow-response windows are visible in the debug log.
+- **Coordinator logs what it fetches and why.** Each tick logs the summary
+  timeframes due (fast tier, hourly slow tier, or a backoff retry), and every
+  summary result logs its scope, timeframe and whether it was previously stale,
+  at debug level.
+- **Diagnostics download now shows the stale/retry state.** The config-entry
+  diagnostics include the coordinator tick, per-timeframe `summary_stale`
+  flags, consecutive failure counts, and the tick each timeframe is due for
+  retry — so a reporter's download shows exactly which timeframes were blanked
+  or stale and whether backoff was still pending.
+
 ## Version 4.8.72
 - **Keep last-known data during API outages, marked as stale.** When the
   upstream summary fetch fails, the generation/capacity values are no longer

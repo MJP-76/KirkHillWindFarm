@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -9,6 +11,8 @@ import aiohttp
 
 from .const import DEFAULT_BASE_URL, SCOPE_OWNER
 from .exceptions import KirkHillAuthError, KirkHillConnectionError
+
+_LOGGER = logging.getLogger(__name__)
 
 TIMEOUT = aiohttp.ClientTimeout(total=20)
 
@@ -31,6 +35,8 @@ class KirkHillApiClient:
         self, session: aiohttp.ClientSession, path: str, params: dict[str, str]
     ) -> dict[str, Any]:
         url = f"{self._base_url}{path}"
+        started = time.monotonic()
+        _LOGGER.debug("Kirk Hill API GET %s params=%s", path, params)
         try:
             async with session.get(
                 url, params=params, headers=self._headers, timeout=TIMEOUT
@@ -38,12 +44,31 @@ class KirkHillApiClient:
                 if resp.status == 401:
                     raise KirkHillAuthError("Invalid or missing API key")
                 resp.raise_for_status()
-                return await resp.json()
+                body = await resp.json()
+                _LOGGER.debug(
+                    "Kirk Hill API GET %s params=%s -> HTTP %s in %.2fs",
+                    path,
+                    params,
+                    resp.status,
+                    time.monotonic() - started,
+                )
+                return body
         except KirkHillAuthError:
             raise
         except aiohttp.ClientError as exc:
+            _LOGGER.debug(
+                "Kirk Hill API GET %s failed after %.2fs: %s",
+                path,
+                time.monotonic() - started,
+                exc,
+            )
             raise KirkHillConnectionError(str(exc)) from exc
         except asyncio.TimeoutError as exc:
+            _LOGGER.debug(
+                "Kirk Hill API GET %s timed out after %.2fs",
+                path,
+                time.monotonic() - started,
+            )
             raise KirkHillConnectionError("Request timed out") from exc
 
     async def get_current(
