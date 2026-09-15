@@ -122,7 +122,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
                 <span class="dot stopped"></span>Stopped
               </span>
               <span>Scroll / pinch to zoom · Drag to pan · Double-tap to reset</span>
-              <span>&copy; OpenStreetMap contributors</span>
+              <span>&copy; OpenStreetMap contributors &middot; &copy; CARTO</span>
             </div>
           </div>
         </ha-card>
@@ -412,7 +412,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
         const wx = ((tx % maxTile) + maxTile) % maxTile;
         const left = tx * TS - originX;
         const top = ty * TS - originY;
-        html += `<image href="https://tile.openstreetmap.org/${zoom}/${wx}/${ty}.png" x="${left}" y="${top}" width="${TS}" height="${TS}" />`;
+        html += `<image href="https://basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${wx}/${ty}.png" x="${left}" y="${top}" width="${TS}" height="${TS}" />`;
       }
     }
     return html;

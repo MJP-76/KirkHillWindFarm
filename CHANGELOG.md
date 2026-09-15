@@ -2,6 +2,19 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.76
+- **SCADA bottom chrome: API pill next to version, above legend.** The API
+  status pill, version number and reload button now sit together on a single
+  row above the legend strip. The version text is slightly darker for better
+  contrast.
+- **Turbine activity history chart.** The turbine detail modal now includes a
+  horizontal status timeline covering the selected timeframe, showing at a
+  glance when a turbine was running, curtailed, in maintenance, stopped, etc.
+- **Turbine map: switch tile source to CARTO Voyager.** The map was loading
+  tiles from tile.openstreetmap.org, which blocks unidentified embedded
+  applications (osm.wiki/blocked). Tiles now come from CARTO's free Voyager
+  layer, which uses OSM data under a more permissive policy for embedded use.
+
 ## Version 4.8.75
 - **API Status pill on the SCADA card.** The header now shows an "API" chip
   that is green with "API OK" while the Kirk Hill API responds and red with

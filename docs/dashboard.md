@@ -36,6 +36,17 @@ pastel tint of the status colour; the text is the saturated status colour.
 A turbine can be **curtailed** (bird/bat protection, grid constraint, etc.)
 while the alarm indicator still reads **OK** — curtailment is not a fault.
 
+### API status pill
+
+Bottom of the SCADA card, next to the version number (above the legend, on the
+same line as the reload button). Reflects the coordinator's last fetch directly,
+so an API outage is obvious rather than a page full of unknown values:
+
+- **API OK** (green) — the Kirk Hill API last responded normally.
+- **API DOWN** (red) — the coordinator's last fetch failed (timeout,
+  rate-limit, or outage).
+- **API —** — the status entity is unavailable or not configured.
+
 ### Restored generation values
 
 After a Home Assistant restart, generation figures (yesterday, today, week,
@@ -81,6 +92,9 @@ cursor/hover affordance to signal they are clickable.
   - Running/stopped legend and per-turbine hover title
   - Fixed zoom level (15) centred on the farm
   - Scroll wheel zoom, drag-to-pan, pinch zoom, double-click/double-tap to reset
+  - Tiles served by **CARTO Voyager** (OSM data under CARTO's embedded-use
+    policy); bypasses the strict `tile.openstreetmap.org` restriction that
+    blocked the previous source (osm.wiki/blocked)
 - Per-turbine owner/site power, state, and active status cards
 
 ## Dashboard customisation
