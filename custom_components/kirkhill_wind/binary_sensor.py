@@ -19,7 +19,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if t.get("id") is not None
     ]
 
-    entities: list = [FarmAlarmSensor(coordinator, entry)]
+    entities: list = [
+        FarmAlarmSensor(coordinator, entry),
+        APIStatusSensor(coordinator, entry),
+    ]
     entities += [TurbineActiveSensor(coordinator, entry, tid) for tid in turbine_ids]
 
     async_add_entities(entities)
@@ -66,3 +69,28 @@ class TurbineActiveSensor(KirkHillTurbineEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         t = self._turbine_data(SCOPE_OWNER)
         return t.get("status") == "active" if t else False
+
+
+class APIStatusSensor(KirkHillEntity, BinarySensorEntity):
+    """On when the Kirk Hill API has responded successfully.
+
+    Unlike the data sensors (which go unavailable when the coordinator's last
+    update failed), this entity stays available so the dashboard can show an
+    explicit "API down" state rather than a page full of unknown values. It
+    reflects the last fetch outcome directly, so it is never hidden behind the
+    normal 'available' short-circuit.
+    """
+
+    _attr_name = "API Status"
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "api_status")
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.last_update_success)

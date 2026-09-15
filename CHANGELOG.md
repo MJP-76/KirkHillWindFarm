@@ -2,6 +2,14 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.75
+- **API Status pill on the SCADA card.** The header now shows an "API" chip
+  that is green with "API OK" while the Kirk Hill API responds and red with
+  "API DOWN" when the coordinator's last update failed, instead of hiding the
+  outage behind a page full of unknown values. Driven by a new
+  `binary_sensor.<farm>_api_status` (device class connectivity) that reflects
+  the coordinator's last fetch outcome.
+
 ## Version 4.8.74
 - **Fix the turbine "Generation Today" chart not rendering.** The generation
   step-line charts (turbine, site and owner modals) used `type: "stepLine"`,

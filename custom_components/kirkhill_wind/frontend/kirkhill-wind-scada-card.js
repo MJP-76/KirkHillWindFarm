@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.8.74";
+const KIRKHILL_WIND_SCADA_VERSION = "4.8.75";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
@@ -1293,6 +1293,8 @@ class KirkHillWindScada extends HTMLElement {
     const gridDividerX2 = gridRightX - 10 * scaleX;
     const chipLeftColX = 30 * scaleX;
     const chipRightColX = 152 * scaleX;
+    const chipApiX = 312 * scaleX;
+    const chipApiW = 78 * scaleX;
     const chipWindX = 400 * scaleX;
     const chipWindW = busX - chipWindX - 8;
     const chipWindTitleX = 412 * scaleX;
@@ -1341,6 +1343,8 @@ class KirkHillWindScada extends HTMLElement {
       gridDividerX2,
       chipLeftColX,
       chipRightColX,
+      chipApiX,
+      chipApiW,
       chipUserGenX,
       chipUserGenW,
       chipUserGenTitleX,
@@ -1483,6 +1487,12 @@ _buildHeaderChips(layout) {
         <rect x="${layout.chipRightColX}" y="24" width="${150 * layout.scaleX}" height="30" rx="15"/>
         <text class="chip-label" x="${layout.chipRightColX + 10 * layout.scaleX}" y="44" text-anchor="start">Active Turbines</text>
         <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 140 * layout.scaleX}" y="44" text-anchor="end">—</text>
+
+        <!-- API connectivity pill: green when the Kirk Hill API responds, red when it doesn't -->
+        <g class="api-status" data-api="indicator">
+          <rect x="${layout.chipApiX}" y="24" width="${layout.chipApiW}" height="30" rx="15"/>
+          <text class="api-status-text" data-api="text" x="${layout.chipApiX + layout.chipApiW / 2}" y="44" text-anchor="middle">API</text>
+        </g>
 
         <!-- Wind & Forecast panel (left of bus, right of turbines) -->
         <g class="wind-panel" data-wind="panel">
@@ -1652,6 +1662,18 @@ _buildHeaderChips(layout) {
         '[data-alarm="text"]',
         inFault ? `${faultCount} FAULT${faultCount === 1 ? "" : "S"}` : "OK"
       );
+    }
+
+    // API connectivity pill: green when the API last responded, red when not.
+    const apiIndicator = root.querySelector('[data-api="indicator"]');
+    if (apiIndicator) {
+      const apiEntity = config.api_status_entity;
+      const apiState = apiEntity ? this._str(apiEntity) : "";
+      const apiUp = apiState === "on";
+      const apiUnavailable = !apiEntity || apiState === "" || apiState === "unavailable" || apiState === "unknown";
+      const inDown = !apiUnavailable && !apiUp;
+      apiIndicator.classList.toggle("api-down", inDown);
+      this._setText(root, '[data-api="text"]', apiUp ? "API OK" : inDown ? "API DOWN" : "API —");
     }
 
     // Turbines
@@ -1835,6 +1857,12 @@ _buildHeaderChips(layout) {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.15; }
       }
+
+      /* API connectivity pill */
+      .api-status rect { fill: var(--khscada-alarm-ok-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
+      .api-status-text { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .api-status.api-down rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
+      .api-status.api-down .api-status-text { fill: var(--khscada-error-color); }
 
       /* Legend */
       .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
