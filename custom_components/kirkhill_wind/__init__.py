@@ -30,13 +30,11 @@ from .const import (
     CONF_BASE_URL,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
-    CONF_GRAPH_HOURS,
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_BASE_URL,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
-    DEFAULT_GRAPH_HOURS,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     PLATFORMS,
@@ -421,6 +419,21 @@ def _generation_markdown_card(title: str, entries: list[tuple[str, str | None]])
     }
 
 
+def _deprecation_banner() -> dict:
+    """Warning banner shown at the top of views migrating to the SCADA dashboard."""
+    return {
+        "type": "markdown",
+        "title": "View deprecation notice",
+        "content": (
+            "### Warning — View being deprecated\n\n"
+            "This view is being **deprecated** and **migrated to the "
+            "[SCADA Dashboard](/kirk-hill-wind-dashboard/scada)**. "
+            "It is **not currently under development**; content here may be "
+            "outdated or removed."
+        ),
+    }
+
+
 def _owner_generation_markdown_card(
     title: str,
     entries: list[tuple[str, str | None, str | None]],
@@ -460,10 +473,32 @@ _OBSOLETE_CARD_KEYS: set[str] = {
     "entities:title:Site metrics",
     "entities:title:Owner projected earnings by timeframe",
     "entities:title:Site projected value by timeframe",
+    # Turbines view trimmed in v4.8.77 — eight per-turbine entity cards and the
+    # all-turbine activity graph superseded by the SCADA nodes and modal charts.
+    "history-graph:title:Turbine Activity — last 24h",
+    "entities:title:Turbine T1",
+    "entities:title:Turbine T2",
+    "entities:title:Turbine T3",
+    "entities:title:Turbine T4",
+    "entities:title:Turbine T5",
+    "entities:title:Turbine T6",
+    "entities:title:Turbine T7",
+    "entities:title:Turbine T8",
+    # Legacy container wrappers around the removed cards — structural keys must
+    # be retired too or the merge preserves them as "user-added" and the map
+    # gets duplicated (the old stack/grid keys no longer match the new ones).
+    "container:vertical-stack:history-graph:title:Turbine Activity — last 24h|"
+    "custom:kirkhill-wind-turbine-map:title:Turbine map",
+    "container:grid:entities:title:Turbine T1|entities:title:Turbine T2|"
+    "entities:title:Turbine T3|entities:title:Turbine T4|entities:title:Turbine T5|"
+    "entities:title:Turbine T6|entities:title:Turbine T7|entities:title:Turbine T8",
 }
 # Obsolete view paths — views with these paths are removed from existing dashboards on merge.
 _OBSOLETE_VIEW_PATHS: set[str] = {
     "overview",
+    # History tab removed in v4.8.77 — its 25h owner/site/wind charts are
+    # covered by the SCADA card's Owner/Site modals with 6H–1Y timeframes.
+    "history",
 }
 _OBSOLETE_SECTION_KEYS: dict[str, set[str]] = {
     "overview": {
@@ -834,34 +869,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         for tid in present_turbine_ids
     ]
 
-    turbine_cards = []
-    for tid in present_turbine_ids:
-        turbine_cards.append(
-            {
-                "type": "entities",
-                "title": f"Turbine {tid}",
-                "entities": [
-                    {"entity": turbine(tid, "owner_power"), "name": "Owner power"},
-                    {"entity": turbine(tid, "site_power"), "name": "Site power"},
-                    {"entity": turbine(tid, "state_text"), "name": "State"},
-                    {"entity": turbine(tid, "active"), "name": "Active"},
-                ],
-            }
-        )
-
-    graph_hours = entry.options.get(CONF_GRAPH_HOURS, DEFAULT_GRAPH_HOURS)
-
-    turbine_status_barchart = {
-        "type": "history-graph",
-        "title": f"Turbine Activity — last {graph_hours}h",
-        "entities": [
-            tid_entity
-            for tid_entity in (turbine(tid, "active") for tid in present_turbine_ids)
-            if tid_entity is not None
-        ],
-        "hours_to_show": graph_hours,
-    }
-
     financial_kpi_cards = [
         {
             "type": "entity",
@@ -928,6 +935,11 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                     {
                         "type": "grid",
                         "column_span": 2,
+                        "cards": [_deprecation_banner()],
+                    },
+                    {
+                        "type": "grid",
+                        "column_span": 2,
                         "cards": [
                             {
                                 "type": "heading",
@@ -969,112 +981,14 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                 ],
             },
             {
-                "title": "History",
-                "path": "history",
-                "icon": "mdi:chart-line",
-                "type": "sections",
-                "max_columns": 2,
-                "sections": [
-                    {
-                        "type": "grid",
-                        "column_span": 2,
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Charts",
-                                "heading_style": "title",
-                                "icon": "mdi:chart-line",
-                            },
-                            {
-                                "type": "history-graph",
-                                "title": "Power and Wind (last 25 hours)",
-                                "hours_to_show": 25,
-                                "entities": [
-                                    farm_scoped("owner", "farm_power"),
-                                    farm_scoped("site", "farm_power"),
-                                    farm("farm_wind_speed"),
-                                ],
-                            },
-                            {
-                                "type": "custom:apexcharts-card",
-                                "graph_span": "25h",
-                                "apex_config": {
-                                    "legend": {"show": False},
-                                    "stroke": {"width": 2},
-                                },
-                                "header": {
-                                    "show": True,
-                                    "title": "Power — Owner (blue) / Site (orange)",
-                                    "show_states": True,
-                                    "colorize_states": True,
-                                },
-                                "series": [
-                                    {
-                                        "entity": farm_scoped("owner", "farm_power"),
-                                        "fill_raw": "last",
-                                        "color": "blue",
-                                        "unit": "kW",
-                                        "type": "area",
-                                    },
-                                    {
-                                        "entity": farm_scoped("site", "farm_power"),
-                                        "fill_raw": "last",
-                                        "color": "orange",
-                                        "unit": "kW",
-                                        "transform": "return x * 1000;",
-                                        "type": "area",
-                                    },
-                                ],
-                            },
-                            {
-                                "type": "custom:plotly-graph",
-                                "hours_to_show": 25,
-                                "refresh_interval": "auto",
-                                "entities": [
-                                    {
-                                        "entity": farm_scoped("owner", "farm_power"),
-                                        "y_axis": "y",
-                                        "line": {"width": 2},
-                                    },
-                                    {
-                                        "entity": farm_scoped("site", "farm_power"),
-                                        "y_axis": "y2",
-                                        "line": {"width": 2},
-                                    },
-                                    {
-                                        "entity": farm("farm_wind_speed"),
-                                        "y_axis": "y3",
-                                        "line": {"width": 1, "dash": "dot"},
-                                    },
-                                ],
-                                "layout": {
-                                    "title": "Power & Wind (25h)",
-                                    "yaxis": {"title": "Owner (kW)", "side": "left"},
-                                    "yaxis2": {
-                                        "title": "Site (kW)",
-                                        "overlaying": "y",
-                                        "side": "right",
-                                    },
-                                    "yaxis3": {
-                                        "title": "Wind (m/s)",
-                                        "overlaying": "y",
-                                        "side": "right",
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
                 "title": "Turbines",
                 "path": "turbines",
                 "icon": "mdi:wind-turbine",
                 "cards": [
+                    _deprecation_banner(),
                     {
                         "type": "vertical-stack",
                         "cards": [
-                            turbine_status_barchart,
                             {
                                 "type": "custom:kirkhill-wind-turbine-map",
                                 "title": "Turbine map",
@@ -1083,12 +997,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             },
                         ],
                     },
-                    {
-                        "type": "grid",
-                        "columns": 2,
-                        "square": False,
-                        "cards": turbine_cards,
-                    }
                 ],
             },
         ],

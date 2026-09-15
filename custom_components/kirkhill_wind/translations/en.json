@@ -43,8 +43,7 @@
           "enable_payment_tracking": "Enable payment tracking onboarding (Ethex, experimental)",
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
-          "scan_interval": "Poll interval (seconds)",
-          "graph_hours": "Turbine activity chart timeframe (hours)"
+          "scan_interval": "Poll interval (seconds)"
         }
       }
     }

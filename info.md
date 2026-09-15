@@ -46,11 +46,13 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Optional experimental Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, active binary sensor, generation today (site), generation all-time (site), and rotor speed for each of the 8 turbines
 - **SCADA tab** — the first tab on the auto-generated dashboard, a full-bleed animated single-line diagram (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; national grid block shows Owner and Site export and to-grid-today, with wind/forecast chips and a flashing alarm indicator; **top-right "Your Generation" panel shows your generation (auto-scaled), last updated timestamp, and your share in watts**; panel view so it fills the entire tab; **pinch to zoom (up to 6x), drag to pan, and double-tap to reset on mobile**; National Grid box and Your Generation panel text enlarged for readability on small screens; owner export auto-derived from site export × owner generation share when the API reports no owner power
-- **Auto-generated Lovelace dashboard** — created automatically during setup with SCADA (first), finances, history, and turbines tabs containing:
+- **Auto-generated Lovelace dashboard** — created automatically during setup with SCADA (first), finances, and turbines tabs:
   - Taller turbine map viewport so all turbines fit more reliably on-screen
   - Active/inactive turbine count and alarm status (alarm = actual thermal/electrical turbine fault)
   - An **interactive turbine map** showing all 8 turbines with T1–T8 labels, running/stopped legend, hover titles, live spin animation proportional to output, scroll/pinch zoom, drag-to-pan, and double-tap to reset
-  - Full per-turbine detail cards
+  - **History tab removed** (v4.8.77) — its 25h owner/site/wind charts are covered by the SCADA card's Owner/Site pop-out modals with selectable 6H–1Y timeframes
+  - **Turbines tab trimmed** (v4.8.77) — per-turbine status cards and the all-turbine activity graph removed (now on the SCADA diagram and per-turbine modals); only the map remains
+  - **Deprecation banners** on the Finances and Turbines tabs flagging migration to the SCADA dashboard
 - **Bundled chart cards** — ApexCharts and Plotly Lovelace cards shipped with the integration (no separate HACS installs needed)
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
 - **Power & Wind (25h) time-series (Plotly)** — owner power (kW), site power (kW), and wind speed (m/s)
@@ -60,7 +62,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
 - **Finances tab shows generation kWh + earnings** for all timeframes (Owner & Site)
-- **Overview tab removed** — dashboard starts with SCADA, then Finances, History, Turbines
+- **Overview tab removed** — dashboard starts with SCADA, then Finances, Turbines (History removed in v4.8.77)
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
 - **Optimized fetch tiers** — "yesterday" moved to hourly tier (static once day ends); week/month/ytd/year/alltime also hourly; only "today" fetches every poll
 - **Owner power fallback** — calculates from site power × owner share % when API returns 0/None

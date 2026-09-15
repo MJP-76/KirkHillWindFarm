@@ -73,18 +73,24 @@ cursor/hover affordance to signal they are clickable.
 
 ## Finances tab
 
+> **Deprecated** — this view is being migrated to the SCADA dashboard and is not
+> under active development. A warning banner sits at the top of the view.
+
 - **Owner finances** projected timeframe value sensors
 - **Site finances** projected timeframe value sensors
 
 ## History tab
 
-- **Combined Power and Wind** history graph — owner power, site power, and wind speed on a single chart
-- **Dual-axis Power chart** (ApexCharts) — site power (MW) and owner power (kW) on separate Y-axes
-- **Power & Wind (25h)** time-series (Plotly) — owner power (kW), site power (kW), and wind speed (m/s) on shared/right axes
+**Removed in v4.8.77.** The 25-hour owner/site power and wind charts it held
+are covered by the SCADA card's Owner and Site pop-out modals, which offer
+selectable 6H–1Y timeframes. Data previously here is available through those
+modals; the dedicated tab no longer exists.
 
 ## Turbines tab
 
-- **Turbine activity history** — 24-hour active/inactive history for all 8 turbines
+> **Deprecated** — this view is being migrated to the SCADA dashboard and is not
+> under active development. A warning banner sits at the top of the view.
+
 - **Interactive turbine map** — a full-width animated map card with:
   - T1–T8 labels above each turbine marker
   - Turbine icons that spin in proportion to live site capacity factor
@@ -95,7 +101,10 @@ cursor/hover affordance to signal they are clickable.
   - Tiles served by **CARTO Voyager** (OSM data under CARTO's embedded-use
     policy); bypasses the strict `tile.openstreetmap.org` restriction that
     blocked the previous source (osm.wiki/blocked)
-- Per-turbine owner/site power, state, and active status cards
+
+The per-turbine status cards and the all-turbine activity graph were removed in
+v4.8.77 — turbine power, status, and activity history are now shown on the SCADA
+diagram and via each turbine's pop-out modal.
 
 ## Dashboard customisation
 

@@ -2,6 +2,21 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.77
+- **Dashboard consolidation — deprecation banners.** The Finances and Turbines
+  views now carry a "View being deprecated — migrated to the SCADA Dashboard,
+  not under development" banner at the top, linking to the SCADA tab.
+- **History tab removed.** Its three 25-hour owner/site power + wind charts were
+  superseded by the SCADA card's Owner and Site pop-out modals with selectable
+  6H–1Y timeframes. The tab is gone; the data is available through those modals.
+- **Turbines tab trimmed.** Per-turbine status cards (T1–T8) and the all-turbine
+  activity graph removed — turbine power, status, and activity history are now
+  shown on the SCADA diagram and in each turbine's pop-out modal. The turbine
+  map remains (CARTO Voyager tiles), under the deprecation banner.
+- **Options: "Turbine activity chart timeframe" removed.** The `graph_hours`
+  option only fed the removed Turbines activity graph and is gone from the
+  options flow and translations.
+
 ## Version 4.8.76
 - **SCADA bottom chrome: API pill next to version, above legend.** The API
   status pill, version number and reload button now sit together on a single
