@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.8.73";
+const KIRKHILL_WIND_SCADA_VERSION = "4.8.74";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
@@ -487,6 +487,11 @@ class KirkHillWindScada extends HTMLElement {
       Object.values(this._turbineDetailCharts).forEach(c => c.destroy && c.destroy());
       this._turbineDetailCharts = null;
     }
+    if (this._turbineDetailTurbine) {
+      // Reset to 24h so a heavy 6M/1Y window is not re-fetched on every reopen.
+      const key = this._turbineModalKey(this._turbineDetailTurbine.id);
+      if (this._modalTimeRanges) this._modalTimeRanges[key] = "1d";
+    }
     this._turbineDetailTurbine = null;
     if (this._boundKeydown) {
       window.removeEventListener("keydown", this._boundKeydown);
@@ -573,10 +578,11 @@ class KirkHillWindScada extends HTMLElement {
       capacity: config.capacity_entity,
       genSite: config.grid_energy_entity,
     };
+    this._setChartLoading();
     try {
       await this._ensureApexCharts();
       const history = await this._fetchHistory(entities, startISO, now.toISOString());
-      if (window.ApexCharts) this._renderSiteCharts(history);
+      if (window.ApexCharts) { this._renderSiteCharts(history); this._clearChartPlaceholders(); }
       else this._showChartError("Charts unavailable — ApexCharts failed to load");
     } catch (err) {
       console.error("Failed to load site history:", err);
@@ -619,9 +625,9 @@ class KirkHillWindScada extends HTMLElement {
     if (genData.length) {
       charts.gen = new ApexCharts(ts("#site-chart-gen"), {
         series: [{ name: "Gen (kWh)", data: genData }],
-        chart: { type: "stepLine", height: 250, ...base },
+        chart: { type: "line", height: 250, ...base },
         xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
-        stroke: { width: 2 }, colors: ["#059669"],
+        stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
         tooltip: { x: { format: "HH:mm" } },
       });
       charts.gen.render();
@@ -696,10 +702,11 @@ class KirkHillWindScada extends HTMLElement {
       ownerPower: config.owner_power_entity,
       genOwner: config.owner_generation_today_entity,
     };
+    this._setChartLoading();
     try {
       await this._ensureApexCharts();
       const history = await this._fetchHistory(entities, startISO, now.toISOString());
-      if (window.ApexCharts) this._renderOwnerCharts(history);
+      if (window.ApexCharts) { this._renderOwnerCharts(history); this._clearChartPlaceholders(); }
       else this._showChartError("Charts unavailable — ApexCharts failed to load");
     } catch (err) {
       console.error("Failed to load owner history:", err);
@@ -730,9 +737,9 @@ class KirkHillWindScada extends HTMLElement {
     if (genData.length) {
       charts.gen = new ApexCharts(ts("#owner-chart-gen"), {
         series: [{ name: "Gen (kWh)", data: genData }],
-        chart: { type: "stepLine", height: 250, ...base },
+        chart: { type: "line", height: 250, ...base },
         xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
-        stroke: { width: 2 }, colors: ["#059669"],
+        stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
         tooltip: { x: { format: "HH:mm" } },
       });
       charts.gen.render();
@@ -762,11 +769,13 @@ class KirkHillWindScada extends HTMLElement {
       state: turbine.state_entity,
     };
 
+    this._setChartLoading();
     try {
       await this._ensureApexCharts();
       const history = await this._fetchHistory(entities, startISO, endISO);
       if (window.ApexCharts) {
         this._renderCharts(turbine.id, history);
+        this._clearChartPlaceholders();
       } else {
         this._showChartError("Charts unavailable — ApexCharts failed to load");
       }
@@ -861,8 +870,8 @@ class KirkHillWindScada extends HTMLElement {
         charts.windPower = new ApexCharts(this.shadowRoot.querySelector("#chart-wind-power"), {
           series: [{ name: "Wind vs Power", data: scatterData }],
           chart: { type: "scatter", height: 300, ...chartOpts },
-          xaxis: { title: { text: "Power (kW)" } },
-          yaxis: { title: { text: "Wind (m/s)" } },
+          xaxis: { title: { text: "Power (kW)" }, labels: { formatter: (v) => this._fmt(v, 2) } },
+          yaxis: { title: { text: "Wind (m/s)" }, labels: { formatter: (v) => this._fmt(v, 2) } },
           colors: ["#f59e0b"],
           markers: { size: 4 },
         });
@@ -926,10 +935,10 @@ class KirkHillWindScada extends HTMLElement {
     if (genData.length) {
       charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), {
         series: [{ name: "Generation (kWh)", data: genData }],
-        chart: { type: "stepLine", height: 250, ...chartOpts },
+        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "kWh" } },
-        stroke: { width: 2 },
+        stroke: { curve: "stepline", width: 2 },
         colors: ["#059669"],
       });
       charts.generation.render();
@@ -957,6 +966,15 @@ class KirkHillWindScada extends HTMLElement {
 
   _showChartError(msg) {
     if (!this.shadowRoot) return;
+    this._renderChartPlaceholders(msg);
+  }
+
+  _setChartLoading() {
+    if (!this.shadowRoot) return;
+    this._renderChartPlaceholders("Waiting for data\u2026");
+  }
+
+  _renderChartPlaceholders(msg) {
     this.shadowRoot.querySelectorAll(".apex-chart").forEach(el => {
       el.style.display = "flex";
       el.style.alignItems = "center";
@@ -964,6 +982,18 @@ class KirkHillWindScada extends HTMLElement {
       el.style.color = "var(--khscada-secondary-color)";
       el.style.fontSize = "13px";
       el.textContent = msg;
+    });
+  }
+
+  _clearChartPlaceholders() {
+    if (!this.shadowRoot) return;
+    this.shadowRoot.querySelectorAll(".apex-chart").forEach(el => {
+      el.style.display = "";
+      el.style.alignItems = "";
+      el.style.justifyContent = "";
+      el.style.color = "";
+      el.style.fontSize = "";
+      if (el.textContent === "Waiting for data\u2026") el.textContent = "";
     });
   }
 

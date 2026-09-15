@@ -2,6 +2,22 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.74
+- **Fix the turbine "Generation Today" chart not rendering.** The generation
+  step-line charts (turbine, site and owner modals) used `type: "stepLine"`,
+  which ApexCharts does not recognise as a chart type, so the charts stayed
+  blank. They are now regular line charts with a `stepline` stroke, so the
+  running kWh total draws correctly.
+- **Reset the turbine chart timeframe to 24h when the modal is closed.** A
+  selected 6M/1Y window no longer persists after leaving the turbine detail, so
+  reopening does not re-fetch months of history every time. Timeframe changes
+  still apply while the modal is open.
+- **Tidy the "Wind vs Power" scatter axes.** Axis labels are formatted to two
+  decimals so kW/m/s values no longer sprawl across many zeros.
+- **"Waiting for data…" indicator.** While the history for the selected window
+  is loading (this is slower for longer timeframes), the chart area shows a
+  waiting message instead of looking frozen.
+
 ## Version 4.8.73
 - **Debug logging on every API request.** Each Kirk Hill API call now logs its
   endpoint, query params and round-trip latency at debug level, and failures
