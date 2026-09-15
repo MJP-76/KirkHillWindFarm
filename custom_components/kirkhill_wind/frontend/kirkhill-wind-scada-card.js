@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.8.77";
+const KIRKHILL_WIND_SCADA_VERSION = "4.8.78";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
@@ -603,43 +603,42 @@ class KirkHillWindScada extends HTMLElement {
   _renderSiteCharts(history) {
     if (!window.ApexCharts) return;
     const charts = {};
-    const base = { toolbar: { show: false }, background: "transparent" };
     const ts = (id) => this.shadowRoot.querySelector(id);
     const toSeries = (arr) => (arr || []).map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]).filter(d => d[1] !== null);
 
     const sitePowerData = toSeries(history.sitePower);
     if (sitePowerData.length) {
-      charts.power = new ApexCharts(ts("#site-chart-power"), {
+      charts.power = new ApexCharts(ts("#site-chart-power"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Site Power (MW)", data: sitePowerData }],
-        chart: { type: "line", height: 250, ...base },
         xaxis: { type: "datetime" }, yaxis: { title: { text: "MW" } },
         stroke: { curve: "smooth", width: 2 }, markers: { size: 0 }, colors: ["#0284c7"],
         tooltip: { x: { format: "HH:mm" } },
-      });
+      }));
       charts.power.render();
     }
 
     const capData = toSeries(history.capacity);
     if (capData.length) {
-      charts.capacity = new ApexCharts(ts("#site-chart-capacity"), {
+      charts.capacity = new ApexCharts(ts("#site-chart-capacity"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Capacity %", data: capData }],
-        chart: { type: "line", height: 250, ...base },
         xaxis: { type: "datetime" }, yaxis: { title: { text: "%" }, max: 100 },
         stroke: { curve: "smooth", width: 2 }, colors: ["#22c55e"],
         tooltip: { x: { format: "HH:mm" } },
-      });
+      }));
       charts.capacity.render();
     }
 
     const genData = toSeries(history.genSite);
     if (genData.length) {
-      charts.gen = new ApexCharts(ts("#site-chart-gen"), {
+      charts.gen = new ApexCharts(ts("#site-chart-gen"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Gen (kWh)", data: genData }],
-        chart: { type: "line", height: 250, ...base },
         xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
         stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
         tooltip: { x: { format: "HH:mm" } },
-      });
+      }));
       charts.gen.render();
     }
 
@@ -727,31 +726,30 @@ class KirkHillWindScada extends HTMLElement {
   _renderOwnerCharts(history) {
     if (!window.ApexCharts) return;
     const charts = {};
-    const base = { toolbar: { show: false }, background: "transparent" };
     const ts = (id) => this.shadowRoot.querySelector(id);
     const toSeries = (arr) => (arr || []).map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]).filter(d => d[1] !== null);
 
     const ownerPowerData = toSeries(history.ownerPower);
     if (ownerPowerData.length) {
-      charts.power = new ApexCharts(ts("#owner-chart-power"), {
+      charts.power = new ApexCharts(ts("#owner-chart-power"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Owner Power (kW)", data: ownerPowerData }],
-        chart: { type: "line", height: 250, ...base },
         xaxis: { type: "datetime" }, yaxis: { title: { text: "kW" } },
         stroke: { curve: "smooth", width: 2 }, markers: { size: 0 }, colors: ["#10b981"],
         tooltip: { x: { format: "HH:mm" } },
-      });
+      }));
       charts.power.render();
     }
 
     const genData = toSeries(history.genOwner);
     if (genData.length) {
-      charts.gen = new ApexCharts(ts("#owner-chart-gen"), {
+      charts.gen = new ApexCharts(ts("#owner-chart-gen"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Gen (kWh)", data: genData }],
-        chart: { type: "line", height: 250, ...base },
         xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
         stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
         tooltip: { x: { format: "HH:mm" } },
-      });
+      }));
       charts.gen.render();
     }
 
@@ -815,14 +813,21 @@ class KirkHillWindScada extends HTMLElement {
 
   async _fetchHistory(entities, start, end) {
     const hass = this._hass;
-    const entries = Object.entries(entities);
+    const windowMs = new Date(end).getTime() - new Date(start).getTime();
+    const long = windowMs > 7 * 24 * 3600 * 1000;
+    const maxPts = long ? 500 : 800;
 
-    const results = await Promise.all(entries.map(async ([key, entityId]) => {
+    const results = await Promise.all(Object.entries(entities).map(async ([key, entityId]) => {
       if (!entityId) return [key, []];
+      if (long && key !== "state") {
+        const stats = await this._fetchStatistics(entityId, start, end);
+        if (stats && stats.length) return [key, this._downsample(stats, maxPts)];
+      }
       try {
-        const path = `history/period/${start}?end_time=${end}&filter_entity_id=${entityId}&minimal_response=true`;
+        const path = `history/period/${start}?end_time=${end}&filter_entity_id=${encodeURIComponent(entityId)}&minimal_response&significant_changes_only`;
         const data = await hass.callApi("GET", path);
-        return [key, Array.isArray(data) ? data[0] || [] : []];
+        const raw = Array.isArray(data) ? data[0] || [] : [];
+        return [key, key === "state" ? raw : this._downsample(raw, maxPts)];
       } catch {
         return [key, []];
       }
@@ -831,11 +836,32 @@ class KirkHillWindScada extends HTMLElement {
     return Object.fromEntries(results);
   }
 
+  async _fetchStatistics(entityId, start, end) {
+    const conn = this._hass?.connection;
+    if (!conn?.sendMessagePromise) return null;
+    try {
+      const stats = await conn.sendMessagePromise({
+        type: "recorder/statistics_during_period",
+        start_time: start,
+        end_time: end,
+        statistic_ids: [entityId],
+        period: "hour",
+        types: ["mean", "state"],
+      });
+      const rows = stats?.[entityId];
+      if (!Array.isArray(rows) || !rows.length) return null;
+      return rows
+        .map(r => ({ last_changed: r.start, state: r.mean ?? r.state }))
+        .filter(p => p.state != null && p.state !== "");
+    } catch {
+      return null;
+    }
+  }
+
   _renderCharts(turbineId, history, startEpoch, endEpoch) {
     if (!window.ApexCharts) return;
 
     const charts = {};
-    const chartOpts = { toolbar: { show: false }, background: "transparent", legend: { show: false } };
 
     // Pre-compute wind lookup once for the scatter chart
     const windMap = new Map();
@@ -852,22 +878,22 @@ class KirkHillWindScada extends HTMLElement {
       .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
       .filter(d => d[1] !== null);
     if (powerData.length) {
-      charts.power = new ApexCharts(this.shadowRoot.querySelector("#chart-power"), {
+      charts.power = new ApexCharts(this.shadowRoot.querySelector("#chart-power"), this._apexOpts({
+        type: "line", height: 300,
         series: [{ name: "Power (kW)", data: powerData }],
-        chart: { type: "line", height: 300, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "kW" } },
         stroke: { curve: "smooth", width: 2 },
         markers: { size: 0 },
         colors: ["#0284c7"],
         tooltip: { x: { format: "HH:mm" } },
-      });
+      }));
       charts.power.render();
     }
 
     // Wind vs Power scatter
     if (windMap.size && powerData.length) {
-      const scatterData = history.power
+      const scatterData = this._downsample(history.power
         .map(p => {
           const t = new Date(p.last_changed).getTime();
           const pv = this._numVal(p.state);
@@ -875,16 +901,16 @@ class KirkHillWindScada extends HTMLElement {
           const wv = windMap.get(t) ?? this._interpolateWind(history.wind, t);
           return wv !== null ? { x: pv, y: wv } : null;
         })
-        .filter(d => d !== null);
+        .filter(d => d !== null), 400);
       if (scatterData.length) {
-        charts.windPower = new ApexCharts(this.shadowRoot.querySelector("#chart-wind-power"), {
+        charts.windPower = new ApexCharts(this.shadowRoot.querySelector("#chart-wind-power"), this._apexOpts({
+          type: "scatter", height: 300,
           series: [{ name: "Wind vs Power", data: scatterData }],
-          chart: { type: "scatter", height: 300, ...chartOpts },
           xaxis: { title: { text: "Power (kW)" }, labels: { formatter: (v) => this._fmt(v, 2) } },
           yaxis: { title: { text: "Wind (m/s)" }, labels: { formatter: (v) => this._fmt(v, 2) } },
           colors: ["#f59e0b"],
           markers: { size: 4 },
-        });
+        }));
         charts.windPower.render();
       }
     }
@@ -894,14 +920,14 @@ class KirkHillWindScada extends HTMLElement {
       .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
       .filter(d => d[1] !== null);
     if (capData.length) {
-      charts.capacity = new ApexCharts(this.shadowRoot.querySelector("#chart-capacity"), {
+      charts.capacity = new ApexCharts(this.shadowRoot.querySelector("#chart-capacity"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Capacity %", data: capData }],
-        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "%" }, max: 100 },
         stroke: { curve: "smooth", width: 2 },
         colors: ["#22c55e"],
-      });
+      }));
       charts.capacity.render();
     }
 
@@ -910,14 +936,14 @@ class KirkHillWindScada extends HTMLElement {
       .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
       .filter(d => d[1] !== null);
     if (rotorData.length) {
-      charts.rotor = new ApexCharts(this.shadowRoot.querySelector("#chart-rotor"), {
+      charts.rotor = new ApexCharts(this.shadowRoot.querySelector("#chart-rotor"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "RPM", data: rotorData }],
-        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "RPM" } },
         stroke: { curve: "smooth", width: 2 },
         colors: ["#8b5cf6"],
-      });
+      }));
       charts.rotor.render();
     }
 
@@ -926,15 +952,15 @@ class KirkHillWindScada extends HTMLElement {
       .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
       .filter(d => d[1] !== null);
     if (windData.length) {
-      charts.wind = new ApexCharts(this.shadowRoot.querySelector("#chart-wind"), {
+      charts.wind = new ApexCharts(this.shadowRoot.querySelector("#chart-wind"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Wind (m/s)", data: windData }],
-        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "m/s" } },
         stroke: { curve: "smooth", width: 2 },
         markers: { size: 0 },
         colors: ["#f59e0b"],
-      });
+      }));
       charts.wind.render();
     }
 
@@ -943,14 +969,14 @@ class KirkHillWindScada extends HTMLElement {
       .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
       .filter(d => d[1] !== null);
     if (genData.length) {
-      charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), {
+      charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), this._apexOpts({
+        type: "line", height: 250,
         series: [{ name: "Generation (kWh)", data: genData }],
-        chart: { type: "line", height: 250, ...chartOpts },
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "kWh" } },
         stroke: { curve: "stepline", width: 2 },
         colors: ["#059669"],
-      });
+      }));
       charts.generation.render();
     }
 
@@ -958,25 +984,27 @@ class KirkHillWindScada extends HTMLElement {
     // status bands so a glance shows what the turbine was doing and when.
     const activityData = this._buildActivityHistory(history.state || [], startEpoch, endEpoch);
     if (activityData.length) {
-      charts.activity = new ApexCharts(this.shadowRoot.querySelector("#chart-activity"), {
+      const bg = this._cssVar("var(--khscada-card-bg)") || this._cssVar("var(--card-background-color)") || "#1c1c1c";
+      const fg = this._cssVar("var(--khscada-primary-color)") || this._cssVar("var(--primary-text-color)") || "#e1e1e1";
+      charts.activity = new ApexCharts(this.shadowRoot.querySelector("#chart-activity"), this._apexOpts({
+        type: "rangeBar", height: 130,
         series: [{ name: "Turbine Activity", data: activityData }],
-        chart: { type: "rangeBar", height: 130, ...chartOpts },
         plotOptions: { bar: { horizontal: true, barHeight: "70%", rangeBarGroupRows: false } },
         xaxis: { type: "datetime", min: startEpoch, max: endEpoch },
         yaxis: { show: false },
         dataLabels: { enabled: false },
         tooltip: {
-          custom: ({ seriesIndex, dataPointIndex }) => {
+          custom: ({ dataPointIndex }) => {
             const d = activityData[dataPointIndex];
             const st = KirkHillWindScada.STATUS[d.key] || KirkHillWindScada.STATUS.unknown;
-            return `<div style="padding:6px 10px;font-family:inherit;font-size:13px">
+            return `<div style="padding:6px 10px;font-family:inherit;font-size:13px;background:${bg};color:${fg};border-radius:4px">
               <div style="font-weight:600;color:${this._cssVar(st.color)}">${st.label}</div>
-              <div style="color:var(--primary-text-color)">${this._fmtTime(new Date(d.x[0]).toISOString())}</div>
-              <div style="color:var(--primary-text-color)">${this._fmtTime(new Date(d.x[1]).toISOString())}</div>
+              <div>${this._fmtTime(new Date(d.x[0]).toISOString())}</div>
+              <div>${this._fmtTime(new Date(d.x[1]).toISOString())}</div>
             </div>`;
           },
         },
-      });
+      }));
       charts.activity.render();
     }
 
@@ -1030,6 +1058,72 @@ class KirkHillWindScada extends HTMLElement {
     return resolved || value;
   }
 
+  _isDark() {
+    if (this._hass?.themes?.darkMode === true) return true;
+    if (this._hass?.themes?.darkMode === false) return false;
+    const bg = this._cssVar("var(--card-background-color, #ffffff)").trim();
+    const hex = bg.match(/#([0-9a-f]{6})/i);
+    if (hex) {
+      const n = parseInt(hex[1], 16);
+      const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 140;
+    }
+    const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (rgb) {
+      return (0.2126 * +rgb[1] + 0.7152 * +rgb[2] + 0.0722 * +rgb[3]) < 140;
+    }
+    return true;
+  }
+
+  _apexOpts({ type, height, series, colors, stroke, markers, xaxis, yaxis, tooltip, plotOptions, dataLabels, chartExtra }) {
+    const dark = this._isDark();
+    const text = this._cssVar("var(--khscada-primary-color)") || this._cssVar("var(--primary-text-color)") || "#e1e1e1";
+    const muted = this._cssVar("var(--khscada-secondary-color)") || this._cssVar("var(--secondary-text-color)") || "#9b9b9b";
+    const divider = this._cssVar("var(--khscada-divider)") || this._cssVar("var(--divider-color)") || "#444";
+    return {
+      series,
+      colors,
+      ...(stroke ? { stroke } : {}),
+      ...(markers ? { markers } : {}),
+      ...(plotOptions ? { plotOptions } : {}),
+      ...(dataLabels ? { dataLabels } : {}),
+      chart: {
+        type,
+        height,
+        toolbar: { show: false },
+        background: "transparent",
+        foreColor: text,
+        legend: { show: false },
+        ...(chartExtra || {}),
+      },
+      theme: { mode: dark ? "dark" : "light" },
+      grid: { borderColor: divider, strokeDashArray: 3 },
+      tooltip: {
+        theme: dark ? "dark" : "light",
+        style: { fontSize: "12px" },
+        ...(tooltip || {}),
+      },
+      xaxis: {
+        axisBorder: { color: divider },
+        axisTicks: { color: divider },
+        ...(xaxis || {}),
+        labels: { style: { colors: muted }, ...((xaxis && xaxis.labels) || {}) },
+      },
+      yaxis: {
+        ...(yaxis || {}),
+        labels: { style: { colors: muted }, ...((yaxis && yaxis.labels) || {}) },
+      },
+    };
+  }
+
+  _downsample(arr, maxPoints) {
+    if (!arr || arr.length <= maxPoints) return arr || [];
+    const step = (arr.length - 1) / (maxPoints - 1);
+    const out = [];
+    for (let i = 0; i < maxPoints; i++) out.push(arr[Math.round(i * step)]);
+    return out;
+  }
+
   _interpolateWind(windHistory, targetTime) {
     if (!windHistory.length) return null;
     let before = null, after = null;
@@ -1059,25 +1153,19 @@ class KirkHillWindScada extends HTMLElement {
 
   _renderChartPlaceholders(msg) {
     this.shadowRoot.querySelectorAll(".apex-chart").forEach(el => {
-      el.style.display = "flex";
-      el.style.alignItems = "center";
-      el.style.justifyContent = "center";
-      el.style.color = "var(--khscada-secondary-color)";
-      el.style.fontSize = "13px";
-      el.textContent = msg;
+      let overlay = el.querySelector(":scope > .chart-placeholder");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.className = "chart-placeholder";
+        el.appendChild(overlay);
+      }
+      overlay.textContent = msg;
     });
   }
 
   _clearChartPlaceholders() {
     if (!this.shadowRoot) return;
-    this.shadowRoot.querySelectorAll(".apex-chart").forEach(el => {
-      el.style.display = "";
-      el.style.alignItems = "";
-      el.style.justifyContent = "";
-      el.style.color = "";
-      el.style.fontSize = "";
-      if (el.textContent === "Waiting for data\u2026") el.textContent = "";
-    });
+    this.shadowRoot.querySelectorAll(".chart-placeholder").forEach(el => el.remove());
   }
 
   // ---- mobile pan / pinch-zoom ----------------------------------------
@@ -2013,7 +2101,24 @@ _buildHeaderChips(layout) {
       .chart-item { background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 12px; }
       .chart-item.large { grid-column: span 2; }
       .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); }
-      .apex-chart { width: 100%; height: 100%; min-height: 280px; }
+      .apex-chart { position: relative; width: 100%; height: 100%; min-height: 280px; }
+      .chart-placeholder {
+        position: absolute; inset: 0; z-index: 2; pointer-events: none;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--khscada-secondary-color);
+        font: var(--ha-font-size, 14px) var(--khscada-font-family);
+      }
+      .apexcharts-tooltip {
+        background: var(--khscada-card-bg) !important;
+        color: var(--khscada-primary-color) !important;
+        border: 1px solid var(--khscada-divider) !important;
+        box-shadow: none !important;
+      }
+      .apexcharts-tooltip-title {
+        background: var(--khscada-card-bg) !important;
+        color: var(--khscada-primary-color) !important;
+        border-bottom: 1px solid var(--khscada-divider) !important;
+      }
       @media (max-width: 900px) {
         .chart-item.large { grid-column: span 1; }
         .chart-grid { grid-template-columns: 1fr; }

@@ -62,7 +62,9 @@ timeframe selector offering **6H / 12H / 24H / 1W / 1M / 6M / 1Y** (24H
 default). The selected range is remembered per pop-out type (owner, site,
 turbine) and drives that modal's charts independently — there is no single
 global timeframe control. Modal headings show the active range (e.g.
-"Historical Data (1W)").
+"Historical Data (1W)"). Windows longer than a week (1M / 6M / 1Y) use hourly
+recorder statistics rather than raw history, so the charts stay usable on
+slower browsers.
 
 ### Site and Owner detail modals
 

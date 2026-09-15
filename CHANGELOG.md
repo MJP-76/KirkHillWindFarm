@@ -2,6 +2,18 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.78
+- **Waiting-for-data overlay no longer sticks.** The placeholder was written as
+  text inside the chart container, so ApexCharts left it sitting on top of a
+  finished graph. It is now a separate overlay that is removed when the charts
+  render.
+- **Chart tooltips follow the HA theme.** Turbine/Owner/Site ApexCharts use
+  dark/light tooltip, axis and grid colours from the active theme instead of a
+  white box with grey text.
+- **6M / 1Y charts use hourly statistics.** Windows longer than a week pull
+  recorder hourly means (capped at 500 points) instead of raw history, so a
+  slow browser is not dragging months of every state-change.
+
 ## Version 4.8.77
 - **Dashboard consolidation — deprecation banners.** The Finances and Turbines
   views now carry a "View being deprecated — migrated to the SCADA Dashboard,

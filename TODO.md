@@ -12,6 +12,7 @@
 - [x] Deploy v4.8.76 to production (map tile fallback to CARTO Voyager, turbine activity history chart, SCADA bottom chrome row)
 - [x] Deploy v4.8.77 to production (deprecation banners on Finances/Turbines, History tab removed, Turbines tab trimmed, graph_hours option removed)
 - [x] Create GitHub release v4.8.77 (stable; includes 4.8.76)
+- [x] Fix issue #47 follow-ups in v4.8.78 (stuck waiting overlay, themed chart tooltips, 6M/1Y hourly stats)
 - [x] Reply to issue #47 (4.8.74/4.8.75 fixes, by-design chart types, request dashboard dump + map console output)
 - [x] Post follow-up to issue #47 (dashboard untick/tick reset, API pill clarifications, map blocking + deprecation note, planned features)
 - [x] Switch turbine map tile source to CARTO Voyager (bypasses tile.openstreetmap.org blocking for embedded apps)
