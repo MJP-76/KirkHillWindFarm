@@ -36,18 +36,20 @@ and an animated dashboard.
   and the whole farm (`site`), covering power, capacity factor, and generation
   for yesterday, today, week, month, YTD, year, and all time — plus projected
   owner/site value in GBP for each timeframe.
-- **Live SCADA dashboard** — auto-creates a Lovelace dashboard tab with an
-  animated single-line diagram: 8 turbines feeding the site collection bus, the
-  step-up transformer, and the national grid. It shows **Owner and Site**
-  generation details, live wind speed, active-turbine count, next-hour forecast,
-  and an alarm indicator for any turbine in a fault state.
+- **Live SCADA dashboard** — auto-creates a Lovelace dashboard with an
+  animated single-line diagram as the first tab: 8 turbines feeding the site
+  collection bus, the step-up transformer, and the national grid. It shows
+  **Owner and Site** generation details, live wind speed, active-turbine count,
+  next-hour forecast, an API-status pill, and an alarm indicator for any turbine
+  in a fault state. Click Owner, Site, or a turbine for ApexCharts history
+  (6H–1Y) including a turbine activity timeline.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
-  colour-coded status pills. Click the detail panels for ApexCharts history with
-  a configurable chart timeframe (6H/12H/24H/1W/1M/6M/1Y).
-- **Interactive turbine map** — a full-width animated map with T1–T8 markers,
-  spinning icons proportional to live capacity factor, and active/inactive
-  colouring.
+  colour-coded status pills.
+- **Interactive turbine map** — on the deprecated Turbines tab (map only):
+  T1–T8 markers, spinning icons proportional to live capacity factor, CARTO
+  Voyager tiles. The History tab is gone; Finances and Turbines are flagged as
+  migrating to SCADA and are not under active development.
 - **Notifiable** — entities support a WhatsApp alert guide for turbine
   down/recovery.
 - **Config flow & options** — masked API key entry, optional auto-dashboard, and

@@ -71,6 +71,13 @@ the scope you clicked — a separate **Site** modal and a separate **Owner** mod
 each with its own ApexCharts series for the selected timeframe. The panels have a
 cursor/hover affordance to signal they are clickable.
 
+### Turbine detail modal
+
+Clicking a turbine node opens its pop-out. Besides power, wind, rotor, capacity
+and generation charts for the selected timeframe, the modal includes a
+**horizontal activity timeline** showing when that turbine was running,
+curtailed, in maintenance, stopped, or in a fault state.
+
 ## Finances tab
 
 > **Deprecated** — this view is being migrated to the SCADA dashboard and is not

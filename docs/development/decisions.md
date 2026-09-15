@@ -64,12 +64,21 @@ decision changes.
   across restarts (`RestoreEntity`), so a user can adjust figures without
   reconfiguring when new share/watt data becomes available.
 
+## Dashboard consolidation
+
+- **2026-09-15 — SCADA is the live dashboard; History is gone; Finances and
+  Turbines are deprecated.** History's 25h charts are covered by SCADA Owner/Site
+  modals (6H–1Y). Turbines is map-only (CARTO Voyager); per-turbine cards and the
+  activity graph moved to SCADA nodes/modals. Both remaining non-SCADA views
+  carry a deprecation banner. The `graph_hours` option was removed with the
+  activity graph. Existing installs prune History and the old Turbines cards via
+  `_OBSOLETE_VIEW_PATHS` / `_OBSOLETE_CARD_KEYS` on merge.
+
 ## Deployment state
 
-- **2026-09-04 — Production manifest is one release behind the repository**
-  (prod `4.8.63`, repo/`VERSION` `4.8.65`). The frontend is live in prod
-  (SCADA JS byte-identical to the repo); the Python changes are staged but not
-  active until the pending full restart. `CHANGELOG.md` is the authoritative
-  version history.
+- **2026-09-15 — Production is aligned with the repository at `4.8.77`.**
+  `CHANGELOG.md` is the authoritative version history. GitHub Releases/HACS are
+  for other users; this host deploys from `origin/main` commits mirrored into
+  `/homeassistant/custom_components/kirkhill_wind/`.
 
 [changelog]: https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md
