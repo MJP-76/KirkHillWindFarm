@@ -9,8 +9,11 @@
 - [x] Verify `binary_sensor.kirk_hill_wind_farm_api_status` exists and is `on` (API reachable)
 - [x] Verify the SCADA card config has `api_status_entity` merged in
 - [x] Create GitHub releases v4.8.74 and v4.8.75 (stable)
+- [x] Deploy v4.8.76 to production (map tile fallback to CARTO Voyager, turbine activity history chart, SCADA bottom chrome row)
 - [x] Reply to issue #47 (4.8.74/4.8.75 fixes, by-design chart types, request dashboard dump + map console output)
-- [ ] If the turbine map reporter confirms tile-load errors against `tile.openstreetmap.org`, add a fallback tile source to `kirkhill-wind-turbine-map.js`
+- [x] Post follow-up to issue #47 (dashboard untick/tick reset, API pill clarifications, map blocking + deprecation note, planned features)
+- [x] Switch turbine map tile source to CARTO Voyager (bypasses tile.openstreetmap.org blocking for embedded apps)
+- [ ] Deprecate the turbine map card (interim fix in place via CARTO; map planned for removal in a future release)
 - [ ] Confirm `sensor.kirk_hill_wind_farm_generation_today_site` exists (used by the SCADA card's grid energy)
 
 ## Backlog
