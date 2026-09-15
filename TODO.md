@@ -3,11 +3,14 @@
 ## Release roll-out — SCADA v4.8.x
 
 - [x] Update README.md and info.md for the SCADA tab, panel view, and per-turbine sensors
-- [ ] Update production HA instance to v4.8.4 via HACS
-- [ ] Restart Home Assistant on production
-- [ ] Verify the SCADA tab is present, is the first tab, and fills the whole panel
-- [ ] Verify `sensor.turbine_t1_generation_today` (and per-turbine generation/rotor sensors) now exist
-- [ ] Confirm the KPI cards render as entity cards (no stat-card config errors)
+- [x] Deploy v4.8.74 to production (turbine Generation Today chart, 24h timeframe reset, scatter decimals, waiting indicator)
+- [x] Deploy v4.8.75 to production (API Status pill on SCADA card backed by `binary_sensor.<farm>_api_status`)
+- [x] Restart Home Assistant on production to pick up the new binary_sensor platform code
+- [x] Verify `binary_sensor.kirk_hill_wind_farm_api_status` exists and is `on` (API reachable)
+- [x] Verify the SCADA card config has `api_status_entity` merged in
+- [x] Create GitHub releases v4.8.74 and v4.8.75 (stable)
+- [x] Reply to issue #47 (4.8.74/4.8.75 fixes, by-design chart types, request dashboard dump + map console output)
+- [ ] If the turbine map reporter confirms tile-load errors against `tile.openstreetmap.org`, add a fallback tile source to `kirkhill-wind-turbine-map.js`
 - [ ] Confirm `sensor.kirk_hill_wind_farm_generation_today_site` exists (used by the SCADA card's grid energy)
 
 ## Backlog
