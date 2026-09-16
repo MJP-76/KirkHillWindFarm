@@ -1471,13 +1471,13 @@ class KirkHillWindScada extends HTMLElement {
     const chipUserGenX = 750 * scaleX;
     const chipUserGenW = gridRightX - chipUserGenX;
     const chipUserGenTitleX = 762 * scaleX;
-    const chipUserGenValueX = gridRightX - 130 * scaleX;
-    const chipUserGenFinX = gridRightX - 10 * scaleX;
+    const chipUserGenValueX = gridRightX - 115 * scaleX;
+    const chipUserGenFinX = gridRightX - 15 * scaleX;
     const chipSiteGenX = 750 * scaleX;
     const chipSiteGenW = gridRightX - chipSiteGenX;
     const chipSiteGenTitleX = 762 * scaleX;
-    const chipSiteGenValueX = gridRightX - 130 * scaleX;
-    const chipSiteGenFinX = gridRightX - 10 * scaleX;
+    const chipSiteGenValueX = gridRightX - 115 * scaleX;
+    const chipSiteGenFinX = gridRightX - 15 * scaleX;
     const resetBtnW = 44 * scaleX;
     const resetBtnH = 48;
     // Bottom chrome row: version number, API status pill and reset button sit
@@ -1682,66 +1682,72 @@ _buildHeaderChips(layout) {
         <!-- Right side: Owner Generation & Capacity (far right) -->
         <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="26">Generation, Capacity & Earnings</text>
         <g class="user-gen" data-user-gen="panel">
-          <rect x="${layout.chipUserGenX}" y="44" width="${layout.chipUserGenW}" height="260" rx="8"/>
-          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="68">Owner Capacity</text>
+          <rect x="${layout.chipUserGenX}" y="44" width="${layout.chipUserGenW}" height="232" rx="8"/>
+          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="66">Owner Capacity</text>
+          <text class="user-gen-colh" x="${layout.chipUserGenTitleX}" y="88">Timeframe</text>
+          <text class="user-gen-colh" x="${layout.chipUserGenValueX}" y="88" text-anchor="end">Generation</text>
+          <text class="user-gen-colh" x="${layout.chipUserGenFinX}" y="88" text-anchor="end">Value (£)</text>
           <!-- Generation timeframes -->
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="98">Yesterday</text>
-          <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="98" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-yesterday" x="${layout.chipUserGenFinX}" y="98" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="120">Today</text>
-          <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="120" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-today" x="${layout.chipUserGenFinX}" y="120" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="142">Week</text>
-          <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="142" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-week" x="${layout.chipUserGenFinX}" y="142" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="164">Month</text>
-          <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="164" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-month" x="${layout.chipUserGenFinX}" y="164" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="186">YTD</text>
-          <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="186" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-ytd" x="${layout.chipUserGenFinX}" y="186" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="208">Year</text>
-          <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="208" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-year" x="${layout.chipUserGenFinX}" y="208" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="110">Yesterday</text>
+          <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="110" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-yesterday" x="${layout.chipUserGenFinX}" y="110" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="130">Today</text>
+          <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="130" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-today" x="${layout.chipUserGenFinX}" y="130" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="150">Week</text>
+          <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="150" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-week" x="${layout.chipUserGenFinX}" y="150" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="170">Month</text>
+          <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="170" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-month" x="${layout.chipUserGenFinX}" y="170" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="190">YTD</text>
+          <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="190" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-ytd" x="${layout.chipUserGenFinX}" y="190" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="210">Year</text>
+          <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="210" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-year" x="${layout.chipUserGenFinX}" y="210" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="230">All time</text>
           <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="230" text-anchor="end">—</text>
           <text class="user-gen-value user-gen-fin" data-user-gen="fin-alltime" x="${layout.chipUserGenFinX}" y="230" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="254">Your Share (W)</text>
-          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="254" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="276">Share (‱)</text>
-          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="276" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="250">Your Share (W)</text>
+          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="250" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="270">Share (‱)</text>
+          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="270" text-anchor="end">—</text>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
         <g class="site-gen" data-site-gen="panel">
-          <rect x="${layout.chipSiteGenX}" y="320" width="${layout.chipSiteGenW}" height="260" rx="8"/>
-          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="344">Site Capacity</text>
+          <rect x="${layout.chipSiteGenX}" y="284" width="${layout.chipSiteGenW}" height="232" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="306">Site Capacity</text>
+          <text class="site-gen-colh" x="${layout.chipSiteGenTitleX}" y="328">Timeframe</text>
+          <text class="site-gen-colh" x="${layout.chipSiteGenValueX}" y="328" text-anchor="end">Generation</text>
+          <text class="site-gen-colh" x="${layout.chipSiteGenFinX}" y="328" text-anchor="end">Value (£)</text>
           <!-- Site timeframes -->
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="374">Yesterday</text>
-          <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="374" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-yesterday" x="${layout.chipSiteGenFinX}" y="374" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="396">Today</text>
-          <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="396" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-today" x="${layout.chipSiteGenFinX}" y="396" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="418">Week</text>
-          <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="418" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-week" x="${layout.chipSiteGenFinX}" y="418" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="440">Month</text>
-          <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="440" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-month" x="${layout.chipSiteGenFinX}" y="440" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="462">YTD</text>
-          <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="462" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-ytd" x="${layout.chipSiteGenFinX}" y="462" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="484">Year</text>
-          <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="484" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-year" x="${layout.chipSiteGenFinX}" y="484" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="506">All time</text>
-          <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="506" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-alltime" x="${layout.chipSiteGenFinX}" y="506" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="530">Site Capacity Factor (%)</text>
-          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="530" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="552">Site Power (MW)</text>
-          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="552" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="350">Yesterday</text>
+          <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="350" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-yesterday" x="${layout.chipSiteGenFinX}" y="350" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="370">Today</text>
+          <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="370" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-today" x="${layout.chipSiteGenFinX}" y="370" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="390">Week</text>
+          <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="390" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-week" x="${layout.chipSiteGenFinX}" y="390" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="410">Month</text>
+          <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="410" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-month" x="${layout.chipSiteGenFinX}" y="410" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="430">YTD</text>
+          <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="430" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-ytd" x="${layout.chipSiteGenFinX}" y="430" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="450">Year</text>
+          <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="450" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-year" x="${layout.chipSiteGenFinX}" y="450" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="470">All time</text>
+          <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="470" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-alltime" x="${layout.chipSiteGenFinX}" y="470" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="490">Site Capacity Factor (%)</text>
+          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="490" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="510">Site Power (MW)</text>
+          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="510" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -2027,19 +2033,20 @@ _buildHeaderChips(layout) {
       .gen-section-heading { fill: var(--khscada-secondary-color); font: 600 calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.4px; }
       .user-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
       .user-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
-      .user-gen-title { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .user-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-value { font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-share { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-colh, .site-gen-colh { fill: var(--khscada-disabled-color); font: 600 calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.6px; }
+      .user-gen-value { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-share { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
       .site-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
-      .site-gen-title { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .site-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-value { font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-value { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }

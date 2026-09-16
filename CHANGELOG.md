@@ -12,6 +12,10 @@ All notable changes to the Kirk Hill Wind Farm integration.
 - **SCADA panels renamed and headed.** The right-side panels are now headed
   "Generation, Capacity & Earnings" and titled **Owner Capacity** and
   **Site Capacity** (formerly "Owner/Site Generation & Capacity").
+- **Compact table layout with column headings.** Each panel now has a
+  **Timeframe / Generation / Value (£)** column heading row, and the rows are
+  tightened (smaller value type, closer row spacing, two columns brought
+  together) so the financials don't look spread out.
 - **Map tiles back to OpenStreetMap.** The turbine map reverts from the CARTO
   Voyager experiment to the standard `tile.openstreetmap.org` source for
   reliability on all networks.
