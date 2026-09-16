@@ -2,6 +2,23 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.79
+- **Finances tab retired — financials are now in the SCADA card.** The
+  standalone Finances view is removed. Today's earnings, this month, and YTD
+  figures are replaced by a **£ value column** on every timeframe row
+  (Yesterday…All time) in both the **Owner Capacity** and **Site Capacity**
+  panels of the SCADA card, alongside the kWh figures. Both Owner and Site
+  values are shown.
+- **SCADA panels renamed and headed.** The right-side panels are now headed
+  "Generation, Capacity & Earnings" and titled **Owner Capacity** and
+  **Site Capacity** (formerly "Owner/Site Generation & Capacity").
+- **Map tiles back to OpenStreetMap.** The turbine map reverts from the CARTO
+  Voyager experiment to the standard `tile.openstreetmap.org` source for
+  reliability on all networks.
+- **SCADA chrome: reset button moved after the API pill.** The bottom row now
+  reads version | API status pill | reload button. The "Status since" text in
+  turbine cards was darkened to match the wind/today lines for readability.
+
 ## Version 4.8.78
 - **Waiting-for-data overlay no longer sticks.** The placeholder was written as
   text inside the chart container, so ApexCharts left it sitting on top of a

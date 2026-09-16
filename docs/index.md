@@ -50,7 +50,7 @@ development, you can do so here:
 - Open-Meteo forecast integration (forecast only; not authoritative actual generation)
 - Optional experimental Ethex payment-tracking onboarding toggle
 - Configurable polling interval via Options
-- Auto-generated Lovelace dashboard: SCADA first (single-line diagram, API status pill, Owner/Site/turbine pop-out charts including activity history), then deprecated Finances and Turbines (map only) tabs. History tab removed in v4.8.77.
+- Auto-generated Lovelace dashboard: SCADA first (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe £ earnings, pop-out charts including activity history), then the deprecated Turbines (map only) tab. History removed in v4.8.77; Finances retired into the SCADA card in v4.8.79.
 - Dashboard customisations are preserved across reloads and updates; `kirkhill_wind.reset_dashboard` restores defaults
 
 ## Where to go next

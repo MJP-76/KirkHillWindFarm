@@ -68,7 +68,7 @@ slower browsers.
 
 ### Site and Owner detail modals
 
-Clicking the **Generation & Capacity** panel opens a dedicated detail modal for
+Clicking a **Capacity** panel (Owner or Site) opens a dedicated detail modal for
 the scope you clicked — a separate **Site** modal and a separate **Owner** modal,
 each with its own ApexCharts series for the selected timeframe. The panels have a
 cursor/hover affordance to signal they are clickable.
@@ -80,13 +80,14 @@ and generation charts for the selected timeframe, the modal includes a
 **horizontal activity timeline** showing when that turbine was running,
 curtailed, in maintenance, stopped, or in a fault state.
 
-## Finances tab
+## Financials (formerly the Finances tab)
 
-> **Deprecated** — this view is being migrated to the SCADA dashboard and is not
-> under active development. A warning banner sits at the top of the view.
-
-- **Owner finances** projected timeframe value sensors
-- **Site finances** projected timeframe value sensors
+The standalone **Finances tab was removed in v4.8.79** — its content (today's
+earnings, this month, year to date) now lives in the SCADA card itself. Every
+timeframe row (Yesterday, Today, Week, Month, YTD, Year, All time) in both the
+**Owner Capacity** and **Site Capacity** panels shows a **£ value column**
+alongside the kWh figure, so generation and its projected earnings are on the
+same row for the same timeframe. Both Owner and Site values are shown.
 
 ## History tab
 

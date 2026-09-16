@@ -356,69 +356,6 @@ def _entity_ids_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, 
     return entity_ids
 
 
-# Jinja fragment that formats a kWh value (already bound to `n`) with scaled units.
-_SCALED_ENERGY_JINJA = (
-    "{% if n >= 1000000000000000 %}{{ '%.2f' | format(n / 1000000000000000) }} EWh"
-    "{% elif n >= 1000000000000 %}{{ '%.2f' | format(n / 1000000000000) }} PWh"
-    "{% elif n >= 1000000000 %}{{ '%.2f' | format(n / 1000000000) }} TWh"
-    "{% elif n >= 1000000 %}{{ '%.2f' | format(n / 1000000) }} GWh"
-    "{% elif n >= 1000 %}{{ '%.2f' | format(n / 1000) }} MWh"
-    "{% else %}{{ '%.2f' | format(n) }} kWh{% endif %}"
-)
-
-
-def _generation_markdown_line(label: str, entity_id: str) -> str:
-    """Return a markdown line that formats generation with scaled energy units."""
-    return (
-        f"- **{label}:** "
-        f"{{% set v = state_attr('{entity_id}', 'raw_generation_kwh') %}}"
-        "{% if v is not none %}"
-        "{% set n = v | float(0) %}"
-        + _SCALED_ENERGY_JINJA
-        + "{% else %}—{% endif %}"
-    )
-
-
-def _owner_generation_markdown_line(
-    label: str,
-    generation_entity_id: str,
-    value_entity_id: str,
-) -> str:
-    """Return a markdown line with actual owner generation and its value."""
-    return (
-        f"- **{label}:** "
-        f"{{% set v = state_attr('{generation_entity_id}', 'raw_generation_kwh') %}}"
-        "{% if v is not none %}"
-        "{% set n = v | float(0) %}"
-        + _SCALED_ENERGY_JINJA
-        + "{% else %}—{% endif %}"
-        " ("
-        f"{{% set w = states('{value_entity_id}') %}}"
-        "{% if w not in ['unknown', 'unavailable', 'none', ''] %}"
-        "£{{ '%.2f' | format(w | float(0)) }}"
-        "{% else %}—{% endif %}"
-        ")"
-    )
-
-
-def _generation_markdown_card(title: str, entries: list[tuple[str, str | None]]) -> dict:
-    """Return a markdown card for formatted generation display.
-
-    Entries whose entity id is missing (None) are skipped so the card degrades
-    gracefully instead of referencing a non-existent entity.
-    """
-    lines = [
-        _generation_markdown_line(label, entity_id)
-        for label, entity_id in entries
-        if entity_id is not None
-    ]
-    return {
-        "type": "markdown",
-        "title": title,
-        "content": "\n".join(lines),
-    }
-
-
 def _deprecation_banner() -> dict:
     """Warning banner shown at the top of views migrating to the SCADA dashboard."""
     return {
@@ -431,26 +368,6 @@ def _deprecation_banner() -> dict:
             "It is **not currently under development**; content here may be "
             "outdated or removed."
         ),
-    }
-
-
-def _owner_generation_markdown_card(
-    title: str,
-    entries: list[tuple[str, str | None, str | None]],
-) -> dict:
-    """Return a markdown card for owner generation and value display.
-
-    Entries whose entity ids are missing (None) are skipped.
-    """
-    lines = [
-        _owner_generation_markdown_line(label, generation_entity_id, value_entity_id)
-        for label, generation_entity_id, value_entity_id in entries
-        if generation_entity_id is not None and value_entity_id is not None
-    ]
-    return {
-        "type": "markdown",
-        "title": title,
-        "content": "\n".join(lines),
     }
 
 
@@ -499,6 +416,9 @@ _OBSOLETE_VIEW_PATHS: set[str] = {
     # History tab removed in v4.8.77 — its 25h owner/site/wind charts are
     # covered by the SCADA card's Owner/Site modals with 6H–1Y timeframes.
     "history",
+    # Finances tab removed in v4.8.79 — its earnings values are now shown
+    # per timeframe (Yesterday…All time) in the SCADA card's Capacity panels.
+    "finances",
 }
 _OBSOLETE_SECTION_KEYS: dict[str, set[str]] = {
     "overview": {
@@ -837,13 +757,13 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ),
     ]
     site_generation_entities = [
-        ("Yesterday", farm_scoped("site", "farm_generation_yesterday")),
-        ("Today", farm_scoped("site", "farm_generation_today")),
-        ("Week", farm_scoped("site", "farm_generation_week")),
-        ("Month", farm_scoped("site", "farm_generation_month")),
-        ("YTD", farm_scoped("site", "farm_generation_ytd")),
-        ("Year", farm_scoped("site", "farm_generation_year")),
-        ("All time", farm_scoped("site", "farm_generation_alltime")),
+        ("Yesterday", farm_scoped("site", "farm_generation_yesterday"), farm_scoped("site", "farm_generation_value_yesterday")),
+        ("Today", farm_scoped("site", "farm_generation_today"), farm_scoped("site", "farm_generation_value_today")),
+        ("Week", farm_scoped("site", "farm_generation_week"), farm_scoped("site", "farm_generation_value_week")),
+        ("Month", farm_scoped("site", "farm_generation_month"), farm_scoped("site", "farm_generation_value_month")),
+        ("YTD", farm_scoped("site", "farm_generation_ytd"), farm_scoped("site", "farm_generation_value_ytd")),
+        ("Year", farm_scoped("site", "farm_generation_year"), farm_scoped("site", "farm_generation_value_year")),
+        ("All time", farm_scoped("site", "farm_generation_alltime"), farm_scoped("site", "farm_generation_value_alltime")),
     ]
     turbine_map_entities = [
         {
@@ -867,27 +787,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             "capacity_entity": turbine(tid, "site_capacity_factor"),
         }
         for tid in present_turbine_ids
-    ]
-
-    financial_kpi_cards = [
-        {
-            "type": "entity",
-            "name": "Today's Earnings",
-            "entity": farm_scoped("owner", "farm_generation_value_today"),
-            "icon": "mdi:cash",
-        },
-        {
-            "type": "entity",
-            "name": "This Month",
-            "entity": farm_scoped("owner", "farm_generation_value_month"),
-            "icon": "mdi:calendar-month",
-        },
-        {
-            "type": "entity",
-            "name": "Year to Date",
-            "entity": farm_scoped("owner", "farm_generation_value_ytd"),
-            "icon": "mdi:chart-timeline-variant",
-        },
     ]
 
     return {
@@ -914,69 +813,14 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "api_status_entity": farm("api_status"),
                         "capacity_entity": farm_scoped("site", "farm_capacity_factor"),
                         "owner_generation_entities": [
-                            {"name": name, "entity": entity}
-                            for name, entity, _ in owner_generation_entities
+                            {"name": name, "entity": entity, "value_entity": value_entity}
+                            for name, entity, value_entity in owner_generation_entities
                         ],
                         "site_generation_entities": [
-                            {"name": name, "entity": entity}
-                            for name, entity in site_generation_entities
+                            {"name": name, "entity": entity, "value_entity": value_entity}
+                            for name, entity, value_entity in site_generation_entities
                         ],
                         "turbines": scada_turbines,
-                    },
-                ],
-            },
-            {
-                "title": "Finances",
-                "path": "finances",
-                "icon": "mdi:cash-multiple",
-                "type": "sections",
-                "max_columns": 2,
-                "sections": [
-                    {
-                        "type": "grid",
-                        "column_span": 2,
-                        "cards": [_deprecation_banner()],
-                    },
-                    {
-                        "type": "grid",
-                        "column_span": 2,
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Finances",
-                                "heading_style": "title",
-                                "icon": "mdi:cash-multiple",
-                            },
-                            *financial_kpi_cards,
-                        ],
-                    },
-                    {
-                        "type": "grid",
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Owner finances",
-                                "heading_style": "title",
-                            },
-                            _owner_generation_markdown_card(
-                                "Owner Generation & Projected Earnings",
-                                owner_generation_entities,
-                            ),
-                        ],
-                    },
-                    {
-                        "type": "grid",
-                        "cards": [
-                            {
-                                "type": "heading",
-                                "heading": "Site finances",
-                                "heading_style": "title",
-                            },
-                            _generation_markdown_card(
-                                "Site Generation",
-                                site_generation_entities,
-                            ),
-                        ],
                     },
                 ],
             },

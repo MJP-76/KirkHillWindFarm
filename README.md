@@ -46,10 +46,9 @@ and an animated dashboard.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
-- **Interactive turbine map** — on the deprecated Turbines tab (map only):
-  T1–T8 markers, spinning icons proportional to live capacity factor, CARTO
-  Voyager tiles. The History tab is gone; Finances and Turbines are flagged as
-  migrating to SCADA and are not under active development.
+- **Interactive turbine map** — OpenStreetMap tiles. The History tab is gone
+  (v4.8.77); the Finances tab was retired in v4.8.79 with its earnings shown per
+  timeframe in the SCADA card; Turbines is flagged as migrating to SCADA.
 - **Notifiable** — entities support a WhatsApp alert guide for turbine
   down/recovery.
 - **Config flow & options** — masked API key entry, optional auto-dashboard, and

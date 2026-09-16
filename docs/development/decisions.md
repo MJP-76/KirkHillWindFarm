@@ -66,12 +66,16 @@ decision changes.
 
 ## Dashboard consolidation
 
-- **2026-09-15 — SCADA is the live dashboard; History is gone; Finances and
-  Turbines are deprecated.** History's 25h charts are covered by SCADA Owner/Site
-  modals (6H–1Y). Turbines is map-only (CARTO Voyager); per-turbine cards and the
-  activity graph moved to SCADA nodes/modals. Both remaining non-SCADA views
-  carry a deprecation banner. The `graph_hours` option was removed with the
-  activity graph. Existing installs prune History and the old Turbines cards via
+- **2026-09-16 — SCADA is the sole live dashboard; History, Finances and
+  Turbines are consolidated.** History's 25h charts are covered by SCADA Owner/Site
+  modals (6H–1Y). The Finances tab was retired in v4.8.79: its earnings figures
+  (today, this month, YTD) now render as a per-timeframe **£ value column** inside
+  the SCADA card's **Owner Capacity** and **Site Capacity** panels (both Owner and
+  Site scopes), and the right-side panels gained a "Generation, Capacity &
+  Earnings" heading. Turbines is map-only (OpenStreetMap tiles since the CARTO
+  Voyager revert); per-turbine cards and the activity graph moved to SCADA
+  nodes/modals, and the Turbines view still carries a deprecation banner. Existing
+  installs prune History, Finances and the old Turbines cards via
   `_OBSOLETE_VIEW_PATHS` / `_OBSOLETE_CARD_KEYS` on merge.
 
 ## Deployment state
