@@ -1471,13 +1471,13 @@ class KirkHillWindScada extends HTMLElement {
     const chipUserGenX = 750 * scaleX;
     const chipUserGenW = gridRightX - chipUserGenX;
     const chipUserGenTitleX = 762 * scaleX;
-    const chipUserGenValueX = gridRightX - 115 * scaleX;
-    const chipUserGenFinX = gridRightX - 15 * scaleX;
+    const chipUserGenValueX = gridRightX - 215 * scaleX;
+    const chipUserGenFinX = gridRightX - 125 * scaleX;
     const chipSiteGenX = 750 * scaleX;
     const chipSiteGenW = gridRightX - chipSiteGenX;
     const chipSiteGenTitleX = 762 * scaleX;
-    const chipSiteGenValueX = gridRightX - 115 * scaleX;
-    const chipSiteGenFinX = gridRightX - 15 * scaleX;
+    const chipSiteGenValueX = gridRightX - 215 * scaleX;
+    const chipSiteGenFinX = gridRightX - 125 * scaleX;
     const resetBtnW = 44 * scaleX;
     const resetBtnH = 48;
     // Bottom chrome row: version number, API status pill and reset button sit
