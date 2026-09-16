@@ -2049,8 +2049,6 @@ _buildHeaderChips(layout) {
       .site-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
       .site-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .site-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-value { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
