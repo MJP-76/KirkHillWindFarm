@@ -16,6 +16,10 @@
 - [x] Reply to issue #47 (4.8.74/4.8.75 fixes, by-design chart types, request dashboard dump + map console output)
 - [x] Post follow-up to issue #47 (dashboard untick/tick reset, API pill clarifications, map blocking + deprecation note, planned features)
 - [x] Switch turbine map tile source to CARTO Voyager (bypasses tile.openstreetmap.org blocking for embedded apps)
+- [x] Deploy v4.8.79 to production (OSM tile revert, SCADA chrome row order, status-since contrast, £ earnings column in Generation & Capacity panels, Finances tab retired and merged into SCADA)
+- [x] Restart Home Assistant (via hab `system restart`) to load the v4.8.79 Python code
+- [x] Verify v4.8.79 in production (manifest 4.8.79, backend/frontend identical to repo, `value_entity` merged into SCADA card, Finances view pruned)
+- [ ] Create GitHub release v4.8.79 (stable; blocked pending user confirmation)
 - [ ] Deprecate the turbine map card (interim fix in place via CARTO; map planned for removal in a future release)
 - [ ] Confirm `sensor.kirk_hill_wind_farm_generation_today_site` exists (used by the SCADA card's grid energy)
 
