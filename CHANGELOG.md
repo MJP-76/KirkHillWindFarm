@@ -2,6 +2,15 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.80
+- **Turbines tab removed.** The standalone Turbines view is deleted — the
+  turbine map card, per-turbine status overview, and the associated
+  deprecation banner no longer ship. Live per-turbine status, power, and
+  generation today are already shown inside the **SCADA** card, and per-turbine
+  history lives in the turbine detail modals, so the standalone view was
+  redundant. Dashboards with the old `turbines` view are pruned automatically
+  on merge.
+
 ## Version 4.8.79
 - **Finances tab retired — financials are now in the SCADA card.** The
   standalone Finances view is removed. Today's earnings, this month, and YTD

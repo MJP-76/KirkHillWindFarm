@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.8.79";
+const KIRKHILL_WIND_SCADA_VERSION = "4.8.80";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
@@ -396,7 +396,7 @@ class KirkHillWindScada extends HTMLElement {
     const stateStarted = this._attr(turbine.state_entity, "state_started_at");
     const lat = this._attr(turbine.state_entity, "latitude");
     const lon = this._attr(turbine.state_entity, "longitude");
-    const coords = (lat != null && lon != null) ? `${lat}, ${lon}` : "\u2014";
+    const coords = (lat != null && lon != null) ? `${lat}, ${lon}` : null;
 
     const modal = document.createElement("div");
     modal.className = "turbine-detail-modal";
@@ -429,7 +429,7 @@ class KirkHillWindScada extends HTMLElement {
               <div class="td-spec"><span class="td-spec-label">Rated Power</span><span class="td-spec-value">2.35 MW</span></div>
               <div class="td-spec"><span class="td-spec-label">Design</span><span class="td-spec-value">Direct drive (gearbox-free)</span></div>
               <div class="td-spec"><span class="td-spec-label">Peak Wind</span><span class="td-spec-value">\u2265 14 m/s (27.2 kn)</span></div>
-              <div class="td-spec"><span class="td-spec-label">Coordinates</span><span class="td-spec-value">${this._escape(coords)}</span></div>
+              <div class="td-spec"><span class="td-spec-label">Coordinates</span><span class="td-spec-value">${coords ? '<a class="td-coords-link" href="https://www.google.com/maps?q=' + encodeURIComponent(coords) + '" target="_blank" rel="noopener">' + this._escape(coords) + '</a>' : "\u2014"}</span></div>
               <div class="td-spec"><span class="td-spec-label">Status since</span><span class="td-spec-value">${this._fmtTime(statusStarted)}</span></div>
               <div class="td-spec"><span class="td-spec-label">State since</span><span class="td-spec-value">${this._fmtTime(stateStarted)}</span></div>
             </div>
@@ -2131,6 +2131,8 @@ _buildHeaderChips(layout) {
       }
       .td-spec-label { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); white-space: nowrap; }
       .td-spec-value { font: var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); text-align: right; }
+      .td-coords-link { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--khscada-primary-color); }
+      .td-coords-link:hover { border-bottom-style: solid; }
 
       /* Charts */
       .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }

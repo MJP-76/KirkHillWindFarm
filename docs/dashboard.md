@@ -98,17 +98,20 @@ modals; the dedicated tab no longer exists.
 
 ## Turbines tab
 
-> **Deprecated** — this view is being migrated to the SCADA dashboard and is not
-> under active development. A warning banner sits at the top of the view.
+**Removed in v4.8.80.** The standalone Turbines view (turbine map and per-turbine
+status overview) has been deleted. Live per-turbine status, power, and generation
+today are shown on the SCADA diagram, and per-turbine history is available through
+each turbine's pop-out modal. Dashboards with the old `turbines` view are pruned
+automatically on merge.
 
-- **Interactive turbine map** — a full-width animated map card with:
-  - T1–T8 labels above each turbine marker
-  - Turbine icons that spin in proportion to live site capacity factor
-  - Active/inactive state shown by marker colour
-  - Running/stopped legend and per-turbine hover title
-  - Fixed zoom level (15) centred on the farm
-  - Scroll wheel zoom, drag-to-pan, pinch zoom, double-click/double-tap to reset
-  - Tiles served by **OpenStreetMap** (standard tile URL `tile.openstreetmap.org/{z}/{x}/{y}.png`); the map previously used CARTO Voyager tiles (v4.8.76–v4.8.78) but has been reverted to OSM for reliability on all networks
+The turbine map card previously provided:
+- T1–T8 labels above each turbine marker
+- Turbine icons that spin in proportion to live site capacity factor
+- Active/inactive state shown by marker colour
+- Running/stopped legend and per-turbine hover title
+- Fixed zoom level (15) centred on the farm
+- Scroll wheel zoom, drag-to-pan, pinch zoom, double-click/double-tap to reset
+- Tiles served by **OpenStreetMap** (standard tile URL `tile.openstreetmap.org/{z}/{x}/{y}.png`); the map previously used CARTO Voyager tiles (v4.8.76–v4.8.78) but has been reverted to OSM for reliability on all networks
 
 The per-turbine status cards and the all-turbine activity graph were removed in
 v4.8.77 — turbine power, status, and activity history are now shown on the SCADA

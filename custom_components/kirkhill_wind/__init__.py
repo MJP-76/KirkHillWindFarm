@@ -356,21 +356,6 @@ def _entity_ids_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, 
     return entity_ids
 
 
-def _deprecation_banner() -> dict:
-    """Warning banner shown at the top of views migrating to the SCADA dashboard."""
-    return {
-        "type": "markdown",
-        "title": "View deprecation notice",
-        "content": (
-            "### Warning — View being deprecated\n\n"
-            "This view is being **deprecated** and **migrated to the "
-            "[SCADA Dashboard](/kirk-hill-wind-dashboard/scada)**. "
-            "It is **not currently under development**; content here may be "
-            "outdated or removed."
-        ),
-    }
-
-
 # ---------------------------------------------------------------------------
 # Dashboard merge helpers — preserve user customisations across reloads
 # ---------------------------------------------------------------------------
@@ -419,6 +404,11 @@ _OBSOLETE_VIEW_PATHS: set[str] = {
     # Finances tab removed in v4.8.79 — its earnings values are now shown
     # per timeframe (Yesterday…All time) in the SCADA card's Capacity panels.
     "finances",
+    # Turbines tab removed in v4.8.80 — the standalone turbine map and status
+    # view is retired; live per-turbine status, power, and generation today are
+    # already shown inside the SCADA card, and per-turbine history is in the
+    # turbine detail modals.
+    "turbines",
 }
 _OBSOLETE_SECTION_KEYS: dict[str, set[str]] = {
     "overview": {
@@ -765,17 +755,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ("Year", farm_scoped("site", "farm_generation_year"), farm_scoped("site", "farm_generation_value_year")),
         ("All time", farm_scoped("site", "farm_generation_alltime"), farm_scoped("site", "farm_generation_value_alltime")),
     ]
-    turbine_map_entities = [
-        {
-            "name": tid,
-            "state_entity": turbine(tid, "state_text"),
-            "power_entity": turbine(tid, "site_power"),
-            "capacity_entity": turbine(tid, "site_capacity_factor"),
-            "active_entity": turbine(tid, "active"),
-        }
-        for tid in present_turbine_ids
-    ]
-
     scada_turbines = [
         {
             "id": tid,
@@ -821,25 +800,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             for name, entity, value_entity in site_generation_entities
                         ],
                         "turbines": scada_turbines,
-                    },
-                ],
-            },
-            {
-                "title": "Turbines",
-                "path": "turbines",
-                "icon": "mdi:wind-turbine",
-                "cards": [
-                    _deprecation_banner(),
-                    {
-                        "type": "vertical-stack",
-                        "cards": [
-                            {
-                                "type": "custom:kirkhill-wind-turbine-map",
-                                "title": "Turbine map",
-                                "zoom": 15,
-                                "turbines": turbine_map_entities,
-                            },
-                        ],
                     },
                 ],
             },

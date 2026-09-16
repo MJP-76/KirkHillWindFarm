@@ -65,8 +65,8 @@ Treat them as closed; flag only if you find a new, concrete problem:
   alltime uses period start) — reasonable?
 
 ### 4. Dashboard generation code in `__init__.py`
-- Dead code was removed (owner/site_value_entities, kpi_cards). Are the remaining
-  list-building blocks (`turbine_map_entities`, `scada_turbines`,
+- Dead code was removed (owner/site_value_entities, kpi_cards, turbine_map_entities, _deprecation_banner). Are the remaining
+  list-building blocks (`scada_turbines`,
   `financial_kpi_cards`, etc.) still consistent, or is there more dead/duplicated
   structure an AI or maintainer could trip over?
 
