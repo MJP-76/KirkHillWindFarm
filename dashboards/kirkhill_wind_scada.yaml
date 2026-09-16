@@ -1,6 +1,6 @@
 title: Wind Farm
 views:
-  - title: SCADA
+  - title: Kirk Hill Scada
     path: scada
     icon: mdi:sitemap
     panel: true
