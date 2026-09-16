@@ -1471,13 +1471,15 @@ class KirkHillWindScada extends HTMLElement {
     const chipUserGenX = 750 * scaleX;
     const chipUserGenW = gridRightX - chipUserGenX;
     const chipUserGenTitleX = 762 * scaleX;
-    const chipUserGenValueX = gridRightX - 215 * scaleX;
-    const chipUserGenFinX = gridRightX - 125 * scaleX;
     const chipSiteGenX = 750 * scaleX;
     const chipSiteGenW = gridRightX - chipSiteGenX;
     const chipSiteGenTitleX = 762 * scaleX;
-    const chipSiteGenValueX = gridRightX - 215 * scaleX;
-    const chipSiteGenFinX = gridRightX - 125 * scaleX;
+    const chipUserGenTimeX = gridRightX - 350 * scaleX;
+    const chipUserGenValueX = gridRightX - 250 * scaleX;
+    const chipUserGenFinX = gridRightX - 150 * scaleX;
+    const chipSiteGenTimeX = gridRightX - 350 * scaleX;
+    const chipSiteGenValueX = gridRightX - 250 * scaleX;
+    const chipSiteGenFinX = gridRightX - 150 * scaleX;
     const resetBtnW = 44 * scaleX;
     const resetBtnH = 48;
     // Bottom chrome row: version number, API status pill and reset button sit
@@ -1683,7 +1685,7 @@ _buildHeaderChips(layout) {
         <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="26">Generation, Capacity & Earnings</text>
         <g class="user-gen" data-user-gen="panel">
           <rect x="${layout.chipUserGenX}" y="44" width="${layout.chipUserGenW}" height="232" rx="8"/>
-          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="66">Owner Capacity</text>
+          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="66">Owner</text>
           <text class="user-gen-colh" x="${layout.chipUserGenTitleX}" y="88">Timeframe</text>
           <text class="user-gen-colh" x="${layout.chipUserGenValueX}" y="88" text-anchor="end">Generation</text>
           <text class="user-gen-colh" x="${layout.chipUserGenFinX}" y="88" text-anchor="end">Value (£)</text>
@@ -1718,7 +1720,7 @@ _buildHeaderChips(layout) {
         <!-- Right side: Site Generation & Capacity (below Owner) -->
         <g class="site-gen" data-site-gen="panel">
           <rect x="${layout.chipSiteGenX}" y="284" width="${layout.chipSiteGenW}" height="232" rx="8"/>
-          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="306">Site Capacity</text>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="306">Site</text>
           <text class="site-gen-colh" x="${layout.chipSiteGenTitleX}" y="328">Timeframe</text>
           <text class="site-gen-colh" x="${layout.chipSiteGenValueX}" y="328" text-anchor="end">Generation</text>
           <text class="site-gen-colh" x="${layout.chipSiteGenFinX}" y="328" text-anchor="end">Value (£)</text>
@@ -2036,8 +2038,8 @@ _buildHeaderChips(layout) {
       .user-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .user-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .user-gen-colh, .site-gen-colh { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.6px; }
-      .user-gen-value { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-value { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .user-gen-share { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
