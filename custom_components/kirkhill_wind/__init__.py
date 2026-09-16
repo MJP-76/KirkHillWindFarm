@@ -772,7 +772,7 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         "title": "Wind Farm",
         "views": [
             {
-                "title": "Kirk Hill Scada",
+                "title": "Kirk Hill SCADA",
                 "path": "scada",
                 "icon": "mdi:sitemap",
                 "panel": True,

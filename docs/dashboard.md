@@ -3,9 +3,9 @@
 When you add the integration, it can auto-create a Lovelace dashboard tab
 (`kirk-hill-wind-dashboard`) in the sidebar.
 
-## Kirk Hill Scada tab
+## Kirk Hill SCADA tab
 
-The first (and, since v4.8.80, only) tab — titled **Kirk Hill Scada**: a
+The first (and, since v4.8.80, only) tab — titled **Kirk Hill SCADA**: a
 full-bleed animated single-line diagram of the farm — 8
 turbines feeding the site collection bus, through the step-up transformer, into
 the national grid. Each turbine shows live power, colour-coded status, last

@@ -37,7 +37,7 @@ and an animated dashboard.
   for yesterday, today, week, month, YTD, year, and all time — plus projected
   owner/site value in GBP for each timeframe.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
-  **Kirk Hill Scada** tab: a full-bleed animated single-line diagram of the
+  **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up
   transformer, into the national grid. It shows
   **Owner and Site** generation details, live wind speed, active-turbine count,

@@ -10,8 +10,8 @@ All notable changes to the Kirk Hill Wind Farm integration.
   history lives in the turbine detail modals, so the standalone view was
   redundant. Dashboards with the old `turbines` view are pruned automatically
   on merge.
-- **Dashboard tab renamed to "Kirk Hill Scada".** The auto-generated dashboard
-  is now a single-tab view titled **Kirk Hill Scada** (was "SCADA"), ready to
+- **Dashboard tab renamed to "Kirk Hill SCADA".** The auto-generated dashboard
+  is now a single-tab view titled **Kirk Hill SCADA** (was "SCADA"), ready to
   grow as the hub for multiple co-op wind-farm SCADA dashboards.
 - **Coordinates link to Google Maps.** In each turbine's detail modal, the
   Coordinates row is now a link that opens Google Maps at the turbine's
