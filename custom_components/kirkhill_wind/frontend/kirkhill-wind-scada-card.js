@@ -1478,15 +1478,15 @@ class KirkHillWindScada extends HTMLElement {
     const chipSiteGenValueX = gridRightX - 10 * scaleX;
     const resetBtnW = 44 * scaleX;
     const resetBtnH = 48;
-    const resetBtnX = 30 * scaleX;
-    // Bottom chrome row: the reset button, version number and API status pill
-    // sit together on one line, above the legend strip.
+    // Bottom chrome row: version number, API status pill and reset button sit
+    // together on one line above the legend strip; the button follows the pill.
     const chromeRowY = legendY - 20;
     const resetBtnY = chromeRowY - resetBtnH / 2;
-    const versionX = resetBtnX + resetBtnW + 12 * scaleX;
+    const versionX = 30 * scaleX;
     const apiPillX = versionX + 82 * scaleX;
     const apiPillW = 78 * scaleX;
-    const legendX = resetBtnX + resetBtnW + 12 * scaleX;
+    const resetBtnX = apiPillX + apiPillW + 12 * scaleX;
+    const legendX = 86 * scaleX;
     const legendW = 500 * scaleX;
     const xfmrTitleX = 630 * scaleX;
     const xfmrRotateX = 630 * scaleX;
@@ -1975,7 +1975,7 @@ _buildHeaderChips(layout) {
       .t-op { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-wind { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-detail { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .t-last { fill: var(--khscada-disabled-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-last { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Bus */
       .bus rect { fill: var(--khscada-bus-bg); stroke: var(--khscada-accent-color); stroke-width: 2; }

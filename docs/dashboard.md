@@ -107,9 +107,7 @@ modals; the dedicated tab no longer exists.
   - Running/stopped legend and per-turbine hover title
   - Fixed zoom level (15) centred on the farm
   - Scroll wheel zoom, drag-to-pan, pinch zoom, double-click/double-tap to reset
-  - Tiles served by **CARTO Voyager** (OSM data under CARTO's embedded-use
-    policy); bypasses the strict `tile.openstreetmap.org` restriction that
-    blocked the previous source (osm.wiki/blocked)
+  - Tiles served by **OpenStreetMap** (standard tile URL `tile.openstreetmap.org/{z}/{x}/{y}.png`); the map previously used CARTO Voyager tiles (v4.8.76–v4.8.78) but has been reverted to OSM for reliability on all networks
 
 The per-turbine status cards and the all-turbine activity graph were removed in
 v4.8.77 — turbine power, status, and activity history are now shown on the SCADA
