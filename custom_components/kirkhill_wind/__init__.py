@@ -28,11 +28,13 @@ from homeassistant.helpers import entity_registry as er
 
 from .const import (
     CONF_BASE_URL,
+    CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_BASE_URL,
+    DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
@@ -77,7 +79,9 @@ async def async_migrate_entry(
     if config_entry.version == _CONFIG_ENTRY_VERSION:
         return True
 
-    data = dict(config_entry.data)
+    # Safely get config entry data - may use different keys in newer HA versions
+    entry_data = getattr(config_entry, 'data', {}) or {}
+    data = dict(entry_data)
 
     if config_entry.version < 3:
         # Version 3 introduced the base_url field so users can target a
@@ -90,6 +94,10 @@ async def async_migrate_entry(
         # owner_value_rate field.
         data.pop("owner_share_percent", None)
         data.pop("owner_value_rate", None)
+
+    if config_entry.version < 5:
+        # Version 5 adds negotiated_cfd_price_gbp_per_mwh config option
+        data.setdefault(CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH)
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, version=_CONFIG_ENTRY_VERSION
