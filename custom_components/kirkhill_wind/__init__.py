@@ -67,7 +67,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 
 # Keep in sync with the VERSION in config_flow.py. Home Assistant calls this
 # module-level handler when a stored config entry's version is behind.
-_CONFIG_ENTRY_VERSION = 4
+_CONFIG_ENTRY_VERSION = 5
 
 
 async def async_migrate_entry(
@@ -130,6 +130,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         ),
     }
+    coordinator.negotiated_price_gbp_per_mwh = float(
+        entry.options.get(
+            CONF_CFD_PRICE_GBP_PER_MWH,
+            entry.data.get(CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH),
+        )
+    )
 
     await async_setup_services(hass)
 

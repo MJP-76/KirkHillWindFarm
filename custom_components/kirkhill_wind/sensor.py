@@ -13,7 +13,9 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
+    CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
+    DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     SCOPE_OWNER,
@@ -318,6 +320,13 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
             default = DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP
         return float(self._entry.options.get(key, self._entry.data.get(key, default)))
 
+    def _cfd_price_gbp_per_mwh(self) -> float | None:
+        """Return the configured CFD price in GBP per MWh, or None if not set."""
+        price = self._entry.options.get(CONF_CFD_PRICE_GBP_PER_MWH)
+        if price is not None and str(price).strip():
+            return float(price)
+        return None
+
     @staticmethod
     def _parse_api_date(value) -> date | None:
         if isinstance(value, date) and not isinstance(value, datetime):
@@ -419,7 +428,33 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """Return earnings based on configured CFD price or fallback to projected model."""
+        price = getattr(self.coordinator, "negotiated_price_gbp_per_mwh", 0.0)
+        if price:
+            # Use actual generation × CFD price when a price is configured
+            kwh = self._live_kwh_for_timeframe()
+            if kwh is not None:
+                return round(kwh / 1000 * price, 2)
+            # If no live kWh available, fall back to projected model
+            return round(self._annual_projected_gbp() * self._projection_factor(), 2)
+        # No CFD price configured: use existing projected model
         return round(self._annual_projected_gbp() * self._projection_factor(), 2)
+
+    def _live_kwh_for_timeframe(self) -> float | None:
+        """Return live generation in kWh for this timeframe and scope."""
+        summary = (
+            self.coordinator.data.get("timeframe_summaries", {})
+            .get(self._scope, {})
+            .get(self._timeframe, {})
+        )
+        value = _as_float(summary.get("total_generation_kwh"))
+        if value is not None:
+            return value
+        # Fall back to total_kwh if total_generation_kwh not available
+        value = _as_float(summary.get("total_kwh"))
+        if value is not None:
+            return value
+        return None
 
     @property
     def extra_state_attributes(self) -> dict:
