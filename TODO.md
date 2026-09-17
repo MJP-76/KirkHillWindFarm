@@ -19,7 +19,11 @@
 - [x] Deploy v4.8.79 to production (OSM tile revert, SCADA chrome row order, status-since contrast, £ earnings column in Generation & Capacity panels, Finances tab retired and merged into SCADA)
 - [x] Restart Home Assistant (via hab `system restart`) to load the v4.8.79 Python code
 - [x] Verify v4.8.79 in production (manifest 4.8.79, backend/frontend identical to repo, `value_entity` merged into SCADA card, Finances view pruned)
+- [x] Deploy v4.8.80 to production (Turbines tab deleted, Google Maps link in turbine modal, tab renamed "Kirk Hill SCADA", column spacing/14px fonts, negotiated CFD price number entity `number.<farm>_negotiated_price_gbp_mwh`)
+- [x] Restart Home Assistant (via hab `system restart`) to load v4.8.80 Python code
+- [x] Verify v4.8.80 in production (integration `loaded`, sensors returning real values, negotiated-price entity present)
 - [ ] Create GitHub release v4.8.79 (stable; blocked pending user confirmation)
+- [ ] Create GitHub release v4.8.80 (stable; HACS not yet showing new version)
 - [ ] Deprecate the turbine map card (interim fix in place via CARTO; map planned for removal in a future release)
 - [ ] Confirm `sensor.kirk_hill_wind_farm_generation_today_site` exists (used by the SCADA card's grid energy)
 
