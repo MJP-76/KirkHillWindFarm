@@ -22,10 +22,9 @@
 - [x] Deploy v4.8.80 to production (Turbines tab deleted, Google Maps link in turbine modal, tab renamed "Kirk Hill SCADA", column spacing/14px fonts, negotiated CFD price number entity `number.<farm>_negotiated_price_gbp_mwh`)
 - [x] Restart Home Assistant (via hab `system restart`) to load v4.8.80 Python code
 - [x] Verify v4.8.80 in production (integration `loaded`, sensors returning real values, negotiated-price entity present)
-- [ ] Create GitHub release v4.8.79 (stable; blocked pending user confirmation)
-- [ ] Create GitHub release v4.8.80 (stable; HACS not yet showing new version)
+- [x] Create GitHub release v4.8.80 (stable; latest for HACS) — v4.8.79 changes are included in it, so no separate v4.8.79 release is needed
 - [ ] Deprecate the turbine map card (interim fix in place via CARTO; map planned for removal in a future release)
-- [ ] Confirm `sensor.kirk_hill_wind_farm_generation_today_site` exists (used by the SCADA card's grid energy)
+- [x] Confirm `sensor.kirk_hill_wind_farm_generation_today_2` (site-scope today generation) exists and feeds the SCADA card's grid energy (live value verified)
 
 ## Backlog
 
