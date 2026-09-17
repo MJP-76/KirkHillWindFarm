@@ -14,8 +14,9 @@
 - Generation (year) [kWh] for owner and site
 - Generation (alltime) [kWh] for owner and site
 - Generation source attribute marks these entities as `api_dynamic`
-- Projected value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site is non-dynamic
-  - For **all-time projected value**, the projection window start date is derived from the API all-time timeframe when available
+- Value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site — live-accurate when a negotiated price is set; otherwise the projected (non-dynamic) model applies
+  - For the projected (fallback) model, the all-time start date is derived from the API all-time timeframe when available
+- Negotiated price (number) [GBP/MWh] — user-set path to live-accurate £ values (see note below)
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Wind speed [m/s]
 - Active turbines
@@ -25,8 +26,14 @@
 Timeframe generation entities keep a stable raw **kWh** state for reliability in
 Home Assistant. The generated dashboard formats those values for display with
 automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and
-rounds them to **2 decimal places**. Financial values are separate **projected**
-figures and are not calculated from live generation.
+rounds them to **2 decimal places**.
+
+Financial £ values are **live-accurate when a negotiated price is set**: the
+`number.kirk_hill_wind_farm_negotiated_price_gbp_mwh` entity (0.0 by default)
+holds the negotiated CfD price in GBP/MWh. When it is >0, each timeframe's value
+is `actual generation kWh ÷ 1000 × price`; when it is 0 (or live generation is
+unavailable, e.g. before the first successful API fetch) the values fall back to
+the projected model based on the configured annual figures.
 
 ## Per turbine device (`Turbine T1` … `Turbine T8`)
 

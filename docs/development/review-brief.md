@@ -4,7 +4,7 @@ Give the repository a **design-focused** review. CI already passes (ruff, HACS
 validation, Hassfest, version-sync); you are NOT reviewing for "does it pass CI".
 Focus on correctness, robustness, and design with these specific questions below.
 
-Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.8.65)
+Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.8.80)
 Start here: `custom_components/kirkhill_wind/` and `docs/development/decisions.md`
 (read the decisions doc first — it records why the code is shaped this way).
 
@@ -32,9 +32,10 @@ Treat them as closed; flag only if you find a new, concrete problem:
 - **OptionsFlow / editing options post-setup** — already implemented: the
   integration exposes a full options flow (`KirkHillWindOptionsFlow` in
   `config_flow.py`) covering polling interval, projected annual earnings (owner
-  & site), owner share %, value rate, graph hours, dashboard and payment
-  toggles. Users can edit all of these from the integration entry's Options
-  button without re-adding.
+  & site), and the dashboard and payment-tracking toggles. Users can edit all
+  of these from the integration entry's Options button without re-adding. The
+  legacy `owner_share_percent` / `owner_value_rate` / `graph_hours` options were
+  removed (share is now derived from the API capacity ratio).
 - **Monetary sensors / currency** — recorded decision: monetary sensors keep
   `device_class=MONETARY` with a hardcoded unit `"GBP"` (do not pull the
   system/locale currency).

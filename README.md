@@ -16,7 +16,8 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-> - **Financial figures are projected, not real-time values and based on user-defined inputs.**
+> - **Financial figures are projected by default** and become live-accurate only
+>   when a negotiated price is set (see below).
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
@@ -36,6 +37,10 @@ and an animated dashboard.
   and the whole farm (`site`), covering power, capacity factor, and generation
   for yesterday, today, week, month, YTD, year, and all time — plus projected
   owner/site value in GBP for each timeframe.
+- **Negotiated CfD price** — set a price (GBP/MWh) via the
+  `number.<farm>_negotiated_price_gbp_mwh` entity and the £ value column is
+  calculated from actual generation (kWh ÷ 1000 × price); leave at 0 for the
+  projected model.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
   **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up

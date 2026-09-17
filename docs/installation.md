@@ -34,9 +34,6 @@ During setup, the integration asks for:
 - **Create dashboard automatically** — whether the integration should create/update its Lovelace dashboard tab
 - **Owner projected annual earnings (GBP)** — used to derive timeframe values (non-dynamic)
 - **Site projected annual earnings (GBP)** — used to derive timeframe values (non-dynamic)
-- **Owner value rate (GBP per kWh)** — legacy setting retained for compatibility
-- **Owner share (%)** — legacy setting retained for compatibility
-- **Forecast source** — Open-Meteo is used automatically for forecast sensors using farm-location lookup (no forecast API key required)
 - **Enable payment tracking onboarding (Ethex, experimental)** — optionally starts the Ethex setup flow
 - **Site name** — used as the integration title in Home Assistant
 
@@ -48,6 +45,9 @@ After setup, the **Configure** options let you change:
 - Create dashboard automatically
 - Owner projected annual earnings (GBP)
 - Site projected annual earnings (GBP)
-- Owner value rate (GBP per kWh) *(legacy compatibility)*
-- Owner share (%) *(legacy compatibility)*
 - Enable payment tracking onboarding (Ethex, experimental)
+
+The negotiated CfD price is **not** an options field — it is a `number` entity
+(`number.<farm>_negotiated_price_gbp_mwh`) you set from the entity's controls.
+When set above 0, the dashboard's £ value column switches from the projected
+model to live actual-generation × price (see [Sensors](sensors.md)).

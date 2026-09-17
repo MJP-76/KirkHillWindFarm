@@ -14,8 +14,12 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 
 ## Project notes
 
-Owner/site generation kWh values are **live dynamic API values**. Owner/site financial earnings shown in the dashboard are **projected values** and **not real-time dynamic earnings**. All-time projected value now uses the API all-time timeframe start date when available.
-Kirk Hill API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
+Owner/site generation kWh values are **live dynamic API values**. Owner/site financial
+earnings shown in the dashboard are **projected values** by default, switching to
+live-accurate (actual generation × negotiated price) once the
+`number.<farm>_negotiated_price_gbp_mwh` entity is set above 0. All-time projected value uses the API all-time timeframe start date when available.
+Kirk Hill
+API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
 Dev updates can be published as GitHub pre-releases for early testing while stable releases remain marked as Latest.
 Stable release flow uses a full merge into `main` before final tagging/publishing.
 Dashboard layout and labels are being aligned to the live Kirk Hill dashboard UX from exported snapshots, while preserving Home Assistant-native entity behavior.
@@ -56,11 +60,11 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
 - **Power & Wind (25h) time-series (Plotly)** — owner power (kW), site power (kW), and wind speed (m/s)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.8.71`), so a stale browser cache is easy to spot
+- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.8.80`), so a stale browser cache is easy to spot
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
-- **Finances tab shows generation kWh + earnings** for all timeframes (Owner & Site)
+- **Negotiated CfD price entity** — set `number.<farm>_negotiated_price_gbp_mwh` (GBP/MWh) to switch the £ value column from projected to live actual-generation × price; 0.0 (default) keeps the projected model
 - **Overview tab removed** — dashboard is now the single **Kirk Hill SCADA** tab (History removed in v4.8.77, Finances removed in v4.8.79, Turbines removed in v4.8.80)
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
 - **Optimized fetch tiers** — "yesterday" moved to hourly tier (static once day ends); week/month/ytd/year/alltime also hourly; only "today" fetches every poll

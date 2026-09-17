@@ -12,11 +12,13 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-!!! warning "Financial figures are projected"
+!!! warning "Financial figures"
 
-    Financial figures are *projected*, not real-time values, and are based on
-    user-defined inputs. The Kirk Hill API remains the authoritative source for
-    actual farm generation.
+    Financial £ values are **live-accurate** only when a negotiated price is set.
+    By default they are *projected* figures based on configured annual inputs —
+    the £ value column switches to actual generation × price when the
+    `number.<farm>_negotiated_price_gbp_mwh` entity is set above 0. The Kirk Hill
+    API remains the authoritative source for actual farm generation.
 
 ## Support me
 
@@ -50,7 +52,7 @@ development, you can do so here:
 - Open-Meteo forecast integration (forecast only; not authoritative actual generation)
 - Optional experimental Ethex payment-tracking onboarding toggle
 - Configurable polling interval via Options
-- Auto-generated Lovelace dashboard: SCADA first (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe £ earnings, pop-out charts including activity history), then the deprecated Turbines (map only) tab. History removed in v4.8.77; Finances retired into the SCADA card in v4.8.79.
+- Auto-generated Lovelace dashboard: SCADA (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe £ earnings, pop-out charts including activity history). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80.
 - Dashboard customisations are preserved across reloads and updates; `kirkhill_wind.reset_dashboard` restores defaults
 
 ## Where to go next

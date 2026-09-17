@@ -87,8 +87,15 @@ The standalone **Finances tab was removed in v4.8.79** — its content (today's
 earnings, this month, year to date) now lives in the SCADA card itself. Every
 timeframe row (Yesterday, Today, Week, Month, YTD, Year, All time) in both the
 **Owner Capacity** and **Site Capacity** panels shows a **£ value column**
-alongside the kWh figure, so generation and its projected earnings are on the
-same row for the same timeframe. Both Owner and Site values are shown.
+alongside the kWh figure, so generation and its value are on the same row for
+the same timeframe. Both Owner and Site values are shown.
+
+By default the £ figures are **projected**, derived from the configured annual
+earnings. If you set a **negotiated CfD price** (via the
+`number.<farm>_negotiated_price_gbp_mwh` entity, GBP/MWh), the values switch to
+**live-accurate**: `actual generation kWh ÷ 1000 × price` per timeframe, falling
+back to the projected model when the price is 0 or live generation is not yet
+available.
 
 ## History tab
 

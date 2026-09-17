@@ -16,6 +16,17 @@ All notable changes to the Kirk Hill Wind Farm integration.
 - **Coordinates link to Google Maps.** In each turbine's detail modal, the
   Coordinates row is now a link that opens Google Maps at the turbine's
   position.
+- **Negotiated CfD price entity.** A new `number.<farm>_negotiated_price_gbp_mwh`
+  entity lets you set the negotiated (CfD) price in GBP/MWh. When a price is
+  set, the £ value column is calculated from **actual generation** (kWh ÷ 1000
+  × price) instead of the projected model — financial figures become
+  live-accurate per timeframe. When the price is 0 (default) or live generation
+  is unavailable, the existing projected model is used as a fallback, so
+  existing installs are unchanged until a price is entered.
+- **SCADA panel polish.** Panel headers simplified to **Owner** / **Site**
+  (was "Owner Capacity" / "Site Capacity"). Gen/value fonts unified at 14px to
+  match the Owner card, and the Timeframe / Generation / Value (£) columns were
+  tightened and right-aligned so the rows sit closer together.
 
 ## Version 4.8.79
 - **Finances tab retired — financials are now in the SCADA card.** The

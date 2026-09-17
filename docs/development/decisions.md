@@ -63,6 +63,13 @@ decision changes.
   the financial sensors read them live from the coordinator. Values persist
   across restarts (`RestoreEntity`), so a user can adjust figures without
   reconfiguring when new share/watt data becomes available.
+- **2026-09-16 — A negotiated CfD price (GBP/MWh) switches the £ column to
+  live-accurate calculation.** A `number` entity (`negotiated_price_gbp_mwh`)
+  stores the negotiated price. When set (>0), each timeframe's £ value is
+  `actual generation kWh ÷ 1000 × price`; when 0 or live kWh is unavailable it
+  falls back to the projected model. The alltime timeframe keeps the fallback
+  path because no historical price data exists — the projected model cannot be
+  replaced there without price history.
 
 ## Dashboard consolidation
 
@@ -72,15 +79,16 @@ decision changes.
   (today, this month, YTD) now render as a per-timeframe **£ value column** inside
   the SCADA card's **Owner Capacity** and **Site Capacity** panels (both Owner and
   Site scopes), and the right-side panels gained a "Generation, Capacity &
-  Earnings" heading. Turbines is map-only (OpenStreetMap tiles since the CARTO
-  Voyager revert); per-turbine cards and the activity graph moved to SCADA
-  nodes/modals, and the Turbines view still carries a deprecation banner. Existing
-  installs prune History, Finances and the old Turbines cards via
+  Earnings" heading. The Turbines tab was removed in v4.8.80: the standalone map
+  and per-turbine status overview no longer ship — per-turbine power, status, and
+  today's generation live on the SCADA diagram, per-turbine history in each
+  pop-out, and the coordinates in the turbine modal link to Google Maps. Existing
+  installs prune History, Finances and Turbines views via
   `_OBSOLETE_VIEW_PATHS` / `_OBSOLETE_CARD_KEYS` on merge.
 
 ## Deployment state
 
-- **2026-09-15 — Production is aligned with the repository at `4.8.77`.**
+- **2026-09-17 — Production is aligned with the repository at `4.8.80`.**
   `CHANGELOG.md` is the authoritative version history. GitHub Releases/HACS are
   for other users; this host deploys from `origin/main` commits mirrored into
   `/homeassistant/custom_components/kirkhill_wind/`.
