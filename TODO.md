@@ -29,7 +29,7 @@
 - [x] Restart Home Assistant (via hab `system restart`) to load the v4.8.81 Python code
 - [x] Verify v4.8.81 in production (manifest 4.8.81, map card shows banner, hardened polling behaves)
   - Confirmed live: manifest 4.8.81, `data_stale` attribute present on `sensor.kirk_hill_wind_farm_power_site` (hardened coordinator), all backend files identical to repo. A newer SCADA card JS than the working tree was found in production (Wind Speed detail modal, trailing-zero number stripping, panel re-alignment) — synced back so repo == production.
-- [ ] Create GitHub release v4.8.81 (stable; latest for HACS)
+- [x] Create GitHub release v4.8.81 (stable; latest for HACS)
 
 ## External review #5 — API resilience hardening (post-v4.8.80 code review)
 
