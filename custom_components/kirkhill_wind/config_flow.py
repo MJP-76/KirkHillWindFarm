@@ -4,11 +4,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
@@ -122,8 +122,8 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Return an errors dict, or empty dict on success."""
         client = KirkHillApiClient(api_key=api_key, base_url=base_url)
         try:
-            async with aiohttp.ClientSession() as session:
-                await client.test(session)
+            # Reuse HA's shared session rather than a throwaway one per attempt.
+            await client.test(async_get_clientsession(self.hass))
         except KirkHillAuthError:
             return {"base": "auth_failed"}
         except KirkHillConnectionError:

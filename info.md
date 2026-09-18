@@ -56,11 +56,14 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   - **History tab removed** (v4.8.77) — its 25h owner/site/wind charts are covered by the SCADA card's Owner/Site pop-out modals with selectable 6H–1Y timeframes
   - **Finances tab removed** (v4.8.79) — earnings now shown per timeframe in the SCADA card's Capacity panels
   - **Turbines tab removed** (v4.8.80) — the standalone turbine map and status view retired; all data now on the SCADA diagram
+  - **Turbine map card deprecated** (v4.8.81) — the standalone `kirkhill-wind-turbine-map` card shows a deprecation banner and will be removed in a future release
+  - **Wind Speed detail modal** (v4.8.81) — click the Wind panel for current speed, the one-hour forecast and the live difference
+  - **Turbine activity swimlane** (v4.8.81) — turbine pop-outs organise activity into one labelled row per state, with hover start/stop time and duration
 - **Bundled chart cards** — ApexCharts and Plotly Lovelace cards shipped with the integration (no separate HACS installs needed)
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
 - **Power & Wind (25h) time-series (Plotly)** — owner power (kW), site power (kW), and wind speed (m/s)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.8.80`), so a stale browser cache is easy to spot
+- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.8.81`), so a stale browser cache is easy to spot
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults

@@ -80,6 +80,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
       this.shadowRoot.innerHTML = `
         <style>${this._styles()}</style>
         <ha-card${header}>
+          ${this._deprecationBanner()}
           <div class="empty">Turbine coordinates are not available yet.</div>
         </ha-card>
       `;
@@ -104,6 +105,7 @@ class KirkHillWindTurbineMap extends HTMLElement {
       this.shadowRoot.innerHTML = `
         <style>${this._styles()}</style>
         <ha-card${header}>
+          ${this._deprecationBanner()}
           <div class="map-shell">
             <svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Turbine map">
               <defs>
@@ -418,6 +420,17 @@ class KirkHillWindTurbineMap extends HTMLElement {
     return html;
   }
 
+  _deprecationBanner() {
+    return `
+      <div class="deprecated" role="note">
+        This card is <strong>deprecated</strong> — the turbine map was retired with
+        the Turbines tab in v4.8.80. Live per-turbine status, power, and generation
+        today are on the <strong>Kirk Hill SCADA</strong> card. It will be removed
+        in a future release.
+      </div>
+    `;
+  }
+
   _renderMarker(turbine, originX, originY, zoom) {
     const { x, y } = this._project(turbine.latitude, turbine.longitude, zoom);
     const left = x - originX;
@@ -581,6 +594,18 @@ class KirkHillWindTurbineMap extends HTMLElement {
       .legend .dot.stopped { background: var(--disabled-text-color, #94a3b8); }
 
       .empty { padding: 24px 16px; color: var(--secondary-text-color); }
+
+      .deprecated {
+        margin: 10px 12px 4px;
+        padding: 8px 12px;
+        border: 1px solid var(--warning-color, #d87c14);
+        border-radius: 6px;
+        background: color-mix(in srgb, var(--warning-color, #d87c14) 14%, var(--ha-card-background, #fff));
+        color: var(--primary-text-color, #1f2937);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .deprecated strong { color: var(--warning-color, #d87c14); }
 
       @keyframes turbine-spin { to { transform: rotate(360deg); } }
     `;

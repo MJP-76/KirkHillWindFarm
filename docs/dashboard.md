@@ -67,19 +67,24 @@ global timeframe control. Modal headings show the active range (e.g.
 recorder statistics rather than raw history, so the charts stay usable on
 slower browsers.
 
-### Site and Owner detail modals
+### Site, Owner and Wind detail modals
 
 Clicking a **Capacity** panel (Owner or Site) opens a dedicated detail modal for
 the scope you clicked — a separate **Site** modal and a separate **Owner** modal,
-each with its own ApexCharts series for the selected timeframe. The panels have a
+each with its own ApexCharts series for the selected timeframe. Clicking the
+**Wind** panel opens a **Wind Speed** modal showing current wind speed, the
+one-hour forecast, and the live difference. All clickable panels have a
 cursor/hover affordance to signal they are clickable.
 
 ### Turbine detail modal
 
 Clicking a turbine node opens its pop-out. Besides power, wind, rotor, capacity
 and generation charts for the selected timeframe, the modal includes a
-**horizontal activity timeline** showing when that turbine was running,
-curtailed, in maintenance, stopped, or in a fault state.
+**turbine activity swimlane** — one labelled row per state the turbine was in
+during the window (running, curtailed, in maintenance, stopped, in a fault
+state, etc.) with a coloured block for each continuous stretch, so state changes
+and their durations read at a glance. Hovering a block shows its start/stop time
+and duration.
 
 ## Financials (formerly the Finances tab)
 
@@ -111,6 +116,11 @@ status overview) has been deleted. Live per-turbine status, power, and generatio
 today are shown on the SCADA diagram, and per-turbine history is available through
 each turbine's pop-out modal. Dashboards with the old `turbines` view are pruned
 automatically on merge.
+
+The standalone **turbine map card** (`kirkhill-wind-turbine-map`) is still
+bundled so any manual placements keep rendering, but it is **deprecated** as of
+v4.8.81: it shows a warning banner at the top of the card and will be removed in
+a future release. Use the **Kirk Hill SCADA** card instead.
 
 The turbine map card previously provided:
 - T1–T8 labels above each turbine marker

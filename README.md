@@ -47,8 +47,8 @@ and an animated dashboard.
   transformer, into the national grid. It shows
   **Owner and Site** generation details, live wind speed, active-turbine count,
   next-hour forecast, an API-status pill, and an alarm indicator for any turbine
-  in a fault state. Click Owner, Site, or a turbine for ApexCharts history
-  (6H–1Y) including a turbine activity timeline.
+  in a fault state. Click Owner, Site, Wind, or a turbine for ApexCharts history
+  (6H–1Y), a wind-speed detail modal, and a labelled turbine activity swimlane.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
@@ -56,7 +56,9 @@ and an animated dashboard.
   Turbines tab; that standalone view was retired in v4.8.80 (the History tab
   was removed in v4.8.77, and the Finances tab in v4.8.79 with its earnings
   shown per timeframe in the SCADA card). Turbine status, power, and generation
-  today all live in the SCADA card.
+  today all live in the SCADA card. The standalone `kirkhill-wind-turbine-map`
+  card is now **deprecated** (it shows a warning banner and will be removed in
+  a future release).
 - **Notifiable** — entities support a WhatsApp alert guide for turbine
   down/recovery.
 - **Config flow & options** — masked API key entry, optional auto-dashboard, and

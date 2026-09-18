@@ -157,6 +157,12 @@ class FarmPowerSensor(KirkHillScopedEntity, SensorEntity):
             return value / 1000
         return value
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs = super().extra_state_attributes
+        attrs["data_stale"] = self._current_is_stale()
+        return attrs
+
 
 class FarmOwnerShareSensor(KirkHillScopedEntity, SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT

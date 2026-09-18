@@ -23,8 +23,25 @@
 - [x] Restart Home Assistant (via hab `system restart`) to load v4.8.80 Python code
 - [x] Verify v4.8.80 in production (integration `loaded`, sensors returning real values, negotiated-price entity present)
 - [x] Create GitHub release v4.8.80 (stable; latest for HACS) — v4.8.79 changes are included in it, so no separate v4.8.79 release is needed
-- [ ] Deprecate the turbine map card (interim fix in place via CARTO; map planned for removal in a future release)
 - [x] Confirm `sensor.kirk_hill_wind_farm_generation_today_2` (site-scope today generation) exists and feeds the SCADA card's grid energy (live value verified)
+- [x] Deprecate the turbine map card — standalone `kirkhill-wind-turbine-map` card now shows a theme-aware deprecation banner pointing to the SCADA card; file and card registration stay for now, removal planned for a future release
+- [x] Deploy v4.8.81 to production (bundles the deprecated-map-card banner with the API resilience hardening below, all uncommitted in the working tree)
+- [x] Restart Home Assistant (via hab `system restart`) to load the v4.8.81 Python code
+- [x] Verify v4.8.81 in production (manifest 4.8.81, map card shows banner, hardened polling behaves)
+  - Confirmed live: manifest 4.8.81, `data_stale` attribute present on `sensor.kirk_hill_wind_farm_power_site` (hardened coordinator), all backend files identical to repo. A newer SCADA card JS than the working tree was found in production (Wind Speed detail modal, trailing-zero number stripping, panel re-alignment) — synced back so repo == production.
+- [ ] Create GitHub release v4.8.81 (stable; latest for HACS)
+
+## External review #5 — API resilience hardening (post-v4.8.80 code review)
+
+- [x] Use HA's shared aiohttp session (`async_get_clientsession`) instead of a fresh `ClientSession` + connection pool per poll (coordinator and config-flow API-key validation)
+- [x] Make the fast-path `current` fetch failure-tolerant per scope — keep last-known-good data and mark stale instead of blanking the whole tick; 401s still raise `ConfigEntryAuthFailed` so re-auth is prompted
+- [x] `gather` the independent turbine ("today" / "all") fetches and make a turbine failure non-fatal (keep last-known turbine map/generation)
+- [x] Prime the wind-speed series on tick 1 (it was previously skipped on the first refresh)
+- [x] Add a `_parse_data` envelope guard so a 200-level error body raises `KirkHillApiError` instead of a raw `KeyError`
+- [x] Use `dt_util.now()` for the calendar-year range (chosen over `utcnow()` so year bucketing tracks HA's local time; UK/IE share UTC offsets so behaviour is identical), exponential backoff between Open-Meteo retries, deterministic sorted timeframe order
+- [x] Reviewer point #5 (missing `CONF_CFD_PRICE_GBP_PER_MWH` import causing a setup NameError) was already fixed by commit `cf92593`, and CI already runs ruff (F401/F821) in `.github/workflows/validate.yml` — the review was against a pre-fix state
+- [x] Bump version to 4.8.81 (done as part of the map-card deprecation; deploy/verify items are in the Release roll-out section above)
+- [ ] Follow-up to reviewer point #3: fetch the Open-Meteo forecast in parallel with the medium-tier turbine fetches. Currently left sequential because the forecast location derives from the freshly fetched turbine map; would need to fall back to last-known coordinates to parallelise (forecast is non-authoritative, so ordering is safe to relax)
 
 ## Backlog
 

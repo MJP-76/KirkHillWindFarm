@@ -2,14 +2,59 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.8.81
+- **API resilience hardening.** A batch of changes from the fifth external
+  review that make the integration keep working through API hiccups instead of
+  blanking out:
+  - Polls now share Home Assistant's HTTP session instead of opening a fresh
+    connection pool each poll (also used for config-time API-key validation).
+  - The fast-path `current` fetch is now **failure-tolerant per scope** — when
+    one scope's fetch fails the last-known-good values are kept and marked
+    stale rather than the whole tick being lost. A failed key still raises
+    `ConfigEntryAuthFailed` so re-auth is prompted.
+  - The per-turbine (today / all) fetches now run in **parallel**, and one
+    failing turbine no longer takes the whole farm down — last-known turbine
+    data is kept.
+  - The wind-speed series is primed on the very first tick instead of being
+    skipped until the second refresh.
+  - A 200-level error body now raises a proper API error instead of a raw
+    `KeyError`; the calendar-year range uses HA's local time (not UTC) and
+    Open-Meteo retries use exponential backoff.
+- **Turbine map card is now deprecated.** The standalone
+  `kirkhill-wind-turbine-map` custom card — retired from the dashboard when the
+  Turbines tab was removed in v4.8.80 — now shows a visible **deprecation
+  banner** at the top of the card, pointing to the **Kirk Hill SCADA** card for
+  live per-turbine status, power, and generation today. The card can no longer
+  be added through the dashboard editor and will be **removed in a future
+  release**; the bundled file and its Lovelace registration stop shipping at
+  that point.
+- **Wind Speed detail modal.** Clicking the **Wind** panel on the SCADA card
+  opens a modal showing current wind speed, the one-hour forecast, and the
+  live difference between them — alongside the existing Site and Owner detail
+  modals. The wind panel now shows a cursor/hover affordance like the other
+  clickable panels.
+- **Turbine activity timeline becomes a labelled swimlane.** The turbine
+  detail modal's activity history rows are now organised as a **swimlane chart
+  with one labelled row per state** the turbine was in during the window
+  (running, curtailed, stopped, faults, etc.), so state changes and their
+  durations read at a glance. Hovering a state band shows its start/stop time
+  and duration.
+- **SCADA numbers no longer show trailing zeros.** Values like `617.0` now
+  render as `617`, while mid-decimal values such as `617.5` are unchanged.
+- **SCADA right-hand column alignment.** The grid panel and the Wind / Owner
+  generation / Site generation chips are re-scaled and re-aligned against the
+  right edge of the diagram for tidier column edges.
+
 ## Version 4.8.80
 - **Turbines tab removed.** The standalone Turbines view is deleted — the
-  turbine map card, per-turbine status overview, and the associated
-  deprecation banner no longer ship. Live per-turbine status, power, and
+  per-turbine status overview, and the associated view-level deprecation banner
+  no longer ship. Live per-turbine status, power, and
   generation today are already shown inside the **SCADA** card, and per-turbine
   history lives in the turbine detail modals, so the standalone view was
   redundant. Dashboards with the old `turbines` view are pruned automatically
-  on merge.
+  on merge. The standalone turbine map custom card is still bundled so existing
+  manual placements keep rendering, but it is deprecated as of v4.8.81 (see
+  above).
 - **Dashboard tab renamed to "Kirk Hill SCADA".** The auto-generated dashboard
   is now a single-tab view titled **Kirk Hill SCADA** (was "SCADA"), ready to
   grow as the hub for multiple co-op wind-farm SCADA dashboards.

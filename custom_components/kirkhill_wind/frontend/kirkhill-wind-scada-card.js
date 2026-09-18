@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.8.80";
+const KIRKHILL_WIND_SCADA_VERSION = "4.8.81";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
@@ -218,10 +218,12 @@ class KirkHillWindScada extends HTMLElement {
 
   _fmt(n, decimals = 1) {
     if (n === null || n === undefined || !Number.isFinite(n)) return "—";
-    return n.toLocaleString(undefined, {
+    const s = n.toLocaleString(undefined, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
+    // Strip trailing zeros after decimal point (e.g. "617.0" → "617")
+    return decimals > 0 ? s.replace(/\.?0+$/, "") : s;
   }
 
   _scaleKwh(kwh) {
@@ -362,6 +364,8 @@ class KirkHillWindScada extends HTMLElement {
       if (site) { this._openSiteDetail(); return; }
       const owner = ev.target.closest("[data-user-gen='panel']");
       if (owner) { this._openOwnerDetail(); return; }
+      const windPanel = ev.target.closest("[data-wind='panel']");
+      if (windPanel) { this._openWindDetail(); return; }
       const g = ev.target.closest("g.turbine");
       if (!g) return;
       this._openTurbine(g);
@@ -414,9 +418,9 @@ class KirkHillWindScada extends HTMLElement {
             </div>
             <div class="td-kpi-grid">
               <div class="td-kpi"><span class="td-kpi-label">Power</span><span class="td-kpi-value">${powerText.value}</span><span class="td-kpi-unit">${powerText.unit}</span></div>
-              <div class="td-kpi"><span class="td-kpi-label">Capacity</span><span class="td-kpi-value">${cf !== null ? cf.toFixed(1) : "\u2014"}</span><span class="td-kpi-unit">%</span></div>
-              <div class="td-kpi"><span class="td-kpi-label">Wind</span><span class="td-kpi-value">${wind !== null ? wind.toFixed(1) : "\u2014"}</span><span class="td-kpi-unit">m/s</span></div>
-              <div class="td-kpi"><span class="td-kpi-label">Rotor</span><span class="td-kpi-value">${rotor !== null ? rotor.toFixed(1) : "\u2014"}</span><span class="td-kpi-unit">rpm</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Capacity</span><span class="td-kpi-value">${cf !== null ? this._fmt(cf) : "\u2014"}</span><span class="td-kpi-unit">%</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Wind</span><span class="td-kpi-value">${wind !== null ? this._fmt(wind) : "\u2014"}</span><span class="td-kpi-unit">m/s</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Rotor</span><span class="td-kpi-value">${rotor !== null ? this._fmt(rotor) : "\u2014"}</span><span class="td-kpi-unit">rpm</span></div>
               <div class="td-kpi"><span class="td-kpi-label">Gen Today</span><span class="td-kpi-value">${genScaled.value}</span><span class="td-kpi-unit">${genScaled.unit}</span></div>
             </div>
             <div class="td-state-line">${this._escape(stateText) || "\u2014"}</div>
@@ -513,6 +517,7 @@ class KirkHillWindScada extends HTMLElement {
 
   _openSiteDetail() { this._showSiteDetailModal(); }
   _openOwnerDetail() { this._showOwnerDetailModal(); }
+  _openWindDetail() { this._showWindDetailModal(); }
 
   // ---- Site detail modal ------------------------------------------------
 
@@ -700,6 +705,46 @@ class KirkHillWindScada extends HTMLElement {
     if (this._ownerDetailModal) { this._ownerDetailModal.remove(); this._ownerDetailModal = null; }
     if (this._ownerDetailCharts) { Object.values(this._ownerDetailCharts).forEach(c => c.destroy?.()); this._ownerDetailCharts = null; }
     if (this._ownerBoundKeydown) { window.removeEventListener("keydown", this._ownerBoundKeydown); this._ownerBoundKeydown = null; }
+  }
+
+  // ---- Wind detail modal ------------------------------------------------
+
+  _showWindDetailModal() {
+    const config = this.config;
+    const wind = this._num(config.wind_speed_entity);
+    const forecast = this._num(config.wind_forecast_entity);
+    const diff = (wind !== null && forecast !== null) ? wind - forecast : null;
+
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Wind Speed</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="td-section td-live">
+            <div class="td-kpi-grid">
+              <div class="td-kpi"><span class="td-kpi-label">Current Speed</span><span class="td-kpi-value">${wind !== null ? this._fmt(wind) : "—"}</span><span class="td-kpi-unit">m/s</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Forecast (1h)</span><span class="td-kpi-value">${forecast !== null ? this._fmt(forecast) : "—"}</span><span class="td-kpi-unit">m/s</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Difference</span><span class="td-kpi-value">${diff !== null ? (diff >= 0 ? "+" : "") + this._fmt(diff) : "—"}</span><span class="td-kpi-unit">m/s</span></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    this.shadowRoot.appendChild(modal);
+    this._windDetailModal = modal;
+    modal.querySelectorAll("[data-close]").forEach(el =>
+      el.addEventListener("click", () => this._closeWindDetailModal()));
+    this._windBoundKeydown = (e) => { if (e.key === "Escape") this._closeWindDetailModal(); };
+    window.addEventListener("keydown", this._windBoundKeydown);
+  }
+
+  _closeWindDetailModal() {
+    if (this._windDetailModal) { this._windDetailModal.remove(); this._windDetailModal = null; }
+    if (this._windBoundKeydown) { window.removeEventListener("keydown", this._windBoundKeydown); this._windBoundKeydown = null; }
   }
 
   async _initOwnerCharts() {
@@ -980,27 +1025,39 @@ class KirkHillWindScada extends HTMLElement {
       charts.generation.render();
     }
 
-    // Turbine activity: status over the selected window, drawn as horizontal
-    // status bands so a glance shows what the turbine was doing and when.
-    const activityData = this._buildActivityHistory(history.state || [], startEpoch, endEpoch);
-    if (activityData.length) {
+    // Turbine activity: a swimlane state timeline. One labelled row per status
+    // the turbine was in during the window, with a coloured block for each
+    // continuous stretch, so state changes and their durations read at a glance.
+    const activity = this._buildActivityHistory(history.state || [], startEpoch, endEpoch);
+    if (activity.segments.length) {
       const bg = this._cssVar("var(--khscada-card-bg)") || this._cssVar("var(--card-background-color)") || "#1c1c1c";
       const fg = this._cssVar("var(--khscada-primary-color)") || this._cssVar("var(--primary-text-color)") || "#e1e1e1";
+      // ApexCharts rangeBar expects { x: <category>, y: [start, end] } for a
+      // datetime timeline; per-segment colour must be fillColor (a plain
+      // `color` key is ignored and every bar falls back to the default).
+      const activityData = activity.segments.map(s => ({
+        x: s.label,
+        y: s.x,
+        fillColor: s.color,
+        key: s.key,
+      }));
+      const laneH = 30;
       charts.activity = new ApexCharts(this.shadowRoot.querySelector("#chart-activity"), this._apexOpts({
-        type: "rangeBar", height: 130,
+        type: "rangeBar",
+        height: Math.max(120, activity.lanes.length * laneH + 40),
         series: [{ name: "Turbine Activity", data: activityData }],
-        plotOptions: { bar: { horizontal: true, barHeight: "70%", rangeBarGroupRows: false } },
+        plotOptions: { bar: { horizontal: true, barHeight: "55%", rangeBarGroupRows: false } },
         xaxis: { type: "datetime", min: startEpoch, max: endEpoch },
-        yaxis: { show: false },
         dataLabels: { enabled: false },
         tooltip: {
-          custom: ({ dataPointIndex }) => {
-            const d = activityData[dataPointIndex];
+          custom: ({ seriesIndex, dataPointIndex, w }) => {
+            const d = w.config.series[seriesIndex].data[dataPointIndex];
+            if (!d) return "";
             const st = KirkHillWindScada.STATUS[d.key] || KirkHillWindScada.STATUS.unknown;
             return `<div style="padding:6px 10px;font-family:inherit;font-size:13px;background:${bg};color:${fg};border-radius:4px">
               <div style="font-weight:600;color:${this._cssVar(st.color)}">${st.label}</div>
-              <div>${this._fmtTime(new Date(d.x[0]).toISOString())}</div>
-              <div>${this._fmtTime(new Date(d.x[1]).toISOString())}</div>
+              <div>${this._fmtTime(new Date(d.y[0]).toISOString())} \u2192 ${this._fmtTime(new Date(d.y[1]).toISOString())}</div>
+              <div>Duration ${this._fmtDuration(d.y[1] - d.y[0])}</div>
             </div>`;
           },
         },
@@ -1012,19 +1069,22 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   // Collapse consecutive history samples with the same status key into one
-  // horizontal range bar, using the fixed window start/end as the boundaries.
+  // horizontal range segment, using the fixed window start/end as the
+  // boundaries. Returns the segments plus the ordered lanes (one per status
+  // that occurred) for the swimlane y-axis.
   _buildActivityHistory(stateHistory, startEpoch, endEpoch) {
-    if (!stateHistory || !stateHistory.length) return [];
+    const empty = { segments: [], lanes: [] };
+    if (!stateHistory || !stateHistory.length) return empty;
     const items = stateHistory
       .map(p => {
         const t = new Date(p.last_changed).getTime();
         if (!Number.isFinite(t)) return null;
         const st = this._statusFor(String(p.state ?? ""), null);
-        return { t, key: st.key, color: st.color };
+        return { t, key: st.key, label: st.label, color: st.color };
       })
       .filter(Boolean)
       .sort((a, b) => a.t - b.t);
-    if (!items.length) return [];
+    if (!items.length) return empty;
 
     // Expand the first and last samples to the window edges so the bands span
     // the full selected timeframe.
@@ -1039,16 +1099,42 @@ class KirkHillWindScada extends HTMLElement {
         prev.t = it.t;
         continue;
       }
-      segs.push({ key: prev.key, color: prev.color, x: [prev.t, it.t] });
+      segs.push({ key: prev.key, label: prev.label, color: prev.color, x: [prev.t, it.t] });
       prev = it;
     }
     if (prev) {
-      segs.push({ key: prev.key, color: prev.color, x: [prev.t, endEpoch] });
+      segs.push({ key: prev.key, label: prev.label, color: prev.color, x: [prev.t, endEpoch] });
     }
     if (segs.length && segs[0].x[0] !== startEpoch) {
       segs[0].x[0] = startEpoch;
     }
-    return segs;
+
+    // One lane per status that occurred; the set is sorted into the STATUS
+    // definition order so it is deterministic. Only `lanes.length` is used by
+    // the caller (to size the chart) - ApexCharts orders the visible rows by
+    // first occurrence in the window, so the top lane is the earliest state.
+    const defined = Object.keys(KirkHillWindScada.STATUS);
+    const present = [...new Set(segs.map(s => s.key))];
+    present.sort((a, b) => defined.indexOf(a) - defined.indexOf(b));
+    const lanes = present.map(key => {
+      const st = KirkHillWindScada.STATUS[key] || KirkHillWindScada.STATUS.unknown;
+      return { key, label: st.label, color: st.color };
+    });
+    return { segments: segs, lanes };
+  }
+
+  _fmtDuration(ms) {
+    if (!Number.isFinite(ms) || ms < 0) return "\u2014";
+    const mins = Math.round(ms / 60000);
+    if (mins < 1) return "<1m";
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h >= 24) {
+      const d = Math.floor(h / 24);
+      return `${d}d ${h % 24}h`;
+    }
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
   }
 
   _cssVar(value) {
@@ -1447,15 +1533,15 @@ class KirkHillWindScada extends HTMLElement {
     // right column keeps sliding left until it sits directly under the left column,
     // merging the staircase into a single column at narrow widths. The vertical
     // pitch gains a small gap as the columns merge so stacked boxes never touch.
-    const busX = 600 * scaleX;
+    const busX = 700 * scaleX;
     const leftColX = 30 * scaleX;
     const rightColX = (30 + (190 + 40) * (1 - collapse)) * scaleX;
     const boxW = 190 * scaleX;
     const feedEndX = busX;
-    const gridRectX = 975 * scaleX;
+    const gridRectX = 930 * scaleX;
     const transformerLineEndX = gridRectX;
     const transformerLineEndY = gridY - 135;
-    const gridRectW = 225 * scaleX;
+    const gridRectW = 270 * scaleX;
     const gridRightX = gridRectX + gridRectW;
     const ownerCx = 1015 * scaleX;
     const siteCx = 1205 * scaleX;
@@ -1464,22 +1550,25 @@ class KirkHillWindScada extends HTMLElement {
     const gridDividerX2 = gridRightX - 10 * scaleX;
     const chipLeftColX = 30 * scaleX;
     const chipRightColX = 152 * scaleX;
-    const chipWindX = 400 * scaleX;
+    const chipWindX = 500 * scaleX;
     const chipWindW = busX - chipWindX - 8;
-    const chipWindTitleX = 412 * scaleX;
+    const chipWindTitleX = 512 * scaleX;
     const chipWindValueX = chipWindX + chipWindW - 12;
-    const chipUserGenX = 750 * scaleX;
+    const chipUserGenX = 930 * scaleX;
     const chipUserGenW = gridRightX - chipUserGenX;
-    const chipUserGenTitleX = 762 * scaleX;
-    const chipSiteGenX = 750 * scaleX;
+    // Three-column table inside the 450-px panel (750→1200):
+    // Timeframe labels ≈ 101 px, Generation values ≈ 82 px, Value £ ≈ 118 px.
+    // Generation right edge at 1025 (−175), Value right edge at 1184 (−16).
+    // Timeframe x so widest label ends 40 px before Generation column's left
+    // edge: 1025 − 82 − 40 − 101 = 802.
+    const chipUserGenValueX = gridRightX - 95 * scaleX;
+    const chipUserGenTitleX = 942 * scaleX;
+    const chipUserGenFinX = gridRightX - 16 * scaleX;
+    const chipSiteGenX = 930 * scaleX;
     const chipSiteGenW = gridRightX - chipSiteGenX;
-    const chipSiteGenTitleX = 762 * scaleX;
-    const chipUserGenTimeX = gridRightX - 350 * scaleX;
-    const chipUserGenValueX = gridRightX - 250 * scaleX;
-    const chipUserGenFinX = gridRightX - 150 * scaleX;
-    const chipSiteGenTimeX = gridRightX - 350 * scaleX;
-    const chipSiteGenValueX = gridRightX - 250 * scaleX;
-    const chipSiteGenFinX = gridRightX - 150 * scaleX;
+    const chipSiteGenValueX = gridRightX - 95 * scaleX;
+    const chipSiteGenTitleX = 942 * scaleX;
+    const chipSiteGenFinX = gridRightX - 16 * scaleX;
     const resetBtnW = 44 * scaleX;
     const resetBtnH = 48;
     // Bottom chrome row: version number, API status pill and reset button sit
@@ -1492,8 +1581,8 @@ class KirkHillWindScada extends HTMLElement {
     const resetBtnX = apiPillX + apiPillW + 12 * scaleX;
     const legendX = 86 * scaleX;
     const legendW = 500 * scaleX;
-    const xfmrTitleX = 630 * scaleX;
-    const xfmrRotateX = 630 * scaleX;
+    const xfmrTitleX = 730 * scaleX;
+    const xfmrRotateX = 730 * scaleX;
 
     return {
       H,
@@ -1546,6 +1635,8 @@ class KirkHillWindScada extends HTMLElement {
       legendW,
       xfmrTitleX,
       xfmrRotateX,
+      tCount,
+      tBottom: tTop + tCount * pitch,
     };
   }
 
@@ -1619,7 +1710,7 @@ class KirkHillWindScada extends HTMLElement {
   _buildBus(layout) {
     return `
       <g class="bus">
-        <rect x="${layout.busX}" y="30" width="${60 * layout.scaleX}" height="${layout.busY2 - 30}" rx="6"/>
+        <rect x="${layout.busX}" y="${layout.tTop}" width="${60 * layout.scaleX}" height="${layout.tBottom - layout.tTop}" rx="6"/>
       </g>
     `;
   }
@@ -1671,14 +1762,14 @@ _buildHeaderChips(layout) {
         <text class="chip-label" x="${layout.chipRightColX + 10 * layout.scaleX}" y="44" text-anchor="start">Active Turbines</text>
         <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 140 * layout.scaleX}" y="44" text-anchor="end">—</text>
 
-        <!-- Wind & Forecast panel (left of bus, right of turbines) -->
+        <!-- Wind & Forecast panel (above National Grid, same spacing as Owner→Site) -->
         <g class="wind-panel" data-wind="panel">
-          <rect x="${layout.chipWindX}" y="24" width="${layout.chipWindW}" height="82" rx="8"/>
-          <text class="wind-title" x="${layout.chipWindTitleX}" y="38">Wind & Forecast</text>
-          <text class="wind-label" x="${layout.chipWindTitleX}" y="58">Current Wind</text>
-          <text class="wind-value" data-chip="wind" x="${layout.chipWindValueX}" y="58" text-anchor="end">—</text>
-          <text class="wind-label" x="${layout.chipWindTitleX}" y="78">Forecast (1h)</text>
-          <text class="wind-value" data-chip="forecast" x="${layout.chipWindValueX}" y="78" text-anchor="end">—</text>
+          <rect x="${layout.gridRectX}" y="524" width="${layout.gridRectW}" height="60" rx="8"/>
+          <text class="wind-title" x="${layout.gridRectX + 10 * layout.scaleX}" y="540" text-anchor="start">Wind Speed</text>
+          <text class="wind-label" x="${layout.gridRectX + 10 * layout.scaleX}" y="558">Current Speed:</text>
+          <text class="wind-value" data-chip="wind" x="${layout.gridTitleX}" y="558" text-anchor="end">—</text>
+          <text class="wind-label" x="${layout.gridRectX + 10 * layout.scaleX}" y="576">Forecast:</text>
+          <text class="wind-value" data-chip="forecast" x="${layout.gridTitleX}" y="576" text-anchor="end">—</text>
         </g>
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
@@ -1746,9 +1837,9 @@ _buildHeaderChips(layout) {
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="470">All time</text>
           <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="470" text-anchor="end">—</text>
           <text class="site-gen-value site-gen-fin" data-site-gen="fin-alltime" x="${layout.chipSiteGenFinX}" y="470" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="490">Site Capacity Factor (%)</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="490">Capacity Factor (%)</text>
           <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="490" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="510">Site Power (MW)</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="510">Power (MW)</text>
           <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="510" text-anchor="end">—</text>
         </g>
       </g>
@@ -2005,7 +2096,7 @@ _buildHeaderChips(layout) {
       .status-pill.status-unavailable { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-unknown { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
       .t-status { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); text-anchor: middle; }
-      .t-power { font: 600 calc(var(--ha-font-size-xxxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-power { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-op { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-wind { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-detail { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }

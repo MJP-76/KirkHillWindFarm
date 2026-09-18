@@ -65,6 +65,12 @@ class KirkHillScopedEntity(KirkHillEntity):
             .get(timeframe, False)
         )
 
+    def _current_is_stale(self) -> bool:
+        """Return True when this scope's current data is showing last-known-good."""
+        return bool(
+            self.coordinator.data.get("current_stale", {}).get(self._scope, False)
+        )
+
     def _owner_share_pct(self) -> float | None:
         """Owner share percentage, computed live from the API's capacity_watts.
 

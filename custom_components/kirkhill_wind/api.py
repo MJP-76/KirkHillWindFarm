@@ -10,7 +10,11 @@ from typing import Any
 import aiohttp
 
 from .const import DEFAULT_BASE_URL, SCOPE_OWNER
-from .exceptions import KirkHillAuthError, KirkHillConnectionError
+from .exceptions import (
+    KirkHillApiError,
+    KirkHillAuthError,
+    KirkHillConnectionError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,12 +75,24 @@ class KirkHillApiClient:
             )
             raise KirkHillConnectionError("Request timed out") from exc
 
+    def _parse_data(self, body: Any) -> Any:
+        """Return the response payload, raising a typed error on a malformed envelope.
+
+        The server normally wraps results as ``{"data": {...}}``, but a 200-level
+        error envelope (``{"error": ...}``) would otherwise surface as a raw
+        ``KeyError`` and escape this client's exception hierarchy. Failing here
+        keeps every payload-format issue a catchable ``KirkHillApiError``.
+        """
+        if not isinstance(body, dict) or "data" not in body:
+            raise KirkHillApiError("Malformed response from Kirk Hill API: missing 'data' key")
+        return body["data"]
+
     async def get_current(
         self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER
     ) -> dict[str, Any]:
         """GET /api/v1/current?scope={scope}."""
         body = await self._get(session, "/api/v1/current", {"scope": scope})
-        return body["data"]
+        return self._parse_data(body)
 
     async def get_turbines(
         self,
@@ -90,7 +106,12 @@ class KirkHillApiClient:
             "/api/v1/turbines",
             {"scope": scope, "range": range_value},
         )
-        return body["data"]["turbines"]
+        turbines = self._parse_data(body).get("turbines")
+        if not isinstance(turbines, list):
+            raise KirkHillApiError(
+                "Malformed response from Kirk Hill API: missing 'turbines' list"
+            )
+        return turbines
 
     async def get_summary(
         self,
@@ -104,7 +125,7 @@ class KirkHillApiClient:
             "/api/v1/summary",
             {"scope": scope, "range": range_value},
         )
-        return body["data"]
+        return self._parse_data(body)
 
     async def get_wind_speed(
         self,
@@ -118,7 +139,7 @@ class KirkHillApiClient:
             "/api/v1/wind-speed",
             {"scope": scope, "range": range_value},
         )
-        return body["data"]
+        return self._parse_data(body)
 
     async def test(self, session: aiohttp.ClientSession) -> None:
         """Validate the API key by making a minimal current request."""
