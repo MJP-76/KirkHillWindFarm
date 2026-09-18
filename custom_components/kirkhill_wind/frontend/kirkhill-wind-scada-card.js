@@ -2279,7 +2279,7 @@ _buildHeaderChips(layout) {
         
         
         
-        --khscada-font-family: var(--primary-font-family, var(--font-family, Roboto, sans-serif));
+        --khscada-font-family: var(--ha-font-family, var(--primary-font-family, var(--font-family, Roboto, sans-serif)));
         --khscada-primary-color: var(--primary-text-color, var(--text-primary-color, #1c2026));
         --khscada-secondary-color: var(--secondary-text-color, #546e7a);
         --khscada-disabled-color: var(--disabled-text-color, var(--secondary-text-color, #9e9e9e));
