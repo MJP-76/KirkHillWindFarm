@@ -1,5 +1,27 @@
 # To-do list
 
+## Release roll-out — SCADA v4.9.0
+
+- [x] Redesign top chip row: Refresh | Version | API | Turbine Status | Wind Speed
+- [x] Version pill shows Running/Latest from HACS update entity with amber update-available state
+- [x] Turbine status pill: three-tier colors (green/amber/red) based on active count
+- [x] API status pill: flash red when down, three-tier ready for rate limiting
+- [x] Turbine status pop-out with per-turbine history (last 24h, expandable rows)
+- [x] API status pop-out with status history and durations
+- [x] Wind Speed chip moved to top row as single line
+- [x] All pills use tspan layout — no white space gaps at any width
+- [x] Legend removed (status colors self-explanatory)
+- [x] Card height locked to1300px to eliminate bottom white space
+- [x] Generation panels repositioned under pill line
+- [x] Grid box aligned with bus bar bottom
+- [x] Turbine map placeholder to prevent stale module crash
+- [ ] Deploy v4.9.0 to production
+- [ ] Restart Home Assistant to load new Python code
+- [ ] Verify v4.9.0 in production
+- [ ] Create GitHub release v4.9.0 (stable; latest for HACS)
+- [ ] Remove turbine map placeholder file after HA restart (stale module refreshed)
+- [ ] Rate limiting: expose `rate_limited` attribute on API status entity when API supports 429
+
 ## Release roll-out — SCADA v4.8.x
 
 - [x] Update README.md and info.md for the SCADA tab, panel view, and per-turbine sensors

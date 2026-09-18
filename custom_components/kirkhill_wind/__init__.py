@@ -54,7 +54,6 @@ _FRONTEND_URLS = "kirkhill_wind_frontend_urls"
 _ETHEX_DOMAIN = "ethex"
 
 _FRONTEND_CARDS: list[tuple[str, Path]] = [
-    ("/kirkhill_wind/turbine-map-card.js", _FRONTEND_DIR / "kirkhill-wind-turbine-map.js"),
     ("/kirkhill_wind/apexcharts-card.js", _FRONTEND_DIR / "apexcharts-card.js"),
     ("/kirkhill_wind/plotly-graph-card.js", _FRONTEND_DIR / "plotly-graph-card.js"),
     ("/kirkhill_wind/scada-card.js", _FRONTEND_DIR / "kirkhill-wind-scada-card.js"),

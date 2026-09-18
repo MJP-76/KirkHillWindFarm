@@ -2,6 +2,23 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.9.0
+- **SCADA card top chip row redesign.** The chip row is reordered and enhanced:
+  - Refresh button moved to first position.
+  - Version pill shows `Running: vX.Y.Z  Latest: vX.Y.Z` from the HACS update entity, with amber border when an update is available.
+  - API status pill now flashes red when offline (matching turbine fault behavior); three-tier system ready for rate limiting (green OK, amber rate-limited, red down) when the API exposes `rate_limited` attribute.
+  - Turbine status pill merged with alarm: shows `X Turbines Active` with three-tier colors (green all active, amber some offline, red all off + flash).
+  - Wind Speed chip moved to top row as a single line: `Wind Speed: Current X.X m/s  Forecast: X.X m/s`.
+  - All pills use `<tspan>` elements for label+value flow — no white space gaps at any card width.
+  - Legend strip removed (status colors are self-explanatory from per-turbine badges).
+- **Turbine status pop-out.** Click the turbine status pill to see per-turbine status with color dots, timestamps, and expandable history (last 24h, last 8 status changes per turbine).
+- **API status pop-out.** Click the API pill to see current status, since timestamp, entity ID, and recent history (last 10 status changes with durations).
+- **Card height tightened.** VIEWBOX height locked to 1300px (hMin=hMax) to eliminate bottom white space after legend removal.
+- **Generation panels repositioned.** Owner and Site panels sit directly under the pill line with consistent spacing.
+- **Grid box aligned.** National Grid box positioned at the bottom of the turbines section, aligned with bus bar end.
+- **Rate limiting groundwork.** Frontend wired for `rate_limited` attribute on API status entity — amber "API LIMITED" state activates when exposed. Issue draft ready for API developer requesting 429 + Retry-After responses.
+- **Turbine map placeholder.** Temporary empty `kirkhill-wind-turbine-map.js` file added to prevent stale Python module crash on integration reload (the module still references the deleted file until next HA restart).
+
 ## Version 4.8.81
 - **API resilience hardening.** A batch of changes from the fifth external
   review that make the integration keep working through API hiccups instead of

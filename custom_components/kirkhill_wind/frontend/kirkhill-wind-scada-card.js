@@ -12,10 +12,10 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.8.81";
+const KIRKHILL_WIND_SCADA_VERSION = "4.9.0";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 860, wMin: 900, wMax: 1800, hMin: 1052, hMax: 1600 };
+    return { w: 1240, h: 1300, wMin: 900, wMax: 1800, hMin: 1300, hMax: 1300 };
   }
 
   static get DESIGN_W() {
@@ -328,19 +328,7 @@ class KirkHillWindScada extends HTMLElement {
               ${this._buildTransformer(layout)}
               ${this._buildGrid(layout)}
               ${this._buildHeaderChips(layout)}
-              ${this._buildLegend(layout)}
             </g>
-            <g class="zoom-overlay" data-zoom-reset="btn">
-              <rect x="${layout.resetBtnX}" y="${layout.resetBtnY}" width="${44 * layout.scaleX}" height="48" rx="10"/>
-              <text x="${layout.resetBtnX + 22 * layout.scaleX}" y="${layout.resetBtnY + 32}" text-anchor="middle" style="font-size: calc(18px * var(--khscada-fs, 1))">⟲</text>
-            </g>
-
-            <!-- Chrome row above the legend: API status pill + version number -->
-            <g class="api-status" data-api="indicator">
-              <rect x="${layout.apiPillX}" y="${layout.chromeRowY - 12}" width="${layout.apiPillW}" height="24" rx="12"/>
-              <text class="api-status-text" data-api="text" x="${layout.apiPillX + layout.apiPillW / 2}" y="${layout.chromeRowY + 5}" text-anchor="middle">API</text>
-            </g>
-            <text class="card-version" x="${layout.versionX}" y="${layout.chromeRowY + 5}">v${KIRKHILL_WIND_SCADA_VERSION}</text>
           </svg>
         </div>
       </ha-card>
@@ -366,6 +354,10 @@ class KirkHillWindScada extends HTMLElement {
       if (owner) { this._openOwnerDetail(); return; }
       const windPanel = ev.target.closest("[data-wind='panel']");
       if (windPanel) { this._openWindDetail(); return; }
+      const apiPill = ev.target.closest("[data-api='indicator']");
+      if (apiPill) { this._openApiDetail(); return; }
+      const alarmPill = ev.target.closest("[data-alarm='indicator']");
+      if (alarmPill) { this._openTurbineStatus(); return; }
       const g = ev.target.closest("g.turbine");
       if (!g) return;
       this._openTurbine(g);
@@ -745,6 +737,244 @@ class KirkHillWindScada extends HTMLElement {
   _closeWindDetailModal() {
     if (this._windDetailModal) { this._windDetailModal.remove(); this._windDetailModal = null; }
     if (this._windBoundKeydown) { window.removeEventListener("keydown", this._windBoundKeydown); this._windBoundKeydown = null; }
+  }
+
+  _openApiDetail() { this._showApiDetailModal(); }
+
+  _showApiDetailModal() {
+    const config = this.config;
+    const hass = this._hass;
+    const entity = config.api_status_entity;
+    const state = entity ? this._str(entity) : "";
+    const isUp = state === "on";
+    const lastChanged = entity ? hass?.states?.[entity]?.last_changed : null;
+    const since = lastChanged ? new Date(lastChanged) : null;
+    const sinceStr = since ? `${String(since.getHours()).padStart(2,"0")}:${String(since.getMinutes()).padStart(2,"0")} on ${since.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}` : "\u2014";
+    const rateLimited = isUp && this._attr(entity, "rate_limited") === true;
+    const statusLabel = isUp ? (rateLimited ? "LIMITED" : "OK") : state === "unavailable" || state === "unknown" ? "UNKNOWN" : "DOWN";
+    const statusColor = isUp ? (rateLimited ? "var(--khscada-warn-color, #ffb300)" : "var(--khscada-success-color)") : "var(--khscada-error-color)";
+
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>API Status</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="td-section td-live">
+            <div class="td-status-badge" style="--badge-color: ${statusColor}">
+              <span class="td-status-dot"></span>${statusLabel}
+            </div>
+            <div class="td-kpi-grid">
+              <div class="td-kpi"><span class="td-kpi-label">Status</span><span class="td-kpi-value">${statusLabel}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Since</span><span class="td-kpi-value">${sinceStr}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Entity</span><span class="td-kpi-value" style="font-size:0.8em;word-break:break-all">${entity || "\u2014"}</span></div>
+            </div>
+          </div>
+          <div class="td-section">
+            <h3>Recent History</h3>
+            <div id="api-history-content"><span class="ts-hist-empty">Loading...</span></div>
+          </div>
+        </div>
+      </div>`;
+    this.shadowRoot.appendChild(modal);
+    this._apiDetailModal = modal;
+    modal.querySelectorAll("[data-close]").forEach(el =>
+      el.addEventListener("click", () => this._closeApiDetailModal()));
+    this._apiBoundKeydown = (e) => { if (e.key === "Escape") this._closeApiDetailModal(); };
+    window.addEventListener("keydown", this._apiBoundKeydown);
+
+    // Load history asynchronously
+    this._loadApiHistory(entity);
+  }
+
+  async _loadApiHistory(entityId) {
+    const container = this.shadowRoot.getElementById("api-history-content");
+    if (!container || !entityId) return;
+    const now = new Date();
+    const startISO = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
+    const endISO = now.toISOString();
+    try {
+      const path = `history/period/${startISO}?end_time=${endISO}&filter_entity_id=${encodeURIComponent(entityId)}&minimal_response&significant_changes_only`;
+      const data = await this._hass.callApi("GET", path);
+      const raw = Array.isArray(data) ? data[0] || [] : [];
+      if (raw.length === 0) { container.innerHTML = '<span class="ts-hist-empty">No history available</span>'; return; }
+      // Find status changes
+      const changes = [];
+      for (let i = 0; i < raw.length; i++) {
+        const st = raw[i].state;
+        let label, color;
+        if (st === "on") { label = "OK"; color = "var(--khscada-success-color)"; }
+        else if (st === "unavailable" || st === "unknown") { label = "UNKNOWN"; color = "var(--khscada-secondary-color)"; }
+        else { label = "DOWN"; color = "var(--khscada-error-color)"; }
+        if (i === 0 || label !== changes[changes.length - 1]?.label) {
+          changes.push({ label, color, time: new Date(raw[i].last_changed), state: st });
+        }
+      }
+      // Show last 10 changes, most recent first
+      const recent = changes.slice(-10).reverse();
+      let html = '<table class="ts-hist-table">';
+      html += '<tr><th>Status</th><th>Time</th><th>Duration</th></tr>';
+      for (let i = 0; i < recent.length; i++) {
+        const c = recent[i];
+        const hh = String(c.time.getHours()).padStart(2, "0");
+        const mm = String(c.time.getMinutes()).padStart(2, "0");
+        const dd = c.time.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        // Duration: time until next change (or now)
+        const nextTime = i > 0 ? recent[i - 1].time : now;
+        const durMs = nextTime.getTime() - c.time.getTime();
+        const durMin = Math.round(durMs / 60000);
+        const durStr = durMin < 1 ? "<1m" : durMin < 60 ? `${durMin}m` : `${Math.floor(durMin/60)}h${durMin%60 > 0 ? (durMin%60)+"m" : ""}`;
+        html += `<tr><td><span class="ts-dot" style="background:${c.color}"></span>${c.label}</td><td class="ts-since">${dd} ${hh}:${mm}</td><td class="ts-hist-detail">${durStr}</td></tr>`;
+      }
+      html += '</table>';
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `<span class="ts-hist-empty">Failed to load: ${err.message || "unknown"}</span>`;
+    }
+  }
+
+  _closeApiDetailModal() {
+    if (this._apiDetailModal) { this._apiDetailModal.remove(); this._apiDetailModal = null; }
+    if (this._apiBoundKeydown) { window.removeEventListener("keydown", this._apiBoundKeydown); this._apiBoundKeydown = null; }
+  }
+
+  _openTurbineStatus() { this._showTurbineStatusModal(); }
+
+  _showTurbineStatusModal() {
+    const config = this.config;
+    const hass = this._hass;
+    const active = this._num(config.active_entity);
+    const total = config.turbines.length;
+    const offline = active === null ? total : total - active;
+    let summaryColor;
+    if (offline === 0) { summaryColor = "var(--khscada-success-color)"; }
+    else if (offline >= total) { summaryColor = "var(--khscada-error-color)"; }
+    else { summaryColor = "var(--khscada-warn-color, #ffb300)"; }
+
+    let rows = "";
+    for (const t of config.turbines) {
+      const tid = t.id || `T${config.turbines.indexOf(t) + 1}`;
+      const stateText = this._str(t.state_entity);
+      const category = this._attr(t.state_entity, "status_category");
+      const status = this._statusFor(stateText, category);
+      const lastChanged = hass?.states?.[t.state_entity]?.last_changed;
+      const since = lastChanged ? new Date(lastChanged) : null;
+      const sinceStr = since ? `${String(since.getHours()).padStart(2,"0")}:${String(since.getMinutes()).padStart(2,"0")}` : "\u2014";
+      rows += `<tr class="ts-row" data-tid="${this._escape(tid)}" data-entity="${this._escape(t.state_entity)}" style="cursor:pointer"><td class="ts-tid">${this._escape(tid)}</td><td><span class="ts-dot" style="background:${status.color}"></span>${status.label}</td><td class="ts-since">${sinceStr}</td><td class="ts-state">${this._escape(stateText) || "\u2014"}</td></tr>`;
+      rows += `<tr class="ts-history" data-history="${this._escape(tid)}" style="display:none"><td colspan="4"><div class="ts-history-content" id="ts-hist-${this._escape(tid)}">Loading...</div></td></tr>`;
+    }
+
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content" style="max-width:680px">
+        <div class="modal-header">
+          <h2>Turbine Status</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="td-section td-live">
+            <div class="td-status-badge" style="--badge-color: ${summaryColor}">
+              <span class="td-status-dot"></span>${active !== null ? active : "\u2014"} of ${total} Active
+            </div>
+            <div class="td-kpi-grid">
+              <div class="td-kpi"><span class="td-kpi-label">Active</span><span class="td-kpi-value">${active !== null ? active : "\u2014"}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Offline</span><span class="td-kpi-value">${offline}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Total</span><span class="td-kpi-value">${total}</span></div>
+            </div>
+          </div>
+          <div class="td-section">
+            <h3>Per-Turbine <span style="font-weight:400;font-size:0.8em;color:var(--khscada-secondary-color)">\u2014 click a row for history</span></h3>
+            <table class="ts-table"><thead><tr><th>ID</th><th>Status</th><th>Since</th><th>Detail</th></tr></thead><tbody>${rows}</tbody></table>
+          </div>
+        </div>
+      </div>`;
+    this.shadowRoot.appendChild(modal);
+    this._turbineStatusModal = modal;
+    modal.querySelectorAll("[data-close]").forEach(el =>
+      el.addEventListener("click", () => this._closeTurbineStatusModal()));
+    this._tsBoundKeydown = (e) => { if (e.key === "Escape") this._closeTurbineStatusModal(); };
+    window.addEventListener("keydown", this._tsBoundKeydown);
+
+    // Bind row clicks to expand/collapse history
+    modal.querySelectorAll(".ts-row").forEach(row => {
+      row.addEventListener("click", () => {
+        const tid = row.getAttribute("data-tid");
+        const histRow = modal.querySelector(`tr[data-history="${tid}"]`);
+        if (!histRow) return;
+        const isOpen = histRow.style.display !== "none";
+        histRow.style.display = isOpen ? "none" : "";
+        if (!isOpen && histRow.querySelector(".ts-history-content")?.textContent === "Loading...") {
+          this._loadTurbineHistory(row.getAttribute("data-entity"), `ts-hist-${tid}`);
+        }
+      });
+    });
+
+    // Preload history for all turbines
+    this._preloadAllTurbineHistory(config.turbines, modal);
+  }
+
+  async _preloadAllTurbineHistory(turbines, modal) {
+    const now = new Date();
+    const start = new Date(now.getTime() - 24 * 3600 * 1000);
+    const startISO = start.toISOString();
+    const endISO = now.toISOString();
+    for (const t of turbines) {
+      const tid = t.id || `T${turbines.indexOf(t) + 1}`;
+      try {
+        await this._loadTurbineHistory(t.state_entity, `ts-hist-${tid}`, startISO, endISO);
+      } catch { /* ignore per-turbine failures */ }
+    }
+  }
+
+  async _loadTurbineHistory(entityId, containerId, startISO, endISO) {
+    const container = this.shadowRoot.getElementById(containerId);
+    if (!container) return;
+    if (!startISO) {
+      const now = new Date();
+      startISO = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
+      endISO = now.toISOString();
+    }
+    try {
+      const path = `history/period/${startISO}?end_time=${endISO}&filter_entity_id=${encodeURIComponent(entityId)}&minimal_response&significant_changes_only`;
+      const data = await this._hass.callApi("GET", path);
+      const raw = Array.isArray(data) ? data[0] || [] : [];
+      if (raw.length === 0) { container.innerHTML = '<span class="ts-hist-empty">No history available</span>'; return; }
+      // Find status changes: consecutive entries with different state values
+      const changes = [];
+      for (let i = 0; i < raw.length; i++) {
+        const st = raw[i].state;
+        const cat = raw[i].attributes?.status_category;
+        const label = this._statusFor(st, cat).label;
+        if (i === 0 || label !== changes[changes.length - 1]?.label) {
+          changes.push({ label, color: this._statusFor(st, cat).color, time: new Date(raw[i].last_changed), detail: st });
+        }
+      }
+      // Show last 8 changes, most recent first
+      const recent = changes.slice(-8).reverse();
+      let html = '<table class="ts-hist-table">';
+      html += '<tr><th>Status</th><th>Time</th><th>Detail</th></tr>';
+      for (const c of recent) {
+        const hh = String(c.time.getHours()).padStart(2, "0");
+        const mm = String(c.time.getMinutes()).padStart(2, "0");
+        const dd = c.time.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        html += `<tr><td><span class="ts-dot" style="background:${c.color}"></span>${c.label}</td><td class="ts-since">${dd} ${hh}:${mm}</td><td class="ts-hist-detail">${this._escape(c.detail) || "\u2014"}</td></tr>`;
+      }
+      html += '</table>';
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `<span class="ts-hist-empty">Failed to load: ${err.message || "unknown"}</span>`;
+    }
+  }
+
+  _closeTurbineStatusModal() {
+    if (this._turbineStatusModal) { this._turbineStatusModal.remove(); this._turbineStatusModal = null; }
+    if (this._tsBoundKeydown) { window.removeEventListener("keydown", this._tsBoundKeydown); this._tsBoundKeydown = null; }
   }
 
   async _initOwnerCharts() {
@@ -1502,11 +1732,6 @@ class KirkHillWindScada extends HTMLElement {
     const tCount = this.config.turbines.length;
     const legendY = H - 150;
 
-    // Transformer label + National Grid live at the bottom of the card; the bus
-    // runs down to them, so the flow reads turbines -> bus -> transformer ->
-    // grid as a vertical single-line diagram on any window size.
-    const gridY = H - 190;
-
     // Staircase turbine layout: T1 left, T2 right with its top level with T1's
     // bottom, T3 left level with T2's bottom, and so on. Every turbine's feed
     // line runs straight to the bus unobstructed, and the block is spread to
@@ -1524,9 +1749,13 @@ class KirkHillWindScada extends HTMLElement {
     const gapV = 10 * collapse;
     const bh = Math.max(
       88,
-      Math.min(120, Math.floor((gridY - tTop - 30 - (tCount - 1) * gapV) / Math.max(1, tCount)))
+      Math.min(120, Math.floor((H - 190 - tTop - 30 - (tCount - 1) * gapV) / Math.max(1, tCount)))
     );
     const pitch = bh + gapV;
+    const tBottom = tTop + tCount * pitch;
+
+    // Grid box sits at the bottom of the turbines section, not at the card bottom.
+    const gridY = tBottom;
 
     // Scale horizontal positions from design width (1240) to current viewBox width.
     // The two columns start with a small gap (40) that shrinks to nothing, then the
@@ -1753,106 +1982,100 @@ class KirkHillWindScada extends HTMLElement {
 _buildHeaderChips(layout) {
     return `
       <g class="chips">
-        <!-- Left side: Alarm + Active Turbines (above turbine list) -->
-        <g class="alarm" data-alarm="indicator">
-          <rect x="${layout.chipLeftColX}" y="24" width="${112 * layout.scaleX}" height="30" rx="15"/>
-          <text class="alarm-text" data-alarm="text" x="${layout.chipLeftColX + 56 * layout.scaleX}" y="44" text-anchor="middle">OK</text>
+        <!-- Top chip row: Refresh | Version | API | Alarm | Wind Speed -->
+        <g class="zoom-overlay" data-zoom-reset="btn">
+          <rect x="${layout.chipLeftColX}" y="24" width="${30 * layout.scaleX}" height="30" rx="8"/>
+          <text x="${layout.chipLeftColX + 15 * layout.scaleX}" y="44" text-anchor="middle" style="font-size: calc(18px * var(--khscada-fs, 1))">⟲</text>
         </g>
-        <rect x="${layout.chipRightColX}" y="24" width="${150 * layout.scaleX}" height="30" rx="15"/>
-        <text class="chip-label" x="${layout.chipRightColX + 10 * layout.scaleX}" y="44" text-anchor="start">Active Turbines</text>
-        <text class="chip-value" data-chip="active" x="${layout.chipRightColX + 140 * layout.scaleX}" y="44" text-anchor="end">—</text>
-
-        <!-- Wind & Forecast panel (above National Grid, same spacing as Owner→Site) -->
-        <g class="wind-panel" data-wind="panel">
-          <rect x="${layout.gridRectX}" y="524" width="${layout.gridRectW}" height="60" rx="8"/>
-          <text class="wind-title" x="${layout.gridRectX + 10 * layout.scaleX}" y="540" text-anchor="start">Wind Speed</text>
-          <text class="wind-label" x="${layout.gridRectX + 10 * layout.scaleX}" y="558">Current Speed:</text>
-          <text class="wind-value" data-chip="wind" x="${layout.gridTitleX}" y="558" text-anchor="end">—</text>
-          <text class="wind-label" x="${layout.gridRectX + 10 * layout.scaleX}" y="576">Forecast:</text>
-          <text class="wind-value" data-chip="forecast" x="${layout.gridTitleX}" y="576" text-anchor="end">—</text>
+        <g class="version-pill" data-version="indicator">
+          <rect x="${layout.chipLeftColX + 40 * layout.scaleX}" y="24" width="${150 * layout.scaleX}" height="30" rx="15"/>
+          <text class="version-text" data-version="text" x="${layout.chipLeftColX + 115 * layout.scaleX}" y="44" text-anchor="middle">v${KIRKHILL_WIND_SCADA_VERSION}</text>
+        </g>
+        <g class="api-status" data-api="indicator">
+          <rect x="${layout.chipLeftColX + 200 * layout.scaleX}" y="24" width="${68 * layout.scaleX}" height="30" rx="15"/>
+          <text class="api-status-text" data-api="text" x="${layout.chipLeftColX + 234 * layout.scaleX}" y="44" text-anchor="middle">API</text>
+        </g>
+        <g class="alarm" data-alarm="indicator">
+          <rect x="${layout.chipLeftColX + 278 * layout.scaleX}" y="24" width="${110 * layout.scaleX}" height="30" rx="15"/>
+          <text class="alarm-text" data-alarm="text" data-chip="active" x="${layout.chipLeftColX + 333 * layout.scaleX}" y="44" text-anchor="middle">—</text>
+        </g>
+        <g data-wind="panel">
+          <rect x="${layout.chipLeftColX + 398 * layout.scaleX}" y="24" width="${240 * layout.scaleX}" height="30" rx="15"/>
+          <text x="${layout.chipLeftColX + 408 * layout.scaleX}" y="44"><tspan class="chip-label">Wind Speed: Current </tspan><tspan class="chip-value" data-chip="wind">—</tspan><tspan class="chip-label"> Forecast: </tspan><tspan class="chip-value" data-chip="forecast">—</tspan></text>
         </g>
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
-        <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="26">Generation, Capacity & Earnings</text>
+        <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation, Capacity & Earnings</text>
         <g class="user-gen" data-user-gen="panel">
-          <rect x="${layout.chipUserGenX}" y="44" width="${layout.chipUserGenW}" height="232" rx="8"/>
-          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="66">Owner</text>
-          <text class="user-gen-colh" x="${layout.chipUserGenTitleX}" y="88">Timeframe</text>
-          <text class="user-gen-colh" x="${layout.chipUserGenValueX}" y="88" text-anchor="end">Generation</text>
-          <text class="user-gen-colh" x="${layout.chipUserGenFinX}" y="88" text-anchor="end">Value (£)</text>
+          <rect x="${layout.chipUserGenX}" y="76" width="${layout.chipUserGenW}" height="232" rx="8"/>
+          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="98">Owner</text>
+          <text class="user-gen-colh" x="${layout.chipUserGenTitleX}" y="120">Timeframe</text>
+          <text class="user-gen-colh" x="${layout.chipUserGenValueX}" y="120" text-anchor="end">Generation</text>
+          <text class="user-gen-colh" x="${layout.chipUserGenFinX}" y="120" text-anchor="end">Value (£)</text>
           <!-- Generation timeframes -->
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="110">Yesterday</text>
-          <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="110" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-yesterday" x="${layout.chipUserGenFinX}" y="110" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="130">Today</text>
-          <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="130" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-today" x="${layout.chipUserGenFinX}" y="130" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="150">Week</text>
-          <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="150" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-week" x="${layout.chipUserGenFinX}" y="150" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="170">Month</text>
-          <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="170" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-month" x="${layout.chipUserGenFinX}" y="170" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="190">YTD</text>
-          <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="190" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-ytd" x="${layout.chipUserGenFinX}" y="190" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="210">Year</text>
-          <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="210" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-year" x="${layout.chipUserGenFinX}" y="210" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="230">All time</text>
-          <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="230" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-alltime" x="${layout.chipUserGenFinX}" y="230" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="250">Your Share (W)</text>
-          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="250" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="270">Share (‱)</text>
-          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="270" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="142">Yesterday</text>
+          <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="142" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-yesterday" x="${layout.chipUserGenFinX}" y="142" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="162">Today</text>
+          <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="162" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-today" x="${layout.chipUserGenFinX}" y="162" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="182">Week</text>
+          <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="182" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-week" x="${layout.chipUserGenFinX}" y="182" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="202">Month</text>
+          <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="202" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-month" x="${layout.chipUserGenFinX}" y="202" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="222">YTD</text>
+          <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="222" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-ytd" x="${layout.chipUserGenFinX}" y="222" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="242">Year</text>
+          <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="242" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-year" x="${layout.chipUserGenFinX}" y="242" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="262">All time</text>
+          <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="262" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-alltime" x="${layout.chipUserGenFinX}" y="262" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="282">Your Share (W)</text>
+          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="282" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="302">Share (‱)</text>
+          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="302" text-anchor="end">—</text>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
         <g class="site-gen" data-site-gen="panel">
-          <rect x="${layout.chipSiteGenX}" y="284" width="${layout.chipSiteGenW}" height="232" rx="8"/>
-          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="306">Site</text>
-          <text class="site-gen-colh" x="${layout.chipSiteGenTitleX}" y="328">Timeframe</text>
-          <text class="site-gen-colh" x="${layout.chipSiteGenValueX}" y="328" text-anchor="end">Generation</text>
-          <text class="site-gen-colh" x="${layout.chipSiteGenFinX}" y="328" text-anchor="end">Value (£)</text>
+          <rect x="${layout.chipSiteGenX}" y="332" width="${layout.chipSiteGenW}" height="232" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="354">Site</text>
+          <text class="site-gen-colh" x="${layout.chipSiteGenTitleX}" y="376">Timeframe</text>
+          <text class="site-gen-colh" x="${layout.chipSiteGenValueX}" y="376" text-anchor="end">Generation</text>
+          <text class="site-gen-colh" x="${layout.chipSiteGenFinX}" y="376" text-anchor="end">Value (£)</text>
           <!-- Site timeframes -->
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="350">Yesterday</text>
-          <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="350" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-yesterday" x="${layout.chipSiteGenFinX}" y="350" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="370">Today</text>
-          <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="370" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-today" x="${layout.chipSiteGenFinX}" y="370" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="390">Week</text>
-          <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="390" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-week" x="${layout.chipSiteGenFinX}" y="390" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="410">Month</text>
-          <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="410" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-month" x="${layout.chipSiteGenFinX}" y="410" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="430">YTD</text>
-          <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="430" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-ytd" x="${layout.chipSiteGenFinX}" y="430" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="450">Year</text>
-          <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="450" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-year" x="${layout.chipSiteGenFinX}" y="450" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="470">All time</text>
-          <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="470" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-alltime" x="${layout.chipSiteGenFinX}" y="470" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="490">Capacity Factor (%)</text>
-          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="490" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="510">Power (MW)</text>
-          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="510" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="398">Yesterday</text>
+          <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="398" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-yesterday" x="${layout.chipSiteGenFinX}" y="398" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="418">Today</text>
+          <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="418" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-today" x="${layout.chipSiteGenFinX}" y="418" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="438">Week</text>
+          <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="438" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-week" x="${layout.chipSiteGenFinX}" y="438" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="458">Month</text>
+          <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="458" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-month" x="${layout.chipSiteGenFinX}" y="458" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="478">YTD</text>
+          <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="478" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-ytd" x="${layout.chipSiteGenFinX}" y="478" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="498">Year</text>
+          <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="498" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-year" x="${layout.chipSiteGenFinX}" y="498" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="518">All time</text>
+          <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="518" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-alltime" x="${layout.chipSiteGenFinX}" y="518" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="538">Capacity Factor (%)</text>
+          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="538" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="558">Power (MW)</text>
+          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="558" text-anchor="end">—</text>
         </g>
       </g>
     `;
-  }
-
-  _buildLegend(layout) {
-    const entries = Object.entries(KirkHillWindScada.STATUS)
-      .map(([key, v]) => `<span class="lg-item"><span class="lg-dot" style="background:${v.color}"></span>${v.label}</span>`)
-      .join("");
-    return `<foreignObject x="${layout.legendX}" y="${layout.legendY}" width="${layout.legendW}" height="120">
-      <div xmlns="http://www.w3.org/1999/xhtml" class="legend">${entries}</div>
-    </foreignObject>`;
   }
 
   // ---- live update ------------------------------------------------------
@@ -1895,7 +2118,7 @@ _buildHeaderChips(layout) {
     const wind = this._num(config.wind_speed_entity);
     this._setText(root, '[data-chip="wind"]', wind === null ? "—" : `${this._fmt(wind)} m/s`);
     const active = this._num(config.active_entity);
-    this._setText(root, '[data-chip="active"]', active === null ? "—" : `${this._fmt(active, 0)} of ${config.turbines.length}`);
+    this._setText(root, '[data-chip="active"]', active === null ? "—" : `${this._fmt(active, 0)} Turbines Active`);
     const forecast = this._num(config.wind_forecast_entity);
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
 
@@ -1944,23 +2167,28 @@ _buildHeaderChips(layout) {
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
 
-    // Alarm indicator (always visible: OK or flashing N FAULTS)
-    const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
-    if (alarmIndicator) {
-      const faultCount = config.turbines.reduce((count, t) => {
-        const category = this._attr(t.state_entity, "status_category");
-        return count + (category === "fault_thermal" || category === "fault_electrical" ? 1 : 0);
-      }, 0);
-      const inFault = faultCount > 0;
-      alarmIndicator.classList.toggle("fault", inFault);
-      this._setText(
-        root,
-        '[data-alarm="text"]',
-        inFault ? `${faultCount} FAULT${faultCount === 1 ? "" : "S"}` : "OK"
-      );
+    // Version pill: Running vs Latest, green up-to-date, amber update available
+    const versionPill = root.querySelector('[data-version="indicator"]');
+    if (versionPill) {
+      const updateEntity = "update.kirk_hill_wind_farm_update";
+      const installed = this._attr(updateEntity, "installed_version") || `v${KIRKHILL_WIND_SCADA_VERSION}`;
+      const latest = this._attr(updateEntity, "latest_version") || installed;
+      const updateAvail = installed !== latest;
+      versionPill.classList.toggle("update-available", updateAvail);
+      this._setText(root, '[data-version="text"]', `Running: ${installed}  Latest: ${latest}`);
     }
 
-    // API connectivity pill: green when the API last responded, red when not.
+    // Turbine status pill: green all active, amber some offline, red all off
+    const alarmIndicator = root.querySelector('[data-alarm="indicator"]');
+    if (alarmIndicator) {
+      const active = this._num(config.active_entity);
+      const total = config.turbines.length;
+      const offline = active === null ? total : total - active;
+      alarmIndicator.classList.toggle("fault", offline >= total);
+      alarmIndicator.classList.toggle("warn", offline > 0 && offline < total);
+    }
+
+    // API connectivity pill: green OK, amber rate-limited, red down (flashes)
     const apiIndicator = root.querySelector('[data-api="indicator"]');
     if (apiIndicator) {
       const apiEntity = config.api_status_entity;
@@ -1968,8 +2196,14 @@ _buildHeaderChips(layout) {
       const apiUp = apiState === "on";
       const apiUnavailable = !apiEntity || apiState === "" || apiState === "unavailable" || apiState === "unknown";
       const inDown = !apiUnavailable && !apiUp;
+      const rateLimited = apiUp && this._attr(apiEntity, "rate_limited") === true;
       apiIndicator.classList.toggle("api-down", inDown);
-      this._setText(root, '[data-api="text"]', apiUp ? "API OK" : inDown ? "API DOWN" : "API —");
+      apiIndicator.classList.toggle("api-rate-limited", rateLimited);
+      this._setText(
+        root,
+        '[data-api="text"]',
+        apiUp ? (rateLimited ? "API LIMITED" : "API OK") : inDown ? "API DOWN" : "API —"
+      );
     }
 
     // Turbines
@@ -2058,6 +2292,7 @@ _buildHeaderChips(layout) {
         --khscada-bus-bg: color-mix(in srgb, var(--primary-color, #0284c7) 8%, transparent);
         --khscada-grid-bg: color-mix(in srgb, var(--success-color, #16a34a) 8%, transparent);
         --khscada-alarm-ok-bg: color-mix(in srgb, var(--success-color, #4caf50) 10%, transparent);
+        --khscada-alarm-warn-bg: color-mix(in srgb, var(--warning-color, #ffb300) 10%, transparent);
         --khscada-alarm-fault-bg: color-mix(in srgb, var(--error-color, #ef5350) 10%, transparent);
         --khscada-divider: var(--divider-color, var(--ha-divider-color, #cbd5e1));
       }
@@ -2153,6 +2388,8 @@ _buildHeaderChips(layout) {
       .alarm.fault rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
       .alarm.fault .alarm-text { fill: var(--khscada-error-color); }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
+      .alarm.warn rect { fill: var(--khscada-alarm-warn-bg); stroke: var(--khscada-warn-color, #ffb300); stroke-width: 2; }
+      .alarm.warn .alarm-text { fill: var(--khscada-warn-color, #ffb300); }
       @keyframes khscada-alarm-flash {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.15; }
@@ -2163,14 +2400,15 @@ _buildHeaderChips(layout) {
       .api-status-text { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .api-status.api-down rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
       .api-status.api-down .api-status-text { fill: var(--khscada-error-color); }
-
-      /* Legend */
-      .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; align-content: center; height: 100%; width: 100%; }
-      .lg-item { color: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+      .api-status.api-down { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
+      .api-status.api-rate-limited rect { fill: var(--khscada-alarm-warn-bg); stroke: var(--khscada-warn-color, #ffb300); stroke-width: 2; }
+      .api-status.api-rate-limited .api-status-text { fill: var(--khscada-warn-color, #ffb300); }
 
       /* Version badge */
-      .card-version { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); opacity: 0.95; }
+      .version-pill rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
+      .version-text { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .version-pill.update-available rect { fill: var(--khscada-alarm-warn-bg); stroke: var(--khscada-warn-color, #ffb300); stroke-width: 2; }
+      .version-pill.update-available .version-text { fill: var(--khscada-warn-color, #ffb300); }
 
       .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
 
@@ -2215,6 +2453,24 @@ _buildHeaderChips(layout) {
       .td-kpi-value { font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); color: var(--khscada-primary-color); }
       .td-kpi-unit { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
       .td-state-line { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); padding: 4px 0; }
+
+      /* Turbine status table */
+      .ts-table { width: 100%; border-collapse: collapse; font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
+      .ts-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--khscada-divider); color: var(--khscada-secondary-color); font-weight: 600; }
+      .ts-table td { padding: 6px 8px; border-bottom: 1px solid var(--khscada-divider); color: var(--khscada-primary-color); vertical-align: middle; }
+      .ts-tid { font-weight: 600; white-space: nowrap; }
+      .ts-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+      .ts-since { white-space: nowrap; color: var(--khscada-secondary-color); }
+      .ts-state { color: var(--khscada-secondary-color); font-size: 0.9em; }
+
+      /* Turbine history sub-table */
+      .ts-history td { padding: 4px 8px; background: color-mix(in srgb, var(--khscada-card-bg) 50%, transparent); }
+      .ts-history-content { padding: 4px 0; }
+      .ts-hist-table { width: 100%; border-collapse: collapse; font: var(--ha-font-size-small, 11px) var(--khscada-font-family); }
+      .ts-hist-table th { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--khscada-divider); color: var(--khscada-secondary-color); font-weight: 600; font-size: 0.9em; }
+      .ts-hist-table td { padding: 3px 6px; border-bottom: 1px solid color-mix(in srgb, var(--khscada-divider) 50%, transparent); color: var(--khscada-primary-color); }
+      .ts-hist-detail { color: var(--khscada-secondary-color); font-size: 0.9em; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .ts-hist-empty { color: var(--khscada-secondary-color); font-style: italic; font-size: 0.9em; }
 
       /* Spec grid */
       .td-spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
