@@ -15,7 +15,7 @@
 const KIRKHILL_WIND_SCADA_VERSION = "4.9.0";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 1300, wMin: 900, wMax: 1800, hMin: 1300, hMax: 1300 };
+    return { w: 1240, h: 1620, wMin: 900, wMax: 1800, hMin: 1620, hMax: 1620 };
   }
 
   static get DESIGN_W() {
@@ -1748,8 +1748,8 @@ class KirkHillWindScada extends HTMLElement {
     );
     const gapV = 10 * collapse;
     const bh = Math.max(
-      88,
-      Math.min(120, Math.floor((H - 190 - tTop - 30 - (tCount - 1) * gapV) / Math.max(1, tCount)))
+      110,
+      Math.min(130, Math.floor((H - 190 - tTop - 30 - (tCount - 1) * gapV) / Math.max(1, tCount)))
     );
     const pitch = bh + gapV;
     const tBottom = tTop + tCount * pitch;
@@ -1917,11 +1917,16 @@ class KirkHillWindScada extends HTMLElement {
           <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 18}">${num}</text>
           <rect class="status-pill" x="${x + 88 * layout.scaleX}" y="${top + 5}" width="${100 * layout.scaleX}" height="20" rx="10"/>
           <text class="t-status" x="${x + 138 * layout.scaleX}" y="${top + 19}"></text>
-          <text class="t-power" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 50}">—</text>
-          <text class="t-op" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + layout.bh - 50}" text-anchor="end">—</text>
-          <text class="t-wind" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 34}">—</text>
-          <text class="t-detail" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 21}"></text>
-          <text class="t-last" x="${x + 14 * layout.scaleX}" y="${top + layout.bh - 10}"></text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 38}">Generation</text>
+          <text class="t-power" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 38}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 54}">Capacity</text>
+          <text class="t-op" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 54}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 70}">Wind</text>
+          <text class="t-wind" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 70}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 86}">Rotor</text>
+          <text class="t-detail" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 86}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 102}">Since</text>
+          <text class="t-last" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 102}" text-anchor="end">—</text>
         </g>
       `;
       linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="${layout.feedEndX}" y2="${cy}"/>`;
@@ -2279,7 +2284,7 @@ _buildHeaderChips(layout) {
         
         
         
-        --khscada-font-family: var(--ha-font-family, var(--primary-font-family, var(--font-family, Roboto, sans-serif)));
+        --khscada-font-family: var(--primary-font-family, var(--font-family, Roboto, sans-serif));
         --khscada-primary-color: var(--primary-text-color, var(--text-primary-color, #1c2026));
         --khscada-secondary-color: var(--secondary-text-color, #546e7a);
         --khscada-disabled-color: var(--disabled-text-color, var(--secondary-text-color, #9e9e9e));
@@ -2332,6 +2337,7 @@ _buildHeaderChips(layout) {
       .status-pill.status-unknown { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
       .t-status { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); text-anchor: middle; }
       .t-power { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-op { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-wind { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .t-detail { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }

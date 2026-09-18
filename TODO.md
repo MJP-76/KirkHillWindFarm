@@ -21,6 +21,8 @@
 - [ ] Create GitHub release v4.9.0 (stable; latest for HACS)
 - [ ] Remove turbine map placeholder file after HA restart (stale module refreshed)
 - [ ] Rate limiting: expose `rate_limited` attribute on API status entity when API supports 429
+- [ ] Font sizing: investigate why fonts render smaller than expected on some instances (theme variables vs fallbacks, --khscada-fs scaling interaction)
+- [ ] Dead white space: eliminate bottom white space below generation panels / grid box — panels should fill the card height dynamically
 
 ## Release roll-out — SCADA v4.8.x
 
