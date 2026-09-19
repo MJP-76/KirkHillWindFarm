@@ -633,26 +633,28 @@ class KirkHillWindScada extends HTMLElement {
 
     const genData = toSeries(history.genSite);
     if (genData.length) {
-      // Filter out daily reset points (value drops significantly = counter reset)
-      const filteredGen = [];
-      let lastKept = null;
-      for (let i = 0; i < genData.length; i++) {
-        const v = genData[i][1];
-        if (lastKept === null || v >= lastKept * 0.5) {
-          filteredGen.push(genData[i]);
-          lastKept = v;
-        }
-      }
-      if (filteredGen.length) {
+      const isDaily = this._isDailyData(history.genSite);
+      if (isDaily) {
+        // Daily statistics from API (max per day) — use bar chart
+        charts.gen = new ApexCharts(ts("#site-chart-gen"), this._apexOpts({
+          type: "bar", height: 250,
+          series: [{ name: "Gen (kWh)", data: genData }],
+          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          colors: ["#059669"],
+          plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
+          tooltip: { x: { format: "dd MMM" } },
+        }));
+      } else {
+        // Hourly/realtime data — use step line
         charts.gen = new ApexCharts(ts("#site-chart-gen"), this._apexOpts({
           type: "line", height: 250,
-          series: [{ name: "Gen (kWh)", data: filteredGen }],
+          series: [{ name: "Gen (kWh)", data: genData }],
           xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
           stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
           tooltip: { x: { format: "HH:mm" } },
         }));
-        charts.gen.render();
       }
+      charts.gen.render();
     }
 
     this._siteDetailCharts = charts;
@@ -757,26 +759,28 @@ class KirkHillWindScada extends HTMLElement {
 
     const energyData = toSeries(history.energy);
     if (energyData.length) {
-      // Filter out daily reset points (value drops significantly = counter reset)
-      const filteredEnergy = [];
-      let lastKept = null;
-      for (let i = 0; i < energyData.length; i++) {
-        const v = energyData[i][1];
-        if (lastKept === null || v >= lastKept * 0.5) {
-          filteredEnergy.push(energyData[i]);
-          lastKept = v;
-        }
-      }
-      if (filteredEnergy.length) {
+      const isDaily = this._isDailyData(history.energy);
+      if (isDaily) {
+        // Daily statistics from API (max per day) — use bar chart
+        charts.energy = new ApexCharts(ts("#grid-chart-energy"), this._apexOpts({
+          type: "bar", height: 250,
+          series: [{ name: "Energy To Grid (kWh)", data: energyData }],
+          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          colors: ["var(--khscada-power-color)"],
+          plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
+          tooltip: { x: { format: "dd MMM" } },
+        }));
+      } else {
+        // Hourly/realtime data — use step line
         charts.energy = new ApexCharts(ts("#grid-chart-energy"), this._apexOpts({
           type: "line", height: 250,
-          series: [{ name: "Energy To Grid (kWh)", data: filteredEnergy }],
+          series: [{ name: "Energy To Grid (kWh)", data: energyData }],
           xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
           stroke: { curve: "stepline", width: 2 }, colors: ["var(--khscada-power-color)"],
           tooltip: { x: { format: "HH:mm" } },
         }));
-        charts.energy.render();
       }
+      charts.energy.render();
     }
 
     this._gridDetailCharts = charts;
@@ -1158,26 +1162,28 @@ class KirkHillWindScada extends HTMLElement {
 
     const genData = toSeries(history.genOwner);
     if (genData.length) {
-      // Filter out daily reset points (value drops significantly = counter reset)
-      const filteredGen = [];
-      let lastKept = null;
-      for (let i = 0; i < genData.length; i++) {
-        const v = genData[i][1];
-        if (lastKept === null || v >= lastKept * 0.5) {
-          filteredGen.push(genData[i]);
-          lastKept = v;
-        }
-      }
-      if (filteredGen.length) {
+      const isDaily = this._isDailyData(history.genOwner);
+      if (isDaily) {
+        // Daily statistics from API (max per day) — use bar chart
+        charts.gen = new ApexCharts(ts("#owner-chart-gen"), this._apexOpts({
+          type: "bar", height: 250,
+          series: [{ name: "Gen (kWh)", data: genData }],
+          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          colors: ["#059669"],
+          plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
+          tooltip: { x: { format: "dd MMM" } },
+        }));
+      } else {
+        // Hourly/realtime data — use step line
         charts.gen = new ApexCharts(ts("#owner-chart-gen"), this._apexOpts({
           type: "line", height: 250,
-          series: [{ name: "Gen (kWh)", data: filteredGen }],
+          series: [{ name: "Gen (kWh)", data: genData }],
           xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
           stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
           tooltip: { x: { format: "HH:mm" } },
         }));
-        charts.gen.render();
       }
+      charts.gen.render();
     }
 
     this._ownerDetailCharts = charts;
@@ -1247,6 +1253,13 @@ class KirkHillWindScada extends HTMLElement {
     const results = await Promise.all(Object.entries(entities).map(async ([key, entityId]) => {
       if (!entityId) return [key, []];
       if (long && key !== "state") {
+        // For energy entities on long timeframes, use daily statistics (max per day)
+        // to avoid the daily counter reset issue
+        const isEnergy = key === "energy" || key === "generation" || key === "genOwner" || key === "genSite";
+        if (isEnergy) {
+          const dailyStats = await this._fetchDailyStatistics(entityId, start, end);
+          if (dailyStats && dailyStats.length) return [key, dailyStats];
+        }
         const stats = await this._fetchStatistics(entityId, start, end);
         if (stats && stats.length) return [key, this._downsample(stats, maxPts)];
       }
@@ -1283,6 +1296,41 @@ class KirkHillWindScada extends HTMLElement {
     } catch {
       return null;
     }
+  }
+
+  async _fetchDailyStatistics(entityId, start, end) {
+    const conn = this._hass?.connection;
+    if (!conn?.sendMessagePromise) return null;
+    try {
+      const stats = await conn.sendMessagePromise({
+        type: "recorder/statistics_during_period",
+        start_time: start,
+        end_time: end,
+        statistic_ids: [entityId],
+        period: "day",
+        types: ["max"],
+      });
+      const rows = stats?.[entityId];
+      if (!Array.isArray(rows) || !rows.length) return null;
+      return rows
+        .map(r => ({ last_changed: r.start, state: r.max }))
+        .filter(p => p.state != null && p.state !== "");
+    } catch {
+      return null;
+    }
+  }
+
+  _isDailyData(data) {
+    if (!data || data.length < 2) return false;
+    // Check if data points are spaced ~24 hours apart (daily statistics)
+    const intervals = [];
+    for (let i = 1; i < Math.min(data.length, 5); i++) {
+      const dt = new Date(data[i].last_changed).getTime() - new Date(data[i-1].last_changed).getTime();
+      intervals.push(dt);
+    }
+    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const dayMs = 24 * 3600 * 1000;
+    return avgInterval > dayMs * 0.8 && avgInterval < dayMs * 1.2;
   }
 
   _renderCharts(turbineId, history, startEpoch, endEpoch) {
@@ -1396,27 +1444,30 @@ class KirkHillWindScada extends HTMLElement {
       .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
       .filter(d => d[1] !== null);
     if (genData.length) {
-      // Filter out daily reset points (value drops significantly = counter reset)
-      const filteredGen = [];
-      let lastKept = null;
-      for (let i = 0; i < genData.length; i++) {
-        const v = genData[i][1];
-        if (lastKept === null || v >= lastKept * 0.5) {
-          filteredGen.push(genData[i]);
-          lastKept = v;
-        }
-      }
-      if (filteredGen.length) {
+      const isDaily = this._isDailyData(history.generation);
+      if (isDaily) {
+        // Daily statistics from API (max per day) — use bar chart
+        charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), this._apexOpts({
+          type: "bar", height: 250,
+          series: [{ name: "Generation (kWh)", data: genData }],
+          xaxis: { type: "datetime" },
+          yaxis: { title: { text: "kWh" } },
+          colors: ["#059669"],
+          plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
+          tooltip: { x: { format: "dd MMM" } },
+        }));
+      } else {
+        // Hourly/realtime data — use step line
         charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), this._apexOpts({
           type: "line", height: 250,
-          series: [{ name: "Generation (kWh)", data: filteredGen }],
+          series: [{ name: "Generation (kWh)", data: genData }],
           xaxis: { type: "datetime" },
           yaxis: { title: { text: "kWh" } },
           stroke: { curve: "stepline", width: 2 },
           colors: ["#059669"],
         }));
-        charts.generation.render();
       }
+      charts.generation.render();
     }
 
     // Turbine activity: a swimlane state timeline. One labelled row per status
