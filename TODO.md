@@ -1,5 +1,20 @@
 # To-do list
 
+## Release roll-out — SCADA v4.10.0
+
+- [x] National Grid detail modal with historical data and timeframe selector
+- [x] Grid labels renamed: Export → Current Export, To Grid Today → Today To Grid
+- [x] Consistent colour scheme: amber=power/energy, cyan=wind, green=financial, primary=titles
+- [x] Turbine box layout: capacity first, status pill spacing fixed
+- [x] Font styling consistency with Owner/Site cards
+- [x] Energy chart reset filtering (no trailing 0s on 1m/6m/1y)
+- [x] Font scaling fixes (VIEWBOX hMin/hMax, fs capped)
+- [x] Dashboard fills screen (ha-card height restored)
+- [ ] Deploy v4.10.0 to production
+- [ ] Restart Home Assistant to load new Python code
+- [ ] Verify v4.10.0 in production
+- [ ] Create GitHub release v4.10.0 (stable; latest for HACS)
+
 ## Release roll-out — SCADA v4.9.0
 
 - [x] Redesign top chip row: Refresh | Version | API | Turbine Status | Wind Speed
@@ -15,14 +30,14 @@
 - [x] Generation panels repositioned under pill line
 - [x] Grid box aligned with bus bar bottom
 - [x] Turbine map placeholder to prevent stale module crash
-- [ ] Deploy v4.9.0 to production
-- [ ] Restart Home Assistant to load new Python code
-- [ ] Verify v4.9.0 in production
-- [ ] Create GitHub release v4.9.0 (stable; latest for HACS)
-- [ ] Remove turbine map placeholder file after HA restart (stale module refreshed)
+- [x] Deploy v4.9.0 to production
+- [x] Restart Home Assistant to load new Python code
+- [x] Verify v4.9.0 in production
+- [x] Create GitHub release v4.9.0 (stable; latest for HACS)
+- [x] Remove turbine map placeholder file after HA restart (stale module refreshed)
 - [ ] Rate limiting: expose `rate_limited` attribute on API status entity when API supports 429
-- [ ] Font sizing: investigate why fonts render smaller than expected on some instances (theme variables vs fallbacks, --khscada-fs scaling interaction)
-- [ ] Dead white space: eliminate bottom white space below generation panels / grid box — panels should fill the card height dynamically
+- [x] Font sizing: investigate why fonts render smaller than expected on some instances (theme variables vs fallbacks, --khscada-fs scaling interaction)
+- [x] Dead white space: eliminate bottom white space below generation panels / grid box — panels should fill the card height dynamically
 
 ## Release roll-out — SCADA v4.8.x
 

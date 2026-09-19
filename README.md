@@ -47,8 +47,10 @@ and an animated dashboard.
   transformer, into the national grid. It shows
   **Owner and Site** generation details, live wind speed, active-turbine count,
   next-hour forecast, an API-status pill, and an alarm indicator for any turbine
-  in a fault state. Click Owner, Site, Wind, or a turbine for ApexCharts history
-  (6H–1Y), a wind-speed detail modal, and a labelled turbine activity swimlane.
+  in a fault state. Click Owner, Site, Wind, National Grid, or a turbine for
+  ApexCharts history (6H–1Y), detail modals, and a labelled turbine activity
+  swimlane. The dashboard uses a consistent colour scheme: amber for power/energy,
+  cyan for wind speed, green for financial values.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.

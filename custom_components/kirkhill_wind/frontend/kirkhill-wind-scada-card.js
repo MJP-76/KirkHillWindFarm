@@ -12,10 +12,10 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.9.0";
+const KIRKHILL_WIND_SCADA_VERSION = "4.10.0";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 1620, wMin: 900, wMax: 1800, hMin: 1620, hMax: 1620 };
+    return { w: 1240, h: 1300, wMin: 900, wMax: 1800, hMin: 700, hMax: 1900 };
   }
 
   static get DESIGN_W() {
@@ -61,6 +61,7 @@ class KirkHillWindScada extends HTMLElement {
     this._values = new Map();
     this._vbW = KirkHillWindScada.VIEWBOX.w;
     this._vbH = KirkHillWindScada.VIEWBOX.h;
+    this._aspect = this._vbW / this._vbH;
     this._turbineEntities = new Map();
     this._zoom = { k: 1, tx: 0, ty: 0 };
     this._fitRaf = null;
@@ -354,6 +355,8 @@ class KirkHillWindScada extends HTMLElement {
       if (owner) { this._openOwnerDetail(); return; }
       const windPanel = ev.target.closest("[data-wind='panel']");
       if (windPanel) { this._openWindDetail(); return; }
+      const gridPanel = ev.target.closest("[data-grid='panel']");
+      if (gridPanel) { this._openGridDetail(); return; }
       const apiPill = ev.target.closest("[data-api='indicator']");
       if (apiPill) { this._openApiDetail(); return; }
       const alarmPill = ev.target.closest("[data-alarm='indicator']");
@@ -510,6 +513,7 @@ class KirkHillWindScada extends HTMLElement {
   _openSiteDetail() { this._showSiteDetailModal(); }
   _openOwnerDetail() { this._showOwnerDetailModal(); }
   _openWindDetail() { this._showWindDetailModal(); }
+  _openGridDetail() { this._showGridDetailModal(); }
 
   // ---- Site detail modal ------------------------------------------------
 
@@ -629,17 +633,147 @@ class KirkHillWindScada extends HTMLElement {
 
     const genData = toSeries(history.genSite);
     if (genData.length) {
-      charts.gen = new ApexCharts(ts("#site-chart-gen"), this._apexOpts({
-        type: "line", height: 250,
-        series: [{ name: "Gen (kWh)", data: genData }],
-        xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
-        stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
-        tooltip: { x: { format: "HH:mm" } },
-      }));
-      charts.gen.render();
+      // Filter out daily reset points (value drops significantly = counter reset)
+      const filteredGen = [];
+      for (let i = 0; i < genData.length; i++) {
+        if (i === 0 || genData[i][1] >= genData[i-1][1] * 0.5) {
+          filteredGen.push(genData[i]);
+        }
+      }
+      if (filteredGen.length) {
+        charts.gen = new ApexCharts(ts("#site-chart-gen"), this._apexOpts({
+          type: "line", height: 250,
+          series: [{ name: "Gen (kWh)", data: filteredGen }],
+          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
+          tooltip: { x: { format: "HH:mm" } },
+        }));
+        charts.gen.render();
+      }
     }
 
     this._siteDetailCharts = charts;
+  }
+
+  // ---- Grid detail modal ------------------------------------------------
+
+  _showGridDetailModal() {
+    const config = this.config;
+    const sitePowerMw = this._num(config.farm_power_entity);
+    const siteEnergyKwh = this._num(config.grid_energy_entity);
+    const sitePowerText =
+      sitePowerMw === null ? { value: "—", unit: "MW" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
+    const siteEnergyScaled = this._scaleKwh(siteEnergyKwh);
+
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>National Grid — Export History</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="td-section td-live">
+            <div class="td-kpi-grid">
+              <div class="td-kpi"><span class="td-kpi-label">Current Export</span><span class="td-kpi-value">${sitePowerText.value}</span><span class="td-kpi-unit">${sitePowerText.unit}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Today To Grid</span><span class="td-kpi-value">${siteEnergyScaled.value}</span><span class="td-kpi-unit">${siteEnergyScaled.unit}</span></div>
+            </div>
+          </div>
+          <div class="td-section td-charts" data-key="grid">
+            ${this._modalTimeRangeHTML("grid")}
+            <h3>Historical Data (${this._timeRangeWindow("grid").label})</h3>
+            <div class="chart-grid">
+              <div class="chart-item large">
+                <h3>Export Power (MW)</h3>
+                <div id="grid-chart-power" class="apex-chart"></div>
+              </div>
+              <div class="chart-item large">
+                <h3>Energy To Grid (kWh)</h3>
+                <div id="grid-chart-energy" class="apex-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    this.shadowRoot.appendChild(modal);
+    this._gridDetailModal = modal;
+    modal.querySelectorAll("[data-close]").forEach(el =>
+      el.addEventListener("click", () => this._closeGridDetailModal()));
+    this._gridBoundKeydown = (e) => { if (e.key === "Escape") this._closeGridDetailModal(); };
+    window.addEventListener("keydown", this._gridBoundKeydown);
+    this._bindModalTimeRange("grid", () => this._initGridCharts());
+    requestAnimationFrame(() => this._initGridCharts());
+  }
+
+  _closeGridDetailModal() {
+    if (this._gridDetailModal) { this._gridDetailModal.remove(); this._gridDetailModal = null; }
+    if (this._gridDetailCharts) { Object.values(this._gridDetailCharts).forEach(c => c.destroy?.()); this._gridDetailCharts = null; }
+    if (this._gridBoundKeydown) { window.removeEventListener("keydown", this._gridBoundKeydown); this._gridBoundKeydown = null; }
+  }
+
+  async _initGridCharts() {
+    if (this._gridDetailCharts) { Object.values(this._gridDetailCharts).forEach(c => c.destroy?.()); this._gridDetailCharts = null; }
+    const config = this.config;
+    const now = new Date();
+    const startISO = new Date(now.getTime() - this._timeRangeWindow("grid").ms).toISOString();
+    const entities = {
+      power: config.farm_power_entity,
+      energy: config.grid_energy_entity,
+    };
+    this._setChartLoading();
+    try {
+      await this._ensureApexCharts();
+      const history = await this._fetchHistory(entities, startISO, now.toISOString());
+      if (window.ApexCharts) { this._renderGridCharts(history); this._clearChartPlaceholders(); }
+      else this._showChartError("Charts unavailable — ApexCharts failed to load");
+    } catch (err) {
+      console.error("Failed to load grid history:", err);
+      this._showChartError(`Charts unavailable — ${err.message || "unknown error"}`);
+    }
+  }
+
+  _renderGridCharts(history) {
+    if (!window.ApexCharts) return;
+    const charts = {};
+    const ts = (id) => this.shadowRoot.querySelector(id);
+    const toSeries = (arr) => (arr || []).map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)]).filter(d => d[1] !== null);
+
+    const powerData = toSeries(history.power);
+    if (powerData.length) {
+      charts.power = new ApexCharts(ts("#grid-chart-power"), this._apexOpts({
+        type: "line", height: 250,
+        series: [{ name: "Export Power (MW)", data: powerData }],
+        xaxis: { type: "datetime" }, yaxis: { title: { text: "MW" } },
+        stroke: { curve: "smooth", width: 2 }, markers: { size: 0 }, colors: ["var(--khscada-power-color)"],
+        tooltip: { x: { format: "HH:mm" } },
+      }));
+      charts.power.render();
+    }
+
+    const energyData = toSeries(history.energy);
+    if (energyData.length) {
+      // Filter out daily reset points (value drops significantly = counter reset)
+      const filteredEnergy = [];
+      for (let i = 0; i < energyData.length; i++) {
+        if (i === 0 || energyData[i][1] >= energyData[i-1][1] * 0.5) {
+          filteredEnergy.push(energyData[i]);
+        }
+      }
+      if (filteredEnergy.length) {
+        charts.energy = new ApexCharts(ts("#grid-chart-energy"), this._apexOpts({
+          type: "line", height: 250,
+          series: [{ name: "Energy To Grid (kWh)", data: filteredEnergy }],
+          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          stroke: { curve: "stepline", width: 2 }, colors: ["var(--khscada-power-color)"],
+          tooltip: { x: { format: "HH:mm" } },
+        }));
+        charts.energy.render();
+      }
+    }
+
+    this._gridDetailCharts = charts;
   }
 
   // ---- Owner detail modal -----------------------------------------------
@@ -1018,14 +1152,23 @@ class KirkHillWindScada extends HTMLElement {
 
     const genData = toSeries(history.genOwner);
     if (genData.length) {
-      charts.gen = new ApexCharts(ts("#owner-chart-gen"), this._apexOpts({
-        type: "line", height: 250,
-        series: [{ name: "Gen (kWh)", data: genData }],
-        xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
-        stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
-        tooltip: { x: { format: "HH:mm" } },
-      }));
-      charts.gen.render();
+      // Filter out daily reset points (value drops significantly = counter reset)
+      const filteredGen = [];
+      for (let i = 0; i < genData.length; i++) {
+        if (i === 0 || genData[i][1] >= genData[i-1][1] * 0.5) {
+          filteredGen.push(genData[i]);
+        }
+      }
+      if (filteredGen.length) {
+        charts.gen = new ApexCharts(ts("#owner-chart-gen"), this._apexOpts({
+          type: "line", height: 250,
+          series: [{ name: "Gen (kWh)", data: filteredGen }],
+          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
+          tooltip: { x: { format: "HH:mm" } },
+        }));
+        charts.gen.render();
+      }
     }
 
     this._ownerDetailCharts = charts;
@@ -1244,15 +1387,24 @@ class KirkHillWindScada extends HTMLElement {
       .map(p => [new Date(p.last_changed).getTime(), this._numVal(p.state)])
       .filter(d => d[1] !== null);
     if (genData.length) {
-      charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), this._apexOpts({
-        type: "line", height: 250,
-        series: [{ name: "Generation (kWh)", data: genData }],
-        xaxis: { type: "datetime" },
-        yaxis: { title: { text: "kWh" } },
-        stroke: { curve: "stepline", width: 2 },
-        colors: ["#059669"],
-      }));
-      charts.generation.render();
+      // Filter out daily reset points (value drops significantly = counter reset)
+      const filteredGen = [];
+      for (let i = 0; i < genData.length; i++) {
+        if (i === 0 || genData[i][1] >= genData[i-1][1] * 0.5) {
+          filteredGen.push(genData[i]);
+        }
+      }
+      if (filteredGen.length) {
+        charts.generation = new ApexCharts(this.shadowRoot.querySelector("#chart-generation"), this._apexOpts({
+          type: "line", height: 250,
+          series: [{ name: "Generation (kWh)", data: filteredGen }],
+          xaxis: { type: "datetime" },
+          yaxis: { title: { text: "kWh" } },
+          stroke: { curve: "stepline", width: 2 },
+          colors: ["#059669"],
+        }));
+        charts.generation.render();
+      }
     }
 
     // Turbine activity: a swimlane state timeline. One labelled row per status
@@ -1610,6 +1762,8 @@ class KirkHillWindScada extends HTMLElement {
         this._openSiteDetail();
       } else if (el && el.closest && el.closest("[data-user-gen='panel']")) {
         this._openOwnerDetail();
+      } else if (el && el.closest && el.closest("[data-grid='panel']")) {
+        this._openGridDetail();
       } else {
         const g = el && el.closest ? el.closest("g.turbine") : null;
         if (g) this._openTurbine(g);
@@ -1726,37 +1880,25 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   _layout() {
-    const H = this._vbH;
-    const W = this._vbW;
-    const scaleX = W / KirkHillWindScada.DESIGN_W;
     const tCount = this.config.turbines.length;
-    const legendY = H - 150;
-
-    // Staircase turbine layout: T1 left, T2 right with its top level with T1's
-    // bottom, T3 left level with T2's bottom, and so on. Every turbine's feed
-    // line runs straight to the bus unobstructed, and the block is spread to
-    // roughly match the bus bar height. Boxes are sized to leave room for more
-    // per-turbine detail lines later.
     const tTop = 64;
-    const collapse = Math.max(
-      0,
-      Math.min(
-        1,
-        (KirkHillWindScada.DESIGN_W - W) /
-          (KirkHillWindScada.DESIGN_W - KirkHillWindScada.VIEWBOX.wMin)
-      )
-    );
-    const gapV = 10 * collapse;
     const bh = Math.max(
-      110,
-      Math.min(130, Math.floor((H - 190 - tTop - 30 - (tCount - 1) * gapV) / Math.max(1, tCount)))
+      130,
+      Math.min(140, Math.floor((1900 - 190 - tTop - 30) / Math.max(1, tCount)))
     );
-    const pitch = bh + gapV;
+    const pitch = bh;
     const tBottom = tTop + tCount * pitch;
 
-    // Grid box sits at the bottom of the turbines section, not at the card bottom.
+    // ViewBox: dynamic height = content, width preserves container aspect ratio
+    const H = tBottom + 24;
+    const vb = KirkHillWindScada.VIEWBOX;
+    this._vbH = H;
+    this._vbW = Math.round((this._aspect || 1) * H);
+    const W = this._vbW;
+    const scaleX = W / KirkHillWindScada.DESIGN_W;
+    const collapse = 0;
+    const legendY = H;
     const gridY = tBottom;
-
     // Scale horizontal positions from design width (1240) to current viewBox width.
     // The two columns start with a small gap (40) that shrinks to nothing, then the
     // right column keeps sliding left until it sits directly under the left column,
@@ -1886,6 +2028,7 @@ class KirkHillWindScada extends HTMLElement {
     if (!r.width || !r.height) return;
     const vb = KirkHillWindScada.VIEWBOX;
     const aspect = r.width / r.height;
+    this._aspect = aspect;
     let w = Math.round(aspect * this._vbH);
     w = Math.max(vb.wMin, Math.min(vb.wMax, w));
     let h = Math.round(w / aspect);
@@ -1914,19 +2057,21 @@ class KirkHillWindScada extends HTMLElement {
       turbinesHtml += `
         <g class="turbine" data-turbine="${this._escape(t.id || `T${i + 1}`)}">
           <rect class="node-rect" x="${x}" y="${top}" width="${layout.boxW}" height="${layout.bh}" rx="8"/>
-          <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 18}">${num}</text>
-          <rect class="status-pill" x="${x + 88 * layout.scaleX}" y="${top + 5}" width="${100 * layout.scaleX}" height="20" rx="10"/>
-          <text class="t-status" x="${x + 138 * layout.scaleX}" y="${top + 19}"></text>
-          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 38}">Generation</text>
-          <text class="t-power" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 38}" text-anchor="end">—</text>
-          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 54}">Capacity</text>
-          <text class="t-op" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 54}" text-anchor="end">—</text>
-          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 70}">Wind</text>
-          <text class="t-wind" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 70}" text-anchor="end">—</text>
-          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 86}">Rotor</text>
-          <text class="t-detail" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 86}" text-anchor="end">—</text>
-          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 102}">Since</text>
-          <text class="t-last" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 102}" text-anchor="end">—</text>
+          <text class="t-id" x="${x + 14 * layout.scaleX}" y="${top + 28}">${num}</text>
+          <rect class="status-pill" x="${x + 88 * layout.scaleX}" y="${top + 14}" width="${100 * layout.scaleX}" height="22" rx="11"/>
+          <text class="t-status" x="${x + 138 * layout.scaleX}" y="${top + 29}"></text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 50}">Capacity</text>
+          <text class="t-op" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 50}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 64}">Generation</text>
+          <text class="t-power" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 64}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 78}">Today</text>
+          <text class="t-today" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 78}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 92}">Wind</text>
+          <text class="t-wind" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 92}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 106}">Rotor</text>
+          <text class="t-detail" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 106}" text-anchor="end">—</text>
+          <text class="t-label" x="${x + 14 * layout.scaleX}" y="${top + 120}">Since</text>
+          <text class="t-last" x="${x + layout.boxW - 14 * layout.scaleX}" y="${top + 120}" text-anchor="end">—</text>
         </g>
       `;
       linesHtml += `<line class="feed-line" x1="${cx}" y1="${cy}" x2="${layout.feedEndX}" y2="${cy}"/>`;
@@ -1968,16 +2113,16 @@ class KirkHillWindScada extends HTMLElement {
   _buildGrid(layout) {
     const cy = layout.gridY;
     return `
-      <g class="grid">
+      <g class="grid" data-grid="panel">
         <rect class="grid-rect" x="${layout.gridRectX}" y="${cy - 270}" width="${layout.gridRectW}" height="270" rx="10"/>
         <text class="grid-title" x="${layout.gridTitleX}" y="${cy - 245}" text-anchor="middle">NATIONAL</text>
         <text class="grid-title" x="${layout.gridTitleX}" y="${cy - 221}" text-anchor="middle">GRID</text>
         <line class="grid-divider" x1="${layout.gridDividerX1}" y1="${cy - 175}" x2="${layout.gridDividerX2}" y2="${cy - 175}"/>
-        <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 153}" text-anchor="middle">Export</text>
+        <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 153}" text-anchor="middle">Current Export</text>
         <text class="grid-power" data-grid="power" x="${layout.gridTitleX}" y="${cy - 121}" text-anchor="middle">—</text>
         <text class="grid-unit" data-grid="power-unit" x="${layout.gridTitleX}" y="${cy - 103}" text-anchor="middle"></text>
         <line class="grid-divider" x1="${layout.gridDividerX1}" y1="${cy - 87}" x2="${layout.gridDividerX2}" y2="${cy - 87}"/>
-        <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 65}" text-anchor="middle">To Grid Today</text>
+        <text class="grid-label" x="${layout.gridTitleX}" y="${cy - 65}" text-anchor="middle">Today To Grid</text>
         <text class="grid-energy" data-grid="energy" x="${layout.gridTitleX}" y="${cy - 39}" text-anchor="middle">—</text>
         <text class="grid-unit" data-grid="energy-unit" x="${layout.gridTitleX}" y="${cy - 21}" text-anchor="middle">kWh</text>
       </g>
@@ -2234,8 +2379,9 @@ _buildHeaderChips(layout) {
       this._setText(node, ".t-status", status.label);
       this._setText(node, ".t-op", opPct === null ? "—" : `${this._fmt(opPct, 1)}%`);
       this._setText(node, ".t-wind", wind === null ? "—" : `${this._fmt(wind)} m/s`);
-      this._setText(node, ".t-detail", `Today ${today.value} ${today.unit}${rotor !== null ? ` · ${this._fmt(rotor, 1)} rpm` : ""}`);
-      this._setText(node, ".t-last", `Status since ${last}`);
+      this._setText(node, ".t-today", today.value === "—" ? "—" : `${today.value} ${today.unit}`);
+      this._setText(node, ".t-detail", rotor === null ? "—" : `${this._fmt(rotor, 1)} rpm`);
+      this._setText(node, ".t-last", `Since ${last}`);
       const pill = node.querySelector(".status-pill");
       if (pill) {
         pill.setAttribute("class", "status-pill " + status.class);
@@ -2292,6 +2438,8 @@ _buildHeaderChips(layout) {
         --khscada-success-color: var(--success-color, #16a34a);
         --khscada-error-color: var(--error-color, #ef4444);
         --khscada-warn-color: var(--warning-color, #f59e0b);
+        --khscada-power-color: var(--khscada-warn-color, #ffb300);
+        --khscada-wind-color: #4fc3f7;
         --khscada-card-bg: var(--card-background-color, var(--paper-card-background-color, #ffffff));
         --khscada-panel-bg: var(--card-background-color, var(--paper-card-background-color, #ffffff));
         --khscada-bus-bg: color-mix(in srgb, var(--primary-color, #0284c7) 8%, transparent);
@@ -2308,8 +2456,8 @@ _buildHeaderChips(layout) {
       /* Modal chart timeframe bar */
       .time-range-bar.modal-time-range { margin: 10px 0 6px; padding: 6px 10px; }
       .time-range-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: var(--khscada-card-bg); border-radius: 12px; margin-bottom: 8px; }
-      .time-range-label { font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); margin-right: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-      .time-range-btn { font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 4px 12px; cursor: pointer; }
+      .time-range-label { font: 600 var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); margin-right: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .time-range-btn { font: 600 var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 4px 12px; cursor: pointer; }
       .time-range-btn:hover { color: var(--khscada-primary-color); }
       .time-range-btn.active { background: color-mix(in srgb, var(--khscada-accent-color) 20%, transparent); color: var(--khscada-accent-color); }
       .bg { fill: var(--khscada-card-bg); }
@@ -2323,7 +2471,7 @@ _buildHeaderChips(layout) {
       .node-rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
       .node-rect[data-status] { opacity: 1; }
       .turbine:hover .node-rect { stroke: var(--khscada-accent-color); }
-      .t-id { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-id { font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-primary-color); }
       .status-pill { fill: color-mix(in srgb, var(--khscada-success-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-running { fill: color-mix(in srgb, var(--khscada-success-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-ready { fill: color-mix(in srgb, var(--khscada-accent-color) 15%, var(--khscada-card-bg)); }
@@ -2335,62 +2483,63 @@ _buildHeaderChips(layout) {
       .status-pill.status-maintenance { fill: color-mix(in srgb, var(--khscada-accent-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-unavailable { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
       .status-pill.status-unknown { fill: color-mix(in srgb, var(--khscada-disabled-color) 15%, var(--khscada-card-bg)); }
-      .t-status { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); text-anchor: middle; }
-      .t-power { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .t-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .t-op { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .t-wind { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .t-detail { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .t-last { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-status { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); text-anchor: middle; }
+      .t-power { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-power-color); }
+      .t-today { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-power-color); }
+      .t-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .t-op { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-primary-color); }
+      .t-wind { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-wind-color); }
+      .t-detail { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-secondary-color); }
+      .t-last { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Bus */
       .bus rect { fill: var(--khscada-bus-bg); stroke: var(--khscada-accent-color); stroke-width: 2; }
 
       /* Transformer label (overlaid down the site collection bus) */
-      .xfmr-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .xfmr-title { font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-primary-color); }
 
       /* Grid node */
       .grid-rect { fill: var(--khscada-grid-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
-      .grid-title { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .grid-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .grid-power { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .grid-energy { font: 600 calc(var(--ha-font-size-xxlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .grid-unit { fill: var(--khscada-disabled-color); font: calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .grid-title { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-xxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .grid-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-large, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .grid-power { font: 600 calc(var(--ha-font-size-xxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-power-color); }
+      .grid-energy { font: 600 calc(var(--ha-font-size-xxlarge, 24px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-power-color); }
+      .grid-unit { fill: var(--khscada-disabled-color); font: calc(var(--ha-font-size-large, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .grid-divider { stroke: var(--khscada-success-color); stroke-width: 2; }
 
       /* Chips */
       .chips rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .chip-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .chip-value { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .chip-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .chip-value { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-wind-color); }
 
       /* Generation & capacity panel (top right) */
-      .gen-section-heading { fill: var(--khscada-secondary-color); font: 600 calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.4px; }
+      .gen-section-heading { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-large, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.4px; }
       .user-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
       .user-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
-      .user-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-colh, .site-gen-colh { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.6px; }
-      .user-gen-value { font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-value { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-share { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-primary-color); }
+      .user-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-colh, .site-gen-colh { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.6px; }
+      .user-gen-value { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-power-color); }
+      .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-value { fill: var(--khscada-power-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-share { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
       .site-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
-      .site-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .site-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-primary-color); }
+      .site-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Wind & forecast panel (below Site Generation) */
       .wind-panel rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .wind-title { font: 600 calc(var(--ha-font-size-large, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .wind-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .wind-value { font: 600 calc(var(--ha-font-size-xlarge, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .wind-title { font: 600 calc(var(--ha-font-size-large, 18px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-primary-color); }
+      .wind-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .wind-value { font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-wind-color); }
 
       /* Alarm indicator */
       .alarm rect { fill: var(--khscada-alarm-ok-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
-      .alarm-text { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .alarm-text { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .alarm.fault rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
       .alarm.fault .alarm-text { fill: var(--khscada-error-color); }
       .alarm.fault { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
@@ -2403,7 +2552,7 @@ _buildHeaderChips(layout) {
 
       /* API connectivity pill */
       .api-status rect { fill: var(--khscada-alarm-ok-bg); stroke: var(--khscada-success-color); stroke-width: 2; }
-      .api-status-text { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .api-status-text { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .api-status.api-down rect { fill: var(--khscada-alarm-fault-bg); stroke: var(--khscada-error-color); stroke-width: 2; }
       .api-status.api-down .api-status-text { fill: var(--khscada-error-color); }
       .api-status.api-down { animation: khscada-alarm-flash 1s steps(1, end) infinite; }
@@ -2412,7 +2561,7 @@ _buildHeaderChips(layout) {
 
       /* Version badge */
       .version-pill rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; }
-      .version-text { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 12px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .version-text { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .version-pill.update-available rect { fill: var(--khscada-alarm-warn-bg); stroke: var(--khscada-warn-color, #ffb300); stroke-width: 2; }
       .version-pill.update-available .version-text { fill: var(--khscada-warn-color, #ffb300); }
 
@@ -2429,7 +2578,7 @@ _buildHeaderChips(layout) {
       }
       .turbine-detail-modal .modal-header { display: flex; align-items: center; justify-content: space-between;
         padding: 16px 20px; border-bottom: 1px solid var(--khscada-divider); }
-      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .turbine-detail-modal .modal-header h2 { margin: 0; font: 600 var(--ha-font-size-xlarge, 20px) var(--khscada-font-family); color: var(--khscada-primary-color); }
       .turbine-detail-modal .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--khscada-secondary-color); padding: 4px 8px; border-radius: 6px; }
       .turbine-detail-modal .modal-close:hover { background: var(--khscada-divider); }
       .turbine-detail-modal .modal-body { padding: 16px; overflow-y: auto; max-height: calc(90vh - 70px); }
@@ -2437,13 +2586,13 @@ _buildHeaderChips(layout) {
       /* Turbine detail sections */
       .td-section { margin-bottom: 20px; }
       .td-section:last-child { margin-bottom: 0; }
-      .td-section h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); text-transform: uppercase; letter-spacing: 0.5px; }
+      .td-section h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 16px) var(--khscada-font-family); color: var(--khscada-primary-color); text-transform: uppercase; letter-spacing: 0.5px; }
 
       /* Status badge */
       .td-status-badge {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 6px 14px; border-radius: 20px; margin-bottom: 14px;
-        font: 600 var(--ha-font-size-small, 12px) var(--khscada-font-family);
+        font: 600 var(--ha-font-size-small, 14px) var(--khscada-font-family);
         background: color-mix(in srgb, var(--badge-color) 15%, transparent);
         color: var(--badge-color); border: 1px solid color-mix(in srgb, var(--badge-color) 30%, transparent);
       }
@@ -2455,13 +2604,13 @@ _buildHeaderChips(layout) {
         background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px;
         padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;
       }
-      .td-kpi-label { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
-      .td-kpi-value { font: 600 var(--ha-font-size-xlarge, 18px) var(--khscada-font-family); color: var(--khscada-primary-color); }
-      .td-kpi-unit { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
-      .td-state-line { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); padding: 4px 0; }
+      .td-kpi-label { font: var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
+      .td-kpi-value { font: 600 var(--ha-font-size-xlarge, 20px) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .td-kpi-unit { font: var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
+      .td-state-line { font: var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); padding: 4px 0; }
 
       /* Turbine status table */
-      .ts-table { width: 100%; border-collapse: collapse; font: var(--ha-font-size-small, 12px) var(--khscada-font-family); }
+      .ts-table { width: 100%; border-collapse: collapse; font: var(--ha-font-size-small, 14px) var(--khscada-font-family); }
       .ts-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--khscada-divider); color: var(--khscada-secondary-color); font-weight: 600; }
       .ts-table td { padding: 6px 8px; border-bottom: 1px solid var(--khscada-divider); color: var(--khscada-primary-color); vertical-align: middle; }
       .ts-tid { font-weight: 600; white-space: nowrap; }
@@ -2484,8 +2633,8 @@ _buildHeaderChips(layout) {
         display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
         padding: 6px 0; border-bottom: 1px solid var(--khscada-divider);
       }
-      .td-spec-label { font: var(--ha-font-size-small, 12px) var(--khscada-font-family); color: var(--khscada-secondary-color); white-space: nowrap; }
-      .td-spec-value { font: var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); text-align: right; }
+      .td-spec-label { font: var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); white-space: nowrap; }
+      .td-spec-value { font: var(--ha-font-size, 16px) var(--khscada-font-family); color: var(--khscada-primary-color); text-align: right; }
       .td-coords-link { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--khscada-primary-color); }
       .td-coords-link:hover { border-bottom-style: solid; }
 
@@ -2493,13 +2642,13 @@ _buildHeaderChips(layout) {
       .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
       .chart-item { background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 12px; }
       .chart-item.large { grid-column: span 2; }
-      .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 14px) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .chart-item h3 { margin: 0 0 10px; font: 600 var(--ha-font-size, 16px) var(--khscada-font-family); color: var(--khscada-primary-color); }
       .apex-chart { position: relative; width: 100%; height: 100%; min-height: 280px; }
       .chart-placeholder {
         position: absolute; inset: 0; z-index: 2; pointer-events: none;
         display: flex; align-items: center; justify-content: center;
         color: var(--khscada-secondary-color);
-        font: var(--ha-font-size, 14px) var(--khscada-font-family);
+        font: var(--ha-font-size, 16px) var(--khscada-font-family);
       }
       .apexcharts-tooltip {
         background: var(--khscada-card-bg) !important;

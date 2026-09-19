@@ -2,6 +2,31 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.10.0
+- **National Grid detail modal.** Click the National Grid box to open a pop-out showing:
+  - Current Export (MW) and Today To Grid (kWh) KPI cards.
+  - Historical Export Power chart (MW over time) — shows instantaneous power at each point in time, not cumulative energy.
+  - Historical Energy To Grid chart (kWh over time) with daily reset filtering.
+  - Timeframe selector (6H, 12H, 24H, 1W, 1M, 6M, 1Y).
+- **Grid labels renamed.** "Export" → "Current Export", "To Grid Today" → "Today To Grid" for clarity.
+- **Consistent colour scheme across dashboard.** Semantic colours now match everywhere:
+  - Amber (`--khscada-power-color`) = power/energy values (t-power, t-today, grid-power, grid-energy, Owner/Site generation).
+  - Cyan (`--khscada-wind-color`) = wind speed (t-wind, wind-value, chip-value).
+  - Green (`--khscada-success-color`) = financial values and OK status (Owner/Site £, alarm OK, API OK).
+  - Primary = titles, capacity, labels (t-id, t-op, grid-title, Owner/Site titles).
+  - Secondary = descriptive labels and metadata (t-label, t-last, chip-label, grid-label).
+- **Turbine box layout improvements:**
+  - Capacity line moved to first position in turbine boxes.
+  - Generation, Today, Wind, Rotor, Since follow in order.
+  - Status pill height increased to22px with16px gap below to prevent text overlap.
+- **Font styling consistency.** Turbine text now matches Owner/Site card pattern:
+  - Values (t-power, t-today, t-op, t-wind, t-detail) = semibold, primary colour.
+  - Labels (t-label) = regular, secondary colour.
+  - Metadata (t-last) = regular, secondary colour.
+- **Energy chart reset filtering.** All cumulative energy charts (Grid, Owner, Site, Turbine) now filter out daily counter resets that previously caused trailing 0s on1m,6m,1y timeframes.
+- **Font scaling fixes.** VIEWBOX height bounds adjusted (hMin700, hMax1900) to allow proper vertical flex. Font scale capped at min(1, scaleX) to prevent text overflow.
+- **Dashboard fills screen.** ha-card height restored to calc(100vh -64px) to ensure proper viewport filling.
+
 ## Version 4.9.0
 - **SCADA card top chip row redesign.** The chip row is reordered and enhanced:
   - Refresh button moved to first position.
