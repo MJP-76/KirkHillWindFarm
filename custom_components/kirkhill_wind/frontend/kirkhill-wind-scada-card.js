@@ -1308,12 +1308,14 @@ class KirkHillWindScada extends HTMLElement {
         end_time: end,
         statistic_ids: [entityId],
         period: "day",
-        types: ["max"],
+        types: ["state", "sum"],
       });
       const rows = stats?.[entityId];
       if (!Array.isArray(rows) || !rows.length) return null;
+      // For daily counters, the state at end of day = total generation that day
+      // For cumulative counters, use sum if available
       return rows
-        .map(r => ({ last_changed: r.start, state: r.max }))
+        .map(r => ({ last_changed: r.start, state: r.sum ?? r.state }))
         .filter(p => p.state != null && p.state !== "");
     } catch {
       return null;
