@@ -635,9 +635,12 @@ class KirkHillWindScada extends HTMLElement {
     if (genData.length) {
       // Filter out daily reset points (value drops significantly = counter reset)
       const filteredGen = [];
+      let lastKept = null;
       for (let i = 0; i < genData.length; i++) {
-        if (i === 0 || genData[i][1] >= genData[i-1][1] * 0.5) {
+        const v = genData[i][1];
+        if (lastKept === null || v >= lastKept * 0.5) {
           filteredGen.push(genData[i]);
+          lastKept = v;
         }
       }
       if (filteredGen.length) {
@@ -756,9 +759,12 @@ class KirkHillWindScada extends HTMLElement {
     if (energyData.length) {
       // Filter out daily reset points (value drops significantly = counter reset)
       const filteredEnergy = [];
+      let lastKept = null;
       for (let i = 0; i < energyData.length; i++) {
-        if (i === 0 || energyData[i][1] >= energyData[i-1][1] * 0.5) {
+        const v = energyData[i][1];
+        if (lastKept === null || v >= lastKept * 0.5) {
           filteredEnergy.push(energyData[i]);
+          lastKept = v;
         }
       }
       if (filteredEnergy.length) {
@@ -1154,9 +1160,12 @@ class KirkHillWindScada extends HTMLElement {
     if (genData.length) {
       // Filter out daily reset points (value drops significantly = counter reset)
       const filteredGen = [];
+      let lastKept = null;
       for (let i = 0; i < genData.length; i++) {
-        if (i === 0 || genData[i][1] >= genData[i-1][1] * 0.5) {
+        const v = genData[i][1];
+        if (lastKept === null || v >= lastKept * 0.5) {
           filteredGen.push(genData[i]);
+          lastKept = v;
         }
       }
       if (filteredGen.length) {
@@ -1389,9 +1398,12 @@ class KirkHillWindScada extends HTMLElement {
     if (genData.length) {
       // Filter out daily reset points (value drops significantly = counter reset)
       const filteredGen = [];
+      let lastKept = null;
       for (let i = 0; i < genData.length; i++) {
-        if (i === 0 || genData[i][1] >= genData[i-1][1] * 0.5) {
+        const v = genData[i][1];
+        if (lastKept === null || v >= lastKept * 0.5) {
           filteredGen.push(genData[i]);
+          lastKept = v;
         }
       }
       if (filteredGen.length) {
