@@ -2215,7 +2215,7 @@ _buildHeaderChips(layout) {
           <text class="alarm-text" data-alarm="text" data-chip="active" x="${layout.chipLeftColX + 333 * layout.scaleX}" y="44" text-anchor="middle">—</text>
         </g>
         <g data-wind="panel">
-          <rect x="${layout.chipLeftColX + 398 * layout.scaleX}" y="24" width="${240 * layout.scaleX}" height="30" rx="15"/>
+          <rect x="${layout.chipLeftColX + 398 * layout.scaleX}" y="24" width="${460 * layout.scaleX}" height="30" rx="15"/>
           <text x="${layout.chipLeftColX + 408 * layout.scaleX}" y="44"><tspan class="chip-label">Wind Speed: Current </tspan><tspan class="chip-value" data-chip="wind">—</tspan><tspan class="chip-label"> Forecast: </tspan><tspan class="chip-value" data-chip="forecast">—</tspan></text>
         </g>
 
@@ -2446,7 +2446,7 @@ _buildHeaderChips(layout) {
       this._setText(node, ".t-wind", wind === null ? "—" : `${this._fmt(wind)} m/s`);
       this._setText(node, ".t-today", today.value === "—" ? "—" : `${today.value} ${today.unit}`);
       this._setText(node, ".t-detail", rotor === null ? "—" : `${this._fmt(rotor, 1)} rpm`);
-      this._setText(node, ".t-last", `Since ${last}`);
+      this._setText(node, ".t-last", last);
       const pill = node.querySelector(".status-pill");
       if (pill) {
         pill.setAttribute("class", "status-pill " + status.class);
