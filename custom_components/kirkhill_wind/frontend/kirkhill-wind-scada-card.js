@@ -2215,7 +2215,7 @@ _buildHeaderChips(layout) {
           <text class="alarm-text" data-alarm="text" data-chip="active" x="${layout.chipLeftColX + 333 * layout.scaleX}" y="44" text-anchor="middle">—</text>
         </g>
         <g data-wind="panel">
-          <rect x="${layout.chipLeftColX + 398 * layout.scaleX}" y="24" width="${460 * layout.scaleX}" height="30" rx="15"/>
+          <rect x="${layout.chipLeftColX + 398 * layout.scaleX}" y="24" width="${240 * layout.scaleX}" height="30" rx="15"/>
           <text x="${layout.chipLeftColX + 408 * layout.scaleX}" y="44"><tspan class="chip-label">Wind Speed: Current </tspan><tspan class="chip-value" data-chip="wind">—</tspan><tspan class="chip-label"> Forecast: </tspan><tspan class="chip-value" data-chip="forecast">—</tspan></text>
         </g>
 
@@ -2476,6 +2476,78 @@ _buildHeaderChips(layout) {
       const motion = busDot.querySelector("animateMotion");
       if (motion && dur) motion.setAttribute("dur", dur);
     }
+
+    // Chip rects are drawn with nominal widths; size them to the real text now
+    // that every label has been written.
+    this._fitChips();
+  }
+
+  // Size each top-row pill to the text it actually holds, then lay the row out
+  // left to right. The pill labels are rewritten at runtime ("Running: x Latest:
+  // y", "API LIMITED", "7/8 Active"), so a fixed rect width either clips longer
+  // values or leaves a permanently oversized pill. Measuring the rendered text
+  // keeps every pill snug regardless of what it is showing.
+  _fitChips() {
+    const root = this.shadowRoot;
+    if (!root) return;
+    const svg = root.querySelector("svg");
+    if (!svg) return;
+
+    const layout = this._layout();
+    const gap = 10 * layout.scaleX;
+    const padX = 10 * layout.scaleX;
+    let x = layout.chipLeftColX;
+
+    // Measure first: getComputedTextLength forces layout, so batching avoids
+    // repeated reflow as each pill is repositioned.
+    const items = [];
+    const measure = (groupSel, textSel, opts = {}) => {
+      const g = root.querySelector(groupSel);
+      if (!g) return;
+      const text = g.querySelector(textSel);
+      const rect = g.querySelector("rect");
+      if (!text || !rect) return;
+      let w = 0;
+      try { w = text.getComputedTextLength(); } catch { w = 0; }
+      if (!w) return;
+      items.push({ g, text, rect, w, ...opts });
+    };
+
+    measure("[data-zoom-reset='btn']", "text", { fixed: 30 });
+    measure("[data-version='indicator']", "[data-version='text']");
+    measure("[data-api='indicator']", "[data-api='text']");
+    measure("[data-alarm='indicator']", "[data-alarm='text']");
+
+    // The wind chip is measured separately below: it holds several tspans, so it
+    // is sized after the four fixed pills have taken up the left of the row.
+    const windG = root.querySelector("[data-wind='panel']");
+    const windRect = windG?.querySelector("rect");
+    const windText = windG?.querySelector("text");
+
+    items.forEach(({ g, text, rect, w, fixed }) => {
+      const contentW = fixed ? fixed * layout.scaleX : w + padX * 2;
+      rect.setAttribute("x", x);
+      rect.setAttribute("width", contentW);
+      if (text.getAttribute("text-anchor") === "middle") {
+        text.setAttribute("x", x + contentW / 2);
+      } else {
+        text.setAttribute("x", x + padX);
+      }
+      x += contentW + gap;
+    });
+
+    if (!windRect || !windText) return;
+
+    // Size the wind chip to its own text like every other pill, but never let
+    // it grow into the Owner panel at 930.
+    let windTextW = 0;
+    try { windTextW = windText.getComputedTextLength(); } catch { windTextW = 0; }
+    const rowRight = 930 * layout.scaleX - 8;
+    const available = Math.max(0, rowRight - x);
+    const windW = Math.min(windTextW + padX * 2, available);
+    windRect.setAttribute("x", x);
+    windRect.setAttribute("width", windW);
+    windText.setAttribute("x", x + padX);
   }
 
   _setText(root, selector, value) {
