@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.11.0";
+const KIRKHILL_WIND_SCADA_VERSION = "4.11.1";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 1300, wMin: 900, wMax: 1800, hMin: 700, hMax: 1900 };
@@ -639,7 +639,7 @@ class KirkHillWindScada extends HTMLElement {
         charts.gen = new ApexCharts(ts("#site-chart-gen"), this._apexOpts({
           type: "bar", height: 250,
           series: [{ name: "Gen (kWh)", data: genData }],
-          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          xaxis: { type: "datetime" }, yaxis: this._kwhAxis(),
           colors: ["#059669"],
           plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
           tooltip: { x: { format: "dd MMM" } },
@@ -649,7 +649,7 @@ class KirkHillWindScada extends HTMLElement {
         charts.gen = new ApexCharts(ts("#site-chart-gen"), this._apexOpts({
           type: "line", height: 250,
           series: [{ name: "Gen (kWh)", data: genData }],
-          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          xaxis: { type: "datetime" }, yaxis: this._kwhAxis(),
           stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
           tooltip: { x: { format: "HH:mm" } },
         }));
@@ -765,7 +765,7 @@ class KirkHillWindScada extends HTMLElement {
         charts.energy = new ApexCharts(ts("#grid-chart-energy"), this._apexOpts({
           type: "bar", height: 250,
           series: [{ name: "Energy To Grid (kWh)", data: energyData }],
-          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          xaxis: { type: "datetime" }, yaxis: this._kwhAxis(),
           colors: ["var(--khscada-power-color)"],
           plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
           tooltip: { x: { format: "dd MMM" } },
@@ -775,7 +775,7 @@ class KirkHillWindScada extends HTMLElement {
         charts.energy = new ApexCharts(ts("#grid-chart-energy"), this._apexOpts({
           type: "line", height: 250,
           series: [{ name: "Energy To Grid (kWh)", data: energyData }],
-          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          xaxis: { type: "datetime" }, yaxis: this._kwhAxis(),
           stroke: { curve: "stepline", width: 2 }, colors: ["var(--khscada-power-color)"],
           tooltip: { x: { format: "HH:mm" } },
         }));
@@ -1168,7 +1168,7 @@ class KirkHillWindScada extends HTMLElement {
         charts.gen = new ApexCharts(ts("#owner-chart-gen"), this._apexOpts({
           type: "bar", height: 250,
           series: [{ name: "Gen (kWh)", data: genData }],
-          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          xaxis: { type: "datetime" }, yaxis: this._kwhAxis(),
           colors: ["#059669"],
           plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
           tooltip: { x: { format: "dd MMM" } },
@@ -1178,7 +1178,7 @@ class KirkHillWindScada extends HTMLElement {
         charts.gen = new ApexCharts(ts("#owner-chart-gen"), this._apexOpts({
           type: "line", height: 250,
           series: [{ name: "Gen (kWh)", data: genData }],
-          xaxis: { type: "datetime" }, yaxis: { title: { text: "kWh" } },
+          xaxis: { type: "datetime" }, yaxis: this._kwhAxis(),
           stroke: { curve: "stepline", width: 2 }, colors: ["#059669"],
           tooltip: { x: { format: "HH:mm" } },
         }));
@@ -1312,10 +1312,12 @@ class KirkHillWindScada extends HTMLElement {
       });
       const rows = stats?.[entityId];
       if (!Array.isArray(rows) || !rows.length) return null;
-      // For daily counters, the state at end of day = total generation that day
-      // For cumulative counters, use sum if available
+      // These energy entities are daily counters: their state at end of day
+      // is that day's total generation. The recorder's `sum` statistic is the
+      // increase since its first recorded value (never reset for daily
+      // counters), so it must NOT be preferred. Use `state` first.
       return rows
-        .map(r => ({ last_changed: r.start, state: r.sum ?? r.state }))
+        .map(r => ({ last_changed: r.start, state: r.state ?? r.sum }))
         .filter(p => p.state != null && p.state !== "");
     } catch {
       return null;
@@ -1453,7 +1455,7 @@ class KirkHillWindScada extends HTMLElement {
           type: "bar", height: 250,
           series: [{ name: "Generation (kWh)", data: genData }],
           xaxis: { type: "datetime" },
-          yaxis: { title: { text: "kWh" } },
+          yaxis: this._kwhAxis(),
           colors: ["#059669"],
           plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
           tooltip: { x: { format: "dd MMM" } },
@@ -1464,7 +1466,7 @@ class KirkHillWindScada extends HTMLElement {
           type: "line", height: 250,
           series: [{ name: "Generation (kWh)", data: genData }],
           xaxis: { type: "datetime" },
-          yaxis: { title: { text: "kWh" } },
+          yaxis: this._kwhAxis(),
           stroke: { curve: "stepline", width: 2 },
           colors: ["#059669"],
         }));
@@ -1646,6 +1648,15 @@ class KirkHillWindScada extends HTMLElement {
         ...(yaxis || {}),
         labels: { style: { colors: muted }, ...((yaxis && yaxis.labels) || {}) },
       },
+    };
+  }
+
+  _kwhAxis() {
+    // kWh charts share this y-axis: thousand separators, no decimal zeros,
+    // so the axis reads "266,242" instead of "266242" or "400000".
+    return {
+      title: { text: "kWh" },
+      labels: { formatter: (v) => this._fmt(v, 0) },
     };
   }
 
