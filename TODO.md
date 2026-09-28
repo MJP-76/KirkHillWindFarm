@@ -7,11 +7,33 @@
 - [x] Issue #57: top-row pill sizes to its text (version/API/alarm/wind); coordinate-space fix for the cap
 - [x] Create GitHub release v4.11.0 (stable; latest for HACS) — published 2026-09-28
 - [x] Reply to issue #57 (all three items fixed, asked David to verify portrait)
+
+## Release roll-out — SCADA v4.11.1
+
+- [x] Fix daily energy-chart totals: `_fetchDailyStatistics` now uses `state: r.state ?? r.sum` (recorder `sum` = `state − K`, constant offset; `state` is the daily-reset total) so long-timeframe 1M/6M/1Y bars show positive real generation instead of negatives/garbage.
+- [x] Fix chart y-axis trailing zeros: added `_kwhAxis()` helper (`labels.formatter: (v) => this._fmt(v, 0)` — thousand separators, no decimal zeros) applied to all 8 kWh charts (site/grid/owner/turbine, bar + step-line variants). Axis reads `266,242` instead of `266242` / `400000`-style raw ints.
+- [x] Deploy v4.11.1 to production (manifest, const, card JS all synced).
+- [x] Restart Home Assistant (via hab system restart) to load v4.11.1 Python/frontend code.
+- [x] Verify v4.11.1 in production (manifest 4.11.1, const 4.11.1, card JS 4.11.1, axis formatting confirmed, daily stats positive).
+- [x] Create GitHub release v4.11.1 (stable; latest for HACS)
+
+## Release roll-out — SCADA v4.11.2
+
+- [x] Fix daily energy-chart totals: `_fetchDailyStatistics` uses `state: r.state ?? r.sum` (recorder `sum` = `state − K` constant offset; `state` is the daily-reset total) so 1M/6M/1Y bars show positive real generation instead of negatives/garbage.
+- [x] Eliminate trailing zeros on all chart y-axes across 1M/6M/1Y timeframes:
+  - kWh charts (Site, Grid, Owner, Turbine — bar & step-line): `_kwhAxis()` helper → thousand separators.
+  - Turbine modal: Power (kW) → `_fmt(v,0)`, Capacity (%) → `_fmt(v,0)`, Rotor (RPM) → `_fmt(v,0)`, Wind (m/s) → `_fmt(v,1)`.
+  - Owner Power (kW) → `_fmt(v,0)`, Site Capacity (%) → `_fmt(v,0)`.
+  - Scatter chart (Wind vs Power) already had formatters.
+- [x] Deploy v4.11.2 to production (manifest, const, card JS all synced).
+- [x] Restart Home Assistant (via hab system restart) to load v4.11.2 Python/frontend code.
+- [x] Verify v4.11.2 in production (manifest 4.11.2, const 4.11.2, card JS 4.11.2, all axis formatters confirmed).
+- [x] Create GitHub release v4.11.2 (stable; latest for HACS)
 - [ ] Deploy v4.11.0 to production (live manifest/card const still 4.10.0; card JS ahead of it)
 - [ ] Restart Home Assistant to load new Python code (backend unchanged since 4.8.81 — confirm before restarting; a restart may not be needed for a frontend-only change)
 - [ ] Verify v4.11.0 in production (manifest → 4.11.0, const 4.11.0, no console.log lines)
 - [ ] Confirm `update.kirk_hill_wind_farm_update` sees v4.11.0 as latest and the installed→latest flip
-- [ ] Investigation: energy-chart daily stats — console.log lines still in working tree awaiting verification
+- [x] **Investigation: energy-chart daily-statistics bug — root cause `r.sum ?? r.state` vs `r.state ?? r.sum`; trailing-zeros axis formatting via `_kwhAxis`**; live copy deployed and verified (hard refresh Ctrl+Shift+R); committed and released as v4.11.1
 
 ## Release roll-out — SCADA v4.9.0
 

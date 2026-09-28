@@ -2,6 +2,14 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.11.2
+- **Daily energy-chart totals fix:** `_fetchDailyStatistics` now uses `state: r.state ?? r.sum` — the recorder's `sum` statistic for daily-reset counters equals `state − K` (constant offset, never reset), so using `sum` produced negatives/garbage. `state` is the correct daily-reset total.
+- **Chart y-axis formatting across all timeframes:** Added formatters to eliminate trailing zeros on 1M/6M/1Y axes.
+  - kWh charts (Site, Grid, Owner, Turbine — bar & step-line): `_kwhAxis()` helper with thousand separators (`266,242` instead of `266242`).
+  - Turbine Power (kW), Capacity (%), Rotor (RPM), Wind (m/s): per-unit formatters.
+  - Owner Power (kW), Site Capacity (%): formatters added.
+  - Scatter chart (Wind vs Power) already had formatters.
+
 ## Version 4.10.0
 - **National Grid detail modal.** Click the National Grid box to open a pop-out showing:
   - Current Export (MW) and Today To Grid (kWh) KPI cards.

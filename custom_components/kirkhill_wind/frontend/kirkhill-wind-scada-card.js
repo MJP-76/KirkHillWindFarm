@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.11.1";
+const KIRKHILL_WIND_SCADA_VERSION = "4.11.2";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 1300, wMin: 900, wMax: 1800, hMin: 700, hMax: 1900 };
@@ -624,7 +624,7 @@ class KirkHillWindScada extends HTMLElement {
       charts.capacity = new ApexCharts(ts("#site-chart-capacity"), this._apexOpts({
         type: "line", height: 250,
         series: [{ name: "Capacity %", data: capData }],
-        xaxis: { type: "datetime" }, yaxis: { title: { text: "%" }, max: 100 },
+        xaxis: { type: "datetime" }, yaxis: { title: { text: "%" }, max: 100, labels: { formatter: (v) => this._fmt(v, 0) } },
         stroke: { curve: "smooth", width: 2 }, colors: ["#22c55e"],
         tooltip: { x: { format: "HH:mm" } },
       }));
@@ -1153,7 +1153,7 @@ class KirkHillWindScada extends HTMLElement {
       charts.power = new ApexCharts(ts("#owner-chart-power"), this._apexOpts({
         type: "line", height: 250,
         series: [{ name: "Owner Power (kW)", data: ownerPowerData }],
-        xaxis: { type: "datetime" }, yaxis: { title: { text: "kW" } },
+        xaxis: { type: "datetime" }, yaxis: { title: { text: "kW" }, labels: { formatter: (v) => this._fmt(v, 0) } },
         stroke: { curve: "smooth", width: 2 }, markers: { size: 0 }, colors: ["#10b981"],
         tooltip: { x: { format: "HH:mm" } },
       }));
@@ -1361,7 +1361,7 @@ class KirkHillWindScada extends HTMLElement {
         type: "line", height: 300,
         series: [{ name: "Power (kW)", data: powerData }],
         xaxis: { type: "datetime" },
-        yaxis: { title: { text: "kW" } },
+        yaxis: { title: { text: "kW" }, labels: { formatter: (v) => this._fmt(v, 0) } },
         stroke: { curve: "smooth", width: 2 },
         markers: { size: 0 },
         colors: ["#0284c7"],
@@ -1403,7 +1403,7 @@ class KirkHillWindScada extends HTMLElement {
         type: "line", height: 250,
         series: [{ name: "Capacity %", data: capData }],
         xaxis: { type: "datetime" },
-        yaxis: { title: { text: "%" }, max: 100 },
+        yaxis: { title: { text: "%" }, max: 100, labels: { formatter: (v) => this._fmt(v, 0) } },
         stroke: { curve: "smooth", width: 2 },
         colors: ["#22c55e"],
       }));
@@ -1419,7 +1419,7 @@ class KirkHillWindScada extends HTMLElement {
         type: "line", height: 250,
         series: [{ name: "RPM", data: rotorData }],
         xaxis: { type: "datetime" },
-        yaxis: { title: { text: "RPM" } },
+        yaxis: { title: { text: "RPM" }, labels: { formatter: (v) => this._fmt(v, 0) } },
         stroke: { curve: "smooth", width: 2 },
         colors: ["#8b5cf6"],
       }));
@@ -1435,7 +1435,7 @@ class KirkHillWindScada extends HTMLElement {
         type: "line", height: 250,
         series: [{ name: "Wind (m/s)", data: windData }],
         xaxis: { type: "datetime" },
-        yaxis: { title: { text: "m/s" } },
+        yaxis: { title: { text: "m/s" }, labels: { formatter: (v) => this._fmt(v, 1) } },
         stroke: { curve: "smooth", width: 2 },
         markers: { size: 0 },
         colors: ["#f59e0b"],
