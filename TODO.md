@@ -1,19 +1,17 @@
 # To-do list
 
-## Release roll-out — SCADA v4.10.0
+## Release roll-out — SCADA v4.11.0
 
-- [x] National Grid detail modal with historical data and timeframe selector
-- [x] Grid labels renamed: Export → Current Export, To Grid Today → Today To Grid
-- [x] Consistent colour scheme: amber=power/energy, cyan=wind, green=financial, primary=titles
-- [x] Turbine box layout: capacity first, status pill spacing fixed
-- [x] Font styling consistency with Owner/Site cards
-- [x] Energy chart reset filtering (no trailing 0s on 1m/6m/1y)
-- [x] Font scaling fixes (VIEWBOX hMin/hMax, fs capped)
-- [x] Dashboard fills screen (ha-card height restored)
-- [ ] Deploy v4.10.0 to production
-- [ ] Restart Home Assistant to load new Python code
-- [ ] Verify v4.10.0 in production
-- [ ] Create GitHub release v4.10.0 (stable; latest for HACS)
+- [x] Daily totals for energy charts on long timeframes (`_fetchDailyStatistics`, state+sum types)
+- [x] Issue #57: duplicate "Since" removed; row label is markup, value is bare timestamp
+- [x] Issue #57: top-row pill sizes to its text (version/API/alarm/wind); coordinate-space fix for the cap
+- [x] Create GitHub release v4.11.0 (stable; latest for HACS) — published 2026-09-28
+- [x] Reply to issue #57 (all three items fixed, asked David to verify portrait)
+- [ ] Deploy v4.11.0 to production (live manifest/card const still 4.10.0; card JS ahead of it)
+- [ ] Restart Home Assistant to load new Python code (backend unchanged since 4.8.81 — confirm before restarting; a restart may not be needed for a frontend-only change)
+- [ ] Verify v4.11.0 in production (manifest → 4.11.0, const 4.11.0, no console.log lines)
+- [ ] Confirm `update.kirk_hill_wind_farm_update` sees v4.11.0 as latest and the installed→latest flip
+- [ ] Investigation: energy-chart daily stats — console.log lines still in working tree awaiting verification
 
 ## Release roll-out — SCADA v4.9.0
 
