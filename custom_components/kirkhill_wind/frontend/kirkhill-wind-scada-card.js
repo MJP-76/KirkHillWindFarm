@@ -2500,6 +2500,11 @@ _buildHeaderChips(layout) {
 
     // Measure first: getComputedTextLength forces layout, so batching avoids
     // repeated reflow as each pill is repositioned.
+    //
+    // Text is measured in viewBox user units, which is the same space the rect
+    // x/width attributes live in, so measured widths and laid-out positions can
+    // be added together directly. The design-space constants below are
+    // multiplied by scaleX to bring them into that same space.
     const items = [];
     const measure = (groupSel, textSel, opts = {}) => {
       const g = root.querySelector(groupSel);
@@ -2517,37 +2522,26 @@ _buildHeaderChips(layout) {
     measure("[data-version='indicator']", "[data-version='text']");
     measure("[data-api='indicator']", "[data-api='text']");
     measure("[data-alarm='indicator']", "[data-alarm='text']");
+    // The wind chip holds several tspans but is a single <text>, so the same
+    // measurement applies; it is simply last in the row.
+    measure("[data-wind='panel']", "text");
 
-    // The wind chip is measured separately below: it holds several tspans, so it
-    // is sized after the four fixed pills have taken up the left of the row.
-    const windG = root.querySelector("[data-wind='panel']");
-    const windRect = windG?.querySelector("rect");
-    const windText = windG?.querySelector("text");
+    // Right edge of the chip row, in viewBox units. The Owner panel starts at
+    // 930 design units; keep a small margin so the wind pill never touches it.
+    const rowRight = 930 * layout.scaleX - 8 * layout.scaleX;
 
-    items.forEach(({ g, text, rect, w, fixed }) => {
+    for (const { text, rect, w, fixed } of items) {
       const contentW = fixed ? fixed * layout.scaleX : w + padX * 2;
+      const clampedW = Math.max(0, Math.min(contentW, rowRight - x));
       rect.setAttribute("x", x);
-      rect.setAttribute("width", contentW);
+      rect.setAttribute("width", clampedW);
       if (text.getAttribute("text-anchor") === "middle") {
-        text.setAttribute("x", x + contentW / 2);
+        text.setAttribute("x", x + clampedW / 2);
       } else {
         text.setAttribute("x", x + padX);
       }
-      x += contentW + gap;
-    });
-
-    if (!windRect || !windText) return;
-
-    // Size the wind chip to its own text like every other pill, but never let
-    // it grow into the Owner panel at 930.
-    let windTextW = 0;
-    try { windTextW = windText.getComputedTextLength(); } catch { windTextW = 0; }
-    const rowRight = 930 * layout.scaleX - 8;
-    const available = Math.max(0, rowRight - x);
-    const windW = Math.min(windTextW + padX * 2, available);
-    windRect.setAttribute("x", x);
-    windRect.setAttribute("width", windW);
-    windText.setAttribute("x", x + padX);
+      x += clampedW + gap;
+    }
   }
 
   _setText(root, selector, value) {
