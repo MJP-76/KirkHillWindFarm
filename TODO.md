@@ -29,11 +29,7 @@
 - [x] Restart Home Assistant (via hab system restart) to load v4.11.2 Python/frontend code.
 - [x] Verify v4.11.2 in production (manifest 4.11.2, const 4.11.2, card JS 4.11.2, all axis formatters confirmed).
 - [x] Create GitHub release v4.11.2 (stable; latest for HACS)
-- [ ] Deploy v4.11.0 to production (live manifest/card const still 4.10.0; card JS ahead of it)
-- [ ] Restart Home Assistant to load new Python code (backend unchanged since 4.8.81 — confirm before restarting; a restart may not be needed for a frontend-only change)
-- [ ] Verify v4.11.0 in production (manifest → 4.11.0, const 4.11.0, no console.log lines)
-- [ ] Confirm `update.kirk_hill_wind_farm_update` sees v4.11.0 as latest and the installed→latest flip
-- [x] **Investigation: energy-chart daily-statistics bug — root cause `r.sum ?? r.state` vs `r.state ?? r.sum`; trailing-zeros axis formatting via `_kwhAxis`**; live copy deployed and verified (hard refresh Ctrl+Shift+R); committed and released as v4.11.1
+- [x] **Investigation: energy-chart daily-statistics bug — root cause `r.sum ?? r.state` vs `r.state ?? r.sum`; trailing-zeros axis formatting via `_kwhAxis`**; live copy deployed and verified (hard refresh Ctrl+Shift+R); committed and released as v4.11.1/4.11.2
 
 ## Release roll-out — SCADA v4.9.0
 
@@ -106,7 +102,7 @@
 
 - [ ] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)
 - [ ] Create a `CONTRIBUTING` file (GitHub auto-features it in the repo file list)
-- [ ] External review #1 — submit to the official HACS default repository so users can find the integration in the HA UI without pasting a URL
+- [x] External review #1 — submit to the official HACS default repository so users can find the integration in the HA UI without pasting a URL (PR #11377 submitted: https://github.com/hacs/default/pull/11377)
 - [ ] External review #4 — add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app.
 - [ ] External review #3.2 — investigate the two bare `except Exception` guards (`__init__.py:205` dashboard load, `config_flow.py:151` API-key validate) and confirm they cannot mask a `ConfigEntryAuthFailed`-worthy error as a generic "unknown" failure
 - [ ] External review #3.4 — `url_already_exists` is matched by exception message string (`__init__.py:178`); look into more robust error handling in case HA rewords the message
