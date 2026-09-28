@@ -102,7 +102,7 @@
 
 - [ ] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)
 - [ ] Create a `CONTRIBUTING` file (GitHub auto-features it in the repo file list)
-- [x] External review #1 — submit to the official HACS default repository so users can find the integration in the HA UI without pasting a URL (PR #11378 submitted: https://github.com/hacs/default/pull/11378)
+- [x] External review #1 — submit to the official HACS default repository so users can find the integration in the HA UI without pasting a URL (PR #11379 submitted: https://github.com/hacs/default/pull/11379)
 - [ ] External review #4 — add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app.
 - [ ] External review #3.2 — investigate the two bare `except Exception` guards (`__init__.py:205` dashboard load, `config_flow.py:151` API-key validate) and confirm they cannot mask a `ConfigEntryAuthFailed`-worthy error as a generic "unknown" failure
 - [ ] External review #3.4 — `url_already_exists` is matched by exception message string (`__init__.py:178`); look into more robust error handling in case HA rewords the message
