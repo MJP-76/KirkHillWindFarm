@@ -760,13 +760,41 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ),
     ]
     site_generation_entities = [
-        ("Yesterday", farm_scoped("site", "farm_generation_yesterday"), farm_scoped("site", "farm_generation_value_yesterday")),
-        ("Today", farm_scoped("site", "farm_generation_today"), farm_scoped("site", "farm_generation_value_today")),
-        ("Week", farm_scoped("site", "farm_generation_week"), farm_scoped("site", "farm_generation_value_week")),
-        ("Month", farm_scoped("site", "farm_generation_month"), farm_scoped("site", "farm_generation_value_month")),
-        ("YTD", farm_scoped("site", "farm_generation_ytd"), farm_scoped("site", "farm_generation_value_ytd")),
-        ("Year", farm_scoped("site", "farm_generation_year"), farm_scoped("site", "farm_generation_value_year")),
-        ("All time", farm_scoped("site", "farm_generation_alltime"), farm_scoped("site", "farm_generation_value_alltime")),
+        (
+            "Yesterday",
+            farm_scoped("site", "farm_generation_yesterday"),
+            farm_scoped("site", "farm_generation_value_yesterday"),
+        ),
+        (
+            "Today",
+            farm_scoped("site", "farm_generation_today"),
+            farm_scoped("site", "farm_generation_value_today"),
+        ),
+        (
+            "Week",
+            farm_scoped("site", "farm_generation_week"),
+            farm_scoped("site", "farm_generation_value_week"),
+        ),
+        (
+            "Month",
+            farm_scoped("site", "farm_generation_month"),
+            farm_scoped("site", "farm_generation_value_month"),
+        ),
+        (
+            "YTD",
+            farm_scoped("site", "farm_generation_ytd"),
+            farm_scoped("site", "farm_generation_value_ytd"),
+        ),
+        (
+            "Year",
+            farm_scoped("site", "farm_generation_year"),
+            farm_scoped("site", "farm_generation_value_year"),
+        ),
+        (
+            "All time",
+            farm_scoped("site", "farm_generation_alltime"),
+            farm_scoped("site", "farm_generation_value_alltime"),
+        ),
     ]
     scada_turbines = [
         {
