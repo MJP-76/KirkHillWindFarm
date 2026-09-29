@@ -8,10 +8,10 @@
 - [x] Config migration v7: strip stale keys from existing entries.
 - [x] Fix past-year £ suppression to cover future `year_YYYY` frames automatically.
 - [x] Docs updated: CHANGELOG.md, installation.md, index.md, decisions.md.
-- [ ] Sync v4.11.7 files to production.
+- [x] Sync v4.11.7 files to production.
 - [ ] Restart Home Assistant to load v4.11.7.
 - [ ] Verify: projected-earnings number entities gone; prices and £ values unchanged.
-- [ ] Create GitHub release v4.11.7 (stable; latest for HACS).
+- [x] Create GitHub release v4.11.7 (stable; latest for HACS).
 
 ## Release roll-out — SCADA v4.11.6
 
