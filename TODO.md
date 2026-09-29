@@ -7,8 +7,8 @@
 - [x] Deploy v4.11.4 to production (manifest, card JS all synced).
 - [ ] Verify v4.11.4 in production (card JS 4.11.4, both portrait fixes confirmed).
 - [ ] Restart Home Assistant to load v4.11.4 manifest version (v4.11.3 restart also still pending).
-- [ ] Create GitHub release v4.11.4 (stable; latest for HACS)
-- [ ] Reply to issue #57 (v4.11.3 trailing-zero charts + v4.11.4 portrait fixes)
+- [x] Create GitHub release v4.11.4 (stable; latest for HACS)
+- [x] Reply to issue #57 (v4.11.3 trailing-zero charts + v4.11.4 portrait fixes)
 
 ## Release roll-out — SCADA v4.11.3
 
