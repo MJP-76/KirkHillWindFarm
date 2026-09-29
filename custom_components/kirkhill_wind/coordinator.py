@@ -35,7 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 # Slow: every 60 polls (~1 hour) - yesterday (static once day ends), week, month, ytd, year, alltime
 #       + Open-Meteo forecast, turbine data, wind-speed series
 FAST_TIMEFRAMES = ("today",)
-SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
+SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime", "year_2024", "year_2025")
 
 
 class KirkHillWindCoordinator(DataUpdateCoordinator):
@@ -257,6 +257,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             for timeframe in sorted(timeframes):
                 if timeframe == "year":
                     range_value = str(dt_util.now().year)
+                elif timeframe.startswith("year_"):
+                    range_value = timeframe.split("_")[1]
                 else:
                     range_value = TIMEFRAME_TO_RANGE[timeframe]
                 task = asyncio.create_task(

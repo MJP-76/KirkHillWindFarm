@@ -102,6 +102,13 @@ earnings. If you set a **negotiated CfD price** (via the
 back to the projected model when the price is 0 or live generation is not yet
 available.
 
+The **All time** row's £ cell always shows `—` regardless of price. The API
+records energy only, never money, so an All-time £ figure would be today's price
+applied retroactively to the farm's whole history — misleading if the CfD price
+has ever changed. The kWh figure on that row stays live. This is a standing
+decision pending confirmation of the CfD strike price value(s), whether the CfD
+has changed, and its contract length (see [Development decisions](development/decisions.md)).
+
 ## History tab
 
 **Removed in v4.8.77.** The 25-hour owner/site power and wind charts it held

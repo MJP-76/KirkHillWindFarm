@@ -20,6 +20,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             ProjectedAnnualEarningsNumber(coordinator, entry, SCOPE_OWNER),
             ProjectedAnnualEarningsNumber(coordinator, entry, SCOPE_SITE),
             NegotiatedPriceNumber(coordinator, entry),
+            OwnerPriceNumber(coordinator, entry),
         ]
     )
 
@@ -107,3 +108,38 @@ class NegotiatedPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
         except (TypeError, ValueError):
             return
         self.coordinator.negotiated_price_gbp_per_mwh = value
+
+
+class OwnerPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
+    """A user-editable owner price in pence per kWh."""
+
+    _attr_native_unit_of_measurement = "p/kWh"
+    _attr_mode = NumberMode.BOX
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 50.0
+    _attr_native_step = 0.1
+    _attr_icon = "mdi:cash-sync"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "owner_price_pence_per_kwh")
+        self._attr_name = "Owner price (p/kWh)"
+
+    @property
+    def native_value(self) -> float | None:
+        return getattr(self.coordinator, "owner_price_pence_per_kwh", 0.0)
+
+    async def async_set_native_value(self, value) -> None:
+        self.coordinator.owner_price_pence_per_kwh = float(value)
+        self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the user's last-edited value across restarts."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is None:
+            return
+        try:
+            value = float(last_state.state)
+        except (TypeError, ValueError):
+            return
+        self.coordinator.owner_price_pence_per_kwh = value

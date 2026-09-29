@@ -20,6 +20,11 @@ It pulls current data for both OpenAPI scopes:
     `number.<farm>_negotiated_price_gbp_mwh` entity is set above 0. The Kirk Hill
     API remains the authoritative source for actual farm generation.
 
+    The **All-time** £ value is suppressed (shows `—`), because the API records
+    energy only — never money — and applying today's price to the farm's entire
+    history would revalue it whenever the price is edited. This stands until the
+    CfD strike price history is confirmed.
+
 ## Support me
 
 If you find this project useful, and would like to help support its continued

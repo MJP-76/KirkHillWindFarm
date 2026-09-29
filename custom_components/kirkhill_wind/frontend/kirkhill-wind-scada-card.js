@@ -349,6 +349,11 @@ class KirkHillWindScada extends HTMLElement {
         this._zoomReset();
         return;
       }
+      const priceEdit = ev.target.closest("[data-price-edit]");
+      if (priceEdit) {
+        this._openPriceEdit(priceEdit.getAttribute("data-price-edit"));
+        return;
+      }
       const site = ev.target.closest("[data-site-gen='panel']");
       if (site) { this._openSiteDetail(); return; }
       const owner = ev.target.closest("[data-user-gen='panel']");
@@ -984,6 +989,75 @@ class KirkHillWindScada extends HTMLElement {
   _closeApiDetailModal() {
     if (this._apiDetailModal) { this._apiDetailModal.remove(); this._apiDetailModal = null; }
     if (this._apiBoundKeydown) { window.removeEventListener("keydown", this._apiBoundKeydown); this._apiBoundKeydown = null; }
+  }
+
+  _openPriceEdit(scope) {
+    // scope: "owner" -> Owner price (p/kWh); "site" -> Site/CfD price (GBP/MWh)
+    const config = this.config;
+    const entity = scope === "owner" ? config.owner_price_entity : config.negotiated_price_entity;
+    if (!entity) return;
+    const label = scope === "owner" ? "Owner price" : "Site price (CfD)";
+    const unit = scope === "owner" ? "p/kWh" : "£/MWh";
+    this._showPriceEditModal(entity, label, unit);
+  }
+
+  _showPriceEditModal(entityId, label, unit) {
+    const current = this._num(entityId);
+    const max = this._attr(entityId, "max") ?? 500;
+    const step = this._attr(entityId, "step") ?? 0.1;
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content" style="max-width: 420px">
+        <div class="modal-header">
+          <h2>${label}</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="price-edit-form">
+            <label class="price-edit-label" for="price-edit-value">Price (${unit})</label>
+            <input class="price-edit-input" id="price-edit-value" type="number" min="0" max="${max}" step="${step}" value="${current ?? ""}" />
+            <div class="price-edit-actions">
+              <button class="price-edit-btn" data-action="cancel">Cancel</button>
+              <button class="price-edit-btn price-edit-save" data-action="save">Save</button>
+            </div>
+            <div class="price-edit-hint">Earnings are live generation × this price, updated on the next poll cycle.</div>
+          </div>
+        </div>
+      </div>`;
+    this.shadowRoot.appendChild(modal);
+    this._priceEditModal = modal;
+    modal.querySelectorAll("[data-close]").forEach(el =>
+      el.addEventListener("click", () => this._closePriceEditModal()));
+    modal.querySelector('[data-action="cancel"]').addEventListener("click", () => this._closePriceEditModal());
+    modal.querySelector('[data-action="save"]').addEventListener("click", async () => {
+      const input = modal.querySelector("#price-edit-value");
+      const value = parseFloat(input.value);
+      if (!Number.isFinite(value) || value < 0) return;
+      try {
+        await this._hass.callService("number", "set_value", { entity_id: entityId, value });
+        this._closePriceEditModal();
+        this._update();
+      } catch (err) {
+        input.setAttribute("data-error", "true");
+      }
+    });
+    const input = modal.querySelector("#price-edit-value");
+    if (input) {
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") modal.querySelector('[data-action="save"]').click();
+      });
+      input.focus();
+      input.select();
+    }
+    this._priceBoundKeydown = (e) => { if (e.key === "Escape") this._closePriceEditModal(); };
+    window.addEventListener("keydown", this._priceBoundKeydown);
+  }
+
+  _closePriceEditModal() {
+    if (this._priceEditModal) { this._priceEditModal.remove(); this._priceEditModal = null; }
+    if (this._priceBoundKeydown) { window.removeEventListener("keydown", this._priceBoundKeydown); this._priceBoundKeydown = null; }
   }
 
   _openTurbineStatus() { this._showTurbineStatusModal(); }
@@ -2235,9 +2309,9 @@ _buildHeaderChips(layout) {
         <g class="user-gen" data-user-gen="panel">
           <rect x="${layout.chipUserGenX}" y="76" width="${layout.chipUserGenW}" height="232" rx="8"/>
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="98">Owner</text>
-          <text class="user-gen-colh" x="${layout.chipUserGenTitleX}" y="120">Timeframe</text>
-          <text class="user-gen-colh" x="${layout.chipUserGenValueX}" y="120" text-anchor="end">Generation</text>
-          <text class="user-gen-colh" x="${layout.chipUserGenFinX}" y="120" text-anchor="end">Value (£)</text>
+          <text class="user-gen-colh" data-colh="label" x="${layout.chipUserGenTitleX}" y="120">Timeframe</text>
+          <text class="user-gen-colh" data-colh="gen" x="${layout.chipUserGenValueX}" y="120" text-anchor="end">Generation</text>
+          <text class="user-gen-colh" data-colh="fin" x="${layout.chipUserGenFinX}" y="120" text-anchor="end">Value (£)</text>
           <!-- Generation timeframes -->
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="142">Yesterday</text>
           <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="142" text-anchor="end">—</text>
@@ -2262,17 +2336,23 @@ _buildHeaderChips(layout) {
           <text class="user-gen-value user-gen-fin" data-user-gen="fin-alltime" x="${layout.chipUserGenFinX}" y="262" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="282">Your Share (W)</text>
           <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="282" text-anchor="end">—</text>
+          <text class="user-gen-value user-gen-fin" data-user-gen="fin-share" x="${layout.chipUserGenFinX}" y="282" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="302">Share (‱)</text>
           <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="302" text-anchor="end">—</text>
+          <!-- Owner price chip (pence/kWh), on the title row, aligned to the Value column -->
+          <g class="price-edit" data-price-edit="owner">
+            <rect x="${layout.chipUserGenFinX - 128 * layout.scaleX}" y="84" width="${128 * layout.scaleX}" height="20" rx="10"/>
+            <text class="price-edit-label" data-price-text="owner" x="${layout.chipUserGenFinX - 8 * layout.scaleX}" y="98" text-anchor="end">Price —</text>
+          </g>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
         <g class="site-gen" data-site-gen="panel">
           <rect x="${layout.chipSiteGenX}" y="332" width="${layout.chipSiteGenW}" height="232" rx="8"/>
           <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="354">Site</text>
-          <text class="site-gen-colh" x="${layout.chipSiteGenTitleX}" y="376">Timeframe</text>
-          <text class="site-gen-colh" x="${layout.chipSiteGenValueX}" y="376" text-anchor="end">Generation</text>
-          <text class="site-gen-colh" x="${layout.chipSiteGenFinX}" y="376" text-anchor="end">Value (£)</text>
+          <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="376">Timeframe</text>
+          <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="376" text-anchor="end">Generation</text>
+          <text class="site-gen-colh" data-colh="fin" x="${layout.chipSiteGenFinX}" y="376" text-anchor="end">Value (£)</text>
           <!-- Site timeframes -->
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="398">Yesterday</text>
           <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="398" text-anchor="end">—</text>
@@ -2299,6 +2379,12 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="538" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="558">Power (MW)</text>
           <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="558" text-anchor="end">—</text>
+          <text class="site-gen-value site-gen-fin" data-site-gen="fin-power" x="${layout.chipSiteGenFinX}" y="558" text-anchor="end">—</text>
+          <!-- Site/CfD price chip (GBP/MWh), on the title row, aligned to the Value column -->
+          <g class="price-edit" data-price-edit="site">
+            <rect x="${layout.chipSiteGenFinX - 128 * layout.scaleX}" y="340" width="${128 * layout.scaleX}" height="20" rx="10"/>
+            <text class="price-edit-label" data-price-text="site" x="${layout.chipSiteGenFinX - 8 * layout.scaleX}" y="354" text-anchor="end">Price —</text>
+          </g>
         </g>
       </g>
     `;
@@ -2348,16 +2434,24 @@ _buildHeaderChips(layout) {
     const forecast = this._num(config.wind_forecast_entity);
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
 
+    // Price chips: Owner price (p/kWh) and Site/CfD price (£/MWh).
+    // Two decimals on display so a sub-0.1 price (e.g. 0.06) is never rounded
+    // up to 0.1 in the pill; the stored value is always shown exactly.
+    const ownerPrice = this._num(config.owner_price_entity);
+    this._setText(root, '[data-price-text="owner"]', ownerPrice === null || ownerPrice === 0 ? "Price —" : `Price ${this._fmt(ownerPrice, 2)} p/kWh`);
+    const sitePrice = this._num(config.negotiated_price_entity);
+    this._setText(root, '[data-price-text="site"]', sitePrice === null || sitePrice === 0 ? "Price —" : `Price £${this._fmt(sitePrice, 2)}/MWh`);
+
     // Generation & capacity panel (top right) — timeframe values
     (config.owner_generation_entities || []).forEach((item) => {
-      const key = `gen-${item.name.toLowerCase().replace(/\s/g, "-")}`;
+      const key = `gen-${item.name.toLowerCase().replace(/\s/g, "")}`;
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-user-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
       this._setChipStale(root.querySelector(`[data-user-gen="${key}"]`), item.entity);
       const fin = this._num(item.value_entity);
-      this._setText(root, `[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "-")}"]`, fin === null ? "—" : `£${this._fmt(fin, 2)}`);
-      this._setChipStale(root.querySelector(`[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "-")}"]`), item.value_entity);
+      this._setText(root, `[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`, fin === null ? "—" : `£${this._fmt(fin, 2)}`);
+      this._setChipStale(root.querySelector(`[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`), item.value_entity);
     });
 
     const siteCap = this._num(config.capacity_entity);
@@ -2376,22 +2470,30 @@ _buildHeaderChips(layout) {
           : null;
     this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct * 100, 2)}‱`);
 
+    // Owner live earnings rate: share of export (kW) × price (p/kWh) / 100 = £/h
+    const ownerRateLph = ownerExportKw !== null && ownerPrice > 0 ? (ownerExportKw * ownerPrice) / 100 : null;
+    this._setText(root, '[data-user-gen="fin-share"]', ownerRateLph === null ? "—" : `£${this._fmt(ownerRateLph, 2)}/h`);
+
     // Site Capacity panel — timeframe values
     (config.site_generation_entities || []).forEach((item) => {
-      const key = `gen-${item.name.toLowerCase().replace(/\s/g, "-")}`;
+      const key = `gen-${item.name.toLowerCase().replace(/\s/g, "")}`;
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-site-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
       this._setChipStale(root.querySelector(`[data-site-gen="${key}"]`), item.entity);
       const fin = this._num(item.value_entity);
-      this._setText(root, `[data-site-gen="fin-${item.name.toLowerCase().replace(/\s/g, "-")}"]`, fin === null ? "—" : `£${this._fmt(fin, 2)}`);
-      this._setChipStale(root.querySelector(`[data-site-gen="fin-${item.name.toLowerCase().replace(/\s/g, "-")}"]`), item.value_entity);
+      this._setText(root, `[data-site-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`, fin === null ? "—" : `£${this._fmt(fin, 2)}`);
+      this._setChipStale(root.querySelector(`[data-site-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`), item.value_entity);
     });
 
     this._setText(root, '[data-site-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
     this._setChipStale(root.querySelector('[data-site-gen="capacity"]'), config.capacity_entity);
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
+
+    // Site live earnings rate: export power (MW) × CfD price (£/MWh) = £/h
+    const siteRateLph = sitePowerMw !== null && sitePrice > 0 ? sitePowerMw * sitePrice : null;
+    this._setText(root, '[data-site-gen="fin-power"]', siteRateLph === null ? "—" : `£${this._fmt(siteRateLph, 2)}/h`);
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
     const versionPill = root.querySelector('[data-version="indicator"]');
@@ -2491,6 +2593,10 @@ _buildHeaderChips(layout) {
     // Chip rects are drawn with nominal widths; size them to the real text now
     // that every label has been written.
     this._fitChips();
+
+    // Generation / Value (£) columns slide to fit the widest figure shown, so a
+    // large site value can never overlap the generation numbers.
+    this._fitValueColumns();
   }
 
   // Size each top-row pill to the text it actually holds, then lay the row out
@@ -2553,6 +2659,72 @@ _buildHeaderChips(layout) {
       }
       x += clampedW + gap;
     }
+  }
+
+  // The Generation and Value (£) columns are drawn at fixed positions, but the
+  // widest value figure (site earnings can run to "£2,716,820.82") is far wider
+  // than the design gap and spills left over the generation numbers. Every
+  // update re-lays the columns out from the widest text measured across BOTH
+  // panels, so the Owner and Site boxes always share the same geometry, and the
+  // boxes widen leftward together (stopping clear of the bus) when the labels
+  // need more room than the design panel allows.
+  _fitValueColumns() {
+    const root = this.shadowRoot;
+    if (!root) return;
+    const layout = this._layout();
+    const scaleX = layout.scaleX;
+
+    const widest = (sel) => {
+      let w = 0;
+      root.querySelectorAll(sel).forEach((el) => {
+        let len = 0;
+        try { len = el.getComputedTextLength(); } catch { len = 0; }
+        if (len > w) w = len;
+      });
+      return w;
+    };
+
+    // Widest text in each column, measured across both panels. The Value (£)
+    // column includes the live per-hour rates; the section heading is a
+    // full-width title, so it is excluded from the label measurement.
+    const widestLabel = widest('[data-colh="label"], .user-gen-label, .site-gen-label, .user-gen-title, .site-gen-title');
+    const widestGen = widest('[data-colh="gen"], [data-user-gen^="gen-"], [data-user-gen="share"], [data-user-gen="sharepct"], [data-site-gen^="gen-"], [data-site-gen="capacity"], [data-site-gen="power"]');
+    const widestFin = widest('[data-colh="fin"], [data-user-gen^="fin-"], [data-site-gen^="fin-"]');
+
+    const gap = 16 * scaleX;
+    const gridRightX = layout.gridRectX + layout.gridRectW;
+    const finX = gridRightX - 16 * scaleX; // value column right edge (fixed)
+    const designGenX = gridRightX - 95 * scaleX;
+    // Generation column slides left only as far as the widest value requires.
+    const genX = Math.min(designGenX, finX - widestFin - gap);
+    // Label column keeps its design anchor unless the shifted generation column
+    // would collide with it; the panel then widens leftward to make room. The
+    // box may slide left only until it meets the bus (700→760): never paint
+    // over it, so the label floor is bus right edge + pill inset + margin.
+    let labelLeft = layout.chipUserGenTitleX;
+    const neededLabelLeft = genX - widestGen - gap - widestLabel;
+    const busRightEdge = layout.busX + 60 * layout.scaleX;
+    if (neededLabelLeft < labelLeft) labelLeft = Math.max(neededLabelLeft, busRightEdge + 12 * layout.scaleX + 8 * layout.scaleX);
+    const panelLeft = Math.max(busRightEdge + 8 * layout.scaleX, Math.min(layout.chipUserGenX, labelLeft - 12 * scaleX));
+
+    const setX = (sel, x) => root.querySelectorAll(sel).forEach((el) => el.setAttribute("x", x));
+    setX(
+      '[data-colh="label"], .user-gen-label, .site-gen-label, .user-gen-title, .site-gen-title, .gen-section-heading',
+      labelLeft
+    );
+    setX(
+      '[data-colh="gen"], [data-user-gen^="gen-"], [data-user-gen="share"], [data-user-gen="sharepct"], [data-site-gen^="gen-"], [data-site-gen="capacity"], [data-site-gen="power"]',
+      genX
+    );
+    // Value figures stay right-aligned at finX — their position never changes.
+
+    root.querySelectorAll("[data-user-gen='panel'], [data-site-gen='panel']").forEach((panel) => {
+      const rect = panel.querySelector("rect");
+      if (rect) {
+        rect.setAttribute("x", panelLeft);
+        rect.setAttribute("width", gridRightX - panelLeft);
+      }
+    });
   }
 
   _setText(root, selector, value) {
@@ -2706,6 +2878,24 @@ _buildHeaderChips(layout) {
       .version-text { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .version-pill.update-available rect { fill: var(--khscada-alarm-warn-bg); stroke: var(--khscada-warn-color, #ffb300); stroke-width: 2; }
       .version-pill.update-available .version-text { fill: var(--khscada-warn-color, #ffb300); }
+
+      /* Price edit chips (Owner p/kWh, Site £/MWh) */
+      .price-edit rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
+      .price-edit:hover rect { stroke: var(--khscada-accent-color); }
+      .price-edit text { fill: var(--khscada-secondary-color); font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); cursor: pointer; }
+      .price-edit:hover text { fill: var(--khscada-primary-color); }
+
+      /* Price edit modal form */
+      .price-edit-form { display: flex; flex-direction: column; gap: 12px; }
+      .price-edit-label { font: 600 var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; }
+      .price-edit-input { font: var(--ha-font-size, 16px) var(--khscada-font-family); color: var(--khscada-primary-color); background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box; }
+      .price-edit-input:focus { outline: none; border-color: var(--khscada-accent-color); }
+      .price-edit-input[data-error="true"] { border-color: var(--khscada-error-color); }
+      .price-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+      .price-edit-btn { font: 600 var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 6px 14px; cursor: pointer; }
+      .price-edit-btn:hover { color: var(--khscada-primary-color); }
+      .price-edit-save { background: color-mix(in srgb, var(--khscada-accent-color) 20%, transparent); color: var(--khscada-accent-color); }
+      .price-edit-hint { font: var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
 
       .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
 

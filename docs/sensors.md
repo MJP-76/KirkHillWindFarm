@@ -35,6 +35,14 @@ is `actual generation kWh ÷ 1000 × price`; when it is 0 (or live generation is
 unavailable, e.g. before the first successful API fetch) the values fall back to
 the projected model based on the configured annual figures.
 
+The **All-time** value is an exception: it reports `unknown` (the SCADA card
+shows `—`) in every case, because the API records energy only — never money —
+and applying today's price to the farm's entire history would silently revalue
+it whenever the price is edited. This stands until the CfD strike price history
+is confirmed (the price value(s), whether the CfD has ever changed, and its
+contract length). The all-time kWh energy figure is unaffected. See
+[Development decisions](development/decisions.md).
+
 ## Per turbine device (`Turbine T1` … `Turbine T8`)
 
 - Power (owner) [kW]

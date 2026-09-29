@@ -31,12 +31,14 @@ from .const import (
     CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
+    CONF_OWNER_PRICE_PENCE_PER_KWH,
     CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_BASE_URL,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
+    DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
     DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     PLATFORMS,
@@ -68,7 +70,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 
 # Keep in sync with the VERSION in config_flow.py. Home Assistant calls this
 # module-level handler when a stored config entry's version is behind.
-_CONFIG_ENTRY_VERSION = 5
+_CONFIG_ENTRY_VERSION = 6
 
 
 async def async_migrate_entry(
@@ -97,6 +99,10 @@ async def async_migrate_entry(
     if config_entry.version < 5:
         # Version 5 adds negotiated_cfd_price_gbp_per_mwh config option
         data.setdefault(CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH)
+
+    if config_entry.version < 6:
+        # Version 6 adds owner_price_pence_per_kwh config option
+        data.setdefault(CONF_OWNER_PRICE_PENCE_PER_KWH, DEFAULT_OWNER_PRICE_PENCE_PER_KWH)
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, version=_CONFIG_ENTRY_VERSION
@@ -141,6 +147,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.options.get(
             CONF_CFD_PRICE_GBP_PER_MWH,
             entry.data.get(CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH),
+        )
+    )
+
+    coordinator.owner_price_pence_per_kwh = float(
+        entry.options.get(
+            CONF_OWNER_PRICE_PENCE_PER_KWH,
+            entry.data.get(
+                CONF_OWNER_PRICE_PENCE_PER_KWH, DEFAULT_OWNER_PRICE_PENCE_PER_KWH
+            ),
         )
     )
 
@@ -754,6 +769,16 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             farm_scoped("owner", "farm_generation_value_year"),
         ),
         (
+            "2025",
+            farm_scoped("owner", "farm_generation_year_2025"),
+            farm_scoped("owner", "farm_generation_value_year_2025"),
+        ),
+        (
+            "2024",
+            farm_scoped("owner", "farm_generation_year_2024"),
+            farm_scoped("owner", "farm_generation_value_year_2024"),
+        ),
+        (
             "All time",
             farm_scoped("owner", "farm_generation_alltime"),
             farm_scoped("owner", "farm_generation_value_alltime"),
@@ -789,6 +814,16 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             "Year",
             farm_scoped("site", "farm_generation_year"),
             farm_scoped("site", "farm_generation_value_year"),
+        ),
+        (
+            "2025",
+            farm_scoped("site", "farm_generation_year_2025"),
+            farm_scoped("site", "farm_generation_value_year_2025"),
+        ),
+        (
+            "2024",
+            farm_scoped("site", "farm_generation_year_2024"),
+            farm_scoped("site", "farm_generation_value_year_2024"),
         ),
         (
             "All time",
@@ -827,6 +862,8 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "owner_grid_energy_entity": farm_scoped("owner", "farm_generation_today"),
                         "owner_generation_today_entity": farm_scoped("owner", "farm_generation_today"),
                         "owner_share_entity": farm_scoped("owner", "farm_owner_share"),
+                        "negotiated_price_entity": farm("negotiated_price_gbp_per_mwh"),
+                        "owner_price_entity": farm("owner_price_pence_per_kwh"),
                         "wind_speed_entity": farm("farm_wind_speed"),
                         "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),

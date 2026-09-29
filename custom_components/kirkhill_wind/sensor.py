@@ -38,6 +38,8 @@ TIMEFRAME_LABELS = {
     "ytd": "Generation (ytd)",
     "year": "Generation (year)",
     "alltime": "Generation (alltime)",
+    "year_2024": "Generation (2024)",
+    "year_2025": "Generation (2025)",
 }
 
 
@@ -433,17 +435,34 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Return earnings based on configured CFD price or fallback to projected model."""
+        """Return earnings: live generation × scope price, else £0.00.
+
+        Owner earnings use the owner price in pence/kWh; site earnings use the
+        negotiated CfD price in GBP/MWh. A price of 0.0 means none is
+        configured yet — the sensor reads £0.00 rather than presenting a
+        made-up projected figure, so no "stuck" static value shows on
+        dashboards until a real price is set.
+
+        The alltime timeframe is the exception: it returns unknown (the card
+        shows "—") because the API only ever records energy, never money.
+        Revaluing the farm's entire history at whatever price is set today is
+        only valid while that price has never changed, so we suppress it until
+        a real price history exists. The kWh energy figure is unaffected.
+        """
+        if self._timeframe == "alltime" or self._timeframe in ("year_2024", "year_2025"):
+            return None
+        kwh = self._live_kwh_for_timeframe()
+        if kwh is None:
+            return 0.0
+        if self._scope == SCOPE_OWNER:
+            price = getattr(self.coordinator, "owner_price_pence_per_kwh", 0.0)
+            if price:
+                return round(kwh * price / 100, 2)
+            return 0.0
         price = getattr(self.coordinator, "negotiated_price_gbp_per_mwh", 0.0)
         if price:
-            # Use actual generation × CFD price when a price is configured
-            kwh = self._live_kwh_for_timeframe()
-            if kwh is not None:
-                return round(kwh / 1000 * price, 2)
-            # If no live kWh available, fall back to projected model
-            return round(self._annual_projected_gbp() * self._projection_factor(), 2)
-        # No CFD price configured: use existing projected model
-        return round(self._annual_projected_gbp() * self._projection_factor(), 2)
+            return round(kwh / 1000 * price, 2)
+        return 0.0
 
     def _live_kwh_for_timeframe(self) -> float | None:
         """Return live generation in kWh for this timeframe and scope."""
@@ -465,10 +484,10 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
         attrs["timeframe"] = self._timeframe
-        attrs["projection_basis"] = "projected_non_dynamic"
-        attrs["projected_annual_gbp"] = self._annual_projected_gbp()
-        attrs["projection_factor"] = self._projection_factor()
-        if self._timeframe == "alltime":
+        if self._timeframe in ("alltime", "year_2024", "year_2025"):
+            attrs["projection_basis"] = "suppressed_no_historical_price"
+            attrs["projected_annual_gbp"] = self._annual_projected_gbp()
+            attrs["projection_factor"] = self._projection_factor()
             start_date = self._alltime_start_date()
             attrs["alltime_start_date"] = (
                 start_date.isoformat() if start_date is not None else None
@@ -476,6 +495,19 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
             attrs["alltime_factor_source"] = (
                 "api_timeframe_start" if start_date is not None else "legacy_fixed_20y_fallback"
             )
+            return attrs
+        if self._scope == SCOPE_OWNER:
+            price = getattr(self.coordinator, "owner_price_pence_per_kwh", 0.0)
+            attrs["projection_basis"] = (
+                "live_owner_price_pence_per_kwh" if price else "no_owner_price_zero"
+            )
+        else:
+            price = getattr(self.coordinator, "negotiated_price_gbp_per_mwh", 0.0)
+            attrs["projection_basis"] = (
+                "live_generation_x_price" if price else "no_price_zero"
+            )
+        attrs["projected_annual_gbp"] = self._annual_projected_gbp()
+        attrs["projection_factor"] = self._projection_factor()
         return attrs
 
 

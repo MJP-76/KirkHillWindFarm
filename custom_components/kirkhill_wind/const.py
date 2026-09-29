@@ -12,6 +12,7 @@ CONF_SCAN_INTERVAL = "scan_interval"
 CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP = "owner_projected_annual_earnings_gbp"
 CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP = "site_projected_annual_earnings_gbp"
 CONF_CFD_PRICE_GBP_PER_MWH = "cfd_price_gbp_per_mwh"
+CONF_OWNER_PRICE_PENCE_PER_KWH = "owner_price_pence_per_kwh"
 
 DEFAULT_BASE_URL = "https://dashboard.kirkhillcoop.org"
 DEFAULT_CREATE_DASHBOARD = True
@@ -21,6 +22,7 @@ DEFAULT_SCAN_INTERVAL = 60  # seconds between API polls
 DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP = 132.0
 DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP = 0.0
 DEFAULT_CFD_PRICE_GBP_PER_MWH = 0.0
+DEFAULT_OWNER_PRICE_PENCE_PER_KWH = 0.0
 
 MIN_SCAN_INTERVAL = 30
 MAX_SCAN_INTERVAL = 3600
@@ -39,6 +41,6 @@ TIMEFRAME_TO_RANGE = {
     "ytd": "ytd",
     "alltime": "all",
 }
-TIMEFRAME_ORDER = ("yesterday", "today", "week", "month", "ytd", "year", "alltime")
+TIMEFRAME_ORDER = ("yesterday", "today", "week", "month", "ytd", "year", "year_2024", "year_2025", "alltime")
 
 PLATFORMS = ["sensor", "binary_sensor", "number"]
