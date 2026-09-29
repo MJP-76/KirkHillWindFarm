@@ -612,7 +612,7 @@ class KirkHillWindScada extends HTMLElement {
       charts.power = new ApexCharts(ts("#site-chart-power"), this._apexOpts({
         type: "line", height: 250,
         series: [{ name: "Site Power (MW)", data: sitePowerData }],
-        xaxis: { type: "datetime" }, yaxis: { title: { text: "MW" } },
+        xaxis: { type: "datetime" }, yaxis: { title: { text: "MW" }, labels: { formatter: (v) => this._fmt(v, 2) } },
         stroke: { curve: "smooth", width: 2 }, markers: { size: 0 }, colors: ["#0284c7"],
         tooltip: { x: { format: "HH:mm" } },
       }));
@@ -750,7 +750,7 @@ class KirkHillWindScada extends HTMLElement {
       charts.power = new ApexCharts(ts("#grid-chart-power"), this._apexOpts({
         type: "line", height: 250,
         series: [{ name: "Export Power (MW)", data: powerData }],
-        xaxis: { type: "datetime" }, yaxis: { title: { text: "MW" } },
+        xaxis: { type: "datetime" }, yaxis: { title: { text: "MW" }, labels: { formatter: (v) => this._fmt(v, 2) } },
         stroke: { curve: "smooth", width: 2 }, markers: { size: 0 }, colors: ["var(--khscada-power-color)"],
         tooltip: { x: { format: "HH:mm" } },
       }));
