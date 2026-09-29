@@ -12,9 +12,9 @@
 - Generation (month) [kWh] for owner and site
 - Generation (ytd) [kWh] for owner and site
 - Generation (year) [kWh] for owner and site
-- Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`; more years appear automatically as time passes
-- Generation (alltime) [kWh] for owner and site
-- Generation source attribute marks these entities as `api_dynamic`
+- Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`. These are **sensors only** (not shown on the SCADA card). More years appear automatically as time passes.
+- Generation (alltime) [kWh] for owner and site — **calculated as the sum of all the year figures**: `2024 + 2025 + … + the current year to date`, including any future years. The `sum_of_years_kwh` attribute lists the per-year components.
+- Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
 - Value (yesterday/today/week/month/ytd/year) [GBP] for owner and site — live-accurate when a price is set; otherwise `£0.00`
   - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
 - Owner price (number) [p/kWh] — user-set owner price driving the owner £ figures
@@ -41,15 +41,16 @@ drives the site figures. When a price is >0, each timeframe's owner value is
 unavailable, e.g. before the first successful API fetch) the sensors read
 `£0.00` — there is no projected-model fallback.
 
-The **All-time** and **past-year (2025, 2024)** values are exceptions: they
-report `unknown` (the SCADA card shows `—`) in every case, because the API
-records energy only — never money — and applying today's price to history would
-silently revalue it whenever the price is edited. This stands until the CfD
-strike price history is confirmed (the price value(s), whether the CfD has ever
-changed, and its contract length). The kWh energy figures are unaffected. Once
-the history is known, each year gets its own price — the per-year rows are the
-foundation for the multi-CfD price schedule. See
-[Development decisions](development/decisions.md).
+The **All-time** value is an exception: it reports `unknown` (the SCADA card
+shows `—`) in every case, because the API records energy only — never money —
+and applying today's price to history would silently revalue it whenever the
+price is edited. The **past-year (2025, 2024)** value sensors follow the same
+rule. All are sensors only — the past-year figures are not shown on the SCADA
+card. This stands until the CfD strike price history is confirmed (the price
+value(s), whether the CfD has ever changed, and its contract length). The kWh
+energy figures are unaffected. Once the history is known, each year gets its own
+price — the per-year sensors are the foundation for the multi-CfD price
+schedule. See [Development decisions](development/decisions.md).
 
 ## Per turbine device (`Turbine T1` … `Turbine T8`)
 

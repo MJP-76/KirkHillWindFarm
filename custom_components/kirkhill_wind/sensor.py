@@ -21,6 +21,7 @@ from .const import (
     SCOPE_SITE,
     SCOPES,
     TIMEFRAME_ORDER,
+    yearly_timeframes,
 )
 from .entity import (
     KirkHillEntity,
@@ -82,6 +83,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if t.get("id") is not None
     ]
 
+    # Every fixed timeframe plus one frame per past calendar year (year_YYYY).
+    # Past years are derived so their sensors appear automatically as years
+    # complete; they feed the All time sum but are not shown on the SCADA card.
+    generation_timeframes = TIMEFRAME_ORDER + yearly_timeframes()
+
     entities: list = [
         *[FarmPowerSensor(coordinator, entry, scope) for scope in SCOPES],
         *[FarmCapacityFactorSensor(coordinator, entry, scope) for scope in SCOPES],
@@ -89,11 +95,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         *[
             FarmGenerationByTimeframeSensor(coordinator, entry, scope, timeframe)
             for scope in SCOPES
-            for timeframe in TIMEFRAME_ORDER
+            for timeframe in generation_timeframes
         ],
         *[
             GenerationValueByTimeframeSensor(coordinator, entry, scope, timeframe)
-            for timeframe in TIMEFRAME_ORDER
+            for timeframe in generation_timeframes
             for scope in SCOPES
         ],
         FarmWindSpeedSensor(coordinator, entry),
@@ -236,8 +242,45 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
                 self._restored_value = None
                 self._restored_attrs = None
 
+    def _sum_yearly_kwh(self) -> float | None:
+        """Sum the per-year timeframes so All time is built from its parts.
+
+        All time is calculated as the sum of every year-based timeframe the
+        coordinator holds (the current `year` frame plus past `year_YYYY`
+        frames), so 2024 + 2025 + ... + the current year to date always equals
+        the All time figure — including any future years added to the yearly
+        timeframe set later.
+        """
+        summaries = (
+            self.coordinator.data.get("timeframe_summaries", {}).get(self._scope, {})
+        )
+        total = 0.0
+        counted = False
+        for key, summary in summaries.items():
+            if key != "year" and not str(key).startswith("year_"):
+                continue
+            if not isinstance(summary, dict):
+                continue
+            value = _as_float(summary.get("total_generation_kwh"))
+            if value is None:
+                value = _as_float(summary.get("total_kwh"))
+            if value is None:
+                continue
+            total += value
+            counted = True
+        if not counted:
+            return None
+        return round(total, 3)
+
     def _live_kwh(self) -> float | None:
         """Return the live API value for this timeframe, or None if not yet available."""
+        if self._timeframe == "alltime":
+            # All time is the sum of the per-year figures (see _sum_yearly_kwh).
+            summed = self._sum_yearly_kwh()
+            if summed is not None:
+                return summed
+            # No per-year data fetched yet: fall through to the API's range=all
+            # value so the row is not blank on the very first poll.
         summary = (
             self.coordinator.data.get("timeframe_summaries", {})
             .get(self._scope, {})
@@ -291,12 +334,36 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
             attrs["raw_generation_kwh"] = live
             attrs["display_unit"] = display_unit
             attrs["display_value"] = display_value
+            if self._timeframe == "alltime":
+                # All time is calculated as the sum of the per-year figures.
+                attrs["generation_source"] = "sum_of_years"
+                attrs["sum_of_years_kwh"] = self._yearly_components()
         elif self._restored_attrs:
             # Use restored attributes if available
             attrs.update(self._restored_attrs)
             attrs["generation_source"] = "restored"
         attrs["data_stale"] = stale
         return attrs
+
+    def _yearly_components(self) -> dict[str, float]:
+        """Return the per-year kWh figures that make up the All time sum."""
+        summaries = (
+            self.coordinator.data.get("timeframe_summaries", {}).get(self._scope, {})
+        )
+        components: dict[str, float] = {}
+        for key, summary in summaries.items():
+            if key != "year" and not str(key).startswith("year_"):
+                continue
+            if not isinstance(summary, dict):
+                continue
+            value = _as_float(summary.get("total_generation_kwh"))
+            if value is None:
+                value = _as_float(summary.get("total_kwh"))
+            if value is None:
+                continue
+            label = key[5:] if str(key).startswith("year_") else "current"
+            components[label] = value
+        return components
 
 
 class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):

@@ -41,6 +41,28 @@ TIMEFRAME_TO_RANGE = {
     "ytd": "ytd",
     "alltime": "all",
 }
-TIMEFRAME_ORDER = ("yesterday", "today", "week", "month", "ytd", "year", "year_2024", "year_2025", "alltime")
+# Fixed (non-year) timeframes. Past calendar years are added dynamically via
+# yearly_timeframes() so future years are picked up without code changes.
+TIMEFRAME_ORDER = ("yesterday", "today", "week", "month", "ytd", "year", "alltime")
+
+# First calendar year with farm generation data — the all-time window starts
+# 2024-04-25 (the API-reported commissioning date). Past-year timeframes run
+# from this year to the last complete year; the current year is the `year`
+# timeframe (range=<current year>).
+PAST_YEAR_START = 2024
+
+
+def yearly_timeframes(current_year: int | None = None) -> tuple[str, ...]:
+    """Return past-year timeframe keys, e.g. ('year_2024', 'year_2025').
+
+    Derived from the commissioning year to the last complete year so any future
+    years are added automatically: their kWh join the All time sum and their
+    sensors appear after the next Home Assistant restart.
+    """
+    if current_year is None:
+        from homeassistant.util import dt as dt_util
+
+        current_year = dt_util.now().year
+    return tuple(f"year_{year}" for year in range(PAST_YEAR_START, current_year))
 
 PLATFORMS = ["sensor", "binary_sensor", "number"]

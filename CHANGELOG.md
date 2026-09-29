@@ -2,6 +2,11 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.11.6
+- **All time generation is now calculated from the per-year figures.** The All time kWh equals `2024 + 2025 + … + the current year to date` exactly, instead of trusting the API's separate `range=all` total. The `sum_of_years_kwh` attribute lists the per-year components, and `generation_source` reads `sum_of_years`.
+- **Future years join automatically.** The per-year timeframe list is derived from the commissioning year (2024) to the last complete year, so a new year is fetched and summed as soon as it completes — no code changes needed. Its sensors appear after the next restart.
+- **Past-year figures are sensors only.** `Generation (2025)` / `Generation (2024)` (owner and site) remain available as entities but are no longer wired into the SCADA card's generation/finance panels — the card shows Yesterday, Today, Week, Month, YTD, Year and All time as before.
+
 ## Version 4.11.5
 - **Two independent price entities.** The single price model is split into:
   - `number.<farm>_owner_price_p_kwh` — **Owner price in p/kWh** (enter `6` for 6 pence). Drives the owner £ figures.
@@ -9,7 +14,7 @@ All notable changes to the Kirk Hill Wind Farm integration.
   - Both default to `0.0`; sensors read `£0.00` until a real price is set (issue #58 — no projected-model fallback). Displayed figures never round up (`0.06` shows as `0.06`).
 - **Price pills on the SCADA card.** Click the price pill on the Owner or Site title row to edit the price inline (opens a modal writing `number.set_value`). Hint: "Earnings are live generation × this price, updated on the next poll cycle."
 - **Live £/h rate on the Power rows.** Owner: `ownerExportKw × ownerPrice(p/kWh) ÷ 100`; Site: `sitePowerMw × sitePrice(£/MWh)`. Shows `—` until a price is set.
-- **Past-year generation rows.** The SCADA Capacity panels gain `Generation (2025)` and `Generation (2024)` rows (before All time) showing live kWh from the API (`range=YYYY` queries). More years appear automatically as time passes.
+- **Past-year generation sensors.** New `Generation (2025)` / `Generation (2024)` sensors (owner and site) hold live kWh from the API (`range=YYYY` queries). They are sensors only — **not shown on the SCADA card**. More years appear automatically as time passes.
 - **Past-year and All-time £ values are suppressed (`—`).** The API records energy only, never money, so applying today's price to history would silently revalue it every time the price is edited. Stands until the CfD strike price value(s), whether the CfD has ever changed, and its contract length are confirmed. kWh figures stay live. This is the foundation for the future multi-CfD price schedule.
 - **Fixed: the All time row never updated its values.** The card derived row keys from the display name with spaces replaced by hyphens (`All time` → `gen-all-time`), but the DOM row is keyed `gen-alltime` — a mismatch that left the row stuck at `—` since v4.8.41. Row keys now strip spaces instead; all rows update correctly.
 - **Version strings unified.** `VERSION`, `manifest.json`, `pyproject.toml` and `KIRKHILL_WIND_SCADA_VERSION` had drifted apart (4.11.2 / 4.11.5 / 4.11.2 / 4.11.4). All are now synced from `VERSION` via `scripts/version_sync.py`.

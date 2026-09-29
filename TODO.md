@@ -1,5 +1,18 @@
 # To-do list
 
+## Release roll-out — SCADA v4.11.6
+
+- [x] All time generation = calculated sum of per-year figures (2024 + 2025 + current year to date).
+- [x] Future years derived automatically (commissioning year → last complete year).
+- [x] Past-year figures kept as sensors only — removed from the card's generation/finance panels.
+- [x] Docs updated: CHANGELOG.md, dashboard.md, sensors.md, decisions.md.
+- [ ] Sync v4.11.6 files to production (`/homeassistant/custom_components/kirkhill_wind/`).
+- [ ] Restart Home Assistant to load v4.11.6 (sensor code needs a full restart).
+- [ ] Verify v4.11.6 in production (All time = 2024 + 2025 + 2026-to-date; card shows 7 rows).
+- [ ] Create GitHub release v4.11.6 (stable; latest for HACS).
+- [ ] Issue #57: close (David confirmed everything nominal).
+- [ ] Issue #58: post v4.11.6 correction (past-year figures are sensors-only) and delete the garbled duplicate comment.
+
 ## Release roll-out — SCADA v4.11.5
 
 - [x] Issue #58: unset price → sensors read £0.00 until configured (no projected-model fallback).

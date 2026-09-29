@@ -25,6 +25,7 @@ from .const import (
     SCOPE_SITE,
     SCOPES,
     TIMEFRAME_TO_RANGE,
+    yearly_timeframes,
 )
 from .exceptions import KirkHillApiError, KirkHillAuthError
 
@@ -33,9 +34,10 @@ _LOGGER = logging.getLogger(__name__)
 # Tiered update intervals (in coordinator ticks; tick 1 primes everything)
 # Fast: every poll - current power + today summary
 # Slow: every 60 polls (~1 hour) - yesterday (static once day ends), week, month, ytd, year, alltime
-#       + Open-Meteo forecast, turbine data, wind-speed series
+#       + past-year CfD windows (year_YYYY, added dynamically) + Open-Meteo forecast,
+#         turbine data, wind-speed series
 FAST_TIMEFRAMES = ("today",)
-SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime", "year_2024", "year_2025")
+SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
 
 
 class KirkHillWindCoordinator(DataUpdateCoordinator):
@@ -248,6 +250,9 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         timeframes: set[str] = set(FAST_TIMEFRAMES)
         if tick == 1 or tick % 60 == 0:
             timeframes.update(SLOW_TIMEFRAMES)
+            # Past calendar years (year_YYYY) — derived so future years are
+            # fetched automatically as they complete.
+            timeframes.update(yearly_timeframes())
         for (scope, timeframe), retry_at in self._summary_retry_at.items():
             if tick >= retry_at:
                 timeframes.add(timeframe)

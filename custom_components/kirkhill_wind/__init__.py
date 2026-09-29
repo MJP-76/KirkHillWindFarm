@@ -769,16 +769,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             farm_scoped("owner", "farm_generation_value_year"),
         ),
         (
-            "2025",
-            farm_scoped("owner", "farm_generation_year_2025"),
-            farm_scoped("owner", "farm_generation_value_year_2025"),
-        ),
-        (
-            "2024",
-            farm_scoped("owner", "farm_generation_year_2024"),
-            farm_scoped("owner", "farm_generation_value_year_2024"),
-        ),
-        (
             "All time",
             farm_scoped("owner", "farm_generation_alltime"),
             farm_scoped("owner", "farm_generation_value_alltime"),
@@ -814,16 +804,6 @@ def _build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
             "Year",
             farm_scoped("site", "farm_generation_year"),
             farm_scoped("site", "farm_generation_value_year"),
-        ),
-        (
-            "2025",
-            farm_scoped("site", "farm_generation_year_2025"),
-            farm_scoped("site", "farm_generation_value_year_2025"),
-        ),
-        (
-            "2024",
-            farm_scoped("site", "farm_generation_year_2024"),
-            farm_scoped("site", "farm_generation_value_year_2024"),
         ),
         (
             "All time",

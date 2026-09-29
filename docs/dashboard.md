@@ -90,10 +90,16 @@ and duration.
 
 The standalone **Finances tab was removed in v4.8.79** — its content (today's
 earnings, this month, year to date) now lives in the SCADA card itself. Every
-timeframe row (Yesterday, Today, Week, Month, YTD, Year, 2025, 2024, All time)
-in both the **Owner Capacity** and **Site Capacity** panels shows a **£ value
-column** alongside the kWh figure, so generation and its value are on the same
-row for the same timeframe. Both Owner and Site values are shown.
+timeframe row (Yesterday, Today, Week, Month, YTD, Year, All time) in both the
+**Owner Capacity** and **Site Capacity** panels shows a **£ value column**
+alongside the kWh figure, so generation and its value are on the same row for
+the same timeframe. Both Owner and Site values are shown.
+
+The **All time** kWh figure is **calculated as the sum of the per-year
+sensors** — `2024 + 2025 + … + the current year to date`, including any future
+years as they complete. The per-year figures themselves are sensors only
+(`Generation (2024)`, `Generation (2025)`, …) and are **not shown on the card**;
+see [Sensors](sensors.md).
 
 ### Prices
 
@@ -111,17 +117,17 @@ price inline. Displayed prices never round up (`0.06` shows as `0.06`), and the
 Power rows show a live £/h rate (`ownerExportKw × price` / `sitePowerMw × price`)
 once a price is set.
 
-### Suppressed £ values (All time and past years)
+### Suppressed £ values (All time)
 
-The **All time** row and the **past-year rows (2025, 2024)** always show `—` in
-the £ column, regardless of price. The API records energy only, never money, so
-these figures would be today's price applied retroactively to history —
-misleading if the CfD price has ever changed. The kWh figures on those rows stay
-live. This is a standing decision pending confirmation of the CfD strike price
-value(s), whether the CfD has changed, and its contract length (see
-[Development decisions](development/decisions.md)). Once the CfD history is
-known, each year gets its own price — the per-year rows are the foundation for
-the multi-CfD price schedule.
+The **All time** row always shows `—` in the £ column, regardless of price. The
+API records energy only, never money, so this figure would be today's price
+applied retroactively to history — misleading if the CfD price has ever changed.
+The kWh figure on that row stays live (as the per-year sum). The past-year value
+sensors follow the same rule. This is a standing decision pending confirmation
+of the CfD strike price value(s), whether the CfD has changed, and its contract
+length (see [Development decisions](development/decisions.md)). Once the CfD
+history is known, each year gets its own price — the per-year sensors are the
+foundation for the multi-CfD price schedule.
 
 ## History tab
 
