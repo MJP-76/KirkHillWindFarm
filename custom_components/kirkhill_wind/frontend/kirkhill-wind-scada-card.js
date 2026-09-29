@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.11.3";
+const KIRKHILL_WIND_SCADA_VERSION = "4.11.4";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 1300, wMin: 900, wMax: 1800, hMin: 700, hMax: 1900 };
@@ -2295,7 +2295,7 @@ _buildHeaderChips(layout) {
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="518">All time</text>
           <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="518" text-anchor="end">—</text>
           <text class="site-gen-value site-gen-fin" data-site-gen="fin-alltime" x="${layout.chipSiteGenFinX}" y="518" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="538">Capacity Factor (%)</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="538">Capacity Factor</text>
           <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="538" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="558">Power (MW)</text>
           <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="558" text-anchor="end">—</text>
@@ -2665,7 +2665,7 @@ _buildHeaderChips(layout) {
       .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .site-gen-value { fill: var(--khscada-power-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-share { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-share { fill: var(--khscada-power-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }

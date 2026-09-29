@@ -1,13 +1,23 @@
 # To-do list
 
+## Release roll-out — SCADA v4.11.4
+
+- [x] Issue #57 (portrait picky items): Site panel "Capacity Factor (%)" label shortened to "Capacity Factor" so it no longer overlaps the amber value (unit was duplicated — value already carries `%`).
+- [x] Issue #57 (portrait picky items): Owner panel "Your Share (W)" styled amber + 16px to match every other figure (was green + larger).
+- [x] Deploy v4.11.4 to production (manifest, card JS all synced).
+- [ ] Verify v4.11.4 in production (card JS 4.11.4, both portrait fixes confirmed).
+- [ ] Restart Home Assistant to load v4.11.4 manifest version (v4.11.3 restart also still pending).
+- [ ] Create GitHub release v4.11.4 (stable; latest for HACS)
+- [ ] Reply to issue #57 (v4.11.3 trailing-zero charts + v4.11.4 portrait fixes)
+
 ## Release roll-out — SCADA v4.11.3
 
 - [x] Fix remaining trailing zeros: Site Power (MW) and Export Power (MW) line-chart y-axes now use `_fmt(v, 2)` formatters (raw recorder values were showing `0.000000`/`0.00000000000000`). Completes the sweep from v4.11.1/4.11.2 — no raw-value axes left.
 - [x] Deploy v4.11.3 to production (manifest, card JS all synced).
 - [x] Verify v4.11.3 in production (card JS 4.11.3, both MW chart axes formatted — confirmed by user).
 - [ ] Restart Home Assistant to load v4.11.3 manifest version.
-- [ ] Create GitHub release v4.11.3 (stable; latest for HACS)
-- [ ] Reply to issue #57 (last two trailing-zero charts fixed)
+- [x] Create GitHub release v4.11.3 (stable; latest for HACS)
+- [ ] Reply to issue #57 (last two trailing-zero charts fixed — reply deferred; folded into v4.11.4 reply)
 
 ## Release roll-out — SCADA v4.11.0
 

@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.11.4
+- **Site panel portrait fix:** "Capacity Factor" label no longer overwritten by the value. The label (which already duplicated the unit — the value carries its own `%`) was long enough to collide with the amber value text on narrow layouts; shortened to `Capacity Factor`.
+- **Owner panel value styling:** "Your Share (W)" is now amber and 16px like every other figure in the panel (was green/success-coloured and larger).
+
 ## Version 4.11.3
 - **Trailing zeros on the last two chart axes fixed.** The Site Power (MW) chart (Site Generation & Capacity panel) and Export Power (MW) chart (National Grid panel) were rendering raw recorder values on the y-axis (`0.000000` / `0.00000000000000`). Both now use `_fmt(v, 2)` axis formatters, stripping trailing zeros like every other chart.
   - This completes the trailing-zeros sweep from v4.11.1/v4.11.2: kWh, kW, %, RPM and m/s axes were already formatted — these two MW line charts were the only remaining raw-value axes.
