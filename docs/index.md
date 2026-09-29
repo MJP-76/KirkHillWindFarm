@@ -14,16 +14,17 @@ It pulls current data for both OpenAPI scopes:
 
 !!! warning "Financial figures"
 
-    Financial £ values are **live-accurate** only when a negotiated price is set.
-    By default they are *projected* figures based on configured annual inputs —
-    the £ value column switches to actual generation × price when the
-    `number.<farm>_negotiated_price_gbp_mwh` entity is set above 0. The Kirk Hill
-    API remains the authoritative source for actual farm generation.
+    Financial £ values are **live-accurate** only when a price is set. By default
+    both price entities are `0.0` and the £ column reads `£0.00`. Set
+    `number.<farm>_owner_price_p_kwh` (Owner price, p/kWh) or
+    `number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh) to switch
+    to actual generation × price. The Kirk Hill API remains the authoritative
+    source for actual farm generation.
 
-    The **All-time** £ value is suppressed (shows `—`), because the API records
-    energy only — never money — and applying today's price to the farm's entire
-    history would revalue it whenever the price is edited. This stands until the
-    CfD strike price history is confirmed.
+    The **All-time** and **past-year (2025, 2024)** £ values are suppressed
+    (show `—`), because the API records energy only — never money — and applying
+    today's price to history would revalue it whenever the price is edited. This
+    stands until the CfD strike price history is confirmed.
 
 ## Support me
 

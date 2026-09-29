@@ -90,24 +90,38 @@ and duration.
 
 The standalone **Finances tab was removed in v4.8.79** — its content (today's
 earnings, this month, year to date) now lives in the SCADA card itself. Every
-timeframe row (Yesterday, Today, Week, Month, YTD, Year, All time) in both the
-**Owner Capacity** and **Site Capacity** panels shows a **£ value column**
-alongside the kWh figure, so generation and its value are on the same row for
-the same timeframe. Both Owner and Site values are shown.
+timeframe row (Yesterday, Today, Week, Month, YTD, Year, 2025, 2024, All time)
+in both the **Owner Capacity** and **Site Capacity** panels shows a **£ value
+column** alongside the kWh figure, so generation and its value are on the same
+row for the same timeframe. Both Owner and Site values are shown.
 
-By default the £ figures are **projected**, derived from the configured annual
-earnings. If you set a **negotiated CfD price** (via the
-`number.<farm>_negotiated_price_gbp_mwh` entity, GBP/MWh), the values switch to
-**live-accurate**: `actual generation kWh ÷ 1000 × price` per timeframe, falling
-back to the projected model when the price is 0 or live generation is not yet
-available.
+### Prices
 
-The **All time** row's £ cell always shows `—` regardless of price. The API
-records energy only, never money, so an All-time £ figure would be today's price
-applied retroactively to the farm's whole history — misleading if the CfD price
-has ever changed. The kWh figure on that row stays live. This is a standing
-decision pending confirmation of the CfD strike price value(s), whether the CfD
-has changed, and its contract length (see [Development decisions](development/decisions.md)).
+Two independent price entities drive the £ figures:
+
+- `number.<farm>_owner_price_p_kwh` — **Owner price in p/kWh** (enter `6` for
+  6 pence). Drives the Owner panel's £ column and the owner £/h rate.
+- `number.<farm>_negotiated_price_gbp_mwh` — **Site/CfD price in £/MWh**
+  (CfD-style strike price). Drives the Site panel's £ column and the site £/h
+  rate.
+
+Both default to `0.0`, in which case the sensors read `£0.00` rather than a
+projected figure. Click the price pill on the panel's title row to edit the
+price inline. Displayed prices never round up (`0.06` shows as `0.06`), and the
+Power rows show a live £/h rate (`ownerExportKw × price` / `sitePowerMw × price`)
+once a price is set.
+
+### Suppressed £ values (All time and past years)
+
+The **All time** row and the **past-year rows (2025, 2024)** always show `—` in
+the £ column, regardless of price. The API records energy only, never money, so
+these figures would be today's price applied retroactively to history —
+misleading if the CfD price has ever changed. The kWh figures on those rows stay
+live. This is a standing decision pending confirmation of the CfD strike price
+value(s), whether the CfD has changed, and its contract length (see
+[Development decisions](development/decisions.md)). Once the CfD history is
+known, each year gets its own price — the per-year rows are the foundation for
+the multi-CfD price schedule.
 
 ## History tab
 

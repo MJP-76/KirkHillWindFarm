@@ -70,13 +70,16 @@ decision changes.
   falls back to the projected model. The alltime timeframe keeps the fallback
   path because no historical price data exists — the projected model cannot be
   replaced there without price history.
-- **2026-09-29 — All-time £ value is suppressed (`unknown`, card shows `—`)
-  until the CfD strike price history is clarified.** The API records energy
-  only, never money; computing All-time value as `alltime kWh × current price`
-  would silently revalue the farm's entire history every time the price is
-  edited. The alltime kWh energy figure remains live. All other timeframes keep
-  their live £ figures. To revisit once the CfD strike price value(s), whether
-  the CfD has ever changed, and its contract length are confirmed.
+- **2026-09-29 — All-time and past-year £ values are suppressed (`unknown`,
+  card shows `—`) until the CfD strike price history is clarified.** The API
+  records energy only, never money; computing these values as
+  `kWh × current price` would silently revalue history every time the price is
+  edited. This applies to the All time row and the past-year rows (2025, 2024)
+  added in v4.11.5. The kWh energy figures remain live. All other timeframes
+  keep their live £ figures. To revisit once the CfD strike price value(s),
+  whether the CfD has ever changed, and its contract length are confirmed. When
+  known, each year gets its own price — the per-year rows are the foundation
+  for the multi-CfD price schedule.
 
 ## Dashboard consolidation
 

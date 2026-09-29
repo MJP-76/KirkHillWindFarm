@@ -1,5 +1,20 @@
 # To-do list
 
+## Release roll-out — SCADA v4.11.5
+
+- [x] Issue #58: unset price → sensors read £0.00 until configured (no projected-model fallback).
+- [x] Two price entities: Owner price (p/kWh) + Site/CfD price (£/MWh), with inline price pills and £/h rates on Power rows.
+- [x] Past-year generation rows (2025, 2024) in both SCADA panels, live kWh from `range=YYYY` API queries.
+- [x] All-time and past-year £ suppressed (`—`) until CfD strike price history confirmed (provisional decision 2026-09-29).
+- [x] Fix All time row slug mismatch (`gen-all-time` vs `gen-alltime`) — row had never updated since v4.8.41.
+- [x] Unify version strings (VERSION/manifest/pyproject/card JS drifted to 4.11.2/4.11.5/4.11.2/4.11.4 — now all 4.11.5 via `scripts/version_sync.py sync`).
+- [x] Update docs: CHANGELOG.md, dashboard.md, sensors.md, index.md, decisions.md.
+- [ ] Sync v4.11.5 files to production (`/homeassistant/custom_components/kirkhill_wind/`).
+- [ ] Restart Home Assistant to load v4.11.5 (sensor code needs a full restart; previous restarts for v4.11.3/v4.11.4 also still pending).
+- [ ] Verify v4.11.5 in production (card version pill shows 4.11.5, past-year rows render, All time row updates).
+- [ ] Create GitHub release v4.11.5 (stable; latest for HACS).
+- [ ] Reply to issue #58 with the final version number.
+
 ## Release roll-out — SCADA v4.11.4
 
 - [x] Issue #57 (portrait picky items): Site panel "Capacity Factor (%)" label shortened to "Capacity Factor" so it no longer overlaps the amber value (unit was duplicated — value already carries `%`).

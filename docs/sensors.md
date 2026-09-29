@@ -12,11 +12,13 @@
 - Generation (month) [kWh] for owner and site
 - Generation (ytd) [kWh] for owner and site
 - Generation (year) [kWh] for owner and site
+- Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`; more years appear automatically as time passes
 - Generation (alltime) [kWh] for owner and site
 - Generation source attribute marks these entities as `api_dynamic`
-- Value (yesterday/today/week/month/ytd/year/alltime) [GBP] for owner and site — live-accurate when a negotiated price is set; otherwise the projected (non-dynamic) model applies
-  - For the projected (fallback) model, the all-time start date is derived from the API all-time timeframe when available
-- Negotiated price (number) [GBP/MWh] — user-set path to live-accurate £ values (see note below)
+- Value (yesterday/today/week/month/ytd/year) [GBP] for owner and site — live-accurate when a price is set; otherwise `£0.00`
+  - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
+- Owner price (number) [p/kWh] — user-set owner price driving the owner £ figures
+- Negotiated price (number) [GBP/MWh] — user-set CfD price driving the site £ figures
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Wind speed [m/s]
 - Active turbines
@@ -28,19 +30,25 @@ Home Assistant. The generated dashboard formats those values for display with
 automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and
 rounds them to **2 decimal places**.
 
-Financial £ values are **live-accurate when a negotiated price is set**: the
-`number.kirk_hill_wind_farm_negotiated_price_gbp_mwh` entity (0.0 by default)
-holds the negotiated CfD price in GBP/MWh. When it is >0, each timeframe's value
-is `actual generation kWh ÷ 1000 × price`; when it is 0 (or live generation is
-unavailable, e.g. before the first successful API fetch) the values fall back to
-the projected model based on the configured annual figures.
+Financial £ values are **live-accurate when a price is set**. Two independent
+price entities hold the prices, both `0.0` by default:
+`number.kirk_hill_wind_farm_owner_price_p_kwh` (Owner price in p/kWh — enter `6`
+for 6 pence) drives the owner figures; and
+`number.kirk_hill_wind_farm_negotiated_price_gbp_mwh` (Site/CfD price in £/MWh)
+drives the site figures. When a price is >0, each timeframe's owner value is
+`generation kWh × price(p/kWh) ÷ 100` and each site value is
+`generation kWh ÷ 1000 × price(£/MWh)`; when it is 0 (or live generation is
+unavailable, e.g. before the first successful API fetch) the sensors read
+`£0.00` — there is no projected-model fallback.
 
-The **All-time** value is an exception: it reports `unknown` (the SCADA card
-shows `—`) in every case, because the API records energy only — never money —
-and applying today's price to the farm's entire history would silently revalue
-it whenever the price is edited. This stands until the CfD strike price history
-is confirmed (the price value(s), whether the CfD has ever changed, and its
-contract length). The all-time kWh energy figure is unaffected. See
+The **All-time** and **past-year (2025, 2024)** values are exceptions: they
+report `unknown` (the SCADA card shows `—`) in every case, because the API
+records energy only — never money — and applying today's price to history would
+silently revalue it whenever the price is edited. This stands until the CfD
+strike price history is confirmed (the price value(s), whether the CfD has ever
+changed, and its contract length). The kWh energy figures are unaffected. Once
+the history is known, each year gets its own price — the per-year rows are the
+foundation for the multi-CfD price schedule. See
 [Development decisions](development/decisions.md).
 
 ## Per turbine device (`Turbine T1` … `Turbine T8`)
