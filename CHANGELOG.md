@@ -2,6 +2,10 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.11.3
+- **Trailing zeros on the last two chart axes fixed.** The Site Power (MW) chart (Site Generation & Capacity panel) and Export Power (MW) chart (National Grid panel) were rendering raw recorder values on the y-axis (`0.000000` / `0.00000000000000`). Both now use `_fmt(v, 2)` axis formatters, stripping trailing zeros like every other chart.
+  - This completes the trailing-zeros sweep from v4.11.1/v4.11.2: kWh, kW, %, RPM and m/s axes were already formatted — these two MW line charts were the only remaining raw-value axes.
+
 ## Version 4.11.2
 - **Daily energy-chart totals fix:** `_fetchDailyStatistics` now uses `state: r.state ?? r.sum` — the recorder's `sum` statistic for daily-reset counters equals `state − K` (constant offset, never reset), so using `sum` produced negatives/garbage. `state` is the correct daily-reset total.
 - **Chart y-axis formatting across all timeframes:** Added formatters to eliminate trailing zeros on 1M/6M/1Y axes.

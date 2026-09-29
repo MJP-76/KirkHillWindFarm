@@ -1,5 +1,14 @@
 # To-do list
 
+## Release roll-out — SCADA v4.11.3
+
+- [x] Fix remaining trailing zeros: Site Power (MW) and Export Power (MW) line-chart y-axes now use `_fmt(v, 2)` formatters (raw recorder values were showing `0.000000`/`0.00000000000000`). Completes the sweep from v4.11.1/4.11.2 — no raw-value axes left.
+- [x] Deploy v4.11.3 to production (manifest, card JS all synced).
+- [x] Verify v4.11.3 in production (card JS 4.11.3, both MW chart axes formatted — confirmed by user).
+- [ ] Restart Home Assistant to load v4.11.3 manifest version.
+- [ ] Create GitHub release v4.11.3 (stable; latest for HACS)
+- [ ] Reply to issue #57 (last two trailing-zero charts fixed)
+
 ## Release roll-out — SCADA v4.11.0
 
 - [x] Daily totals for energy charts on long timeframes (`_fetchDailyStatistics`, state+sum types)
