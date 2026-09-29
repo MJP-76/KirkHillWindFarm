@@ -89,6 +89,17 @@ decision changes.
   shown in the card's generation/finance panels. The year list is derived from
   the commissioning year (2024) to the last complete year, so future years join
   the sum automatically; their sensors appear after the next restart.
+- **2026-09-29 — The projected-annual-earnings estimates are removed (config
+  version 7).** *Supersedes the 2026-09-04 decision above.* The owner/site
+  projected annual earnings (default £132 / £0) were estimated averages feeding
+  a projected model that v4.11.5 retired: earnings are now `kWh × real price`
+  or `£0.00` when no price is set, so the estimates drove no displayed value.
+  The config-flow fields, the `Projected annual earnings` number entities, the
+  `projected_annual_gbp`/`projection_factor` attributes and the dead
+  `_cfd_price_gbp_per_mwh()` helper are all gone, and the v7 migration strips
+  the stale keys from existing entries. The real prices (with their effective
+  dates) are being sourced from the co-op board — when they land, per-year
+  prices replace the estimates entirely.
 
 ## Dashboard consolidation
 

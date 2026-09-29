@@ -1,5 +1,18 @@
 # To-do list
 
+## Release roll-out — SCADA v4.11.7
+
+- [x] Remove projected-annual-earnings from config flow (initial + options).
+- [x] Remove `ProjectedAnnualEarningsNumber` entities and the projection attributes.
+- [x] Remove dead code (`_cfd_price_gbp_per_mwh`) and unused constants.
+- [x] Config migration v7: strip stale keys from existing entries.
+- [x] Fix past-year £ suppression to cover future `year_YYYY` frames automatically.
+- [x] Docs updated: CHANGELOG.md, installation.md, index.md, decisions.md.
+- [ ] Sync v4.11.7 files to production.
+- [ ] Restart Home Assistant to load v4.11.7.
+- [ ] Verify: projected-earnings number entities gone; prices and £ values unchanged.
+- [ ] Create GitHub release v4.11.7 (stable; latest for HACS).
+
 ## Release roll-out — SCADA v4.11.6
 
 - [x] All time generation = calculated sum of per-year figures (2024 + 2025 + current year to date).

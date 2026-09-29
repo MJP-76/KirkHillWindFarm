@@ -12,11 +12,6 @@ from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpe
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
-    CONF_CFD_PRICE_GBP_PER_MWH,
-    CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-    CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
-    DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-    DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     SCOPE_OWNER,
     SCOPE_SITE,
     SCOPES,
@@ -380,27 +375,6 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         label = TIMEFRAME_LABELS.get(timeframe, f"Projected ({timeframe})")
         self._attr_name = f"{label} projected value ({scope_label})"
 
-    def _annual_projected_gbp(self) -> float:
-        values = getattr(self.coordinator, "projected_annual_earnings_gbp", None)
-        if values:
-            live = values.get(self._scope)
-            if live is not None:
-                return float(live)
-        if self._scope == SCOPE_OWNER:
-            key = CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP
-            default = DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP
-        else:
-            key = CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP
-            default = DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP
-        return float(self._entry.options.get(key, self._entry.data.get(key, default)))
-
-    def _cfd_price_gbp_per_mwh(self) -> float | None:
-        """Return the configured CFD price in GBP per MWh, or None if not set."""
-        price = self._entry.options.get(CONF_CFD_PRICE_GBP_PER_MWH)
-        if price is not None and str(price).strip():
-            return float(price)
-        return None
-
     @staticmethod
     def _parse_api_date(value) -> date | None:
         if isinstance(value, date) and not isinstance(value, datetime):
@@ -481,25 +455,6 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
 
         return None
 
-    def _projection_factor(self) -> float:
-        if self._timeframe in ("yesterday", "today"):
-            return 1 / 365
-        if self._timeframe == "week":
-            return 7 / 365
-        if self._timeframe == "month":
-            return 30 / 365
-        if self._timeframe == "ytd":
-            return date.today().timetuple().tm_yday / 365
-        if self._timeframe == "year":
-            return 1.0
-        if self._timeframe == "alltime":
-            start_date = self._alltime_start_date()
-            if start_date is None:
-                return 20.0
-            elapsed_days = max((date.today() - start_date).days, 1)
-            return elapsed_days / 365
-        return 0.0
-
     @property
     def native_value(self):
         """Return earnings: live generation × scope price, else £0.00.
@@ -516,7 +471,7 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         only valid while that price has never changed, so we suppress it until
         a real price history exists. The kWh energy figure is unaffected.
         """
-        if self._timeframe == "alltime" or self._timeframe in ("year_2024", "year_2025"):
+        if self._timeframe == "alltime" or self._timeframe.startswith("year_"):
             return None
         kwh = self._live_kwh_for_timeframe()
         if kwh is None:
@@ -551,10 +506,8 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
         attrs["timeframe"] = self._timeframe
-        if self._timeframe in ("alltime", "year_2024", "year_2025"):
+        if self._timeframe == "alltime" or self._timeframe.startswith("year_"):
             attrs["projection_basis"] = "suppressed_no_historical_price"
-            attrs["projected_annual_gbp"] = self._annual_projected_gbp()
-            attrs["projection_factor"] = self._projection_factor()
             start_date = self._alltime_start_date()
             attrs["alltime_start_date"] = (
                 start_date.isoformat() if start_date is not None else None
@@ -573,8 +526,6 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
             attrs["projection_basis"] = (
                 "live_generation_x_price" if price else "no_price_zero"
             )
-        attrs["projected_annual_gbp"] = self._annual_projected_gbp()
-        attrs["projection_factor"] = self._projection_factor()
         return attrs
 
 

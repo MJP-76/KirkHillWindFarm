@@ -32,18 +32,12 @@ from .const import (
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
-    CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-    CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     DEFAULT_BASE_URL,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
-    DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-    DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
     PLATFORMS,
-    SCOPE_OWNER,
-    SCOPE_SITE,
 )
 from .coordinator import KirkHillWindCoordinator
 from .device import get_farm_device_id
@@ -70,7 +64,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 
 # Keep in sync with the VERSION in config_flow.py. Home Assistant calls this
 # module-level handler when a stored config entry's version is behind.
-_CONFIG_ENTRY_VERSION = 6
+_CONFIG_ENTRY_VERSION = 7
 
 
 async def async_migrate_entry(
@@ -104,8 +98,19 @@ async def async_migrate_entry(
         # Version 6 adds owner_price_pence_per_kwh config option
         data.setdefault(CONF_OWNER_PRICE_PENCE_PER_KWH, DEFAULT_OWNER_PRICE_PENCE_PER_KWH)
 
+    options = dict(getattr(config_entry, "options", {}) or {})
+    if config_entry.version < 7:
+        # Version 7 removes the projected-annual-earnings figures. They were
+        # estimated averages feeding a projected model that v4.11.5 retired
+        # (earnings are now live generation × real price). Strip the dead keys
+        # so no stale estimates linger in the entry.
+        data.pop("owner_projected_annual_earnings_gbp", None)
+        data.pop("site_projected_annual_earnings_gbp", None)
+        options.pop("owner_projected_annual_earnings_gbp", None)
+        options.pop("site_projected_annual_earnings_gbp", None)
+
     hass.config_entries.async_update_entry(
-        config_entry, data=data, version=_CONFIG_ENTRY_VERSION
+        config_entry, data=data, options=options, version=_CONFIG_ENTRY_VERSION
     )
     return True
 
@@ -120,29 +125,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator.farm_device_id = await get_farm_device_id(hass, entry)
 
-    # Seed the user-adjustable projected-earnings figures that the number
-    # platform exposes. The default (config) values are only the starting point;
-    # users override them live via the number entities, which write back here.
-    coordinator.projected_annual_earnings_gbp = {
-        SCOPE_OWNER: float(
-            entry.options.get(
-                CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-                entry.data.get(
-                    CONF_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-                    DEFAULT_OWNER_PROJECTED_ANNUAL_EARNINGS_GBP,
-                ),
-            )
-        ),
-        SCOPE_SITE: float(
-            entry.options.get(
-                CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
-                entry.data.get(
-                    CONF_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
-                    DEFAULT_SITE_PROJECTED_ANNUAL_EARNINGS_GBP,
-                ),
-            )
-        ),
-    }
     coordinator.negotiated_price_gbp_per_mwh = float(
         entry.options.get(
             CONF_CFD_PRICE_GBP_PER_MWH,

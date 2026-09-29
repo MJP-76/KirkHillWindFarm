@@ -2,6 +2,11 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.11.7
+- **Removed: projected annual earnings.** The setup/options fields, the `Projected annual earnings (Owner/Site)` number entities, and the `projected_annual_gbp` / `projection_factor` attributes are gone. They were estimated averages (default £132 / £0) feeding a projected model retired in v4.11.5 — earnings are now `kWh × real price`, or `£0.00` when no price is set, so the estimates drove no displayed value. Existing installations migrate automatically (config version 7 strips the stale keys). Prices remain editable via the number entities and the dashboard price pills.
+- **Fixed: past-year £ suppression now covers future years.** The suppression check matched only `year_2024`/`year_2025` literally; a future `year_2026` frame would have shown a £ figure revalued at today's price — exactly the misvaluation the suppression exists to prevent. Any `year_YYYY` frame is now suppressed automatically.
+- **Removed dead code:** the unused `_cfd_price_gbp_per_mwh()` helper.
+
 ## Version 4.11.6
 - **All time generation is now calculated from the per-year figures.** The All time kWh equals `2024 + 2025 + … + the current year to date` exactly, instead of trusting the API's separate `range=all` total. The `sum_of_years_kwh` attribute lists the per-year components, and `generation_source` reads `sum_of_years`.
 - **Future years join automatically.** The per-year timeframe list is derived from the commissioning year (2024) to the last complete year, so a new year is fetched and summed as soon as it completes — no code changes needed. Its sensors appear after the next restart.

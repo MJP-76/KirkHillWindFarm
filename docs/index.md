@@ -42,7 +42,7 @@ development, you can do so here:
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
-  - owner and site **projected** value by timeframe (GBP), based on configured annual projections (non-dynamic)
+  - owner and site value by timeframe (GBP) — live generation × the configured price, `£0.00` when no price is set
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -54,7 +54,7 @@ development, you can do so here:
   - wind speed, state text, active binary sensor, rotor speed, today's generation
 - Config flow with API key validation and masked key entry
 - Optional automatic dashboard creation during setup
-- Configurable owner/site projected annual earnings (GBP)
+- Configurable prices: Owner price (p/kWh) and Site/CfD price (£/MWh), as `number` entities
 - Open-Meteo forecast integration (forecast only; not authoritative actual generation)
 - Optional experimental Ethex payment-tracking onboarding toggle
 - Configurable polling interval via Options

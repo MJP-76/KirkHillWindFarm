@@ -32,8 +32,6 @@ During setup, the integration asks for:
 
 - **API key** — entered as a masked password field in Home Assistant
 - **Create dashboard automatically** — whether the integration should create/update its Lovelace dashboard tab
-- **Owner projected annual earnings (GBP)** — used to derive timeframe values (non-dynamic)
-- **Site projected annual earnings (GBP)** — used to derive timeframe values (non-dynamic)
 - **Enable payment tracking onboarding (Ethex, experimental)** — optionally starts the Ethex setup flow
 - **Site name** — used as the integration title in Home Assistant
 
@@ -43,11 +41,16 @@ After setup, the **Configure** options let you change:
 
 - Polling interval
 - Create dashboard automatically
-- Owner projected annual earnings (GBP)
-- Site projected annual earnings (GBP)
 - Enable payment tracking onboarding (Ethex, experimental)
 
-The negotiated CfD price is **not** an options field — it is a `number` entity
-(`number.<farm>_negotiated_price_gbp_mwh`) you set from the entity's controls.
-When set above 0, the dashboard's £ value column switches from the projected
-model to live actual-generation × price (see [Sensors](sensors.md)).
+Prices are **not** options fields — they are `number` entities you set from the
+entity's controls or the dashboard's price pills:
+`number.<farm>_owner_price_p_kwh` (Owner price, p/kWh) and
+`number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh). When a price
+is above 0, the dashboard's £ value column shows actual generation × price;
+when it is 0 the sensors read `£0.00` (see [Sensors](sensors.md)).
+
+> **Note:** v4.11.7 removed the "projected annual earnings" setup fields. Those
+> were estimated averages feeding a projected model retired in v4.11.5 — earnings
+> are now live generation × real price, so the estimates were removed along with
+> their number entities. Existing installations migrate automatically.
