@@ -147,13 +147,15 @@ class TestTimeBasedScheduling:
         ):
             await coord._async_update_data()
 
-        # First poll runs the fast and slow tiers for both scopes.
+        # First poll runs the fast and slow tiers for both scopes. Note the
+        # coordinator passes API range values ("all", "7d", "30d"), not the
+        # internal timeframe names ("alltime", "week", "month").
         first_poll = {
             (call.kwargs["scope"], call.kwargs["range_value"])
             for call in mock_api_client.get_summary.call_args_list
         }
-        assert (SCOPE_OWNER, "yesterday") in first_poll
-        assert (SCOPE_SITE, "alltime") in first_poll
+        assert (SCOPE_OWNER, "7d") in first_poll
+        assert (SCOPE_SITE, "all") in first_poll
 
         mock_api_client.get_summary.reset_mock()
 
