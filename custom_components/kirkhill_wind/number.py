@@ -69,6 +69,16 @@ class NegotiatedPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
         except (TypeError, ValueError):
             return
         self.coordinator.negotiated_price_gbp_per_mwh = value
+        # Persist to options so the options form and diagnostics show the
+        # restored value, not the stale default that was in options before
+        # RestoreEntity kicked in.
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            options=merge_options(
+                dict(self._entry.options),
+                {CONF_CFD_PRICE_GBP_PER_MWH: value},
+            ),
+        )
 
 
 class OwnerPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
@@ -112,3 +122,13 @@ class OwnerPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
         except (TypeError, ValueError):
             return
         self.coordinator.owner_price_pence_per_kwh = value
+        # Persist to options so the options form and diagnostics show the
+        # restored value, not the stale default that was in options before
+        # RestoreEntity kicked in.
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            options=merge_options(
+                dict(self._entry.options),
+                {CONF_OWNER_PRICE_PENCE_PER_KWH: value},
+            ),
+        )
