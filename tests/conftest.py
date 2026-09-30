@@ -1,7 +1,7 @@
 """Shared fixtures for Kirk Hill Wind Farm tests."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -42,6 +42,23 @@ def hass():
     finally:
         # Leave no global state behind for the next test.
         frame._hass.hass = None
+
+
+@pytest.fixture(autouse=True)
+def mock_clientsession():
+    """Stub the shared aiohttp session the coordinator fetches.
+
+    The coordinator deliberately uses HA's shared client session rather than
+    making its own. On a mock hass, async_get_clientsession() would try to
+    build a real session -- reaching into the zeroconf/network integration
+    and failing with KeyError: 'network'. Nothing under test here depends on
+    the session itself, only on the API client that receives it.
+    """
+    with patch(
+        "custom_components.kirkhill_wind.coordinator.async_get_clientsession",
+        return_value=MagicMock(name="clientsession"),
+    ):
+        yield
 
 
 @pytest.fixture
