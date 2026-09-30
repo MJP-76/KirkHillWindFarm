@@ -40,7 +40,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         await hass.config_entries.async_reload(target.entry_id)
 
     async def _async_reset_dashboard_service(call) -> None:
-        from . import async_reset_dashboard  # noqa: PLC0415
+        from .dashboard import async_reset_dashboard  # noqa: PLC0415
 
         target = _get_target_entry(hass, call.data.get(ATTR_ENTRY_ID))
         await async_reset_dashboard(hass, target)

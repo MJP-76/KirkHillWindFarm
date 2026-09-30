@@ -3,6 +3,10 @@ name = "kirkhill-wind-farm"
 version = "4.12.0"
 description = "Home Assistant integration for the Kirk Hill Wind Farm dashboard"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
 [tool.black]
 line-length = 120
 

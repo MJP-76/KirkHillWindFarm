@@ -5,54 +5,54 @@ import copy
 
 import pytest
 
-from custom_components.kirkhill_wind import (
-    _OBSOLETE_CARD_KEYS,
-    _OBSOLETE_VIEW_PATHS,
-    _card_match_key,
+from custom_components.kirkhill_wind.dashboard import (
+    OBSOLETE_CARD_KEYS,
+    OBSOLETE_VIEW_PATHS,
+    card_match_key,
     _merge_cards,
-    _merge_dashboard_config,
+    merge_dashboard_config,
     _merge_view,
     _section_match_key,
 )
 
 
 # ---------------------------------------------------------------------------
-# _card_match_key
+# card_match_key
 # ---------------------------------------------------------------------------
 
 class TestCardMatchKey:
     """Verify cards are matched by stable keys."""
 
     def test_heading_matched_by_text(self):
-        assert _card_match_key({"type": "heading", "heading": "My Heading"}) == "heading:My Heading"
+        assert card_match_key({"type": "heading", "heading": "My Heading"}) == "heading:My Heading"
 
     def test_kpi_matched_by_name(self):
         card = {"type": "stat", "name": "Owner Power", "entity": "sensor.x"}
-        assert _card_match_key(card) == "kpi:name:Owner Power"
+        assert card_match_key(card) == "kpi:name:Owner Power"
 
     def test_kpi_falls_back_to_entity(self):
         card = {"type": "entity", "entity": "sensor.x"}
-        assert _card_match_key(card) == "kpi:name:sensor.x"
+        assert card_match_key(card) == "kpi:name:sensor.x"
 
     def test_entities_matched_by_title(self):
         card = {"type": "entities", "title": "Owner data"}
-        assert _card_match_key(card) == "entities:title:Owner data"
+        assert card_match_key(card) == "entities:title:Owner data"
 
     def test_button_matched_by_name(self):
         card = {"type": "button", "name": "Reload integration"}
-        assert _card_match_key(card) == "button:name:Reload integration"
+        assert card_match_key(card) == "button:name:Reload integration"
 
     def test_scada_card_matched_by_type(self):
         card = {"type": "custom:kirkhill-wind-scada", "title": ""}
-        assert _card_match_key(card) == "custom:kirkhill-wind-scada"
+        assert card_match_key(card) == "custom:kirkhill-wind-scada"
 
     def test_apexcharts_matched_by_header_title(self):
         card = {"type": "custom:apexcharts-card", "header": {"title": "Wind"}}
-        assert _card_match_key(card) == "custom:apexcharts-card:title:Wind"
+        assert card_match_key(card) == "custom:apexcharts-card:title:Wind"
 
     def test_unmatchable_card_returns_none(self):
         card = {"type": "custom:unknown"}
-        assert _card_match_key(card) is None
+        assert card_match_key(card) is None
 
     def test_container_matched_by_child_keys(self):
         card = {
@@ -62,7 +62,7 @@ class TestCardMatchKey:
                 {"type": "entities", "title": "Data"},
             ],
         }
-        key = _card_match_key(card)
+        key = card_match_key(card)
         assert key is not None
         assert "container:vertical-stack:" in key
 
@@ -70,7 +70,7 @@ class TestCardMatchKey:
         """stat and entity cards with the same name should match."""
         stat = {"type": "stat", "name": "Power"}
         entity = {"type": "entity", "name": "Power"}
-        assert _card_match_key(stat) == _card_match_key(entity)
+        assert card_match_key(stat) == card_match_key(entity)
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +121,8 @@ class TestMergeCards:
         assert "Site data" in titles
 
     def test_obsolete_card_removed(self):
-        """Cards whose key is in _OBSOLETE_CARD_KEYS should be removed."""
-        obsolete_key = next(iter(_OBSOLETE_CARD_KEYS))
+        """Cards whose key is in OBSOLETE_CARD_KEYS should be removed."""
+        obsolete_key = next(iter(OBSOLETE_CARD_KEYS))
         # Parse the key to reconstruct a minimal card
         # Keys look like "kpi:name:Owner Power" or "entities:title:Turbine T1"
         parts = obsolete_key.split(":", 2)
@@ -150,7 +150,7 @@ class TestMergeCards:
 
 
 # ---------------------------------------------------------------------------
-# _merge_dashboard_config
+# merge_dashboard_config
 # ---------------------------------------------------------------------------
 
 class TestMergeDashboardConfig:
@@ -179,7 +179,7 @@ class TestMergeDashboardConfig:
                 },
             ],
         }
-        result = _merge_dashboard_config(existing, new)
+        result = merge_dashboard_config(existing, new)
         assert len(result["views"]) == 1
         assert result["views"][0]["title"] == "New Title"
         cards = result["views"][0]["cards"]
@@ -197,12 +197,12 @@ class TestMergeDashboardConfig:
                 {"path": "scada", "cards": []},
             ],
         }
-        result = _merge_dashboard_config(existing, new)
+        result = merge_dashboard_config(existing, new)
         paths = [v["path"] for v in result["views"]]
         assert "my-custom-view" in paths
 
     def test_obsolete_view_removed(self):
-        obsolete_path = next(iter(_OBSOLETE_VIEW_PATHS))
+        obsolete_path = next(iter(OBSOLETE_VIEW_PATHS))
         existing = {
             "views": [
                 {"path": obsolete_path, "cards": []},
@@ -211,11 +211,11 @@ class TestMergeDashboardConfig:
         new = {
             "views": [],
         }
-        result = _merge_dashboard_config(existing, new)
+        result = merge_dashboard_config(existing, new)
         paths = [v.get("path") for v in result["views"]]
         assert obsolete_path not in paths
 
     def test_empty_existing_returns_default(self):
         new = {"views": [{"path": "scada", "cards": []}]}
-        result = _merge_dashboard_config({}, new)
+        result = merge_dashboard_config({}, new)
         assert result["views"][0]["path"] == "scada"
