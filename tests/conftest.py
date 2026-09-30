@@ -33,15 +33,23 @@ def hass():
     mock_hass.config_entries = MagicMock()
     mock_hass.bus = MagicMock()
 
-    # DataUpdateCoordinator.__init__ calls frame.report_usage(), which raises
-    # "Frame helper not set up" unless the frame helper has a hass. Real HA
-    # calls this during bootstrap; here the mock is the only hass there is.
-    frame.async_setup(mock_hass)
+    # DataUpdateCoordinator.__init__ calls frame.report_usage() whenever
+    # config_entry is not passed explicitly, because it then has to fall back
+    # to the current_entry ContextVar. The coordinator does pass it, so this is
+    # only a safety net for any other report_usage() call site.
+    #
+    # The frame helper gained a hass in Home Assistant 2026.x (_Hass /
+    # frame.async_setup). Earlier releases have no such API and no such
+    # requirement, so this must stay optional or the min-ha CI job, which runs
+    # against MIN_HA_VERSION, cannot collect tests at all.
+    if hasattr(frame, "async_setup"):
+        frame.async_setup(mock_hass)
     try:
         yield mock_hass
     finally:
         # Leave no global state behind for the next test.
-        frame._hass.hass = None
+        if hasattr(frame, "_hass"):
+            frame._hass.hass = None
 
 
 @pytest.fixture(autouse=True)
