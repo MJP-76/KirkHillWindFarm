@@ -10,16 +10,20 @@ import logging
 
 import voluptuous as vol
 from homeassistant.components import frontend
-from homeassistant.components.lovelace import (
-    CONF_ICON,
+from homeassistant.components.lovelace import dashboard as lovelace_dashboard
+
+# Imported from lovelace.const rather than lovelace itself: these live in
+# const, and lovelace only re-exports some of them, so the top-level import
+# is not a stable contract across HA releases.
+from homeassistant.components.lovelace.const import (
     CONF_REQUIRE_ADMIN,
     CONF_SHOW_IN_SIDEBAR,
     CONF_TITLE,
     CONF_URL_PATH,
     LOVELACE_DATA,
 )
-from homeassistant.components.lovelace import dashboard as lovelace_dashboard
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_ICON
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
