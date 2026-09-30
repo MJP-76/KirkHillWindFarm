@@ -1,9 +1,6 @@
 """Tests for the API client — exception hierarchy and response parsing."""
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
 from custom_components.kirkhill_wind.api import KirkHillApiClient, OpenMeteoApiClient

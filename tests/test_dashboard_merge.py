@@ -1,20 +1,13 @@
 """Tests for the dashboard merge logic — the most fragile part of the integration."""
 from __future__ import annotations
 
-import copy
-
-import pytest
-
 from custom_components.kirkhill_wind.dashboard import (
     OBSOLETE_CARD_KEYS,
     OBSOLETE_VIEW_PATHS,
-    card_match_key,
     _merge_cards,
+    card_match_key,
     merge_dashboard_config,
-    _merge_view,
-    _section_match_key,
 )
-
 
 # ---------------------------------------------------------------------------
 # card_match_key

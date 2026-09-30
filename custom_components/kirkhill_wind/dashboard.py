@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import copy
 import logging
-from pathlib import Path
 
 import voluptuous as vol
 from homeassistant.components import frontend
@@ -449,24 +448,30 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         _LOGGER.debug("No turbine entities registered yet; falling back to T1–T8")
         present_turbine_ids = [f"T{i}" for i in range(1, 9)]
 
-    owner_generation_entities = [
-        ("Yesterday", farm_scoped("owner", "farm_generation_yesterday"), farm_scoped("owner", "farm_generation_value_yesterday")),
-        ("Today", farm_scoped("owner", "farm_generation_today"), farm_scoped("owner", "farm_generation_value_today")),
-        ("Week", farm_scoped("owner", "farm_generation_week"), farm_scoped("owner", "farm_generation_value_week")),
-        ("Month", farm_scoped("owner", "farm_generation_month"), farm_scoped("owner", "farm_generation_value_month")),
-        ("YTD", farm_scoped("owner", "farm_generation_ytd"), farm_scoped("owner", "farm_generation_value_ytd")),
-        ("Year", farm_scoped("owner", "farm_generation_year"), farm_scoped("owner", "farm_generation_value_year")),
-        ("All time", farm_scoped("owner", "farm_generation_alltime"), farm_scoped("owner", "farm_generation_value_alltime")),
-    ]
-    site_generation_entities = [
-        ("Yesterday", farm_scoped("site", "farm_generation_yesterday"), farm_scoped("site", "farm_generation_value_yesterday")),
-        ("Today", farm_scoped("site", "farm_generation_today"), farm_scoped("site", "farm_generation_value_today")),
-        ("Week", farm_scoped("site", "farm_generation_week"), farm_scoped("site", "farm_generation_value_week")),
-        ("Month", farm_scoped("site", "farm_generation_month"), farm_scoped("site", "farm_generation_value_month")),
-        ("YTD", farm_scoped("site", "farm_generation_ytd"), farm_scoped("site", "farm_generation_value_ytd")),
-        ("Year", farm_scoped("site", "farm_generation_year"), farm_scoped("site", "farm_generation_value_year")),
-        ("All time", farm_scoped("site", "farm_generation_alltime"), farm_scoped("site", "farm_generation_value_alltime")),
-    ]
+    # Label and unique-id suffix for each generation timeframe, in display order.
+    generation_periods = (
+        ("Yesterday", "yesterday"),
+        ("Today", "today"),
+        ("Week", "week"),
+        ("Month", "month"),
+        ("YTD", "ytd"),
+        ("Year", "year"),
+        ("All time", "alltime"),
+    )
+
+    def generation_entities(scope: str) -> list[tuple[str, str | None, str | None]]:
+        """Return (label, energy entity, value entity) triples for a generation scope."""
+        return [
+            (
+                label,
+                farm_scoped(scope, f"farm_generation_{suffix}"),
+                farm_scoped(scope, f"farm_generation_value_{suffix}"),
+            )
+            for label, suffix in generation_periods
+        ]
+
+    owner_generation_entities = generation_entities("owner")
+    site_generation_entities = generation_entities("site")
     scada_turbines = [
         {
             "id": tid,

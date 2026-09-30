@@ -1,10 +1,8 @@
 """Tests for config flow — version consistency."""
 from __future__ import annotations
 
-import pytest
-
-from custom_components.kirkhill_wind.config_flow import KirkHillWindConfigFlow
 from custom_components.kirkhill_wind import _CONFIG_ENTRY_VERSION
+from custom_components.kirkhill_wind.config_flow import KirkHillWindConfigFlow
 
 
 class TestConfigFlowVersion:

@@ -1,8 +1,6 @@
 """Tests for sensors — timeframe labels, energy display helper."""
 from __future__ import annotations
 
-import pytest
-
 from custom_components.kirkhill_wind.sensor import (
     TIMEFRAME_LABELS,
     _display_energy_from_kwh,

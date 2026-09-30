@@ -7,7 +7,7 @@ RestoreEntity.
 """
 from __future__ import annotations
 
-from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
+from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import CONF_CFD_PRICE_GBP_PER_MWH, CONF_OWNER_PRICE_PENCE_PER_KWH

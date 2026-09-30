@@ -4,35 +4,27 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from homeassistant.components import frontend
 from homeassistant.components.frontend import (
     add_extra_js_url,
     remove_extra_js_url,
 )
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.components.lovelace import LOVELACE_DATA
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import (
     CONF_BASE_URL,
     CONF_CFD_PRICE_GBP_PER_MWH,
-    CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
     DEFAULT_BASE_URL,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
-    DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
     PLATFORMS,
 )
 from .coordinator import KirkHillWindCoordinator
-from .dashboard import (
-    async_ensure_dashboard,
-    async_reset_dashboard,
-    dashboard_enabled,
-)
+from .dashboard import async_ensure_dashboard
 from .device import get_farm_device_id
 from .services import async_setup_services, async_unload_services
 

@@ -1,7 +1,7 @@
 """Tests for number entities — persistence to config entry options."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

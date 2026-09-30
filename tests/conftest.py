@@ -1,30 +1,22 @@
 """Shared fixtures for Kirk Hill Wind Farm tests."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from custom_components.kirkhill_wind.const import (
     CONF_API_KEY,
     CONF_BASE_URL,
-    CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
-    CONF_OWNER_PRICE_PENCE_PER_KWH,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
     DEFAULT_BASE_URL,
-    DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
-    DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SITE_NAME,
-    DOMAIN,
-    SCOPE_OWNER,
-    SCOPE_SITE,
 )
 
 

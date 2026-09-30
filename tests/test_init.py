@@ -1,7 +1,7 @@
 """Tests for __init__.py — config entry migration."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -46,8 +46,21 @@ class TestConfigMigration:
         assert result is True
         # Should have been updated to current version
         update_call = hass.config_entries.async_update_entry.call_args
-        updated_data = update_call[1]["data"] if update_call[1] else update_call[0][1]
+        updated_data = update_call[1]["data"]
         assert update_call[1]["version"] == _CONFIG_ENTRY_VERSION
+        # Credentials must survive the migration untouched.
+        assert updated_data[CONF_API_KEY] == "key"
+        # base_url is defaulted for pre-v3 entries.
+        assert updated_data[CONF_BASE_URL] == DEFAULT_BASE_URL
+        # Price fields added in v5 and v6 get their defaults.
+        assert updated_data[CONF_CFD_PRICE_GBP_PER_MWH] == DEFAULT_CFD_PRICE_GBP_PER_MWH
+        assert updated_data[CONF_OWNER_PRICE_PENCE_PER_KWH] == DEFAULT_OWNER_PRICE_PENCE_PER_KWH
+        # Dead keys removed in v4 are gone.
+        assert "owner_share_percent" not in updated_data
+        assert "owner_value_rate" not in updated_data
+        # Projected earnings removed in v7 are gone.
+        assert "owner_projected_annual_earnings_gbp" not in updated_data
+        assert "site_projected_annual_earnings_gbp" not in updated_data
 
     @pytest.mark.asyncio
     async def test_migration_from_v4_removes_dead_keys(self):
@@ -68,10 +81,10 @@ class TestConfigMigration:
         assert "owner_value_rate" not in updated_data
 
     @pytest.mark.asyncio
-    async def test_migration_from_v7_removes_projected_earnings(self):
-        """v7 migration should remove projected earnings from data and options."""
+    async def test_migration_from_v6_removes_projected_earnings(self):
+        """v6 -> v7 should remove projected earnings from data and options."""
         hass = MagicMock()
-        entry = self._make_entry(7, {
+        entry = self._make_entry(6, {
             CONF_API_KEY: "key",
             CONF_BASE_URL: DEFAULT_BASE_URL,
             CONF_CFD_PRICE_GBP_PER_MWH: 50.0,

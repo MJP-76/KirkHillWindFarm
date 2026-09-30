@@ -1,7 +1,6 @@
 """Tests for the coordinator — scheduling, auth errors, stale data."""
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,7 +21,6 @@ from custom_components.kirkhill_wind.exceptions import (
     KirkHillAuthError,
     KirkHillConnectionError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -186,9 +184,7 @@ class TestAuthErrorHandling:
         entry = _make_entry()
         coord = _make_coordinator(hass, entry, mock_api_client)
 
-        # Make summary fail with auth error, but current succeeds
-        original_get_summary = mock_api_client.get_summary
-
+        # Make the summary fetch fail with an auth error while the current fetch succeeds
         async def summary_auth_fail(*args, **kwargs):
             raise KirkHillAuthError("Invalid API key")
 
