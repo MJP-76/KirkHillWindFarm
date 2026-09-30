@@ -1,13 +1,16 @@
 """Number platform for user-adjustable Kirk Hill figures.
 
 These appear in the integration's entity list so users can fine-tune the price
-values live instead of reconfiguring the integration.
+values live instead of reconfiguring the integration.  Changes are persisted to
+the config entry options so they survive restarts without relying solely on
+RestoreEntity.
 """
 from __future__ import annotations
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.helpers.restore_state import RestoreEntity
 
+from .const import CONF_CFD_PRICE_GBP_PER_MWH, CONF_OWNER_PRICE_PENCE_PER_KWH
 from .entity import KirkHillEntity
 
 
@@ -42,6 +45,11 @@ class NegotiatedPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
 
     async def async_set_native_value(self, value) -> None:
         self.coordinator.negotiated_price_gbp_per_mwh = float(value)
+        # Persist to config entry options so the value survives restarts.
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            options={**self._entry.options, CONF_CFD_PRICE_GBP_PER_MWH: float(value)},
+        )
         self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
@@ -77,6 +85,11 @@ class OwnerPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
 
     async def async_set_native_value(self, value) -> None:
         self.coordinator.owner_price_pence_per_kwh = float(value)
+        # Persist to config entry options so the value survives restarts.
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            options={**self._entry.options, CONF_OWNER_PRICE_PENCE_PER_KWH: float(value)},
+        )
         self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:

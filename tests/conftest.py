@@ -1,0 +1,121 @@
+"""Shared fixtures for Kirk Hill Wind Farm tests."""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from custom_components.kirkhill_wind.const import (
+    CONF_API_KEY,
+    CONF_BASE_URL,
+    CONF_CFD_PRICE_GBP_PER_MWH,
+    CONF_CREATE_DASHBOARD,
+    CONF_ENABLE_PAYMENT_TRACKING,
+    CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_SCAN_INTERVAL,
+    CONF_SITE_NAME,
+    DEFAULT_BASE_URL,
+    DEFAULT_CFD_PRICE_GBP_PER_MWH,
+    DEFAULT_CREATE_DASHBOARD,
+    DEFAULT_ENABLE_PAYMENT_TRACKING,
+    DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SITE_NAME,
+    DOMAIN,
+    SCOPE_OWNER,
+    SCOPE_SITE,
+)
+
+
+@pytest.fixture
+def hass():
+    """Return a mock HomeAssistant instance."""
+    from homeassistant.core import HomeAssistant
+
+    mock_hass = MagicMock(spec=HomeAssistant)
+    mock_hass.data = {}
+    mock_hass.config = MagicMock()
+    mock_hass.config.components = set()
+    mock_hass.config_entries = MagicMock()
+    mock_hass.bus = MagicMock()
+    return mock_hass
+
+
+@pytest.fixture
+def mock_config_entry_data():
+    """Return the default config entry data dict."""
+    return {
+        CONF_API_KEY: "test-api-key",
+        CONF_BASE_URL: DEFAULT_BASE_URL,
+        CONF_SITE_NAME: DEFAULT_SITE_NAME,
+        CONF_CREATE_DASHBOARD: DEFAULT_CREATE_DASHBOARD,
+        CONF_ENABLE_PAYMENT_TRACKING: DEFAULT_ENABLE_PAYMENT_TRACKING,
+        CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+    }
+
+
+@pytest.fixture
+def mock_current_payload():
+    """Return a realistic current-data API response."""
+    return {
+        "summary": {
+            "total_power_kw": 1234.5,
+            "capacity_factor_percent": 42.3,
+            "active_turbines": 7,
+            "inactive_turbines": 1,
+            "capacity_watts": 4200000,
+            "wind_speed_mps": 8.5,
+        },
+        "turbines": [
+            {
+                "id": f"T{i}",
+                "status": "active" if i <= 7 else "inactive",
+                "state_text": "Turbine in operation" if i <= 7 else "Lack of wind: Wind speed too low",
+                "power_kw": 150.0 if i <= 7 else 0.0,
+                "capacity_factor_percent": 42.0 if i <= 7 else 0.0,
+                "wind_speed_mps": 8.5,
+                "generation_kwh": 3600.0,
+                "generation_share_percent": 12.5,
+                "latest_rotor_speed_rpm": 12.3 if i <= 7 else 0.0,
+                "coordinates": {
+                    "latitude": 54.0 + i * 0.001,
+                    "longitude": -3.0 + i * 0.001,
+                    "source": "osm",
+                    "openstreetmap_node_id": f"node_{i}",
+                },
+            }
+            for i in range(1, 9)
+        ],
+    }
+
+
+@pytest.fixture
+def mock_summary_payload():
+    """Return a realistic summary API response."""
+    return {
+        "summary": {
+            "total_generation_kwh": 50000.0,
+            "capacity_factor_percent": 38.5,
+        },
+        "window": {
+            "from": "2025-01-01T00:00:00Z",
+            "to": "2025-01-31T23:59:59Z",
+        },
+    }
+
+
+@pytest.fixture
+def mock_api_client(mock_current_payload, mock_summary_payload):
+    """Return a mock KirkHillApiClient with default responses."""
+    client = AsyncMock()
+    client.get_current = AsyncMock(return_value=mock_current_payload)
+    client.get_turbines = AsyncMock(return_value=mock_current_payload["turbines"])
+    client.get_summary = AsyncMock(return_value=mock_summary_payload)
+    client.get_wind_speed = AsyncMock(return_value={
+        "series": [
+            {"wind_speed_mps": 8.5, "timestamp": "2025-01-15T12:00:00Z"},
+        ],
+    })
+    client.test = AsyncMock()
+    return client

@@ -34,9 +34,18 @@ TIMEFRAME_LABELS = {
     "ytd": "Generation (ytd)",
     "year": "Generation (year)",
     "alltime": "Generation (alltime)",
-    "year_2024": "Generation (2024)",
-    "year_2025": "Generation (2025)",
 }
+
+
+def _timeframe_label(timeframe: str) -> str:
+    """Return a human-readable label for a timeframe key.
+
+    Past-year keys like 'year_2024' become 'Generation (2024)' without
+    requiring hard-coded entries for every year.
+    """
+    if timeframe.startswith("year_"):
+        return f"Generation ({timeframe[5:]})"
+    return TIMEFRAME_LABELS.get(timeframe, f"Generation ({timeframe})")
 
 
 def _as_float(value) -> float | None:
@@ -220,7 +229,7 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
         super().__init__(coordinator, entry, scope, f"farm_generation_{timeframe}")
         self._timeframe = timeframe
         scope_label = scope.capitalize()
-        label = TIMEFRAME_LABELS.get(timeframe, f"Generation ({timeframe})")
+        label = _timeframe_label(timeframe)
         self._attr_name = f"{label} ({scope_label})"
         self._restored_value: float | None = None
         self._restored_attrs: dict | None = None
@@ -372,7 +381,7 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         super().__init__(coordinator, entry, scope, f"farm_generation_value_{timeframe}")
         self._timeframe = timeframe
         scope_label = scope.capitalize()
-        label = TIMEFRAME_LABELS.get(timeframe, f"Projected ({timeframe})")
+        label = _timeframe_label(timeframe)
         self._attr_name = f"{label} projected value ({scope_label})"
 
     @staticmethod

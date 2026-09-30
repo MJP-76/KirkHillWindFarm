@@ -18,7 +18,6 @@ async def async_get_config_entry_diagnostics(
         "entry": async_redact_data(entry.data, TO_REDACT),
         "data": data,
         "summary_state": {
-            "tick": data.get("tick"),
             "stale": data.get("summary_stale"),
             "failures": data.get("summary_failures"),
             "retry_at": data.get("summary_retry_at"),

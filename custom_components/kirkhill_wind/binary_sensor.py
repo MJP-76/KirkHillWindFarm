@@ -72,13 +72,13 @@ class TurbineActiveSensor(KirkHillTurbineEntity, BinarySensorEntity):
 
 
 class APIStatusSensor(KirkHillEntity, BinarySensorEntity):
-    """On when the Kirk Hill API has responded successfully.
+    """On when the Kirk Hill API has responded successfully with fresh data.
 
     Unlike the data sensors (which go unavailable when the coordinator's last
     update failed), this entity stays available so the dashboard can show an
     explicit "API down" state rather than a page full of unknown values. It
-    reflects the last fetch outcome directly, so it is never hidden behind the
-    normal 'available' short-circuit.
+    reflects both the last fetch outcome AND whether any scope's current data
+    is stale, so "API Status = ON" genuinely means fresh data is flowing.
     """
 
     _attr_name = "API Status"
@@ -93,4 +93,14 @@ class APIStatusSensor(KirkHillEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return bool(self.coordinator.last_update_success)
+        if not self.coordinator.last_update_success:
+            return False
+        current_stale = self.coordinator.data.get("current_stale", {})
+        return not any(current_stale.values())
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "current_stale": self.coordinator.data.get("current_stale", {}),
+            "summary_stale": self.coordinator.data.get("summary_stale", {}),
+        }

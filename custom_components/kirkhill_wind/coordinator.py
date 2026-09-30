@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
@@ -31,13 +31,15 @@ from .exceptions import KirkHillApiError, KirkHillAuthError
 
 _LOGGER = logging.getLogger(__name__)
 
-# Tiered update intervals (in coordinator ticks; tick 1 primes everything)
+# Tiered update intervals (real time, independent of poll interval)
 # Fast: every poll - current power + today summary
-# Slow: every 60 polls (~1 hour) - yesterday (static once day ends), week, month, ytd, year, alltime
-#       + past-year CfD windows (year_YYYY, added dynamically) + Open-Meteo forecast,
-#         turbine data, wind-speed series
+# Medium: every 10 minutes - turbines, wind-speed series
+# Slow: every 1 hour - yesterday, week, month, ytd, year, alltime,
+#       past-year CfD windows (year_YYYY), Open-Meteo forecast
 FAST_TIMEFRAMES = ("today",)
 SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
+_TURBINE_INTERVAL = timedelta(minutes=10)
+_SLOW_INTERVAL = timedelta(hours=1)
 
 
 class KirkHillWindCoordinator(DataUpdateCoordinator):
@@ -60,7 +62,11 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             base_url=entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         )
         self.open_meteo_client = OpenMeteoApiClient()
-        self._tick = 0
+        # Time-based scheduling: initialise to "now" so the first tick runs
+        # all tiers immediately, after which each tier resets its own timer.
+        now = dt_util.utcnow()
+        self._next_turbine_update: datetime = now
+        self._next_slow_update: datetime = now
         self._site_turbines: list[dict] = []
         self._turbine_generation: dict[str, dict] = {}
         self._wind_speed_today: float | None = None
@@ -73,10 +79,10 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         # failed refresh keeps showing old data (marked stale) instead of blanking.
         self._last_summaries: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
         self._last_windows: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
-        # Backoff retry state: consecutive failure count and the tick at which a
-        # (scope, timeframe) should be retried again after a failure.
+        # Backoff retry state: consecutive failure count and the UTC time at
+        # which a (scope, timeframe) should be retried again after a failure.
         self._summary_failures: dict[tuple[str, str], int] = {}
-        self._summary_retry_at: dict[tuple[str, str], int] = {}
+        self._summary_retry_at: dict[tuple[str, str], datetime] = {}
         self._summary_stale: dict[str, dict[str, bool]] = {
             scope: {} for scope in SCOPES
         }
@@ -91,7 +97,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict:
         """Fetch current owner/site data, turbine coordinates, and range summaries."""
-        self._tick += 1
+        now = dt_util.utcnow()
         # One shared session for the integration's lifetime (HA-managed), instead
         # of a fresh session + connection pool on every poll.
         session = async_get_clientsession(self.hass)
@@ -106,7 +112,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         owner_result, site_result, timeframe_result = await asyncio.gather(
             self.client.get_current(session, SCOPE_OWNER),
             self.client.get_current(session, SCOPE_SITE),
-            self._fetch_timeframe_summaries(session, self._tick),
+            self._fetch_timeframe_summaries(session, now),
             return_exceptions=True,
         )
         owner_data = self._resolve_current_result(SCOPE_OWNER, owner_result)
@@ -117,8 +123,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             raise timeframe_result
         timeframe_summaries, timeframe_windows = timeframe_result
 
-        # Medium tier: turbines + today's wind-speed series (every 10 ticks)
-        if self._tick == 1 or self._tick % 10 == 0:
+        # Medium tier: turbines + today's wind-speed series (every 10 minutes)
+        if now >= self._next_turbine_update:
             try:
                 today_turbines, alltime_turbines = await asyncio.gather(
                     self.client.get_turbines(session, SCOPE_SITE, range_value="today"),
@@ -137,21 +143,24 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     today_turbines, alltime_turbines
                 )
                 self._wind_speed_today = await self._fetch_latest_wind_speed(session)
-            coordinates: dict[str, dict[str, float | str | None]] = {}
-            for row in self._site_turbines:
-                turbine_id = row.get("id")
-                coord = row.get("coordinates") or {}
-                if turbine_id:
-                    coordinates[turbine_id] = {
-                        "latitude": coord.get("latitude"),
-                        "longitude": coord.get("longitude"),
-                        "source": coord.get("source"),
-                        "openstreetmap_node_id": coord.get("openstreetmap_node_id"),
-                    }
+            self._next_turbine_update = now + _TURBINE_INTERVAL
 
-            # Slow tier: Open-Meteo forecast (every 60 ticks ~1 hour)
-            if self._tick == 1 or self._tick % 60 == 0:
-                self._open_meteo_forecast = await self._fetch_open_meteo_forecast(session, coordinates)
+        coordinates: dict[str, dict[str, float | str | None]] = {}
+        for row in self._site_turbines:
+            turbine_id = row.get("id")
+            coord = row.get("coordinates") or {}
+            if turbine_id:
+                coordinates[turbine_id] = {
+                    "latitude": coord.get("latitude"),
+                    "longitude": coord.get("longitude"),
+                    "source": coord.get("source"),
+                    "openstreetmap_node_id": coord.get("openstreetmap_node_id"),
+                }
+
+        # Slow tier: Open-Meteo forecast (every 1 hour)
+        if now >= self._next_slow_update:
+            self._open_meteo_forecast = await self._fetch_open_meteo_forecast(session, coordinates)
+            self._next_slow_update = now + _SLOW_INTERVAL
 
         return {
             SCOPE_OWNER: owner_data,
@@ -164,13 +173,12 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "turbine_generation": self._turbine_generation,
             "wind_speed_today": self._wind_speed_today,
             "open_meteo_forecast": self._open_meteo_forecast,
-            "tick": self._tick,
             "summary_failures": {
                 f"{scope}:{timeframe}": count
                 for (scope, timeframe), count in self._summary_failures.items()
             },
             "summary_retry_at": {
-                f"{scope}:{timeframe}": retry_at
+                f"{scope}:{timeframe}": retry_at.isoformat()
                 for (scope, timeframe), retry_at in self._summary_retry_at.items()
             },
         }
@@ -239,24 +247,25 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         return result
 
     async def _fetch_timeframe_summaries(
-        self, session: aiohttp.ClientSession, tick: int
+        self, session: aiohttp.ClientSession, now: datetime
     ) -> tuple[dict[str, dict[str, dict]], dict[str, dict[str, dict]]]:
         tasks: list[tuple[str, str, asyncio.Task]] = []
 
-        # Determine which timeframes to fetch this tick. The slow tier normally
-        # runs every 60 ticks (~1 hour); a timeframe that failed on a slow/last
-        # tick gets retried on a backoff schedule instead of waiting for the
-        # next hourly slot.
+        # Determine which timeframes to fetch this poll. The slow tier runs
+        # when the caller's timestamp passes the slow timer; retries use a
+        # real-UTC backoff schedule independent of the poll interval.
         timeframes: set[str] = set(FAST_TIMEFRAMES)
-        if tick == 1 or tick % 60 == 0:
+        run_slow = now >= self._next_slow_update
+        if run_slow:
             timeframes.update(SLOW_TIMEFRAMES)
             # Past calendar years (year_YYYY) — derived so future years are
             # fetched automatically as they complete.
             timeframes.update(yearly_timeframes())
-        for (scope, timeframe), retry_at in self._summary_retry_at.items():
-            if tick >= retry_at:
+        for (scope, timeframe), retry_at in list(self._summary_retry_at.items()):
+            if now >= retry_at:
                 timeframes.add(timeframe)
-        _LOGGER.debug("Tick %s: fetching summaries for timeframes=%s", tick, sorted(timeframes))
+                # Clear the retry entry so a successful fetch below resets it.
+        _LOGGER.debug("Fetching summaries for timeframes=%s (slow_tier=%s)", sorted(timeframes), run_slow)
 
         for scope in SCOPES:
             for timeframe in sorted(timeframes):
@@ -285,20 +294,24 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         for (scope, timeframe, _), payload in zip(tasks, results):
             key = (scope, timeframe)
             if isinstance(payload, BaseException):
+                # Auth errors must trigger HA's reauth flow, not just retry.
+                if isinstance(payload, KirkHillAuthError):
+                    raise ConfigEntryAuthFailed(str(payload)) from payload
                 failures = self._summary_failures.get(key, 0) + 1
                 self._summary_failures[key] = failures
-                # Backoff: retry after 1, 2, 4, ... ticks, capped at the 60-tick
-                # hourly slot so we never hammer the API during an outage.
-                retry_at = tick + min(2 ** (failures - 1), 60)
+                # Backoff: retry after 1m, 2m, 4m, ... capped at 1 hour so we
+                # never hammer the API during an outage.
+                backoff = min(60 * (2 ** (failures - 1)), 3600)
+                retry_at = now + timedelta(seconds=backoff)
                 self._summary_retry_at[key] = retry_at
                 self._summary_stale[scope][timeframe] = True
                 _LOGGER.warning(
                     "Failed to fetch summary for scope=%s timeframe=%s: %s "
-                    "(keeping last known data, marked stale; next retry tick %s)",
+                    "(keeping last known data, marked stale; next retry at %s)",
                     scope,
                     timeframe,
                     payload,
-                    retry_at,
+                    retry_at.isoformat(),
                 )
                 # Keep the last good values instead of blanking the dashboard.
                 summaries[scope][timeframe] = self._last_summaries[scope].get(timeframe, {})
