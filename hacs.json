@@ -2,6 +2,6 @@
   "name": "Kirk Hill Wind Farm",
   "render_readme": true,
   "country": "GB",
-  "homeassistant": "2024.1.0",
+  "homeassistant": "2025.2.0",
   "content_in_root": false
 }

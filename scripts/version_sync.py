@@ -11,6 +11,23 @@ VERSION_FILE = ROOT / "VERSION"
 MANIFEST_FILE = ROOT / "custom_components" / "kirkhill_wind" / "manifest.json"
 PYPROJECT_FILE = ROOT / "pyproject.toml"
 SCADA_CARD_FILE = ROOT / "custom_components" / "kirkhill_wind" / "frontend" / "kirkhill-wind-scada-card.js"
+HACS_FILE = ROOT / "hacs.json"
+REQUIREMENTS_FILE = ROOT / "requirements.txt"
+
+# Oldest Home Assistant release this integration supports. Single source of
+# truth: `check` fails if hacs.json or requirements.txt disagree, and CI
+# installs this exact version to prove the integration still imports on it.
+#
+# Bump this when you adopt a newer HA API. The binding constraint today is
+# homeassistant.components.lovelace.const.LOVELACE_DATA, which landed in
+# 2025.2.0. Verify with: pip install "homeassistant==<new>" on the matching
+# Python and run the `min-ha` CI job.
+MIN_HA_VERSION = "2025.2.0"
+
+# Python required by MIN_HA_VERSION. Each HA release declares its own
+# requires-python, so pinning a too-old Python here makes pip silently
+# backtrack to a different, older Home Assistant and the check becomes a lie.
+MIN_HA_PYTHON = "3.13"
 
 
 def normalize_version(raw: str) -> str:
@@ -106,11 +123,47 @@ def write_scada_version(version: str) -> None:
     SCADA_CARD_FILE.write_text(replaced, encoding="utf-8")
 
 
+def read_hacs_min_ha() -> str:
+    return str(json.loads(HACS_FILE.read_text(encoding="utf-8")).get("homeassistant", ""))
+
+
+def read_requirements_min_ha() -> str:
+    """Return the homeassistant version floor declared in requirements.txt."""
+    for line in REQUIREMENTS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("homeassistant"):
+            match = re.search(r"homeassistant\s*>=\s*([\d.]+)", line)
+            if match:
+                return match.group(1)
+    return ""
+
+
+def write_hacs_min_ha(version: str) -> None:
+    data = json.loads(HACS_FILE.read_text(encoding="utf-8"))
+    data["homeassistant"] = version
+    HACS_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+
+
+def write_requirements_min_ha(version: str) -> None:
+    lines = REQUIREMENTS_FILE.read_text(encoding="utf-8").splitlines(keepends=True)
+    replaced = False
+    for i, line in enumerate(lines):
+        if line.strip().startswith("homeassistant"):
+            lines[i] = f"homeassistant>={version}\n"
+            replaced = True
+            break
+    if not replaced:
+        raise ValueError("Could not find a homeassistant requirement line.")
+    REQUIREMENTS_FILE.write_text("".join(lines), encoding="utf-8")
+
+
 def check_versions() -> bool:
     source = read_version()
     manifest = read_manifest_version()
     pyproject = read_pyproject_version()
     scada = read_scada_version()
+    hacs_min = read_hacs_min_ha()
+    requirements_min = read_requirements_min_ha()
 
     mismatches: list[str] = []
     if manifest != source:
@@ -120,6 +173,15 @@ def check_versions() -> bool:
     if scada != source:
         label = scada or "@VERSION@ placeholder"
         mismatches.append(f"scada-card.js={label} != VERSION={source}")
+    if hacs_min != MIN_HA_VERSION:
+        mismatches.append(
+            f"hacs.json homeassistant={hacs_min or '(unset)'} != MIN_HA_VERSION={MIN_HA_VERSION}"
+        )
+    if requirements_min != MIN_HA_VERSION:
+        mismatches.append(
+            f"requirements.txt homeassistant>={requirements_min or '(unset)'} "
+            f"!= MIN_HA_VERSION={MIN_HA_VERSION}"
+        )
 
     if mismatches:
         print("Version mismatch detected:")
@@ -127,7 +189,7 @@ def check_versions() -> bool:
             print(f"- {mismatch}")
         return False
 
-    print(f"All versions are aligned at {source}.")
+    print(f"All versions are aligned at {source} (min HA {MIN_HA_VERSION}).")
     return True
 
 
@@ -136,7 +198,12 @@ def sync_versions() -> None:
     write_manifest_version(version)
     write_pyproject_version(version)
     write_scada_version(version)
-    print(f"Synchronized manifest.json, pyproject.toml and scada-card.js to {version}.")
+    write_hacs_min_ha(MIN_HA_VERSION)
+    write_requirements_min_ha(MIN_HA_VERSION)
+    print(
+        f"Synchronized manifest.json, pyproject.toml and scada-card.js to {version}, "
+        f"and minimum Home Assistant to {MIN_HA_VERSION}."
+    )
 
 
 def run_release(prerelease: bool, stable: bool) -> None:
@@ -179,6 +246,20 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("check", help="Validate all tracked versions match VERSION.")
     subparsers.add_parser("sync", help="Sync manifest.json and pyproject.toml from VERSION.")
+    min_ha_parser = subparsers.add_parser(
+        "min-ha",
+        help="Print the minimum supported Home Assistant version / Python, for CI.",
+    )
+    min_ha_parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Print only the minimum Home Assistant version.",
+    )
+    min_ha_parser.add_argument(
+        "--python",
+        action="store_true",
+        help="Print only the Python version required by that Home Assistant release.",
+    )
     release_parser = subparsers.add_parser(
         "release",
         help="Create a v-prefixed tag and GitHub release from VERSION.",
@@ -201,6 +282,16 @@ def main() -> None:
         return
     if args.command == "sync":
         sync_versions()
+        return
+    if args.command == "min-ha":
+        if args.version and args.python:
+            raise SystemExit("--version and --python are mutually exclusive.")
+        if args.version:
+            print(MIN_HA_VERSION)
+        elif args.python:
+            print(MIN_HA_PYTHON)
+        else:
+            print(f"{MIN_HA_VERSION} {MIN_HA_PYTHON}")
         return
     if args.command == "release":
         if args.prerelease and args.stable:
