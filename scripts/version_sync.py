@@ -14,15 +14,29 @@ SCADA_CARD_FILE = ROOT / "custom_components" / "kirkhill_wind" / "frontend" / "k
 HACS_FILE = ROOT / "hacs.json"
 REQUIREMENTS_FILE = ROOT / "requirements.txt"
 
-# Oldest Home Assistant release this integration supports. Single source of
+# Oldest Home Assistant release we advertise support for. Single source of
 # truth: `check` fails if hacs.json or requirements.txt disagree, and CI
-# installs this exact version to prove the integration still imports on it.
+# installs this exact version and runs the suite against it, so this is a
+# tested claim rather than a guess.
 #
-# Bump this when you adopt a newer HA API. The binding constraint today is
-# homeassistant.components.lovelace.const.LOVELACE_DATA, which landed in
-# 2025.2.0. Verify with: pip install "homeassistant==<new>" on the matching
-# Python and run the `min-ha` CI job.
-MIN_HA_VERSION = "2025.2.0"
+# This is a policy choice, not a technical limit. The lowest release the code
+# actually imports against is TECHNICAL_FLOOR_HA_VERSION below; we advertise a
+# newer one on purpose. A floor costs maintenance: every HA API newer than it
+# needs either a floor bump or a compatibility shim. At the technical floor
+# that was already visible -- helpers/frame gained async_setup in 2025.6, which
+# forced a hasattr() guard in tests/conftest.py. A recent floor keeps
+# essentially the whole active install base in scope and buys roughly a year of
+# runway before this becomes the thing to complain about.
+#
+# To change it: update MIN_HA_VERSION and MIN_HA_PYTHON together, re-run
+# `sync`, and let the min-ha CI job confirm the new floor really passes.
+MIN_HA_VERSION = "2026.1.0"
+
+# Lowest Home Assistant release this code can actually import, set by
+# homeassistant.components.lovelace.const.LOVELACE_DATA (2025.2.0). Never
+# advertise support below this. Lower it only if a refactor drops the Lovelace
+# dependency entirely.
+TECHNICAL_FLOOR_HA_VERSION = "2025.2.0"
 
 # Python required by MIN_HA_VERSION. Each HA release declares its own
 # requires-python, so pinning a too-old Python here makes pip silently

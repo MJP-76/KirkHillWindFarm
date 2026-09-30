@@ -38,18 +38,16 @@ def hass():
     # to the current_entry ContextVar. The coordinator does pass it, so this is
     # only a safety net for any other report_usage() call site.
     #
-    # The frame helper gained a hass in Home Assistant 2026.x (_Hass /
-    # frame.async_setup). Earlier releases have no such API and no such
-    # requirement, so this must stay optional or the min-ha CI job, which runs
-    # against MIN_HA_VERSION, cannot collect tests at all.
-    if hasattr(frame, "async_setup"):
-        frame.async_setup(mock_hass)
+    # Both symbols below (frame.async_setup, frame._hass) exist from Home
+    # Assistant 2025.6 onward, comfortably below MIN_HA_VERSION, so the
+    # min-ha CI job can rely on them without a hasattr() guard. If the floor
+    # ever drops below 2025.6, these hasattr() guards have to come back.
+    frame.async_setup(mock_hass)
     try:
         yield mock_hass
     finally:
         # Leave no global state behind for the next test.
-        if hasattr(frame, "_hass"):
-            frame._hass.hass = None
+        frame._hass.hass = None
 
 
 @pytest.fixture(autouse=True)
