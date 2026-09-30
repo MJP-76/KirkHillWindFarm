@@ -63,10 +63,10 @@ class TestConfigMigration:
         assert "site_projected_annual_earnings_gbp" not in updated_data
 
     @pytest.mark.asyncio
-    async def test_migration_from_v4_removes_dead_keys(self):
-        """v4 -> current should remove owner_share_percent and owner_value_rate."""
+    async def test_migration_from_v3_removes_dead_keys(self):
+        """v3 -> current should remove owner_share_percent and owner_value_rate."""
         hass = MagicMock()
-        entry = self._make_entry(4, {
+        entry = self._make_entry(3, {
             CONF_API_KEY: "key",
             CONF_BASE_URL: DEFAULT_BASE_URL,
             "owner_share_percent": 25,

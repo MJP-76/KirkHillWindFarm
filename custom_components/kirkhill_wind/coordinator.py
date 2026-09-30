@@ -55,6 +55,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=scan_interval),
+            config_entry=entry,
         )
         self.entry = entry
         self.client = KirkHillApiClient(

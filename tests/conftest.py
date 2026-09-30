@@ -24,6 +24,7 @@ from custom_components.kirkhill_wind.const import (
 def hass():
     """Return a mock HomeAssistant instance."""
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers import frame
 
     mock_hass = MagicMock(spec=HomeAssistant)
     mock_hass.data = {}
@@ -31,7 +32,16 @@ def hass():
     mock_hass.config.components = set()
     mock_hass.config_entries = MagicMock()
     mock_hass.bus = MagicMock()
-    return mock_hass
+
+    # DataUpdateCoordinator.__init__ calls frame.report_usage(), which raises
+    # "Frame helper not set up" unless the frame helper has a hass. Real HA
+    # calls this during bootstrap; here the mock is the only hass there is.
+    frame.async_setup(mock_hass)
+    try:
+        yield mock_hass
+    finally:
+        # Leave no global state behind for the next test.
+        frame._hass.hass = None
 
 
 @pytest.fixture
