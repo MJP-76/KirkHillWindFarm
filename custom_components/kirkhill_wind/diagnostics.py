@@ -15,7 +15,10 @@ async def async_get_config_entry_diagnostics(
 
     data = coordinator.data
     return {
+        # data holds connection details only; every user-configurable setting
+        # lives in options, so both are needed to see what the entry is using.
         "entry": async_redact_data(entry.data, TO_REDACT),
+        "options": dict(entry.options),
         "data": data,
         "summary_state": {
             "stale": data.get("summary_stale"),

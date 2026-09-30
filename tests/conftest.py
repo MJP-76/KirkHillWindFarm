@@ -69,14 +69,22 @@ def mock_clientsession():
 
 @pytest.fixture
 def mock_config_entry_data():
-    """Return the default config entry data dict."""
+    """Return a config entry in the shape v8 stores it in.
+
+    entry.data holds connection details only; every user-configurable setting
+    belongs in entry.options. See settings.OPTION_KEYS for the split.
+    """
     return {
-        CONF_API_KEY: "test-api-key",
-        CONF_BASE_URL: DEFAULT_BASE_URL,
-        CONF_SITE_NAME: DEFAULT_SITE_NAME,
-        CONF_CREATE_DASHBOARD: DEFAULT_CREATE_DASHBOARD,
-        CONF_ENABLE_PAYMENT_TRACKING: DEFAULT_ENABLE_PAYMENT_TRACKING,
-        CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+        "data": {
+            CONF_API_KEY: "test-api-key",
+            CONF_BASE_URL: DEFAULT_BASE_URL,
+        },
+        "options": {
+            CONF_SITE_NAME: DEFAULT_SITE_NAME,
+            CONF_CREATE_DASHBOARD: DEFAULT_CREATE_DASHBOARD,
+            CONF_ENABLE_PAYMENT_TRACKING: DEFAULT_ENABLE_PAYMENT_TRACKING,
+            CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+        },
     }
 
 

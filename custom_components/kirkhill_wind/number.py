@@ -12,6 +12,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import CONF_CFD_PRICE_GBP_PER_MWH, CONF_OWNER_PRICE_PENCE_PER_KWH
 from .entity import KirkHillEntity
+from .settings import merge_options
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -46,9 +47,14 @@ class NegotiatedPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
     async def async_set_native_value(self, value) -> None:
         self.coordinator.negotiated_price_gbp_per_mwh = float(value)
         # Persist to config entry options so the value survives restarts.
+        # merge_options keeps every other setting; a plain dict literal here
+        # would drop them, because Home Assistant replaces options wholesale.
         self.hass.config_entries.async_update_entry(
             self._entry,
-            options={**self._entry.options, CONF_CFD_PRICE_GBP_PER_MWH: float(value)},
+            options=merge_options(
+                dict(self._entry.options),
+                {CONF_CFD_PRICE_GBP_PER_MWH: float(value)},
+            ),
         )
         self.async_write_ha_state()
 
@@ -88,7 +94,10 @@ class OwnerPriceNumber(KirkHillEntity, RestoreEntity, NumberEntity):
         # Persist to config entry options so the value survives restarts.
         self.hass.config_entries.async_update_entry(
             self._entry,
-            options={**self._entry.options, CONF_OWNER_PRICE_PENCE_PER_KWH: float(value)},
+            options=merge_options(
+                dict(self._entry.options),
+                {CONF_OWNER_PRICE_PENCE_PER_KWH: float(value)},
+            ),
         )
         self.async_write_ha_state()
 

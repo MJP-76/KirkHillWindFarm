@@ -52,15 +52,19 @@ def _make_coordinator(hass, entry, mock_api_client, now=None):
 
 
 def _make_entry(data=None, options=None):
-    """Return a fake config entry."""
+    """Return a fake config entry.
+
+    Mirrors the v8 split: connection details in data, settings in options.
+    """
     entry = MagicMock()
     entry.entry_id = "test_entry"
     entry.data = data or {
         CONF_API_KEY: "key",
         CONF_BASE_URL: DEFAULT_BASE_URL,
+    }
+    entry.options = options if options is not None else {
         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
     }
-    entry.options = options or {}
     return entry
 
 

@@ -17,9 +17,7 @@ from .api import KirkHillApiClient, OpenMeteoApiClient
 from .const import (
     CONF_API_KEY,
     CONF_BASE_URL,
-    CONF_SCAN_INTERVAL,
     DEFAULT_BASE_URL,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     SCOPE_OWNER,
     SCOPE_SITE,
@@ -28,6 +26,7 @@ from .const import (
     yearly_timeframes,
 )
 from .exceptions import KirkHillApiError, KirkHillAuthError
+from .settings import get_scan_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,10 +45,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
     """Fetches current data from owner/site scopes on each tick."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        scan_interval = entry.options.get(
-            CONF_SCAN_INTERVAL,
-            entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-        )
+        scan_interval = get_scan_interval(entry)
         super().__init__(
             hass,
             _LOGGER,
@@ -90,11 +86,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
     def apply_options(self) -> None:
         """Re-apply scan interval when options change."""
-        scan_interval = self.entry.options.get(
-            CONF_SCAN_INTERVAL,
-            self.entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-        )
-        self.update_interval = timedelta(seconds=scan_interval)
+        self.update_interval = timedelta(seconds=get_scan_interval(self.entry))
 
     async def _async_update_data(self) -> dict:
         """Fetch current owner/site data, turbine coordinates, and range summaries."""

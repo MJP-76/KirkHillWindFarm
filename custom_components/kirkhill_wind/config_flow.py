@@ -33,6 +33,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
 )
 from .exceptions import KirkHillAuthError, KirkHillConnectionError
+from .settings import form_defaults, merge_options
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ _LOGGER = logging.getLogger(__name__)
 class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for the Kirk Hill Wind Farm integration."""
 
-    VERSION = 7
+    VERSION = 8
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -59,9 +60,18 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_create_entry(
                     title=user_input.get(CONF_SITE_NAME, DEFAULT_SITE_NAME),
+                    # data carries connection details only. Everything the user
+                    # can change goes in options, where the options flow and the
+                    # number entities can update it.
                     data={
                         CONF_API_KEY: user_input[CONF_API_KEY],
                         CONF_BASE_URL: DEFAULT_BASE_URL,
+                    },
+                    options={
+                        CONF_SITE_NAME: user_input.get(
+                            CONF_SITE_NAME, DEFAULT_SITE_NAME
+                        ),
+                        CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                         CONF_CREATE_DASHBOARD: user_input.get(
                             CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD
                         ),
@@ -69,8 +79,6 @@ class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_ENABLE_PAYMENT_TRACKING,
                             DEFAULT_ENABLE_PAYMENT_TRACKING,
                         ),
-                        CONF_SITE_NAME: user_input.get(CONF_SITE_NAME, DEFAULT_SITE_NAME),
-                        CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                     },
                 )
 
@@ -166,32 +174,31 @@ class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            # Home Assistant assigns this mapping over entry.options wholesale,
+            # so passing only the form fields would delete every setting the
+            # form does not show -- including the two prices the number
+            # entities persist there. Merge instead of replace.
+            return self.async_create_entry(
+                title="",
+                data=merge_options(dict(self._config_entry.options), user_input),
+            )
 
-        current = {**self._config_entry.data, **self._config_entry.options}
+        current = form_defaults(self._config_entry)
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_SCAN_INTERVAL,
-                        default=current.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                        CONF_SCAN_INTERVAL, default=current[CONF_SCAN_INTERVAL]
                     ): vol.All(
                         int, vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL)
                     ),
                     vol.Required(
-                        CONF_CREATE_DASHBOARD,
-                        default=current.get(
-                            CONF_CREATE_DASHBOARD,
-                            DEFAULT_CREATE_DASHBOARD,
-                        ),
+                        CONF_CREATE_DASHBOARD, default=current[CONF_CREATE_DASHBOARD]
                     ): bool,
                     vol.Required(
                         CONF_ENABLE_PAYMENT_TRACKING,
-                        default=current.get(
-                            CONF_ENABLE_PAYMENT_TRACKING,
-                            DEFAULT_ENABLE_PAYMENT_TRACKING,
-                        ),
+                        default=current[CONF_ENABLE_PAYMENT_TRACKING],
                     ): bool,
                 }
             ),

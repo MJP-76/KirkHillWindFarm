@@ -17,5 +17,10 @@ class TestConfigFlowVersion:
         )
 
     def test_version_is_current(self):
-        """Version should be 7 (the current schema version)."""
-        assert KirkHillWindConfigFlow.VERSION == 7
+        """Version should be 8 (the current schema version).
+
+        v8 split connection details from settings: entry.data keeps only the
+        API key and base URL, and every user-configurable setting moved to
+        entry.options.
+        """
+        assert KirkHillWindConfigFlow.VERSION == 8

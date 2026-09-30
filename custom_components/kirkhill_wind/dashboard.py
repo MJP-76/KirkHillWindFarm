@@ -28,10 +28,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
-from .const import (
-    CONF_CREATE_DASHBOARD,
-    DEFAULT_CREATE_DASHBOARD,
-)
+from .settings import dashboard_enabled
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,14 +40,6 @@ _ICON = "mdi:wind-turbine"
 # ---------------------------------------------------------------------------
 # Public API — called from __init__.py
 # ---------------------------------------------------------------------------
-
-
-def dashboard_enabled(entry: ConfigEntry) -> bool:
-    """Return whether dashboard creation is enabled for this config entry."""
-    return entry.options.get(
-        CONF_CREATE_DASHBOARD,
-        entry.data.get(CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD),
-    )
 
 
 async def async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> None:

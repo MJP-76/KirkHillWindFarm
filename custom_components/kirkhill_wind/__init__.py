@@ -15,11 +15,9 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CONF_BASE_URL,
     CONF_CFD_PRICE_GBP_PER_MWH,
-    CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
     DEFAULT_BASE_URL,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
-    DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
     PLATFORMS,
 )
@@ -27,6 +25,12 @@ from .coordinator import KirkHillWindCoordinator
 from .dashboard import async_ensure_dashboard
 from .device import get_farm_device_id
 from .services import async_setup_services, async_unload_services
+from .settings import (
+    OPTION_KEYS,
+    get_negotiated_price,
+    get_owner_price,
+    payment_tracking_enabled,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _FRONTEND_DIR = Path(__file__).parent / "frontend"
@@ -45,7 +49,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 ]
 
 # Keep in sync with the VERSION in config_flow.py.
-_CONFIG_ENTRY_VERSION = 7
+_CONFIG_ENTRY_VERSION = 8
 
 
 async def async_migrate_entry(
@@ -57,6 +61,7 @@ async def async_migrate_entry(
 
     entry_data = getattr(config_entry, 'data', {}) or {}
     data = dict(entry_data)
+    options = dict(getattr(config_entry, "options", {}) or {})
 
     if config_entry.version < 3:
         data.setdefault(CONF_BASE_URL, DEFAULT_BASE_URL)
@@ -65,18 +70,36 @@ async def async_migrate_entry(
         data.pop("owner_share_percent", None)
         data.pop("owner_value_rate", None)
 
+    # The two prices are settings, so they seed into options rather than data.
+    # The defaults themselves are declared once in settings.SETTING_DEFAULTS.
     if config_entry.version < 5:
-        data.setdefault(CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH)
+        options.setdefault(
+            CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH
+        )
 
     if config_entry.version < 6:
-        data.setdefault(CONF_OWNER_PRICE_PENCE_PER_KWH, DEFAULT_OWNER_PRICE_PENCE_PER_KWH)
+        options.setdefault(
+            CONF_OWNER_PRICE_PENCE_PER_KWH, DEFAULT_OWNER_PRICE_PENCE_PER_KWH
+        )
 
-    options = dict(getattr(config_entry, "options", {}) or {})
     if config_entry.version < 7:
         data.pop("owner_projected_annual_earnings_gbp", None)
         data.pop("site_projected_annual_earnings_gbp", None)
         options.pop("owner_projected_annual_earnings_gbp", None)
         options.pop("site_projected_annual_earnings_gbp", None)
+
+    if config_entry.version < 8:
+        # Split connection details from settings. entry.data keeps only what
+        # identifies the integration; everything the user can change moves to
+        # entry.options.
+        #
+        # setdefault preserves existing precedence. Some of these keys may
+        # already be in options, because the options flow and the number
+        # entities have been writing there; where both mappings held a value,
+        # options already won at runtime, so it must keep winning here.
+        for key in OPTION_KEYS:
+            if key in data:
+                options.setdefault(key, data.pop(key))
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, options=options, version=_CONFIG_ENTRY_VERSION
@@ -94,21 +117,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator.farm_device_id = await get_farm_device_id(hass, entry)
 
-    coordinator.negotiated_price_gbp_per_mwh = float(
-        entry.options.get(
-            CONF_CFD_PRICE_GBP_PER_MWH,
-            entry.data.get(CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH),
-        )
-    )
+    coordinator.negotiated_price_gbp_per_mwh = get_negotiated_price(entry)
 
-    coordinator.owner_price_pence_per_kwh = float(
-        entry.options.get(
-            CONF_OWNER_PRICE_PENCE_PER_KWH,
-            entry.data.get(
-                CONF_OWNER_PRICE_PENCE_PER_KWH, DEFAULT_OWNER_PRICE_PENCE_PER_KWH
-            ),
-        )
-    )
+    coordinator.owner_price_pence_per_kwh = get_owner_price(entry)
 
     await async_setup_services(hass)
 
@@ -173,10 +184,7 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
 
 async def _async_setup_payment_tracking(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Initialize Ethex config flow when payment tracking is enabled."""
-    if not entry.options.get(
-        CONF_ENABLE_PAYMENT_TRACKING,
-        entry.data.get(CONF_ENABLE_PAYMENT_TRACKING, DEFAULT_ENABLE_PAYMENT_TRACKING),
-    ):
+    if not payment_tracking_enabled(entry):
         return
 
     if _ETHEX_DOMAIN not in hass.config.components:
