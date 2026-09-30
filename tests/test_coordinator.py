@@ -26,16 +26,29 @@ from custom_components.kirkhill_wind.exceptions import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_coordinator(hass, entry, mock_api_client):
-    """Build a coordinator with a mocked API client."""
+def _make_coordinator(hass, entry, mock_api_client, now=None):
+    """Build a coordinator with a mocked API client.
+
+    ``now`` freezes dt_util.utcnow() while the coordinator is constructed.
+    This matters: __init__ seeds _next_turbine_update/_next_slow_update from
+    utcnow() so the first poll runs every tier. A test that only patches time
+    around _async_update_data() leaves those timers set to the real (later)
+    wall clock, so the patched "now" never reaches the interval and the
+    medium/slow tiers silently never run.
+    """
     from custom_components.kirkhill_wind.coordinator import KirkHillWindCoordinator
 
     with patch(
         "custom_components.kirkhill_wind.coordinator.KirkHillApiClient",
         return_value=mock_api_client,
     ):
-        coord = KirkHillWindCoordinator(hass, entry)
-    return coord
+        if now is None:
+            return KirkHillWindCoordinator(hass, entry)
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            return KirkHillWindCoordinator(hass, entry)
 
 
 def _make_entry(data=None, options=None):
@@ -62,33 +75,31 @@ class TestTimeBasedScheduling:
     async def test_first_poll_runs_all_tiers(self, hass, mock_api_client):
         """On the very first poll, turbine + slow tiers should run immediately."""
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
-
         now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-        with patch(
-            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
-            return_value=now,
-        ):
-            await coord._async_update_data()
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        await coord._async_update_data()
 
         # Turbine fetch should have been called (first poll = immediate)
         mock_api_client.get_turbines.assert_called()
-        # Slow tier should have run (first poll = immediate)
+        # Both tiers should have rescheduled themselves into the future
+        assert coord._next_turbine_update > now
         assert coord._next_slow_update > now
 
     @pytest.mark.asyncio
     async def test_turbine_tier_skipped_within_10min(self, hass, mock_api_client):
         """Turbine tier should NOT run if less than 10 minutes since last."""
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
-
         t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
         # First poll — primes everything
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
             return_value=t0,
         ):
             await coord._async_update_data()
+        mock_api_client.get_turbines.assert_called()
         mock_api_client.get_turbines.reset_mock()
 
         # Second poll, 5 minutes later — turbine tier should be skipped
@@ -104,14 +115,15 @@ class TestTimeBasedScheduling:
     async def test_turbine_tier_runs_after_10min(self, hass, mock_api_client):
         """Turbine tier should run after 10 minutes have elapsed."""
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
-
         t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
             return_value=t0,
         ):
             await coord._async_update_data()
+        mock_api_client.get_turbines.assert_called()
         mock_api_client.get_turbines.reset_mock()
 
         t1 = t0 + timedelta(minutes=11)
@@ -124,19 +136,26 @@ class TestTimeBasedScheduling:
 
     @pytest.mark.asyncio
     async def test_slow_tier_skipped_within_1hr(self, hass, mock_api_client):
-        """Slow tier (historical summaries) should NOT run within 1 hour."""
+        """Slow tier (historical summaries) should NOT re-run within 1 hour."""
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
-
         t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
             return_value=t0,
         ):
             await coord._async_update_data()
 
-        # Check that slow timeframes were fetched on first poll
-        first_slow_call_count = mock_api_client.get_summary.call_count
+        # First poll runs the fast and slow tiers for both scopes.
+        first_poll = {
+            (call.kwargs["scope"], call.kwargs["range_value"])
+            for call in mock_api_client.get_summary.call_args_list
+        }
+        assert (SCOPE_OWNER, "yesterday") in first_poll
+        assert (SCOPE_SITE, "alltime") in first_poll
+
+        mock_api_client.get_summary.reset_mock()
 
         t1 = t0 + timedelta(minutes=30)
         with patch(
@@ -145,10 +164,14 @@ class TestTimeBasedScheduling:
         ):
             await coord._async_update_data()
 
-        # Only fast timeframes (today) should have been fetched on second poll
-        # — fewer calls than the first poll which included slow tiers.
-        second_call_count = mock_api_client.get_summary.call_count - first_slow_call_count
-        assert second_call_count < first_slow_call_count
+        # Within the hour only the fast 'today' timeframe is re-fetched, for
+        # both scopes. Asserting the exact set, not a call count, so this
+        # cannot pass by coincidence.
+        second_poll = {
+            (call.kwargs["scope"], call.kwargs["range_value"])
+            for call in mock_api_client.get_summary.call_args_list
+        }
+        assert second_poll == {(SCOPE_OWNER, "today"), (SCOPE_SITE, "today")}
 
 
 # ---------------------------------------------------------------------------
@@ -164,14 +187,15 @@ class TestAuthErrorHandling:
         from homeassistant.config_entries import ConfigEntryAuthFailed
 
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
         mock_api_client.get_current = AsyncMock(
             side_effect=KirkHillAuthError("Invalid API key")
         )
 
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
-            return_value=datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+            return_value=now,
         ):
             with pytest.raises(ConfigEntryAuthFailed):
                 await coord._async_update_data()
@@ -182,7 +206,8 @@ class TestAuthErrorHandling:
         from homeassistant.config_entries import ConfigEntryAuthFailed
 
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
 
         # Make the summary fetch fail with an auth error while the current fetch succeeds
         async def summary_auth_fail(*args, **kwargs):
@@ -192,7 +217,7 @@ class TestAuthErrorHandling:
 
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
-            return_value=datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+            return_value=now,
         ):
             with pytest.raises(ConfigEntryAuthFailed):
                 await coord._async_update_data()
@@ -201,14 +226,14 @@ class TestAuthErrorHandling:
     async def test_connection_error_marks_stale_and_retries(self, hass, mock_api_client):
         """Connection errors should mark data stale and schedule retry."""
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
 
         # Make summary fail with connection error
         mock_api_client.get_summary = AsyncMock(
             side_effect=KirkHillConnectionError("Timeout")
         )
 
-        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
             return_value=now,
@@ -228,9 +253,9 @@ class TestAuthErrorHandling:
     async def test_stale_data_retained_on_failure(self, hass, mock_api_client, mock_current_payload):
         """When current fetch fails, last-known-good data should be retained."""
         entry = _make_entry()
-        coord = _make_coordinator(hass, entry, mock_api_client)
-
         t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
         # First poll — succeeds
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
