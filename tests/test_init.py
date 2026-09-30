@@ -260,7 +260,7 @@ class TestSettingsAccess:
         assert get_site_name(_make_entry(8, options={CONF_SITE_NAME: "Custom"})) == "Custom"
 
     def test_falls_back_to_declared_default(self):
-        entry = _make_entry(8, )
+        entry = _make_entry(8)
         assert get_site_name(entry) == DEFAULT_SITE_NAME
         assert get_scan_interval(entry) == DEFAULT_SCAN_INTERVAL
         assert get_negotiated_price(entry) == DEFAULT_CFD_PRICE_GBP_PER_MWH
@@ -272,9 +272,7 @@ class TestSettingsAccess:
         This guards against the split silently regressing: if a reader went
         back to consulting data, this test would fail.
         """
-        entry = _make_entry(8, 
-            {CONF_SITE_NAME: "Stale Name", CONF_SCAN_INTERVAL: 5},
-        )
+        entry = _make_entry(8, {CONF_SITE_NAME: "Stale Name", CONF_SCAN_INTERVAL: 5})
         assert get_site_name(entry) == DEFAULT_SITE_NAME
         assert get_scan_interval(entry) == DEFAULT_SCAN_INTERVAL
 
@@ -283,7 +281,7 @@ class TestSettingsAccess:
 
     def test_unknown_key_is_rejected(self):
         with pytest.raises(KeyError):
-            get_setting(_make_entry(8, ), "not_a_setting")
+            get_setting(_make_entry(8), "not_a_setting")
 
     def test_merge_options_lets_the_form_win(self):
         merged = merge_options(
