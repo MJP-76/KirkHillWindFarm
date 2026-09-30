@@ -33,11 +33,11 @@ from custom_components.kirkhill_wind.settings import (
 )
 
 
-def _make_entry(version, data, options=None):
+def _make_entry(version, data=None, options=None):
     """Return a fake config entry at a given schema version."""
     entry = MagicMock()
     entry.version = version
-    entry.data = data
+    entry.data = data or {}
     entry.options = options or {}
     return entry
 
