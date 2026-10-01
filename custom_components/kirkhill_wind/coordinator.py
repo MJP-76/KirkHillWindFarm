@@ -245,6 +245,20 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self, session: aiohttp.ClientSession, now: datetime
     ) -> tuple[dict[str, dict[str, dict]], dict[str, dict[str, dict]]]:
         tasks: list[tuple[str, str, asyncio.Task]] = []
+        current_year = dt_util.now().year
+
+        # Seed summaries/windows with cached immutable year data.  Completed
+        # calendar years never change, so fetch them once and reuse forever.
+        summaries: dict[str, dict[str, dict]] = {
+            scope: dict(self._last_summaries[scope]) for scope in SCOPES
+        }
+        windows: dict[str, dict[str, dict]] = {
+            scope: dict(self._last_windows[scope]) for scope in SCOPES
+        }
+        for (scope, year_str), cached in self._immutable_year_summaries.items():
+            summaries[scope][f"year_{year_str}"] = cached
+        for (scope, year_str), cached in self._immutable_year_windows.items():
+            windows[scope][f"year_{year_str}"] = cached
 
         # Determine which timeframes to fetch this poll. The slow tier runs
         # when the caller's timestamp passes the slow timer; retries use a
@@ -262,7 +276,6 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 # Clear the retry entry so a successful fetch below resets it.
         _LOGGER.debug("Fetching summaries for timeframes=%s (slow_tier=%s)", sorted(timeframes), run_slow)
 
-        current_year = dt_util.now().year
         for scope in SCOPES:
             for timeframe in sorted(timeframes):
                 if timeframe == "year":
@@ -270,13 +283,9 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 elif timeframe.startswith("year_"):
                     year_str = timeframe.split("_")[1]
                     range_value = year_str
-                    # Completed years are immutable — use cached data if available.
-                    if int(year_str) < current_year:
-                        cache_key = (scope, year_str)
-                        if cache_key in self._immutable_year_summaries:
-                            summaries.setdefault(scope, {})[timeframe] = self._immutable_year_summaries[cache_key]
-                            windows.setdefault(scope, {})[timeframe] = self._immutable_year_windows.get(cache_key, {})
-                            continue
+                    # Completed years are immutable — skip if already cached.
+                    if int(year_str) < current_year and (scope, year_str) in self._immutable_year_summaries:
+                        continue
                 else:
                     range_value = TIMEFRAME_TO_RANGE[timeframe]
                 task = asyncio.create_task(
@@ -289,12 +298,6 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             return_exceptions=True,
         )
 
-        summaries: dict[str, dict[str, dict]] = {
-            scope: dict(self._last_summaries[scope]) for scope in SCOPES
-        }
-        windows: dict[str, dict[str, dict]] = {
-            scope: dict(self._last_windows[scope]) for scope in SCOPES
-        }
         for (scope, timeframe, _), payload in zip(tasks, results):
             key = (scope, timeframe)
             if isinstance(payload, BaseException):
