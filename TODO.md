@@ -158,12 +158,42 @@
 - [x] Bump version to 4.8.81 (done as part of the map-card deprecation; deploy/verify items are in the Release roll-out section above)
 - [ ] Follow-up to reviewer point #3: fetch the Open-Meteo forecast in parallel with the medium-tier turbine fetches. Currently left sequential because the forecast location derives from the freshly fetched turbine map; would need to fall back to last-known coordinates to parallelise (forecast is non-authoritative, so ordering is safe to relax)
 
-## Backlog
+## Enhancements & API
+
+### #54 — Expose unused response fields as sensors
+
+Fields the coordinator already fetches but discards. No API changes needed.
+
+- [ ] `reading.complete` → binary_sensor (CONNECTIVITY) — whether all turbines are reporting
+- [ ] `reading.generated_at` → sensor (TIMESTAMP) — data freshness
+- [ ] `unknown_turbines` → sensor — count of turbines with no imported state
+- [ ] `latest_import_status` → sensor — import pipeline health (e.g. "completed")
+- [ ] `latest_rotor_speed_at` → per-turbine sensor (TIMESTAMP) — rotor data freshness
+- [ ] Use full `/api/v1/wind-speed` time series for historical wind speed charts in turbine modals (currently only the last element is read)
+
+### #55 — API feature requests (require upstream API changes)
+
+- [ ] Per-turbine generation for intermediate ranges (7d, 30d, ytd, year) — `/api/v1/turbines` currently only supports `today` and `all`
+- [ ] Structured curtailment reason in turbine state data (environmental / grid / maintenance / commercial)
+- [ ] Confirm `/api/v1/generation` endpoint stability and build client support if stable
+- [ ] Confirm `range=custom` with `from`/`to` stability and document rate limits
+- [ ] Confirm unused response fields stability (see #54 above)
+- [ ] Financial figures in the API response (negotiated price, member price, export price, price granularity, revenue figures)
+
+### #37 — OAuth 2.1 PKCE authentication
+
+- [ ] Add OAuth 2.1 Authorization Code flow with PKCE as alternative to manual API key entry (assigned: MJP-76)
+
+## Code review backlog
+
+- [ ] **Reviewer #5 follow-up** — fetch the Open-Meteo forecast in parallel with the medium-tier turbine fetches (currently sequential because the forecast location derives from the freshly fetched turbine map; would need to fall back to last-known coordinates)
+- [ ] **Review #3.2** — investigate the two bare `except Exception` guards (`__init__.py:205` dashboard load, `config_flow.py:151` API-key validate) and confirm they cannot mask a `ConfigEntryAuthFailed`-worthy error as a generic "unknown" failure
+- [ ] **Review #3.4** — `url_already_exists` is matched by exception message string (`__init__.py:178`); look into more robust error handling in case HA rewords the message
+- [ ] **Review #3.5** — split the ~700-line dashboard generation/merge logic out of `__init__.py` (1,025 lines) into a dedicated `dashboard.py` module, leaving setup/unload/listeners in `__init__.py`
+- [ ] **Review #4** — add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app
+
+## Housekeeping
 
 - [ ] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)
 - [ ] Create a `CONTRIBUTING` file (GitHub auto-features it in the repo file list)
-- [x] External review #1 — submit to the official HACS default repository so users can find the integration in the HA UI without pasting a URL (PR #11379 submitted: https://github.com/hacs/default/pull/11379)
-- [ ] External review #4 — add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app.
-- [ ] External review #3.2 — investigate the two bare `except Exception` guards (`__init__.py:205` dashboard load, `config_flow.py:151` API-key validate) and confirm they cannot mask a `ConfigEntryAuthFailed`-worthy error as a generic "unknown" failure
-- [ ] External review #3.4 — `url_already_exists` is matched by exception message string (`__init__.py:178`); look into more robust error handling in case HA rewords the message
-- [ ] External review #3.5 — split the ~700-line dashboard generation/merge logic out of `__init__.py` (1,025 lines) into a dedicated `dashboard.py` module, leaving setup/unload/listeners in `__init__.py`
+- [x] External review #1 — submit to the official HACS default repository (PR #11379: https://github.com/hacs/default/pull/11379)
