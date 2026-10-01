@@ -35,7 +35,7 @@ Fields the coordinator already fetches but discards. No API changes needed.
 ### Dashboard & integration
 
 - [ ] Rate limiting: expose `rate_limited` attribute on API status entity when API supports 429
-- [ ] Remove the deprecated turbine map card (`kirkhill-wind-turbine-map`) entirely — currently bundled with a deprecation banner since v4.8.81
+- [x] ~~Remove the deprecated turbine map card~~ — JS file already deleted; OBSOLETE_CARD_KEYS entry stays to prune old dashboards.
 
 ## Code review backlog
 
