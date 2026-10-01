@@ -26,7 +26,88 @@ Fields the coordinator already fetches but discards. No API changes needed.
 - [ ] Confirm `/api/v1/generation` endpoint stability and build client support if stable
 - [ ] Confirm `range=custom` with `from`/`to` stability and document rate limits
 - [ ] Confirm unused response fields stability (see #54 above)
-- [ ] Financial figures in the API response (negotiated price, member price, export price, price granularity, revenue figures)
+- [ ] **Financial figures in the API response** — the target design. See
+      [Target design: prices owned by the API](#target-design-prices-owned-by-the-api)
+      below, and [#55 §6](https://github.com/MJP-76/KirkHillWindFarm/issues/55) for the
+      upstream request. **Awaiting the board** (asked 2026-10-01).
+
+### Target design: prices owned by the API
+
+**The goal.** CfD strike rate, sell/export price, and owner price all come from the API
+rather than being user-entered. The integration stops *asserting* financial figures and
+starts *reporting* them. Board has been asked; not yet answered.
+
+**Why this is the right direction, not just a data source.** It removes three things at
+once:
+
+- the `suppressed_no_historical_price` branch at `sensor.py:487`, which currently returns
+  `None` for `alltime` and every `year_*` timeframe because no per-year price exists
+- both `number` price entities
+- the whole class of bug where `entry.options` and `restore_state` disagree about money —
+  the class v4.13.6 just finished cleaning up
+
+The coordinator would read prices rather than assert them, and earnings would need zero
+user configuration.
+
+**Ask the API for effective-dated ranges, not year keys.** A CfD strike rate does not
+normally change on 1 January. If it changes on 1 July, a `2025: 85.0` entry is wrong for
+half that year, and the failure is invisible — plausible numbers that are quietly wrong.
+Request `{effective_from, effective_to, rate}`, which handles renegotiation, partial years,
+and a contract that started mid-year. Year-keyed data is easier to ask for and much harder
+to use correctly.
+
+**Ask for full history back to commissioning, not just the current rate.** The `alltime`
+figure is the one that needs the deepest tail. If the API returns the current rate plus a
+few years, `alltime` stays suppressed indefinitely and we gain `year_YYYY` but not the
+total.
+
+**Prices, not earnings.** The API should return prices rather than computed revenue, so
+the integration can show its working (kWh × rate) and a member who thinks a figure is
+wrong can see which input to challenge. An API-supplied earnings figure would have to be
+taken on trust.
+
+#### Pre-work that is safe to do now
+
+- [ ] Extract the price lookup in `sensor.py` behind a single function, so the per-year
+      table drops in later without touching the earnings logic
+- [ ] Put the "no known price for this year → suppress, never fall back to a default"
+      rule in one tested place. This is the rule most likely to be got wrong: silently
+      applying a wrong price is precisely the failure the current suppression avoids.
+
+#### Once the API lands
+
+- [ ] Populate per-year prices; lift the `suppressed_no_historical_price` branch in
+      `sensor.py:487`
+- [ ] Compute `alltime` as a sum across years rather than suppressing it
+- [ ] Deprecate the two `number` price entities, then remove them **in a later release
+      only** — keep them until the API path has run for a release, and use the same
+      backfill-first pattern as v4.13.6. Do not remove them in the same release that
+      introduces the API path.
+
+#### ⚠️ Coupling that must not be split
+
+Per-year prices **break the precondition** of the "completed years are cached forever"
+decision (`docs/development/decisions.md`). That decision is currently safe *only*
+because no money is ever derived from a cached year. Adding per-year earnings makes
+money derive from cached years, and financial figures can be corrected upstream in a way
+generation much less so.
+
+**These two changes land together or not at all.** A cached-year correction policy has to
+be settled at the same time as the per-year price table, or the first retroactive board
+restatement will silently serve stale earnings.
+
+#### Open questions for the board
+
+1. Is the CfD price per year, or per contract term? A CfD typically has a strike price
+   that can be renegotiated, and may be flat across the whole term. If flat, the year
+   dimension is mostly relevant to the owner price.
+2. What happens for years with no known price? If the answer covers 2024 onward but not
+   2022–23, those years must stay suppressed rather than fall back to a default.
+3. Is the owner price per year and per turbine, or per year for the farm? The current
+   owner price is farm-wide in pence per kWh.
+4. Are retroactive corrections possible? If the board restates 2024, does that change
+   history? This decides whether prices are immutable constants per release or a
+   revisable data file — and therefore whether the caching question above is tractable.
 
 ### #37 — OAuth 2.1 PKCE authentication
 
