@@ -15,7 +15,7 @@
 const KIRKHILL_WIND_SCADA_VERSION = "4.13.3";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
-    return { w: 1240, h: 1300, wMin: 900, wMax: 1800, hMin: 700, hMax: 1900 };
+    return { w: 1240, h: 1300, wMin: 900, wMax: 2200, hMin: 700, hMax: 1900 };
   }
 
   static get DESIGN_W() {
@@ -319,12 +319,7 @@ class KirkHillWindScada extends HTMLElement {
                       markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--khscada-accent-color)"/>
               </marker>
-              <clipPath id="khscada-clip-version"><rect x="${layout.chipLeftColX + 40 * layout.scaleX}" y="24" width="${170 * layout.scaleX}" height="30" rx="15"/></clipPath>
-              <clipPath id="khscada-clip-api"><rect x="${layout.chipLeftColX + 220 * layout.scaleX}" y="24" width="${78 * layout.scaleX}" height="30" rx="15"/></clipPath>
-              <clipPath id="khscada-clip-alarm"><rect x="${layout.chipLeftColX + 308 * layout.scaleX}" y="24" width="${130 * layout.scaleX}" height="30" rx="15"/></clipPath>
-              <clipPath id="khscada-clip-wind"><rect x="${layout.chipLeftColX + 448 * layout.scaleX}" y="24" width="${280 * layout.scaleX}" height="30" rx="15"/></clipPath>
-              <clipPath id="khscada-clip-owner"><rect x="${layout.chipUserGenX}" y="76" width="${layout.chipUserGenW}" height="232" rx="8"/></clipPath>
-              <clipPath id="khscada-clip-site"><rect x="${layout.chipSiteGenX}" y="332" width="${layout.chipSiteGenW}" height="232" rx="8"/></clipPath>
+
             </defs>
             <rect class="bg" x="0" y="0" width="${layout.W}" height="${layout.H}" fill="url(#khscada-grid)"/>
             <g data-zoom="wrap" transform="translate(0 0) scale(1)">
@@ -2293,26 +2288,26 @@ _buildHeaderChips(layout) {
           <rect x="${layout.chipLeftColX}" y="24" width="${30 * layout.scaleX}" height="30" rx="8"/>
           <text x="${layout.chipLeftColX + 15 * layout.scaleX}" y="44" text-anchor="middle" style="font-size: calc(18px * var(--khscada-fs, 1))">⟲</text>
         </g>
-        <g class="version-pill" data-version="indicator" clip-path="url(#khscada-clip-version)">
+        <g class="version-pill" data-version="indicator">
           <rect x="${layout.chipLeftColX + 40 * layout.scaleX}" y="24" width="${170 * layout.scaleX}" height="30" rx="15"/>
           <text class="version-text" data-version="text" x="${layout.chipLeftColX + 125 * layout.scaleX}" y="44" text-anchor="middle">v${KIRKHILL_WIND_SCADA_VERSION}</text>
         </g>
-        <g class="api-status" data-api="indicator" clip-path="url(#khscada-clip-api)">
+        <g class="api-status" data-api="indicator">
           <rect x="${layout.chipLeftColX + 220 * layout.scaleX}" y="24" width="${78 * layout.scaleX}" height="30" rx="15"/>
           <text class="api-status-text" data-api="text" x="${layout.chipLeftColX + 259 * layout.scaleX}" y="44" text-anchor="middle">API</text>
         </g>
-        <g class="alarm" data-alarm="indicator" clip-path="url(#khscada-clip-alarm)">
+        <g class="alarm" data-alarm="indicator">
           <rect x="${layout.chipLeftColX + 308 * layout.scaleX}" y="24" width="${130 * layout.scaleX}" height="30" rx="15"/>
           <text class="alarm-text" data-alarm="text" data-chip="active" x="${layout.chipLeftColX + 373 * layout.scaleX}" y="44" text-anchor="middle">—</text>
         </g>
-        <g data-wind="panel" clip-path="url(#khscada-clip-wind)">
+        <g data-wind="panel">
           <rect x="${layout.chipLeftColX + 448 * layout.scaleX}" y="24" width="${280 * layout.scaleX}" height="30" rx="15"/>
           <text x="${layout.chipLeftColX + 458 * layout.scaleX}" y="44"><tspan class="chip-label">Wind Speed: Current </tspan><tspan class="chip-value" data-chip="wind">—</tspan><tspan class="chip-label"> Forecast: </tspan><tspan class="chip-value" data-chip="forecast">—</tspan></text>
         </g>
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
         <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation, Capacity & Earnings</text>
-        <g class="user-gen" data-user-gen="panel" clip-path="url(#khscada-clip-owner)">
+        <g class="user-gen" data-user-gen="panel">
           <rect x="${layout.chipUserGenX}" y="76" width="${layout.chipUserGenW}" height="232" rx="8"/>
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="98">Owner</text>
           <text class="user-gen-colh" data-colh="label" x="${layout.chipUserGenTitleX}" y="120">Timeframe</text>
@@ -2353,7 +2348,7 @@ _buildHeaderChips(layout) {
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
-        <g class="site-gen" data-site-gen="panel" clip-path="url(#khscada-clip-site)">
+        <g class="site-gen" data-site-gen="panel">
           <rect x="${layout.chipSiteGenX}" y="332" width="${layout.chipSiteGenW}" height="232" rx="8"/>
           <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="354">Site</text>
           <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="376">Timeframe</text>
