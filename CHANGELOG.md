@@ -2,6 +2,22 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.13.1
+- **New diagnostic sensors (#54).** Five fields the API already returned but the integration discarded are now exposed:
+  - `binary_sensor.data_complete` — on when every turbine has current power, wind speed, and state data.
+  - `sensor.data_generated_at` — timestamp of when the API response was generated (data freshness).
+  - `sensor.unknown_turbines` — count of turbines with no imported state.
+  - `sensor.latest_import_status` — status of the latest data import (e.g. `completed`), with `latest_generation_interval_end` as an attribute.
+  - Rotor speed sensor now includes a `sampled_at` attribute showing when the rotor speed was last measured.
+- **API call optimisation.** Removed the redundant `/api/v1/wind-speed` call — wind speed is already in the `current` endpoint summary. Saves 6 API calls/hour. Completed calendar year summaries (`year_2024`, `year_2025`, …) are now cached on first fetch and never refetched, saving 4 calls/hour (growing by 2 each year).
+- **Open-Meteo forecast parallelised.** The forecast now runs as a parallel task alongside the timeframe summary fetches when the slow tier is due, instead of sequentially after. Uses cached turbine coordinates so it does not depend on a fresh turbine fetch.
+- **Dashboard robustness.** `url_already_exists` detection now checks the exception's `translation_key` attribute instead of string-matching the translated message, protecting against future HA translation changes.
+- **Docs: pre-release install and feedback section.** Installation page now covers enabling pre-releases in HACS, downloading a specific pre-release version, and reporting pre-release problems with the required version details.
+- **Docs: sensor reference updated.** Added API Status binary sensor, Data complete binary sensor, Data generated at, Unknown turbines, Latest import status, and Owner share sensor. Fixed "State text" → "State" to match the actual entity name.
+- **Docs: review-brief updated.** Version reference corrected to v4.13.0; removed stale projected-earnings options from OptionsFlow description.
+- **Docs: SUPPORT and CONTRIBUTING files added.**
+- **Test fix.** `test_obsolete_card_removed` no longer depends on non-deterministic set iteration order.
+
 ## Version 4.11.7
 - **Removed: projected annual earnings.** The setup/options fields, the `Projected annual earnings (Owner/Site)` number entities, and the `projected_annual_gbp` / `projection_factor` attributes are gone. They were estimated averages (default £132 / £0) feeding a projected model retired in v4.11.5 — earnings are now `kWh × real price`, or `£0.00` when no price is set, so the estimates drove no displayed value. Existing installations migrate automatically (config version 7 strips the stale keys). Prices remain editable via the number entities and the dashboard price pills.
 - **Fixed: past-year £ suppression now covers future years.** The suppression check matched only `year_2024`/`year_2025` literally; a future `year_2026` frame would have shown a £ figure revalued at today's price — exactly the misvaluation the suppression exists to prevent. Any `year_YYYY` frame is now suppressed automatically.
