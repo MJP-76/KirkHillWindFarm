@@ -58,7 +58,7 @@ whole call was waste. `_next_slow_update` is only advanced *after* the second ca
 both invocations saw the slow tier as due.
 
 - [x] Remove the redundant call from the initial gather
-- [ ] Fix the test that let it through (see below)
+- [x] Fix the test that let it through (see below)
 
 Cost before the fix, at the default 60s scan interval: 2 wasted `get_summary` calls per
 poll (~2,880/day), plus 14 more on each hourly slow poll (32 actual vs 18 intended,
@@ -72,8 +72,8 @@ comment saying this is deliberate ("so this cannot pass by coincidence"). A set 
 invariant under duplication: it yields the same value for 2 calls as for 4, so the test
 passes identically against the buggy and the correct implementation.
 
-- [ ] Change the schedule test from set-based to count-aware assertions
-- [ ] Add an API-call-budget regression test covering: normal poll, turbine-due poll,
+- [x] Change the schedule test from set-based to count-aware assertions
+- [x] Add an API-call-budget regression test covering: normal poll, turbine-due poll,
       slow-tier poll, and completed-year caching
 
 ### 🟠 Malformed successful payload escapes as `AttributeError`
@@ -186,6 +186,36 @@ reached the same conclusion independently.
 ## Release history
 
 Completed releases, newest first. Preserved for reference.
+
+### v4.13.5 (pre-release, 2026-10-01)
+
+- Fix doubled summary fetch on every slow-tier poll (v4.13.4 regression)
+- `_parse_data()` now guarantees a `dict`; a non-object `data` raises
+  `KirkHillApiError` instead of leaking an `AttributeError`
+- `TestApiCallBudget`: call-count assertions for the API budget (18 / 2 / 2 / 14)
+- `AGENTS.md`: seven do-not-break invariants, each with its regression test named
+
+### v4.13.4 (pre-release, 2026-10-01)
+
+- SCADA card: remove clip paths, increase viewBox `wMax`
+
+### v4.13.3 (pre-release, 2026-10-01)
+
+- SCADA card: widen pills to fit text
+
+### v4.13.2 (pre-release, 2026-10-01)
+
+- SCADA card: fix text overflow on first load
+
+### v4.13.1 (pre-release, 2026-10-01)
+
+- Diagnostic sensors: `reading.complete`, `reading.generated_at`,
+  `unknown_turbines`, `latest_import_status`, rotor-speed `sampled_at`
+- API optimisation: drop the redundant `/api/v1/wind-speed` call, cache
+  immutable year summaries, parallelise the Open-Meteo forecast with
+  timeframe summaries
+- Fix `url_already_exists` string match to use `translation_key`
+- Docs: pre-release install/feedback, sensor reference, SUPPORT/CONTRIBUTING
 
 ### v4.13.0 (pre-release, 2026-09-30)
 
