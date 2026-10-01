@@ -82,6 +82,9 @@ and an animated dashboard.
 > Want to include earnings from the Ethex Investment Platform? Add
 > <https://github.com/mjp-76/ha-ethex> too (experimental; awaiting Ethex go-live).
 
+> Want to try a pre-release? See
+> [Install a pre-release version](https://MJP-76.github.io/KirkHillWindFarm/installation/#install-a-pre-release-version).
+
 ## Documentation
 
 Full documentation is available at **[https://MJP-76.github.io/KirkHillWindFarm/][docs]**
