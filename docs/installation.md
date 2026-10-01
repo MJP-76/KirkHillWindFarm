@@ -66,26 +66,20 @@ the stable release yet.
 
 ## What's in the latest pre-release
 
-**v4.13.1** (pre-release) — released 2026-10-01
+**v4.13.2** (pre-release) — released 2026-10-01
 
-New diagnostic sensors:
+Bug fix:
 
-- `binary_sensor.data_complete` — on when every turbine has current data
-- `sensor.data_generated_at` — when the API response was generated
-- `sensor.unknown_turbines` — turbines with no imported state
-- `sensor.latest_import_status` — data import pipeline health
-- Rotor speed `sampled_at` attribute — when rotor speed was last measured
+- Fixed SCADA card text overflow on first load — pill rectangles and generation panels now clip text, preventing the layout shift where overflowing text triggered a viewBox recalculation.
 
-Performance improvements:
+Includes all v4.13.1 changes:
 
+- New diagnostic sensors: `data_complete`, `data_generated_at`, `unknown_turbines`, `latest_import_status`, rotor speed `sampled_at` attribute
 - Removed redundant `/api/v1/wind-speed` API call (saves 6 calls/hour)
-- Cached immutable year summaries — completed years fetched once (saves 4 calls/hour)
+- Cached immutable year summaries (saves 4 calls/hour)
 - Open-Meteo forecast now runs in parallel with timeframe summaries
-
-Other changes:
-
-- Dashboard `url_already_exists` detection hardened against HA translation changes
-- Docs: sensor reference, SUPPORT, CONTRIBUTING files added
+- Dashboard `url_already_exists` detection hardened
+- Docs: sensor reference, SUPPORT, CONTRIBUTING files
 - Test fix: flaky `test_obsolete_card_removed` now deterministic
 
 [Full changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)

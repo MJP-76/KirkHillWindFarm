@@ -2,6 +2,9 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.13.2
+- **Fixed: SCADA card text overflow on first load.** Pill rectangles (version, API status, alarm, wind speed) and generation panels (owner, site) now have SVG clip paths that prevent text from extending beyond the rect bounds. This eliminates the first-load layout shift where overflowing text triggered a viewBox recalculation.
+
 ## Version 4.13.1
 - **New diagnostic sensors (#54).** Five fields the API already returned but the integration discarded are now exposed:
   - `binary_sensor.data_complete` — on when every turbine has current power, wind speed, and state data.
