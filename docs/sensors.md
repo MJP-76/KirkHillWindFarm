@@ -25,6 +25,10 @@
 - Inactive turbines
 - Alarm (binary sensor) — on when any turbine is in an actual thermal or electrical fault state
 - API Status (binary sensor) — on when the Kirk Hill API last responded normally, off when the last fetch failed
+- Data complete (binary sensor) — on when every turbine has current power, wind speed, and state data available
+- Data generated at (timestamp) — when the API response was generated (data freshness)
+- Unknown turbines — count of turbines with no imported state
+- Latest import status — status of the latest data import (e.g. `completed`); includes `latest_generation_interval_end` as an attribute
 - Owner share [%] — your share of the farm's capacity, derived from the API generation ratio
 
 Timeframe generation entities keep a stable raw **kWh** state for reliability in
@@ -65,7 +69,7 @@ schedule. See [Development decisions](development/decisions.md).
 - Active (binary sensor)
 - Generation today (site) [kWh]
 - Generation all-time (site) [kWh]
-- Rotor speed [rpm]
+- Rotor speed [rpm] — includes `sampled_at` attribute (when the rotor speed was last measured)
 - Today's generation share attribute (`share_percent`)
 
 For turbine down/recovery notifications built on these entities, see

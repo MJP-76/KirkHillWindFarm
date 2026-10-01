@@ -1,9 +1,12 @@
-"""Tests for binary sensors — API Status sensor in particular."""
+"""Tests for binary sensors — API Status and Data Complete sensors."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from custom_components.kirkhill_wind.binary_sensor import APIStatusSensor
+from custom_components.kirkhill_wind.binary_sensor import (
+    APIStatusSensor,
+    DataCompleteSensor,
+)
 
 
 class TestAPIStatusSensor:
@@ -72,3 +75,38 @@ class TestAPIStatusSensor:
         assert "current_stale" in attrs
         assert "summary_stale" in attrs
         assert attrs["current_stale"]["owner"] is True
+
+
+class TestDataCompleteSensor:
+    """Verify Data Complete reflects the reading.complete field."""
+
+    def _make_sensor(self, reading):
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {
+            "owner": {"reading": reading},
+        }
+        entry = MagicMock()
+        entry.entry_id = "test"
+        return DataCompleteSensor(coordinator, entry)
+
+    def test_on_when_complete(self):
+        sensor = self._make_sensor({"complete": True, "generated_at": "2026-06-25T12:00:00Z"})
+        assert sensor.is_on is True
+
+    def test_off_when_not_complete(self):
+        sensor = self._make_sensor({"complete": False, "generated_at": "2026-06-25T12:00:00Z"})
+        assert sensor.is_on is False
+
+    def test_none_when_no_reading(self):
+        sensor = self._make_sensor(None)
+        assert sensor.is_on is None
+
+    def test_none_when_reading_missing_complete(self):
+        sensor = self._make_sensor({"generated_at": "2026-06-25T12:00:00Z"})
+        assert sensor.is_on is None
+
+    def test_extra_state_attributes_include_generated_at(self):
+        sensor = self._make_sensor({"complete": True, "generated_at": "2026-06-25T12:00:00Z"})
+        attrs = sensor.extra_state_attributes
+        assert attrs["generated_at"] == "2026-06-25T12:00:00Z"

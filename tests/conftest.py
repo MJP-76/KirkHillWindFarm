@@ -92,11 +92,18 @@ def mock_config_entry_data():
 def mock_current_payload():
     """Return a realistic current-data API response."""
     return {
+        "reading": {
+            "scope": "owner",
+            "source_interval": "1m",
+            "generated_at": "2026-06-25T12:34:00Z",
+            "complete": True,
+        },
         "summary": {
             "total_power_kw": 1234.5,
             "capacity_factor_percent": 42.3,
             "active_turbines": 7,
             "inactive_turbines": 1,
+            "unknown_turbines": 0,
             "capacity_watts": 4200000,
             "wind_speed_mps": 8.5,
         },
@@ -130,6 +137,8 @@ def mock_summary_payload():
         "summary": {
             "total_generation_kwh": 50000.0,
             "capacity_factor_percent": 38.5,
+            "latest_import_status": "completed",
+            "latest_generation_interval_end": "2026-06-25T12:30:00Z",
         },
         "window": {
             "from": "2025-01-01T00:00:00Z",

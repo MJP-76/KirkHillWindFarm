@@ -229,6 +229,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 "generation_today_kwh": t.get("generation_kwh"),
                 "generation_today_share_percent": t.get("generation_share_percent"),
                 "rotor_speed_rpm": t.get("latest_rotor_speed_rpm"),
+                "rotor_speed_at": t.get("latest_rotor_speed_at"),
             }
         for t in alltime:
             turbine_id = t.get("id")

@@ -22,6 +22,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities: list = [
         FarmAlarmSensor(coordinator, entry),
         APIStatusSensor(coordinator, entry),
+        DataCompleteSensor(coordinator, entry),
     ]
     entities += [TurbineActiveSensor(coordinator, entry, tid) for tid in turbine_ids]
 
@@ -69,6 +70,31 @@ class TurbineActiveSensor(KirkHillTurbineEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         t = self._turbine_data(SCOPE_OWNER)
         return t.get("status") == "active" if t else False
+
+
+class DataCompleteSensor(KirkHillEntity, BinarySensorEntity):
+    """On when every turbine has current power, wind speed, and state data."""
+
+    _attr_name = "Data complete"
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "data_complete")
+
+    @property
+    def is_on(self) -> bool | None:
+        reading = self.coordinator.data.get(SCOPE_OWNER, {}).get("reading")
+        if not isinstance(reading, dict):
+            return None
+        complete = reading.get("complete")
+        return bool(complete) if complete is not None else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        reading = self.coordinator.data.get(SCOPE_OWNER, {}).get("reading", {})
+        return {
+            "generated_at": reading.get("generated_at"),
+        }
 
 
 class APIStatusSensor(KirkHillEntity, BinarySensorEntity):

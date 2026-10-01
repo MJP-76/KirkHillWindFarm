@@ -11,11 +11,11 @@ GitHub issue numbers are linked where they exist.
 
 Fields the coordinator already fetches but discards. No API changes needed.
 
-- [ ] `reading.complete` → binary_sensor (CONNECTIVITY) — whether all turbines are reporting
-- [ ] `reading.generated_at` → sensor (TIMESTAMP) — data freshness
-- [ ] `unknown_turbines` → sensor — count of turbines with no imported state
-- [ ] `latest_import_status` → sensor — import pipeline health (e.g. "completed")
-- [ ] `latest_rotor_speed_at` → per-turbine sensor (TIMESTAMP) — rotor data freshness
+- [x] `reading.complete` → binary_sensor (CONNECTIVITY) — whether all turbines are reporting
+- [x] `reading.generated_at` → sensor (TIMESTAMP) — data freshness
+- [x] `unknown_turbines` → sensor — count of turbines with no imported state
+- [x] `latest_import_status` → sensor — import pipeline health (e.g. "completed")
+- [x] `latest_rotor_speed_at` → per-turbine sensor (TIMESTAMP) — rotor data freshness (as `sampled_at` attribute on Rotor speed)
 - [ ] Use full `/api/v1/wind-speed` time series for historical wind speed charts in turbine modals (currently only the last element is read)
 
 ### #55 — API feature requests (require upstream API changes)
@@ -46,8 +46,8 @@ Fields the coordinator already fetches but discards. No API changes needed.
 
 ## Housekeeping
 
-- [ ] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)
-- [ ] Create a `CONTRIBUTING` file (GitHub auto-features it in the repo file list)
+- [x] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)
+- [x] Create a `CONTRIBUTING` file (GitHub auto-features it in the repo file list)
 - [x] Submit to the official HACS default repository (PR #11379: https://github.com/hacs/default/pull/11379)
 
 ---

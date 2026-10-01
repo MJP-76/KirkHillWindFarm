@@ -9,6 +9,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpeed
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
@@ -118,6 +119,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ),
         FarmActiveTurbinesSensor(coordinator, entry),
         FarmInactiveTurbinesSensor(coordinator, entry),
+        DataGeneratedAtSensor(coordinator, entry),
+        UnknownTurbinesSensor(coordinator, entry),
+        LatestImportStatusSensor(coordinator, entry),
     ]
 
     for tid in turbine_ids:
@@ -611,6 +615,67 @@ class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     def native_value(self):
         return self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {}).get("inactive_turbines")
 
+
+class DataGeneratedAtSensor(KirkHillEntity, SensorEntity):
+    """When the API response was generated (data freshness)."""
+
+    _attr_name = "Data generated at"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:clock-check-outline"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "data_generated_at")
+
+    @property
+    def native_value(self):
+        reading = self.coordinator.data.get(SCOPE_OWNER, {}).get("reading")
+        if not isinstance(reading, dict):
+            return None
+        ts = reading.get("generated_at")
+        if not isinstance(ts, str):
+            return None
+        return dt_util.parse_datetime(ts)
+
+
+class UnknownTurbinesSensor(KirkHillEntity, SensorEntity):
+    """Count of turbines with no imported state."""
+
+    _attr_name = "Unknown turbines"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:help-circle-outline"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "unknown_turbines")
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {}).get("unknown_turbines")
+
+
+class LatestImportStatusSensor(KirkHillEntity, SensorEntity):
+    """Status of the latest data import (e.g. 'completed')."""
+
+    _attr_name = "Latest import status"
+    _attr_icon = "mdi:import"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "latest_import_status")
+
+    @property
+    def native_value(self):
+        summaries = self.coordinator.data.get("timeframe_summaries", {})
+        today = summaries.get(SCOPE_OWNER, {}).get("today", {})
+        return today.get("latest_import_status")
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        summaries = self.coordinator.data.get("timeframe_summaries", {})
+        today = summaries.get(SCOPE_OWNER, {}).get("today", {})
+        return {
+            "latest_generation_interval_end": today.get("latest_generation_interval_end"),
+        }
+
+
 class TurbinePowerSensor(KirkHillScopedTurbineEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.POWER
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -773,3 +838,7 @@ class TurbineRotorSpeedSensor(KirkHillTurbineEntity, SensorEntity):
     @property
     def native_value(self):
         return _as_float(self._turbine_generation_data().get("rotor_speed_rpm"))
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {"sampled_at": self._turbine_generation_data().get("rotor_speed_at")}

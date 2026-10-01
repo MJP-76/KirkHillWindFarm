@@ -1,8 +1,14 @@
-"""Tests for sensors — timeframe labels, energy display helper."""
+"""Tests for sensors — timeframe labels, energy display helper, and new diagnostic sensors."""
 from __future__ import annotations
+
+from datetime import datetime, timezone
+from unittest.mock import MagicMock
 
 from custom_components.kirkhill_wind.sensor import (
     TIMEFRAME_LABELS,
+    DataGeneratedAtSensor,
+    LatestImportStatusSensor,
+    UnknownTurbinesSensor,
     _display_energy_from_kwh,
     _timeframe_label,
 )
@@ -72,3 +78,98 @@ class TestDisplayEnergyFromKwh:
         unit, value = _display_energy_from_kwh(0.0)
         assert unit == "kWh"
         assert value == 0.0
+
+
+class TestDataGeneratedAtSensor:
+    """Verify Data Generated At parses the API timestamp."""
+
+    def _make_sensor(self, reading):
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {"owner": {"reading": reading}}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        return DataGeneratedAtSensor(coordinator, entry)
+
+    def test_parses_iso_timestamp(self):
+        sensor = self._make_sensor({"generated_at": "2026-06-25T12:34:00Z"})
+        result = sensor.native_value
+        assert isinstance(result, datetime)
+        assert result == datetime(2026, 6, 25, 12, 34, 0, tzinfo=timezone.utc)
+
+    def test_none_when_no_reading(self):
+        sensor = self._make_sensor(None)
+        assert sensor.native_value is None
+
+    def test_none_when_missing_generated_at(self):
+        sensor = self._make_sensor({"complete": True})
+        assert sensor.native_value is None
+
+    def test_none_when_not_string(self):
+        sensor = self._make_sensor({"generated_at": 12345})
+        assert sensor.native_value is None
+
+
+class TestUnknownTurbinesSensor:
+    """Verify Unknown Turbines reads from the summary."""
+
+    def _make_sensor(self, summary):
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {"owner": {"summary": summary}}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        return UnknownTurbinesSensor(coordinator, entry)
+
+    def test_returns_count(self):
+        sensor = self._make_sensor({"unknown_turbines": 2})
+        assert sensor.native_value == 2
+
+    def test_returns_zero(self):
+        sensor = self._make_sensor({"unknown_turbines": 0})
+        assert sensor.native_value == 0
+
+    def test_none_when_missing(self):
+        sensor = self._make_sensor({})
+        assert sensor.native_value is None
+
+
+class TestLatestImportStatusSensor:
+    """Verify Latest Import Status reads from the timeframe summaries."""
+
+    def _make_sensor(self, summaries):
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {"timeframe_summaries": summaries}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        return LatestImportStatusSensor(coordinator, entry)
+
+    def test_returns_status(self):
+        summaries = {
+            "owner": {
+                "today": {
+                    "latest_import_status": "completed",
+                    "latest_generation_interval_end": "2026-06-25T12:30:00Z",
+                }
+            }
+        }
+        sensor = self._make_sensor(summaries)
+        assert sensor.native_value == "completed"
+
+    def test_extra_attributes_include_interval_end(self):
+        summaries = {
+            "owner": {
+                "today": {
+                    "latest_import_status": "completed",
+                    "latest_generation_interval_end": "2026-06-25T12:30:00Z",
+                }
+            }
+        }
+        sensor = self._make_sensor(summaries)
+        attrs = sensor.extra_state_attributes
+        assert attrs["latest_generation_interval_end"] == "2026-06-25T12:30:00Z"
+
+    def test_none_when_no_summaries(self):
+        sensor = self._make_sensor({})
+        assert sensor.native_value is None
