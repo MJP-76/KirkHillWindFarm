@@ -437,23 +437,25 @@ class TestApiCallBudget:
                     f"exactly once, got {first.get((scope, year))}"
                 )
 
-        mock_api_client.get_summary.reset_mock()
-
-        # Two further slow-tier polls over the following two hours.
+        # Two further slow-tier polls over the following two hours. Each poll is
+        # counted separately: the Counter accumulates across polls, so combining
+        # them would report every range as fetched twice and prove nothing.
         for minutes in (61, 121):
+            mock_api_client.get_summary.reset_mock()
             with patch(
                 "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
                 return_value=t0 + timedelta(minutes=minutes),
             ):
                 await coord._async_update_data()
 
-        later = _summary_calls(mock_api_client)
-        for scope in SCOPES:
-            for year in past_years:
-                assert (scope, year) not in later, (
-                    f"completed year {year} was re-requested for {scope}"
-                )
-        self._only_once(later, "post-cache slow polls")
+            later = _summary_calls(mock_api_client)
+            for scope in SCOPES:
+                for year in past_years:
+                    assert (scope, year) not in later, (
+                        f"completed year {year} was re-requested for {scope} "
+                        f"{minutes} minutes in"
+                    )
+            self._only_once(later, f"slow poll at +{minutes}min")
 
 
 # ---------------------------------------------------------------------------
