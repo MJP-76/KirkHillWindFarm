@@ -66,7 +66,7 @@ the stable release yet.
 
 ## What's in the latest pre-release
 
-**v4.13.1-pre** — released 2026-10-01
+**v4.13.1** (pre-release) — released 2026-10-01
 
 New diagnostic sensors:
 
@@ -105,8 +105,8 @@ include the details below.
 - **Home Assistant version** — **Settings → System → Repairs** (top of the page)
 - **Integration version** — the version shown on the **Kirk Hill Wind Farm** card in HACS
 
-State which pre-release you are on — `git`-style tags like `v4.13.0-pre` are
-more precise than "the latest".
+State which pre-release you are on — version numbers like `v4.13.1` are more
+precise than "the latest".
 
 If a problem makes the integration unusable, follow the
 [going back to a stable release](installation.md#install-a-pre-release-version)
