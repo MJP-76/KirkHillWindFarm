@@ -2,6 +2,9 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.13.4
+- **Removed clip paths, increased viewBox width.** Clip paths were masking text overflow instead of fixing it. Removed all clip paths and increased `wMax` from 1800 to 2200 so the SVG viewBox grows to fit the pill text content naturally.
+
 ## Version 4.13.3
 - **Widened SCADA card pills.** Version (150→170), API status (68→78), alarm (110→130), and wind speed (240→280) pills are wider to fit text content without clipping.
 

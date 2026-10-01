@@ -66,11 +66,11 @@ the stable release yet.
 
 ## What's in the latest pre-release
 
-**v4.13.3** (pre-release) — released 2026-10-01
+**v4.13.4** (pre-release) — released 2026-10-01
 
 Bug fix:
 
-- Widened SCADA card pills (version, API status, alarm, wind speed) to fit text content without clipping.
+- Removed clip paths from SCADA card pills and generation panels; increased viewBox max width (1800→2200) so the SVG grows to fit text content naturally instead of clipping it.
 
 Includes all v4.13.1 changes:
 
