@@ -26,6 +26,66 @@ in the top right corner, scrolling down to the API section, pressing
 The polling interval can be changed later from the integration's
 **Configure** (Options) menu.
 
+## Install a pre-release version
+
+Pre-releases are development builds published before a stable release. Install
+one only if you want to test early, or you need a change that has not reached
+the stable release yet.
+
+### 1. Let HACS offer pre-releases
+
+1. Open **Settings → Devices & Services**
+2. Open the **HACS** integration
+3. Open **Kirk Hill Wind Farm**
+4. In the **Diagnostics** section, switch on the disabled **Pre-release** item
+
+### 2. Download a specific pre-release
+
+1. Open **HACS** from the sidebar
+2. Find **Kirk Hill Wind Farm**
+3. Click the **⋮** (ellipsis) next to the integration
+4. Click **Update information**
+5. Click **Re-download**
+6. Open the **Need a different version?** dropdown
+7. Select the latest pre-release from the list
+8. Restart Home Assistant
+
+!!! warning "Pre-releases are development builds"
+
+    They can contain incomplete or breaking work. Your existing config entry
+    and entities are kept, but new sensors, renamed entities or removed
+    options may appear. Check the
+    [changelog](changelog.md) for what changed before installing.
+
+!!! tip "Going back to a stable release"
+
+    Repeat the steps above and pick the newest **Latest** version from the
+    **Need a different version?** dropdown, then restart Home Assistant.
+    Switching the **Pre-release** diagnostic back off stops HACS offering
+    pre-releases as updates.
+
+## Reporting a pre-release problem
+
+Pre-release problems are the most useful kind of feedback, and they are the
+main reason pre-releases are published. If something looks wrong, breaks, or
+does not behave as the docs describe,
+[open an issue](https://github.com/MJP-76/KirkHillWindFarm/issues/new) and
+include the details below.
+
+- **What did you do?** — the steps you took to trigger the problem
+- **What happened?** — the actual behaviour you saw
+- **What did you expect?** — what should have happened instead
+- **HACS version** — the version shown on the integration in the HACS sidebar
+- **Home Assistant version** — **Settings → System → Repairs** (top of the page)
+- **Integration version** — the version shown on the **Kirk Hill Wind Farm** card in HACS
+
+State which pre-release you are on — `git`-style tags like `v4.13.0-pre` are
+more precise than "the latest".
+
+If a problem makes the integration unusable, follow the
+[going back to a stable release](installation.md#install-a-pre-release-version)
+steps above first, then report it.
+
 ## Configuration
 
 During setup, the integration asks for:
