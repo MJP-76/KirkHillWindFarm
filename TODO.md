@@ -209,7 +209,18 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
-### v4.13.5 (pre-release, 2026-10-01)
+### v4.13.6 (2026-10-01)
+
+- `RestoreEntity` price read converted to a **one-time backfill** — the v9 migration
+  writes a `CONF_PRICE_RESTORE_PENDING` list into options and the backfill consumes it
+  once, so options is the sole authority in steady state with no pre-v4.13.0 price lost
+- Removes the `hacs.json` `license` key (HACS rejects unlisted keys; the license check
+  reads GitHub's SPDX metadata instead). HACS Validation green for the first time
+- Config entry schema version 8 → 9
+- 16 new tests: `TestPriceBackfillMigration`, `TestPriceBackfillUpgrade`,
+  `TestRestoreDoesNotOverrideOptions`. Full suite 134 passed on current + minimum HA
+
+### v4.13.5 (2026-10-01)
 
 - Fix doubled summary fetch on every slow-tier poll (v4.13.4 regression)
 - `_parse_data()` now guarantees a `dict`; a non-object `data` raises
