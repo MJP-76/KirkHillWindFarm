@@ -24,6 +24,8 @@
 - Active turbines
 - Inactive turbines
 - Alarm (binary sensor) — on when any turbine is in an actual thermal or electrical fault state
+- API Status (binary sensor) — on when the Kirk Hill API last responded normally, off when the last fetch failed
+- Owner share [%] — your share of the farm's capacity, derived from the API generation ratio
 
 Timeframe generation entities keep a stable raw **kWh** state for reliability in
 Home Assistant. The generated dashboard formats those values for display with
@@ -59,7 +61,7 @@ schedule. See [Development decisions](development/decisions.md).
 - Capacity factor (owner) [%]
 - Capacity factor (site) [%]
 - Wind speed (m/s)
-- State text
+- State
 - Active (binary sensor)
 - Generation today (site) [kWh]
 - Generation all-time (site) [kWh]
