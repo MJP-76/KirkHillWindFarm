@@ -75,7 +75,7 @@ async def async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> Non
                 }
             )
         except (HomeAssistantError, vol.Invalid) as err:
-            if "url_already_exists" in str(err):
+            if getattr(err, "translation_key", None) == "url_already_exists":
                 _LOGGER.debug("Dashboard URL already exists (race), fetching existing item")
                 await dashboards_collection.async_load()
                 item = next(

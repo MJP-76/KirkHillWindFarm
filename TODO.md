@@ -40,8 +40,8 @@ Fields the coordinator already fetches but discards. No API changes needed.
 ## Code review backlog
 
 - [ ] Fetch the Open-Meteo forecast in parallel with the medium-tier turbine fetches (currently sequential because the forecast location derives from the freshly fetched turbine map; would need to fall back to last-known coordinates to parallelise)
-- [ ] Investigate the two bare `except Exception` guards (`__init__.py:205` dashboard load, `config_flow.py:151` API-key validate) and confirm they cannot mask a `ConfigEntryAuthFailed`-worthy error as a generic "unknown" failure
-- [ ] `url_already_exists` is matched by exception message string (`__init__.py:178`); look into more robust error handling in case HA rewords the message
+- [x] Investigate bare `except Exception` guards — both safe: dashboard load (YAML file, no API) and config flow (auth/connection errors caught first). No action needed.
+- [x] `url_already_exists` string matching — replaced with `translation_key` attribute check (more robust than string matching against translated message)
 - [ ] Split the ~700-line dashboard generation/merge logic out of `__init__.py` (1,025 lines) into a dedicated `dashboard.py` module, leaving setup/unload/listeners in `__init__.py`
 - [ ] Add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app
 
