@@ -66,23 +66,10 @@ the stable release yet.
 
 ## What's in the latest pre-release
 
-**v4.13.4** (pre-release) — released 2026-10-01
-
-Bug fix:
-
-- Removed clip paths from SCADA card pills and generation panels; increased viewBox max width (1800→2200) so the SVG grows to fit text content naturally instead of clipping it.
-
-Includes all v4.13.1 changes:
-
-- New diagnostic sensors: `data_complete`, `data_generated_at`, `unknown_turbines`, `latest_import_status`, rotor speed `sampled_at` attribute
-- Removed redundant `/api/v1/wind-speed` API call (saves 6 calls/hour)
-- Cached immutable year summaries (saves 4 calls/hour)
-- Open-Meteo forecast now runs in parallel with timeframe summaries
-- Dashboard `url_already_exists` detection hardened
-- Docs: sensor reference, SUPPORT, CONTRIBUTING files
-- Test fix: flaky `test_obsolete_card_removed` now deterministic
-
-[Full changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
+No pre-release currently active. The latest stable release is
+**v4.13.4** — see the
+[changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
+for what's included.
 
 ## Reporting a pre-release problem
 
