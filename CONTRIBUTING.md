@@ -72,6 +72,12 @@ they drift.
 - Include tests for new sensors or changed behaviour.
 - Update the docs (`docs/`) if the change affects what users see or configure.
 - Update `CHANGELOG.md` for user-facing changes.
+- **If you change a decision recorded in `docs/development/decisions.md`, update
+  that file in the same commit** — and if it is a rule an agent could break
+  (an invariant with a regression test), update the matching bullet in
+  `AGENTS.md` too. A decision that lives only in a diff is lost. That is the
+  whole mechanism; there is no other guard against drift.
+- Bump `VERSION` with `python scripts/version_sync.py sync`, never by hand.
 
 ## Code style
 

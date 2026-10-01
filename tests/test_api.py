@@ -1,9 +1,12 @@
 """Tests for the API client — exception hierarchy and response parsing."""
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from custom_components.kirkhill_wind.api import KirkHillApiClient, OpenMeteoApiClient
+from custom_components.kirkhill_wind.const import SCOPE_OWNER, SCOPE_SITE
 from custom_components.kirkhill_wind.exceptions import (
     KirkHillApiError,
     KirkHillAuthError,
@@ -43,13 +46,88 @@ class TestApiClient:
 
     def test_parse_data_non_dict_raises(self):
         client = KirkHillApiClient(api_key="key")
-        with pytest.raises(KirkHillApiError, match="missing 'data' key"):
+        with pytest.raises(KirkHillApiError, match="expected an object"):
             client._parse_data("not a dict")
 
     def test_parse_data_list_raises(self):
         client = KirkHillApiClient(api_key="key")
-        with pytest.raises(KirkHillApiError, match="missing 'data' key"):
+        with pytest.raises(KirkHillApiError, match="expected an object"):
             client._parse_data([1, 2, 3])
+
+    # -- The dict guarantee -------------------------------------------------
+    # Every caller does payload.get(...) straight after _parse_data, so a
+    # {"data": []} response would otherwise raise a bare AttributeError from
+    # inside the client -- not a KirkHillApiError -- and the coordinator's
+    # stale-data and retry-backoff machinery would never engage.
+
+    @pytest.mark.parametrize(
+        "data",
+        [[], ["a"], 0, 1, 3.5, True, "text", None],
+        ids=["empty-list", "list", "int-0", "int", "float", "bool", "str", "none"],
+    )
+    def test_parse_data_non_object_payload_raises(self, data):
+        """A non-object 'data' must raise KirkHillApiError, not leak a type error."""
+        client = KirkHillApiClient(api_key="key")
+        with pytest.raises(KirkHillApiError, match="must be an object"):
+            client._parse_data({"data": data})
+
+    def test_parse_data_reports_the_offending_type(self):
+        """The error names the type it got, so a bad envelope is diagnosable."""
+        client = KirkHillApiClient(api_key="key")
+        with pytest.raises(KirkHillApiError, match="got list"):
+            client._parse_data({"data": []})
+
+    def test_parse_data_unwraps_envelope_and_returns_data(self):
+        """A valid payload passes through unchanged, envelope discarded."""
+        client = KirkHillApiClient(api_key="key")
+        payload = {"summary": {"total_power_kw": 1.0}, "window": {"from": "x"}}
+        result = client._parse_data({"data": payload, "meta": {"ignored": True}})
+        assert result == payload
+        assert "meta" not in result
+
+    @pytest.mark.asyncio
+    async def test_get_current_rejects_non_object_data(self):
+        """A 200 response carrying a list payload surfaces as KirkHillApiError.
+
+        Regression guard for the coordinator path: without the guarantee this
+        escaped as AttributeError inside the client.
+        """
+        client = KirkHillApiClient(api_key="key")
+        session = MagicMock()
+        body = {"data": []}
+
+        async def fake_get(session, path, params):
+            return body
+
+        with patch.object(client, "_get", side_effect=fake_get):
+            with pytest.raises(KirkHillApiError, match="must be an object"):
+                await client.get_current(session, SCOPE_OWNER)
+
+    @pytest.mark.asyncio
+    async def test_get_turbines_rejects_non_object_data(self):
+        """get_turbines previously hit .get() before its own isinstance guard."""
+        client = KirkHillApiClient(api_key="key")
+        session = MagicMock()
+
+        async def fake_get(session, path, params):
+            return {"data": []}
+
+        with patch.object(client, "_get", side_effect=fake_get):
+            with pytest.raises(KirkHillApiError, match="must be an object"):
+                await client.get_turbines(session, SCOPE_SITE, range_value="today")
+
+    @pytest.mark.asyncio
+    async def test_get_turbines_rejects_object_without_turbines(self):
+        """A valid envelope missing the 'turbines' list still raises."""
+        client = KirkHillApiClient(api_key="key")
+        session = MagicMock()
+
+        async def fake_get(session, path, params):
+            return {"data": {"summary": {}}}
+
+        with patch.object(client, "_get", side_effect=fake_get):
+            with pytest.raises(KirkHillApiError, match="missing 'turbines' list"):
+                await client.get_turbines(session, SCOPE_SITE, range_value="today")
 
 
 class TestOpenMeteoClient:

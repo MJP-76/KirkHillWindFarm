@@ -75,17 +75,32 @@ class KirkHillApiClient:
             )
             raise KirkHillConnectionError("Request timed out") from exc
 
-    def _parse_data(self, body: Any) -> Any:
+    def _parse_data(self, body: Any) -> dict[str, Any]:
         """Return the response payload, raising a typed error on a malformed envelope.
 
         The server normally wraps results as ``{"data": {...}}``, but a 200-level
         error envelope (``{"error": ...}``) would otherwise surface as a raw
         ``KeyError`` and escape this client's exception hierarchy. Failing here
         keeps every payload-format issue a catchable ``KirkHillApiError``.
+
+        The ``dict`` guarantee is part of this contract, not just the caller's
+        problem. Every caller does ``payload.get(...)`` straight afterwards, so a
+        ``{"data": []}`` response would otherwise raise a bare ``AttributeError``
+        from inside the client — which the coordinator's stale-data and retry
+        machinery does not recognise, and which ``get_turbines`` hits before its
+        own ``isinstance`` guard. Callers may rely on a dict coming back.
         """
-        if not isinstance(body, dict) or "data" not in body:
+        if not isinstance(body, dict):
+            raise KirkHillApiError("Malformed response from Kirk Hill API: expected an object")
+        if "data" not in body:
             raise KirkHillApiError("Malformed response from Kirk Hill API: missing 'data' key")
-        return body["data"]
+        data = body["data"]
+        if not isinstance(data, dict):
+            raise KirkHillApiError(
+                f"Malformed response from Kirk Hill API: 'data' must be an object, "
+                f"got {type(data).__name__}"
+            )
+        return data
 
     async def get_current(
         self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER

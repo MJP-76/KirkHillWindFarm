@@ -100,26 +100,24 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         # of a fresh session + connection pool on every poll.
         session = async_get_clientsession(self.hass)
 
-        # Fast tier: current owner/site payloads are fetched every tick alongside
-        # the today summary. Results are collected with return_exceptions so a
-        # failure in one scope keeps the other scope (and the summary tier)
-        # refreshing instead of blanking the whole update.
-        owner_result: Any
-        site_result: Any
-        timeframe_result: Any
-        owner_result, site_result, timeframe_result = await asyncio.gather(
+        # Fast tier: current owner/site payloads are fetched every tick. Results
+        # are collected with return_exceptions so a failure in one scope keeps the
+        # other scope refreshing instead of blanking the whole update.
+        #
+        # Summary fetches deliberately do NOT join this gather. They are issued
+        # exactly once, further down, after the turbine tier has had its chance
+        # to refresh the cached coordinates the Open-Meteo forecast depends on.
+        # Fetching them here as well doubled every summary API call per update,
+        # because _next_slow_update is only advanced after the later call, so
+        # both invocations saw the slow tier as due. See
+        # test_summaries_are_fetched_exactly_once_per_update.
+        owner_result, site_result = await asyncio.gather(
             self.client.get_current(session, SCOPE_OWNER),
             self.client.get_current(session, SCOPE_SITE),
-            self._fetch_timeframe_summaries(session, now),
             return_exceptions=True,
         )
         owner_data = self._resolve_current_result(SCOPE_OWNER, owner_result)
         site_data = self._resolve_current_result(SCOPE_SITE, site_result)
-        if isinstance(timeframe_result, BaseException):
-            # Only an unexpected error can escape _fetch_timeframe_summaries;
-            # per-timeframe API failures are absorbed inside it.
-            raise timeframe_result
-        timeframe_summaries, timeframe_windows = timeframe_result
 
         # Medium tier: turbines + today's wind-speed series (every 10 minutes)
         if now >= self._next_turbine_update:

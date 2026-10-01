@@ -45,6 +45,136 @@ Fields the coordinator already fetches but discards. No API changes needed.
 - [x] ~~Split the ~700-line dashboard generation/merge logic out of `__init__.py`~~ — already done: `__init__.py` is 207 lines (setup/unload/listeners), `dashboard.py` is 519 lines (generation/merge/entity IDs).
 - [ ] Add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app
 
+## Bugs — v4.13.4 ChatGPT review
+
+All 18 findings verified against source. Two are real runtime defects.
+
+### 🔴 Duplicate summary fetch — was shipping in stable v4.13.4
+
+`_fetch_timeframe_summaries()` ran twice per `_async_update_data()`: once inside the
+initial `asyncio.gather`, again after the turbine tier. The first result was unpacked
+into `timeframe_summaries`/`timeframe_windows` and then immediately overwritten, so the
+whole call was waste. `_next_slow_update` is only advanced *after* the second call, so
+both invocations saw the slow tier as due.
+
+- [x] Remove the redundant call from the initial gather
+- [ ] Fix the test that let it through (see below)
+
+Cost before the fix, at the default 60s scan interval: 2 wasted `get_summary` calls per
+poll (~2,880/day), plus 14 more on each hourly slow poll (32 actual vs 18 intended,
+because the first call populated `_immutable_year_summaries` and the second skipped only
+the completed years).
+
+### 🔴 No test can catch the duplicate — the assertion models the wrong property
+
+`test_coordinator.py` asserts on a **set** of `(scope, range_value)` pairs, with a
+comment saying this is deliberate ("so this cannot pass by coincidence"). A set is
+invariant under duplication: it yields the same value for 2 calls as for 4, so the test
+passes identically against the buggy and the correct implementation.
+
+- [ ] Change the schedule test from set-based to count-aware assertions
+- [ ] Add an API-call-budget regression test covering: normal poll, turbine-due poll,
+      slow-tier poll, and completed-year caching
+
+### 🟠 Malformed successful payload escapes as `AttributeError`
+
+`_parse_data()` returned `body["data"]` with no type check, so a `{"data": []}` response
+raised a bare `AttributeError` at `coordinator.py` (`payload.get("summary")`) and in
+`get_turbines()` — where it fired *before* that method's own `isinstance` guard. Neither
+is a `KirkHillApiError`, so the coordinator's stale-data and retry-backoff machinery never
+engaged.
+
+- [x] `_parse_data()` now validates the envelope *and* guarantees a `dict`, with distinct
+      messages for a non-object body, a missing `data` key, and a non-object `data`
+- [x] `get_turbines()` no longer needs its own guard — the dict guarantee covers it
+
+### 🟠 RestoreEntity outranks the authoritative store — DO NOT simply remove it
+
+`number.py` applies the RestoreEntity value over `entry.options` *unconditionally*, then
+persists it back. Since v8 made options the authoritative source, that precedence is
+inverted: a stale restore record can clobber the saved value.
+
+**But removing RestoreEntity is a data-loss regression as proposed.** Up to v4.11.6,
+`async_set_native_value` wrote nowhere — prices lived *only* in RestoreEntity. So anyone
+who set a price before v4.13.0 has it in `restore_state` alone, and `options` holds only
+the migration default of 50.0. Deleting the RestoreEntity read path would silently reset
+those users to the default on upgrade.
+
+Note: the `f570578` RestoreEntity→options persist fix is doing more than its release note
+claimed. It is the **only** path carrying pre-v4.12 prices into options, not just a
+desync fix.
+
+- [ ] Make RestoreEntity a **one-time backfill** rather than a per-start override, so it
+      cannot outrank options in steady state
+- [ ] Only then consider dropping it, and only in a release users reach from a version
+      that already ran the backfill
+- [ ] Test a ≤v4.11.6 upgrade with a populated `restore_state` and empty options before
+      touching this
+
+### 🟢 "Completed years are immutable" — already mitigated, no action
+
+The review flagged permanently caching completed years as risky for financial data. Not
+applicable: `sensor.py` returns `None` for `alltime` and every `year_*` timeframe, so no
+earnings value is ever derived from a cached year. Only generation kWh is exposed to a
+backfill, which is a far weaker assumption to worry about. Revisit only if the API ever
+gains a revenue field.
+
+## Lint & coverage hygiene
+
+From the v4.13.4 review. Explicitly **not** part of a correctness release — the reviewer
+prescribed three separate PRs so config cleanup does not hide inside a bug fix.
+
+- [ ] **PR A** — Decide the authoritative lint config. Root `pyproject.toml` sets
+      `line-length = 120`; nested `custom_components/kirkhill_wind/pyproject.toml` sets
+      `88`. Recommend deleting the nested one so there is a single project config.
+- [ ] **PR B** — Fix the resulting lint debt (40 pre-existing E501s come from the nested
+      88-char setting, not from new code)
+- [ ] **PR C** — Enforce `ruff check .` in CI
+- [ ] Enable `pytest-cov` in CI as **reporting only** (`--cov-report=term-missing`), no
+      threshold yet. `pytest-cov` is in `requirements-dev.txt` but has never been invoked.
+- [ ] Move the hardcoded `known_floors` HA→Python map out of `test_min_ha.py` into one
+      documented place (currently `tests/test_min_ha.py:84`)
+
+### The big refactor — remaining structural split of `__init__.py`
+
+Review #62 §8 called `__init__.py` "an application controller" doing migration, setup,
+services, frontend/JS registration, Lovelace dashboard create/merge/reset, payment
+tracking, and entity-registry handling. The dashboard half was split out in v4.13.0
+(`dashboard.py`); the rest is still there.
+
+Target layout from the review:
+
+```
+custom_components/kirkhill_wind/
+├── __init__.py        # setup/unload only
+├── migration.py       # async_migrate_entry + version constant
+├── services.py
+├── device.py          # entity-registry helpers
+├── dashboard/
+│   ├── __init__.py
+│   ├── builder.py     # build_dashboard_config
+│   ├── merge.py       # merge_dashboard_config + card_match_key
+│   └── constants.py   # OBSOLETE_* key sets
+└── frontend/
+```
+
+Remaining work:
+
+- [ ] Extract `async_migrate_entry` + `_CONFIG_ENTRY_VERSION` into `migration.py`
+- [ ] Split `dashboard.py` (519 lines) into `dashboard/{builder,merge,constants}.py`
+- [ ] Extract frontend/JS static-path registration into `frontend.py`
+- [ ] Extract payment-tracking setup (`_async_setup_payment_tracking`) into its own module
+- [ ] Re-export from `__init__.py` where tests import `_CONFIG_ENTRY_VERSION` / `async_migrate_entry`
+- [ ] Tests must pass unchanged at each step — refactor only, no behaviour changes
+- [ ] **Deferred:** split the coordinator (413 lines / 19.2 KB) into summary / turbine /
+      forecast managers. Both reviews agree this is premature until the API-call-budget
+      test exists, because that test is what makes the split safe rather than another
+      behavioural change.
+
+Note: do this as a pure structural change. Tests are already in place, so the "establish
+tests before refactoring" precondition from review #62 is satisfied. The v4.13.4 review
+reached the same conclusion independently.
+
 ## Housekeeping
 
 - [x] Create a `SUPPORT` file (GitHub auto-features it in the repo file list)

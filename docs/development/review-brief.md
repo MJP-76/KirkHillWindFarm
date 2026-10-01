@@ -4,14 +4,16 @@ Give the repository a **design-focused** review. CI already passes (ruff, HACS
 validation, Hassfest, version-sync); you are NOT reviewing for "does it pass CI".
 Focus on correctness, robustness, and design with these specific questions below.
 
-Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.13.0)
-Start here: `custom_components/kirkhill_wind/` and `docs/development/decisions.md`
-(read the decisions doc first — it records why the code is shaped this way).
+Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.13.4)
+Start here: `custom_components/kirkhill_wind/`, then `AGENTS.md`, then
+`docs/development/decisions.md` (read the decisions doc — it records why the
+code is shaped this way and answers several questions below already).
 
 ## Context
 - Tiny custom integration: one coordinator polling a wind-farm API, farm-level +
   per-turbine sensors/binary_sensors, a bundled JS SCADA card, and dashboard
-  generation code in `__init__.py`.
+  generation/merge code in `dashboard.py` (`__init__.py` is setup/unload only,
+  207 lines).
 - `via_device_id` replaced the deprecated `via_device=(DOMAIN, entry.entry_id)`
   tuple (HA Core 2027.8 compat). The hub device id is resolved once in
   `__init__.py::async_setup_entry` and stored on the coordinator. Highest-risk
@@ -38,8 +40,22 @@ Treat them as closed; flag only if you find a new, concrete problem:
   from the API capacity ratio). Projected annual earnings options were removed
   in v4.11.7.
 - **Monetary sensors / currency** — recorded decision: monetary sensors keep
-  `device_class=MONETARY` with a hardcoded unit `"GBP"` (do not pull the
+  `device_class=MONETORY` with a hardcoded unit `"GBP"` (do not pull the
   system/locale currency).
+- **"Completed years are cached forever, so historical £ data could go stale."**
+  Not applicable. `sensor.py` returns `None` for `alltime` and every `year_*`
+  timeframe, so no £ value is ever derived from a cached year — only generation
+  kWh is. See `docs/development/decisions.md`.
+- **"Remove `RestoreEntity` so `ConfigEntry.options` is the sole authority."**
+  The direction is right but removal as specified is a **data-loss regression**.
+  Prices set before v4.12 were never written to options — they live only in
+  `restore_state`. The correct fix is to convert restore into a *one-time
+  backfill* that seeds options, and only drop the read path in a later release.
+- **"Split the 413-line coordinator."** Agreed in principle, deliberately
+  deferred until the API-call-budget test exists. Do not raise it as a defect.
+- **"Assert on sets of API calls in coordinator tests."** Do not suggest
+  reverting to set-based assertions — a set is invariant under duplication,
+  which is how a doubled summary fetch shipped. See below.
 
 ## Specific review questions
 
@@ -60,22 +76,28 @@ Treat them as closed; flag only if you find a new, concrete problem:
 
 ### 3. Sensor correctness
 - `sensor.py`: units conversion for site vs owner power (MW vs kW), the
-  `_display_energy_from_kwh` scale thresholds, `RestoreEntity` fallback logic in
-  `GenerationByTimeframe` and turbine generation sensors — any off-by-one or
-  unit-scale bugs?
-- `GenerationValueByTimeframeSensor::_projection_factor` (ytd uses day-of-year,
-  alltime uses period start) — reasonable?
+  `_display_energy_from_kwh` scale thresholds, and the generation sensors —
+  any off-by-one or unit-scale bugs?
+- The alltime/past-year `None` suppression is deliberate; do not report it as a
+  missing value.
 
-### 4. Dashboard generation code in `__init__.py`
-- Dead code was removed (owner/site_value_entities, kpi_cards, turbine_map_entities, _deprecation_banner). Are the remaining
-  list-building blocks (`scada_turbines`,
-  `financial_kpi_cards`, etc.) still consistent, or is there more dead/duplicated
-  structure an AI or maintainer could trip over?
+### 4. Dashboard generation code in `dashboard.py`
+- Dashboard create/merge/reset now lives in `dashboard.py` (519 lines), split
+  out of `__init__.py` in v4.13.0. Public surface: `build_dashboard_config`,
+  `merge_dashboard_config`, `card_match_key`, `OBSOLETE_CARD_KEYS`.
+- Dead code was removed across several releases (owner/site_value_entities,
+  kpi_cards, `Projected annual earnings` entities, `_deprecation_banner`). Are
+  the remaining list-building blocks still consistent, or is there more
+  dead/duplicated structure an AI or maintainer could trip over?
 
 ### 5. Anything else a maintainer should know
-- SECURITY: secrets handling, HTTPS, no hardcoded credentials.
+- SECURITY: secrets handling, HTTPS, no hardcoded credentials. Note the API key
+  lives in `entry.data`; `diagnostics.py` must redact it.
 - TYPING / portability: `from __future__ import annotations`, py311 target.
 - Any obviously fragile string-keyed data access (`coordinator.data[...]`).
+- **Do not** suggest reverting `_parse_data`'s dict guarantee or bypassing
+  `merge_options` when writing options — both are enforced invariants with
+  regression tests.
 
 ## Output format
 Give a numbered list of findings, each with: severity (blocker / major / minor /

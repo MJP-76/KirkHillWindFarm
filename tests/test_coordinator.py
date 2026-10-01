@@ -1,6 +1,7 @@
 """Tests for the coordinator — scheduling, auth errors, stale data."""
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -15,6 +16,8 @@ from custom_components.kirkhill_wind.const import (
     SCOPE_OWNER,
     SCOPE_SITE,
     SCOPES,
+    TIMEFRAME_TO_RANGE,
+    yearly_timeframes,
 )
 from custom_components.kirkhill_wind.exceptions import (
     KirkHillApiError,
@@ -66,6 +69,73 @@ def _make_entry(data=None, options=None):
         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
     }
     return entry
+
+
+def _summary_calls(mock_api_client):
+    """Return {(scope, range_value): fetch_count} for one coordinator update.
+
+    Deliberately a Counter, not a set. A set collapses duplicates, so it cannot
+    express the property we actually care about -- that a timeframe is fetched
+    exactly once -- and it let a doubled summary fetch ship to production in
+    v4.13.4. Keys are (scope, range_value) as the coordinator calls the API;
+    the coordinator's internal timeframe names ("alltime", "week", "month")
+    map to range values ("all", "7d", "30d") before they get here.
+    """
+    counter = Counter(
+        (call.kwargs["scope"], call.kwargs["range_value"])
+        for call in mock_api_client.get_summary.call_args_list
+    )
+    return dict(counter)
+
+
+def _current_year():
+    """The calendar year the coordinator will use for the `year` timeframe.
+
+    _fetch_timeframe_summaries reads dt_util.now().year -- the *real* wall
+    clock, not the utcnow() a test patches. A test that hardcodes a year goes
+    stale every January, so derive it the same way production does.
+    """
+    from homeassistant.util import dt as dt_util
+
+    return dt_util.now().year
+
+
+def _ranges_for(timeframes):
+    """Map timeframe keys to the range values the API is called with.
+
+    Derived from the production tables rather than hardcoded so these tests do
+    not rot when a timeframe is added. Note SLOW_TIMEFRAMES does *not* contain
+    "today" -- the fast tier is a separate tuple, and a due slow poll fetches
+    the union of both.
+    """
+    current_year = _current_year()
+    return {
+        str(current_year) if tf == "year" else TIMEFRAME_TO_RANGE[tf]
+        for tf in timeframes
+    }
+
+
+def _fast_ranges():
+    """Range values fetched on any poll: the fast tier."""
+    from custom_components.kirkhill_wind.coordinator import FAST_TIMEFRAMES
+
+    return _ranges_for(FAST_TIMEFRAMES)
+
+
+def _rolling_ranges():
+    """Range values fetched when the slow tier is also due (fast + slow)."""
+    from custom_components.kirkhill_wind.coordinator import FAST_TIMEFRAMES, SLOW_TIMEFRAMES
+
+    return _ranges_for(FAST_TIMEFRAMES + SLOW_TIMEFRAMES)
+
+
+def _past_year_ranges():
+    """Range values for the completed-year timeframes, once they exist.
+
+    On a machine whose clock is before 2026 there are no completed years yet,
+    so return empty rather than asserting against a fiction.
+    """
+    return {tf.split("_", 1)[1] for tf in yearly_timeframes()}
 
 
 # ---------------------------------------------------------------------------
@@ -154,12 +224,16 @@ class TestTimeBasedScheduling:
         # First poll runs the fast and slow tiers for both scopes. Note the
         # coordinator passes API range values ("all", "7d", "30d"), not the
         # internal timeframe names ("alltime", "week", "month").
-        first_poll = {
-            (call.kwargs["scope"], call.kwargs["range_value"])
-            for call in mock_api_client.get_summary.call_args_list
-        }
+        first_poll = _summary_calls(mock_api_client)
         assert (SCOPE_OWNER, "7d") in first_poll
         assert (SCOPE_SITE, "all") in first_poll
+        # Cardinality matters as much as membership: a set is invariant under
+        # duplication, which is how the doubled summary fetch shipped. Every
+        # (scope, range) pair must appear exactly once.
+        assert set(first_poll.values()) == {1}, (
+            "a (scope, range) pair was fetched more than once on the first poll: "
+            f"{ {k: v for k, v in first_poll.items() if v != 1} }"
+        )
 
         mock_api_client.get_summary.reset_mock()
 
@@ -171,13 +245,215 @@ class TestTimeBasedScheduling:
             await coord._async_update_data()
 
         # Within the hour only the fast 'today' timeframe is re-fetched, for
-        # both scopes. Asserting the exact set, not a call count, so this
-        # cannot pass by coincidence.
-        second_poll = {
-            (call.kwargs["scope"], call.kwargs["range_value"])
-            for call in mock_api_client.get_summary.call_args_list
+        # both scopes -- once each, not twice.
+        second_poll = _summary_calls(mock_api_client)
+        assert second_poll == {(SCOPE_OWNER, "today"): 1, (SCOPE_SITE, "today"): 1}
+
+
+class TestApiCallBudget:
+    """The coordinator is designed around API request frequency, so pin it.
+
+    A doubled summary fetch shipped in v4.13.4 because the schedule test
+    asserted a *set* of (scope, range) pairs. A set is invariant under
+    duplication -- it yields the same value whether a timeframe is fetched once
+    or twice. These tests assert counts, so they fail if any pair is fetched
+    more than once.
+    """
+
+    @staticmethod
+    def _only_once(calls, label):
+        offenders = {k: v for k, v in calls.items() if v != 1}
+        assert not offenders, (
+            f"{label}: expected every (scope, range) fetched exactly once, "
+            f"but these were duplicated: {offenders}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_summaries_are_fetched_exactly_once_per_update(
+        self, hass, mock_api_client
+    ):
+        """Named in coordinator.py: no (scope, range) pair may be fetched twice.
+
+        This is the regression test for the v4.13.4 bug. The summary fetch ran
+        both in the initial asyncio.gather and again after the turbine tier;
+        because _next_slow_update is advanced only *after* the later call, the
+        earlier one also saw the slow tier as due and re-fetched every
+        timeframe. Every tier due on the first poll is therefore the worst
+        case, and the exact key set is asserted so a *newly added* timeframe is
+        also caught if it is somehow fetched twice.
+        """
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            await coord._async_update_data()
+
+        calls = _summary_calls(mock_api_client)
+
+        # Every tier is due on the first poll: the rolling ranges, the current
+        # year, and each completed year (none cached yet).
+        expected = {
+            (scope, range_value)
+            for scope in SCOPES
+            for range_value in _rolling_ranges() | _past_year_ranges()
         }
-        assert second_poll == {(SCOPE_OWNER, "today"), (SCOPE_SITE, "today")}
+        assert set(calls) == expected, (
+            "first poll must fetch every timeframe exactly once per scope; "
+            f"missing={expected - set(calls)} unexpected={set(calls) - expected}"
+        )
+        self._only_once(calls, "first poll (all tiers due)")
+
+    @pytest.mark.asyncio
+    async def test_fast_poll_fetches_today_once_per_scope(self, hass, mock_api_client):
+        """A steady-state poll must fetch exactly one summary per scope."""
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        # Prime: first poll runs every tier and caches completed years.
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            await coord._async_update_data()
+        mock_api_client.get_summary.reset_mock()
+        mock_api_client.get_current.reset_mock()
+
+        # Steady-state fast poll, 5 minutes later: slow and turbine tiers off.
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0 + timedelta(minutes=5),
+        ):
+            await coord._async_update_data()
+
+        assert mock_api_client.get_current.call_count == 2  # owner + site
+        fast = {(scope, r): 1 for scope in SCOPES for r in _fast_ranges()}
+        assert _summary_calls(mock_api_client) == fast, (
+            "a steady-state poll must fetch exactly the fast tier, once per scope"
+        )
+        self._only_once(_summary_calls(mock_api_client), "fast poll")
+
+    @pytest.mark.asyncio
+    async def test_turbine_due_poll_adds_no_extra_summaries(self, hass, mock_api_client):
+        """A turbine-due poll fetches turbines, but summaries stay at today-once."""
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            await coord._async_update_data()
+        mock_api_client.get_summary.reset_mock()
+        mock_api_client.get_turbines.reset_mock()
+
+        # 11 minutes: turbine tier due, slow tier still not.
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0 + timedelta(minutes=11),
+        ):
+            await coord._async_update_data()
+
+        # Two turbine calls: range=today and range=all.
+        assert mock_api_client.get_turbines.call_count == 2
+        fast = {(scope, r): 1 for scope in SCOPES for r in _fast_ranges()}
+        assert _summary_calls(mock_api_client) == fast, (
+            "a turbine-due poll must not add summaries -- the slow tier is not due"
+        )
+        self._only_once(_summary_calls(mock_api_client), "turbine-due poll")
+
+    @pytest.mark.asyncio
+    async def test_slow_tier_fetches_each_timeframe_once_per_scope(
+        self, hass, mock_api_client
+    ):
+        """A slow-tier poll must not double-fetch the historical timeframes.
+
+        The completed years were cached on the first poll, so a due slow tier
+        must request only the rolling ranges -- once each per scope.
+        """
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            await coord._async_update_data()
+        mock_api_client.get_summary.reset_mock()
+
+        # 61 minutes: slow tier due again, turbine tier long expired but
+        # irrelevant to summaries.
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0 + timedelta(minutes=61),
+        ):
+            await coord._async_update_data()
+
+        calls = _summary_calls(mock_api_client)
+        self._only_once(calls, "slow-tier poll")
+
+        rolling = _rolling_ranges()
+        assert set(calls) == {(scope, r) for scope in SCOPES for r in rolling}, (
+            "a due slow tier must fetch exactly the rolling ranges -- completed "
+            f"years are cached. missing={ {(s, r) for s in SCOPES for r in rolling} - set(calls) } "
+            f"unexpected={ set(calls) - {(s, r) for s in SCOPES for r in rolling} }"
+        )
+
+        # Explicitly: completed years must not be requested again.
+        for scope in SCOPES:
+            for year in _past_year_ranges():
+                assert (scope, year) not in calls, (
+                    f"completed year {year} was re-requested for {scope}"
+                )
+
+    @pytest.mark.asyncio
+    async def test_completed_years_are_fetched_once_ever(self, hass, mock_api_client):
+        """Completed calendar years are cached and never re-requested."""
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            await coord._async_update_data()
+
+        past_years = _past_year_ranges()
+        if not past_years:
+            pytest.skip("no completed calendar year to cache on this clock")
+
+        first = _summary_calls(mock_api_client)
+        for scope in SCOPES:
+            for year in past_years:
+                assert first.get((scope, year)) == 1, (
+                    f"first poll must fetch completed year {year} for {scope} "
+                    f"exactly once, got {first.get((scope, year))}"
+                )
+
+        mock_api_client.get_summary.reset_mock()
+
+        # Two further slow-tier polls over the following two hours.
+        for minutes in (61, 121):
+            with patch(
+                "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+                return_value=t0 + timedelta(minutes=minutes),
+            ):
+                await coord._async_update_data()
+
+        later = _summary_calls(mock_api_client)
+        for scope in SCOPES:
+            for year in past_years:
+                assert (scope, year) not in later, (
+                    f"completed year {year} was re-requested for {scope}"
+                )
+        self._only_once(later, "post-cache slow polls")
 
 
 # ---------------------------------------------------------------------------
