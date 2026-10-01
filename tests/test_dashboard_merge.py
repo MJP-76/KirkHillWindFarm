@@ -115,23 +115,10 @@ class TestMergeCards:
 
     def test_obsolete_card_removed(self):
         """Cards whose key is in OBSOLETE_CARD_KEYS should be removed."""
-        # Pick a key the test can reconstruct a minimal card for. Sets have
-        # non-deterministic iteration order, and container keys need nested
-        # cards that card_match_key recognises, so filter to simple keys.
-        simple_keys = [
-            k for k in OBSOLETE_CARD_KEYS
-            if k.split(":")[0] in ("kpi", "entities", "button")
-        ]
-        obsolete_key = simple_keys[0]
-        # Parse the key to reconstruct a minimal card
-        # Keys look like "kpi:name:Owner Power" or "entities:title:Turbine T1"
-        parts = obsolete_key.split(":", 2)
-        if parts[0] == "kpi":
-            existing = [{"type": "stat", "name": parts[2]}]
-        elif parts[0] == "entities":
-            existing = [{"type": "entities", "title": parts[2]}]
-        else:
-            existing = [{"type": parts[0], "title": parts[2]}]
+        # Use a known simple key to avoid set iteration non-determinism.
+        obsolete_key = "entities:title:Turbine T1"
+        assert obsolete_key in OBSOLETE_CARD_KEYS
+        existing = [{"type": "entities", "title": "Turbine T1"}]
 
         new = []  # No new cards
         result = _merge_cards(existing, new)
