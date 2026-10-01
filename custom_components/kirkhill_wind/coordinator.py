@@ -66,8 +66,11 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self._next_slow_update: datetime = now
         self._site_turbines: list[dict] = []
         self._turbine_generation: dict[str, dict] = {}
-        self._wind_speed_today: float | None = None
         self._open_meteo_forecast: dict = {}
+        # Immutable year summaries: completed calendar years never change, so
+        # fetch them once and cache forever.  Keyed by (scope, year_string).
+        self._immutable_year_summaries: dict[tuple[str, str], dict] = {}
+        self._immutable_year_windows: dict[tuple[str, str], dict] = {}
         # Last known-good current payloads per scope, kept so a failed fast-path
         # refresh keeps showing old data (marked stale) instead of blanking.
         self._last_current: dict[str, dict] = {}
@@ -135,7 +138,6 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 self._turbine_generation = self._build_turbine_generation(
                     today_turbines, alltime_turbines
                 )
-                self._wind_speed_today = await self._fetch_latest_wind_speed(session)
             self._next_turbine_update = now + _TURBINE_INTERVAL
 
         coordinates: dict[str, dict[str, float | str | None]] = {}
@@ -164,7 +166,6 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "summary_stale": self._summary_stale,
             "current_stale": dict(self._current_stale),
             "turbine_generation": self._turbine_generation,
-            "wind_speed_today": self._wind_speed_today,
             "open_meteo_forecast": self._open_meteo_forecast,
             "summary_failures": {
                 f"{scope}:{timeframe}": count
@@ -261,12 +262,21 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 # Clear the retry entry so a successful fetch below resets it.
         _LOGGER.debug("Fetching summaries for timeframes=%s (slow_tier=%s)", sorted(timeframes), run_slow)
 
+        current_year = dt_util.now().year
         for scope in SCOPES:
             for timeframe in sorted(timeframes):
                 if timeframe == "year":
-                    range_value = str(dt_util.now().year)
+                    range_value = str(current_year)
                 elif timeframe.startswith("year_"):
-                    range_value = timeframe.split("_")[1]
+                    year_str = timeframe.split("_")[1]
+                    range_value = year_str
+                    # Completed years are immutable — use cached data if available.
+                    if int(year_str) < current_year:
+                        cache_key = (scope, year_str)
+                        if cache_key in self._immutable_year_summaries:
+                            summaries.setdefault(scope, {})[timeframe] = self._immutable_year_summaries[cache_key]
+                            windows.setdefault(scope, {})[timeframe] = self._immutable_year_windows.get(cache_key, {})
+                            continue
                 else:
                     range_value = TIMEFRAME_TO_RANGE[timeframe]
                 task = asyncio.create_task(
@@ -330,29 +340,12 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             self._summary_failures.pop(key, None)
             self._summary_retry_at.pop(key, None)
             self._summary_stale[scope][timeframe] = False
+            # Cache completed year data — it never changes.
+            if timeframe.startswith("year_") and int(timeframe.split("_")[1]) < current_year:
+                self._immutable_year_summaries[(scope, timeframe.split("_")[1])] = summary_out
+                self._immutable_year_windows[(scope, timeframe.split("_")[1])] = window_out
 
         return summaries, windows
-
-    async def _fetch_latest_wind_speed(self, session: aiohttp.ClientSession) -> float | None:
-        try:
-            payload = await self.client.get_wind_speed(
-                session,
-                scope=SCOPE_SITE,
-                range_value="today",
-            )
-        except KirkHillApiError as exc:
-            _LOGGER.warning("Failed to fetch wind-speed series: %s", exc)
-            return self._wind_speed_today
-        series = payload.get("series", [])
-        if not isinstance(series, list) or not series:
-            return None
-
-        latest = series[-1]
-        if not isinstance(latest, dict):
-            return None
-
-        value = latest.get("wind_speed_mps")
-        return value if isinstance(value, (int, float)) else None
 
     async def _fetch_open_meteo_forecast(
         self,

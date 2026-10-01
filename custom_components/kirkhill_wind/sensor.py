@@ -553,9 +553,6 @@ class FarmWindSpeedSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        value = _as_float(self.coordinator.data.get("wind_speed_today"))
-        if value is not None:
-            return value
         return _as_float(self.coordinator.data[SCOPE_OWNER]["summary"].get("wind_speed_mps"))
 
 
