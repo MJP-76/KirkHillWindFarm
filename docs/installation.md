@@ -64,6 +64,32 @@ the stable release yet.
     Switching the **Pre-release** diagnostic back off stops HACS offering
     pre-releases as updates.
 
+## What's in the latest pre-release
+
+**v4.13.1-pre** — released 2026-10-01
+
+New diagnostic sensors:
+
+- `binary_sensor.data_complete` — on when every turbine has current data
+- `sensor.data_generated_at` — when the API response was generated
+- `sensor.unknown_turbines` — turbines with no imported state
+- `sensor.latest_import_status` — data import pipeline health
+- Rotor speed `sampled_at` attribute — when rotor speed was last measured
+
+Performance improvements:
+
+- Removed redundant `/api/v1/wind-speed` API call (saves 6 calls/hour)
+- Cached immutable year summaries — completed years fetched once (saves 4 calls/hour)
+- Open-Meteo forecast now runs in parallel with timeframe summaries
+
+Other changes:
+
+- Dashboard `url_already_exists` detection hardened against HA translation changes
+- Docs: sensor reference, SUPPORT, CONTRIBUTING files added
+- Test fix: flaky `test_obsolete_card_removed` now deterministic
+
+[Full changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
+
 ## Reporting a pre-release problem
 
 Pre-release problems are the most useful kind of feedback, and they are the
