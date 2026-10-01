@@ -2,6 +2,9 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.13.3
+- **Widened SCADA card pills.** Version (150→170), API status (68→78), alarm (110→130), and wind speed (240→280) pills are wider to fit text content without clipping.
+
 ## Version 4.13.2
 - **Fixed: SCADA card text overflow on first load.** Pill rectangles (version, API status, alarm, wind speed) and generation panels (owner, site) now have SVG clip paths that prevent text from extending beyond the rect bounds. This eliminates the first-load layout shift where overflowing text triggered a viewBox recalculation.
 

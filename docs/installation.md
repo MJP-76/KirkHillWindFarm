@@ -66,11 +66,11 @@ the stable release yet.
 
 ## What's in the latest pre-release
 
-**v4.13.2** (pre-release) — released 2026-10-01
+**v4.13.3** (pre-release) — released 2026-10-01
 
 Bug fix:
 
-- Fixed SCADA card text overflow on first load — pill rectangles and generation panels now clip text, preventing the layout shift where overflowing text triggered a viewBox recalculation.
+- Widened SCADA card pills (version, API status, alarm, wind speed) to fit text content without clipping.
 
 Includes all v4.13.1 changes:
 
