@@ -3,6 +3,5 @@
   "render_readme": true,
   "country": "GB",
   "homeassistant": "2026.1.0",
-  "content_in_root": false,
-  "license": "GPL-3.0-or-later"
+  "content_in_root": false
 }
