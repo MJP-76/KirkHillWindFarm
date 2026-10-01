@@ -16,10 +16,11 @@ Fields the coordinator already fetches but discards. No API changes needed.
 - [x] `unknown_turbines` → sensor — count of turbines with no imported state
 - [x] `latest_import_status` → sensor — import pipeline health (e.g. "completed")
 - [x] `latest_rotor_speed_at` → per-turbine sensor (TIMESTAMP) — rotor data freshness (as `sampled_at` attribute on Rotor speed)
-- [ ] Use full `/api/v1/wind-speed` time series for historical wind speed charts in turbine modals (currently only the last element is read)
+- [x] ~~Use full `/api/v1/wind-speed` time series~~ — dropped entirely; wind speed is already in the `current` endpoint summary. HA recorder handles historical charts. Saves 6 API calls/hour.
 
 ### #55 — API feature requests (require upstream API changes)
 
+- [ ] Combined current + today summary endpoint — halve fast-tier round trips from 4 to 2 per poll (240→120 calls/hour)
 - [ ] Per-turbine generation for intermediate ranges (7d, 30d, ytd, year) — `/api/v1/turbines` currently only supports `today` and `all`
 - [ ] Structured curtailment reason in turbine state data (environmental / grid / maintenance / commercial)
 - [ ] Confirm `/api/v1/generation` endpoint stability and build client support if stable
