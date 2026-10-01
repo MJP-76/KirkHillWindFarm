@@ -71,6 +71,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         # fetch them once and cache forever.  Keyed by (scope, year_string).
         self._immutable_year_summaries: dict[tuple[str, str], dict] = {}
         self._immutable_year_windows: dict[tuple[str, str], dict] = {}
+        # Cached turbine coordinates for Open-Meteo forecast location.
+        self._cached_coordinates: dict[str, dict[str, float | str | None]] = {}
         # Last known-good current payloads per scope, kept so a failed fast-path
         # refresh keeps showing old data (marked stale) instead of blanking.
         self._last_current: dict[str, dict] = {}
@@ -138,23 +140,23 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 self._turbine_generation = self._build_turbine_generation(
                     today_turbines, alltime_turbines
                 )
+                self._cached_coordinates = self._build_coordinates(self._site_turbines)
             self._next_turbine_update = now + _TURBINE_INTERVAL
 
-        coordinates: dict[str, dict[str, float | str | None]] = {}
-        for row in self._site_turbines:
-            turbine_id = row.get("id")
-            coord = row.get("coordinates") or {}
-            if turbine_id:
-                coordinates[turbine_id] = {
-                    "latitude": coord.get("latitude"),
-                    "longitude": coord.get("longitude"),
-                    "source": coord.get("source"),
-                    "openstreetmap_node_id": coord.get("openstreetmap_node_id"),
-                }
+        # Slow tier: Open-Meteo forecast runs in parallel with timeframe
+        # summaries (below) when both are due, using cached turbine coordinates
+        # so it does not depend on a fresh turbine fetch.
+        slow_due = now >= self._next_slow_update
+        if slow_due:
+            forecast_task = asyncio.create_task(
+                self._fetch_open_meteo_forecast(session, self._cached_coordinates)
+            )
 
-        # Slow tier: Open-Meteo forecast (every 1 hour)
-        if now >= self._next_slow_update:
-            self._open_meteo_forecast = await self._fetch_open_meteo_forecast(session, coordinates)
+        # Fast tier (+ slow tier timeframes when due): summary fetches.
+        timeframe_summaries, timeframe_windows = await self._fetch_timeframe_summaries(session, now)
+
+        if slow_due:
+            self._open_meteo_forecast = await forecast_task
             self._next_slow_update = now + _SLOW_INTERVAL
 
         return {
@@ -204,8 +206,15 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
     def _last_coordinates(self) -> dict[str, dict[str, float | str | None]]:
         """Return the turbine coordinates built from the current turbine set."""
+        return self._cached_coordinates
+
+    @staticmethod
+    def _build_coordinates(
+        turbines: list[dict],
+    ) -> dict[str, dict[str, float | str | None]]:
+        """Extract turbine coordinates from a turbines API response."""
         coordinates: dict[str, dict[str, float | str | None]] = {}
-        for row in self._site_turbines:
+        for row in turbines:
             turbine_id = row.get("id")
             coord = row.get("coordinates") or {}
             if turbine_id:
