@@ -97,19 +97,41 @@ inverted: a stale restore record can clobber the saved value.
 **But removing RestoreEntity is a data-loss regression as proposed.** Up to v4.11.6,
 `async_set_native_value` wrote nowhere — prices lived *only* in RestoreEntity. So anyone
 who set a price before v4.13.0 has it in `restore_state` alone, and `options` holds only
-the migration default of 50.0. Deleting the RestoreEntity read path would silently reset
-those users to the default on upgrade.
+the migration default of `0.0`. Deleting the RestoreEntity read path would silently reset
+those users to £0 on every earnings sensor. (Correction: an earlier draft of this entry
+said the default was 50.0. There is no 50.0 anywhere in the code — `const.py` has declared
+`0.0` since the constants were introduced, and the 50.0 came from a commit message using
+it as a hypothetical example.)
 
 Note: the `f570578` RestoreEntity→options persist fix is doing more than its release note
 claimed. It is the **only** path carrying pre-v4.12 prices into options, not just a
 desync fix.
 
-- [ ] Make RestoreEntity a **one-time backfill** rather than a per-start override, so it
-      cannot outrank options in steady state
-- [ ] Only then consider dropping it, and only in a release users reach from a version
-      that already ran the backfill
-- [ ] Test a ≤v4.11.6 upgrade with a populated `restore_state` and empty options before
-      touching this
+- [x] Test a ≤v4.11.6 upgrade with a populated `restore_state` and empty options before
+      touching this — `test_number.py::TestPriceBackfillUpgrade`,
+      `test_init.py::TestPriceBackfillMigration` (v4.13.6)
+- [x] Make RestoreEntity a **one-time backfill** rather than a per-start override, so it
+      cannot outrank options in steady state — v9 migration writes a
+      `CONF_PRICE_RESTORE_PENDING` **list** into options; `_PriceBackfillMixin` consumes it
+      once and deletes it (v4.13.6)
+- [ ] Only then consider dropping `RestoreEntity`, and only in a release users reach from
+      a version that already ran the backfill — every user has now run it exactly once
+      during the v9 migration, so this is *unblocked*, but it is not urgent: the marker is
+      what makes the steady state safe, and the read is skipped without it
+
+Two things the naive fixes got wrong, both caught by the new tests:
+
+- A **shared boolean** marker starves the second entity. Both numbers share one entry, so
+  whichever set up first would clear the flag and the other price would never be
+  recovered. The marker is a list; each entity removes only its own key.
+- `merge_options` is a spread (`{**existing, **incoming}`), so it **cannot delete** a key.
+  Popping the marker from the incoming dict left it in `existing`. It has to be removed
+  from the merged result, or it survives into steady state and the stale-record clobber
+  comes back.
+
+There is deliberately **no** "value still equals the default, so backfill" shortcut.
+`0.0` is a real value (`sensor.py` reports `projection_basis=no_owner_price_zero` for it),
+so a value-equality guard would retry the restore forever.
 
 ### 🟢 "Completed years are immutable" — already mitigated, no action
 

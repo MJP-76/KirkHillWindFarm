@@ -16,6 +16,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_PRICE_RESTORE_PENDING,
     DEFAULT_BASE_URL,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
@@ -49,7 +50,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 ]
 
 # Keep in sync with the VERSION in config_flow.py.
-_CONFIG_ENTRY_VERSION = 8
+_CONFIG_ENTRY_VERSION = 9
 
 
 async def async_migrate_entry(
@@ -100,6 +101,25 @@ async def async_migrate_entry(
         for key in OPTION_KEYS:
             if key in data:
                 options.setdefault(key, data.pop(key))
+
+    if config_entry.version < 9:
+        # One-time price backfill. Before v4.13.0 the number entities wrote
+        # nowhere, so a price the user set before then lives only in
+        # restore_state, and the v5/v6 migrations above seeded the declared
+        # default into options instead. Record which prices still need
+        # recovering so number.py does it exactly once, then clears itself.
+        # Without this, upgrading from <=v4.11.6 silently zeroes every
+        # earnings sensor.
+        #
+        # Every pre-v9 entry is listed, not just those missing a price:
+        # entry.options cannot distinguish "never set" from "set before
+        # persistence existed", because the migration seeds the key. An entry
+        # that already backfilled is a redundant read, not a wrong value --
+        # restore_state and options agree by then.
+        options[CONF_PRICE_RESTORE_PENDING] = [
+            CONF_CFD_PRICE_GBP_PER_MWH,
+            CONF_OWNER_PRICE_PENCE_PER_KWH,
+        ]
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, options=options, version=_CONFIG_ENTRY_VERSION

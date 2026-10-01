@@ -103,22 +103,49 @@ decision changes.
 
 ## Price persistence and historical caching
 
-- **2026-10-01 — Prices set before v4.12 exist ONLY in `restore_state`. Do not
+- **2026-10-01 — Prices set before v4.13.0 exist ONLY in `restore_state`. Do not
   remove the `RestoreEntity` read path without a replacement migration.** Up to
   v4.11.6, `number.async_set_native_value` wrote nowhere — it set the
   coordinator attribute and called `async_write_ha_state`, and that was it. So a
   user who set £85/MWh on v4.11.6 has that value in `restore_state` alone, while
-  `options` holds only the schema migration default of 50.0. Deleting the
-  restore read silently resets exactly the longest-tenured users on upgrade,
-  because HACS users update to *latest* and will skip the intermediate release
-  that carried the value across. The right shape is a **one-time backfill**
-  (read restore, write options, then stop reading restore) before removal.
+  `options` holds only the schema migration default, which is `0.0` (`const.py`
+  has declared `DEFAULT_CFD_PRICE_GBP_PER_MWH = 0.0` and
+  `DEFAULT_OWNER_PRICE_PENCE_PER_KWH = 0.0` since those constants were
+  introduced). Deleting the restore read silently zeroes every earnings sensor
+  for exactly the longest-tenured users on upgrade, because HACS users update to
+  *latest* and will skip the intermediate release that carried the value across.
+  The failure is silent, not loud: `sensor.py` reports
+  `projection_basis=no_owner_price_zero` and returns `0.0`, with nothing raising.
+  A note on the record: an earlier version of this entry, and of `TODO.md`, said
+  the fallback was 50.0. That figure came from the `f570578` commit message,
+  which used 50.0 as a hypothetical stale default rather than a real one.
 - **2026-10-01 — `RestoreEntity` must never outrank `entry.options`.** Since v8,
-  options are the authoritative store. `number.async_added_to_hass` currently
-  applies the restored value over options *unconditionally*, then persists it
-  back — inverted precedence. In steady state the two agree (the number entity
-  updates both, and the options flow never exposes prices), so it is not yet
-  user-visible, but it is the wrong direction and should become a backfill.
+  options are the authoritative store. `number.async_added_to_hass` applied the
+  restored value over options *unconditionally*, then persisted it back —
+  inverted precedence. In steady state the two agree (the number entity updates
+  both, and the options flow never exposes prices), so it was not user-visible,
+  but the direction was wrong. **Resolved in v4.13.6** by the backfill below.
+- **2026-10-01 (v4.13.6) — The restore read is a one-shot backfill, gated on a
+  marker in options.** The v9 migration writes `CONF_PRICE_RESTORE_PENDING` for
+  any pre-v9 entry; `_PriceBackfillMixin` reads `restore_state` only when the
+  marker is present, persists the recovered value, and removes its key. The
+  marker is the *only* thing that distinguishes "never set" from "set before
+  persistence existed", because the v5/v6 migrations seed the key and so
+  `options` always contains it after migration. Three design points that are
+  load-bearing and easy to undo:
+  - The marker is a **list of option keys**, not a boolean. Both number entities
+    share one config entry; a shared boolean lets whichever sets up first clear
+    it, stranding the other price in `restore_state` forever.
+  - `merge_options` is a spread, so it **cannot delete** a key. The marker must
+    be popped from the merged result, or it survives into the steady state and
+    the stale-record clobber returns.
+  - There is deliberately **no** "value still equals the default" shortcut. `0.0`
+    is a legitimate value — `sensor.py` reports `no_owner_price_zero` for it — so
+    a value-equality guard would retry the backfill forever.
+  Every user has now run the backfill exactly once during the v9 migration, so
+  dropping `RestoreEntity` is technically unblocked. It is still not worth doing
+  on its own: the marker is what makes the steady state safe, and with the
+  marker absent the read is already skipped.
 - **2026-10-01 — Completed calendar years are fetched once and cached for the
   lifetime of the process.** `year_YYYY` frames below the current year are
   immutable: fetched, stored in `_immutable_year_summaries` /

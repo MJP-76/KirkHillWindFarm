@@ -17,10 +17,13 @@ class TestConfigFlowVersion:
         )
 
     def test_version_is_current(self):
-        """Version should be 8 (the current schema version).
+        """Version should be 9 (the current schema version).
 
         v8 split connection details from settings: entry.data keeps only the
         API key and base URL, and every user-configurable setting moved to
         entry.options.
+
+        v9 adds the price-backfill marker, so prices set before v4.13.0 can be
+        recovered from restore_state on the next start.
         """
-        assert KirkHillWindConfigFlow.VERSION == 8
+        assert KirkHillWindConfigFlow.VERSION == 9

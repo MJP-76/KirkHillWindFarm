@@ -12,6 +12,25 @@ CONF_SCAN_INTERVAL = "scan_interval"
 CONF_CFD_PRICE_GBP_PER_MWH = "cfd_price_gbp_per_mwh"
 CONF_OWNER_PRICE_PENCE_PER_KWH = "owner_price_pence_per_kwh"
 
+# One-shot marker, not a user setting. See AGENTS.md rule 3.
+#
+# Until v4.13.0 the number entities persisted nowhere, so a price a user set
+# before then exists only in restore_state. The v5/v6 migrations could not
+# recover it -- they seeded the declared default -- which means entry.options
+# alone cannot tell "the user never set a price" apart from "the user set it
+# before persistence existed". The v9 migration stores the affected option keys
+# here so the restore read happens exactly once, and only for the entries that
+# need it.
+#
+# Value is a list of the option keys still awaiting backfill, because the two
+# number entities set up separately and each must consume only its own key --
+# a single shared boolean would let whichever entity ran first clear the flag
+# and silently skip the other.
+#
+# Deliberately not in settings.SETTING_DEFAULTS: it is not a setting, must not
+# appear in the options form, and get_setting() should reject it.
+CONF_PRICE_RESTORE_PENDING = "price_restore_pending"
+
 DEFAULT_BASE_URL = "https://dashboard.kirkhillcoop.org"
 DEFAULT_CREATE_DASHBOARD = True
 DEFAULT_ENABLE_PAYMENT_TRACKING = False

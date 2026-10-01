@@ -13,6 +13,7 @@ from custom_components.kirkhill_wind.const import (
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_PRICE_RESTORE_PENDING,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
     DEFAULT_BASE_URL,
@@ -247,7 +248,109 @@ class TestDataOptionsSeparation:
         data, options = await self._migrated(entry)
 
         assert data == {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL}
-        assert options == {}
+        # No settings are invented, but the v9 price-backfill marker is added --
+        # it is not a setting, so compare on the setting keys only.
+        assert not set(options) & set(OPTION_KEYS)
+        assert CONF_PRICE_RESTORE_PENDING in options
+
+
+class TestPriceBackfillMigration:
+    """v9 marks pre-v4.13.0 entries so their prices can be recovered.
+
+    The scenario this exists for: a user on v4.11.6 set a price. At that version
+    the number entities wrote nowhere, so the value lived only in restore_state.
+    The v5/v6 migrations could not see it and seeded the declared default (0.0).
+    Upgrading would therefore zero every earnings sensor, silently -- no error,
+    just £0 on the dashboard.
+    """
+
+    async def _migrated(self, entry):
+        hass = MagicMock()
+        result = await async_migrate_entry(hass, entry)
+        assert result is True
+        call = hass.config_entries.async_update_entry.call_args[1]
+        return call["data"], call["options"], call["version"]
+
+    @pytest.mark.asyncio
+    async def test_v4_11_6_entry_is_flagged_for_backfill(self):
+        """A v4 entry (the schema version v4.11.6 wrote) gets the marker."""
+        data, options, version = await self._migrated(
+            _make_entry(4, {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL})
+        )
+
+        assert version == _CONFIG_ENTRY_VERSION
+        # The migrations seed the declared default -- they cannot recover the
+        # real price, which is the whole reason the marker exists.
+        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == DEFAULT_CFD_PRICE_GBP_PER_MWH
+        assert options[CONF_OWNER_PRICE_PENCE_PER_KWH] == DEFAULT_OWNER_PRICE_PENCE_PER_KWH
+        assert set(options[CONF_PRICE_RESTORE_PENDING]) == {
+            CONF_CFD_PRICE_GBP_PER_MWH,
+            CONF_OWNER_PRICE_PENCE_PER_KWH,
+        }
+
+    @pytest.mark.asyncio
+    async def test_marker_covers_both_prices_separately(self):
+        """A list, not a single boolean.
+
+        The two number entities share one entry. With a shared boolean, whichever
+        set up first would clear it and the other price would never be
+        recovered -- a silent, partial data loss.
+        """
+        _, options, _ = await self._migrated(
+            _make_entry(4, {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL})
+        )
+
+        pending = options[CONF_PRICE_RESTORE_PENDING]
+        assert isinstance(pending, list)
+        assert len(pending) == 2
+        assert len(set(pending)) == 2, "a price must not appear twice"
+
+    @pytest.mark.asyncio
+    async def test_v8_entry_also_flagged(self):
+        """Entries written by v4.13.x never backfilled, because nothing asked them to.
+
+        They are consistent already, so this is a redundant restore read at
+        worst -- the alternative is a value-equality guess that would treat a
+        deliberate 0.0 as un-backfilled forever.
+        """
+        _, options, _ = await self._migrated(
+            _make_entry(
+                8,
+                {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL},
+                {CONF_CFD_PRICE_GBP_PER_MWH: 85.0, CONF_OWNER_PRICE_PENCE_PER_KWH: 4.2},
+            )
+        )
+
+        assert CONF_PRICE_RESTORE_PENDING in options
+        # Existing values must not be disturbed by the migration itself.
+        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == 85.0
+        assert options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 4.2
+
+    @pytest.mark.asyncio
+    async def test_already_migrated_entry_is_not_reflagged(self):
+        """Once at v9 the entry returns early, so the marker is not re-added.
+
+        Re-adding it would make every subsequent restart retry the backfill, and
+        a stale restore record could then overwrite a price the user has since
+        changed.
+        """
+        hass = MagicMock()
+        entry = _make_entry(
+            _CONFIG_ENTRY_VERSION,
+            {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL},
+            {CONF_CFD_PRICE_GBP_PER_MWH: 85.0},
+        )
+
+        assert await async_migrate_entry(hass, entry) is True
+        hass.config_entries.async_update_entry.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_marker_is_not_a_setting(self):
+        """It must not appear in the options form or in get_setting's keyspace."""
+        assert CONF_PRICE_RESTORE_PENDING not in OPTION_KEYS
+        assert CONF_PRICE_RESTORE_PENDING not in SETTING_DEFAULTS
+        with pytest.raises(KeyError):
+            get_setting(_make_entry(9), CONF_PRICE_RESTORE_PENDING)
 
 
 class TestSettingsAccess:

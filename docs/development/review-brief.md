@@ -47,10 +47,15 @@ Treat them as closed; flag only if you find a new, concrete problem:
   timeframe, so no £ value is ever derived from a cached year — only generation
   kWh is. See `docs/development/decisions.md`.
 - **"Remove `RestoreEntity` so `ConfigEntry.options` is the sole authority."**
-  The direction is right but removal as specified is a **data-loss regression**.
-  Prices set before v4.12 were never written to options — they live only in
-  `restore_state`. The correct fix is to convert restore into a *one-time
-  backfill* that seeds options, and only drop the read path in a later release.
+  **Settled in v4.13.6 — do not raise again.** Removal as originally specified was
+  a data-loss regression: prices set before v4.13.0 were never written to options and
+  live only in `restore_state`. That has been fixed properly — the restore read is now a
+  **one-shot backfill** gated on a `CONF_PRICE_RESTORE_PENDING` marker that the v9
+  migration writes, so options is the sole authority in steady state *and* no
+  pre-existing price is lost. Details and the three easy-to-break design points are in
+  `docs/development/decisions.md`; regression tests are
+  `test_number.py::TestPriceBackfillUpgrade` and
+  `test_init.py::TestPriceBackfillMigration`.
 - **"Split the 413-line coordinator."** Agreed in principle, deliberately
   deferred until the API-call-budget test exists. Do not raise it as a defect.
 - **"Assert on sets of API calls in coordinator tests."** Do not suggest

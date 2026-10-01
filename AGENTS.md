@@ -26,16 +26,37 @@ undoes a deliberate fix.
 |---|---|---|
 | 1 | Write `entry.options` only through `settings.merge_options`. HA replaces the options mapping wholesale, so a bare dict literal silently deletes every setting you did not name. | yes — `test_options_flow.py`, `test_number.py::TestNumberPersistence` |
 | 2 | `entry.data` is connection only (`api_key`, `base_url`). All settings live in `entry.options`, read via `settings.py`. | yes — `test_init.py::TestDataOptionsSeparation` |
-| 3 | Do not remove the `RestoreEntity` read path in `number.py`. Prices set before v4.12 exist *only* in `restore_state`; removing the read path resets those users to the 50.0 default. Convert it to a one-time backfill first. | partial — persist-back covered, the <=v4.11.6 upgrade path is **not** |
+| 3 | Do not remove the `RestoreEntity` read path in `number.py`. Prices set before v4.13.0 exist *only* in `restore_state`; the v5/v6 migrations seed the `0.0` default, so without the backfill those users' earnings silently read £0. It is now a **one-time** backfill, gated on `CONF_PRICE_RESTORE_PENDING` — see below. | yes — `test_number.py::TestPriceBackfillUpgrade`, `test_init.py::TestPriceBackfillMigration` |
 | 4 | Assert API call counts, not sets. A set is invariant under duplication. | `test_coordinator.py::TestApiCallBudget` |
 | 5 | Fetch summaries exactly once per `_async_update_data()`, after the turbine tier. Do not move the call into the initial `asyncio.gather` — `_next_slow_update` is advanced later, so an earlier call also sees the slow tier as due. | `TestApiCallBudget::test_summaries_are_fetched_exactly_once_per_update` |
 | 6 | Do not split `coordinator.py` without call-budget coverage for whatever you move. | n/a — process rule |
 | 7 | Keep `_parse_data()`'s dict guarantee. Callers depend on it. | `test_api.py::TestApiClient` |
 
-Rule 3 is only partially covered: the persist-back path is tested, but nothing
-covers a user upgrading from ≤v4.11.6, whose prices exist only in `restore_state`.
-Write that test before touching the restore path — it is the one change here
-that can silently cost a user real money.
+### The price backfill is one-shot, and that is load-bearing
+
+`RestoreEntity` is a *recovery mechanism*, not a source of truth. The v9
+migration writes `CONF_PRICE_RESTORE_PENDING` (a **list** of the two price
+option keys) into options for any pre-v9 entry. `_PriceBackfillMixin` then:
+
+- **marker absent** → returns without reading `restore_state` at all. Options is
+  authoritative, so a stale restore record cannot overwrite a price the user has
+  since changed.
+- **marker present** → reads `restore_state` once, persists the value, and drops
+  its own key from the list. The marker is deleted once the list empties.
+
+Two constraints that are easy to break:
+
+1. **The marker must be a list, not a boolean.** Both number entities share one
+   config entry. A shared boolean would let whichever set up first clear it, and
+   the other price would never be recovered.
+2. **`merge_options` cannot delete a key.** It is a spread
+   (`{**existing, **incoming}`), so popping from the incoming dict leaves the
+   existing value intact. The marker is removed from the *merged* result.
+
+There is no "value is still the default, so backfill" shortcut: `0.0` is a
+legitimate, meaningful value (`sensor.py` reports
+`projection_basis=no_owner_price_zero` for it), so a value-equality guard would
+retry the restore forever.
 
 ## Conventions
 
