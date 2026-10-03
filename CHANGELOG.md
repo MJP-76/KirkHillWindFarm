@@ -2,6 +2,20 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.13.6
+- **Fixed: a stale restore record could overwrite a saved price.** Since v4.13.0 `entry.options` is the authority, but `RestoreEntity` still applied its value on every start — inverted precedence. The read is now a **one-time backfill**, gated on a `CONF_PRICE_RESTORE_PENDING` marker written by the v9 config-entry migration: marker absent → `restore_state` is not read at all and options wins; marker present → the price is read, persisted, and the marker consumed. Config entry schema version 8 → 9.
+- **No upgrade action needed, and no price is lost.** A price set before v4.13.0 existed only in `restore_state` — up to v4.11.6 `async_set_native_value` wrote nowhere — so that read was the only path carrying it forward. The backfill runs once for exactly those installations and never again. `0.0` remains a legitimate price (`projection_basis=no_owner_price_zero`), so nothing is retried on a value-equality guess.
+- **Removed the invalid `license` key from `hacs.json`.** HACS validates that file against a closed schema, so `extra keys not allowed @ data['license']` had failed the HACS Validation job on every push since v4.13.1-pre added it. HACS reads the licence from GitHub's repository metadata, not from `hacs.json`. The `LICENSE` file is unchanged.
+- **Docs.** `decisions.md` records the price-backfill rationale; `AGENTS.md` rule 3 now describes the one-shot form; `review-brief.md` updated. `TODO.md` corrected — the fallback default price is `0.0`, not 50.0.
+- **Tests.** 16 new tests: 5 for the migration, 8 for the backfill, 3 for the steady-state guard.
+
+## Version 4.13.5
+- **Fixed: every timeframe summary was fetched twice per update.** `_fetch_timeframe_summaries()` ran once in the initial `asyncio.gather` and again after the turbine tier; because `_next_slow_update` is only advanced *after* the later call, both saw the slow tier as due. At the default 60-second scan interval that is roughly 2,880 redundant requests a day, plus 14 extra on each hourly slow poll. Summaries are now fetched once, after the turbine tier has refreshed the cached coordinates the Open-Meteo forecast needs.
+- **Fixed: a malformed API payload raised an unrecoverable `AttributeError`.** `_parse_data()` validated the envelope but returned whatever `body["data"]` held, so a `{"data": []}` response blew up inside the client instead of raising a `KirkHillApiError` the coordinator can recover from — in `get_turbines()` this happened before that method's own guard, so stale-data handling and retry backoff never engaged. The `dict` guarantee is now enforced, with distinct messages for a non-object body, a missing `data` key, and a non-object `data`.
+- **Test fix.** The coordinator schedule test asserted on a *set* of `(scope, range)` pairs, and a set is invariant under duplication — it passed identically against the buggy and the correct code, which is how the doubled fetch reached a stable release. Assertions are now count-based, and `TestApiCallBudget` pins the budget across the first poll (18 calls), a steady-state fast poll (2), a turbine-due poll (2), a slow-tier poll (14) and completed-year caching, with expectations derived from the timeframe constants rather than hardcoded.
+- **Docs.** `AGENTS.md` gained the seven do-not-break invariants, each naming its regression test; `docs/development/decisions.md` added with ten entries on the config-entry schema, coordinator tiers and year cache; `review-brief.md` had stale version references corrected.
+- **Not included: `ruff` and coverage thresholds.** The 40 existing `E501`s would fail the build on day one, so those are separate changes.
+
 ## Version 4.13.4
 - **Removed clip paths, increased viewBox width.** Clip paths were masking text overflow instead of fixing it. Removed all clip paths and increased `wMax` from 1800 to 2200 so the SVG viewBox grows to fit the pill text content naturally.
 
