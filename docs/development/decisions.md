@@ -95,11 +95,13 @@ decision changes.
   coordinates the Open-Meteo forecast depends on, so summaries must not start
   before it.
 - **2026-10-01 — The coordinator is not to be split until the API-call-budget
-  test exists.** It has grown to ~413 lines / 19 KB and does read like a god
-  object (scheduling, API orchestration, historical caching, turbines,
-  Open-Meteo, stale-state). Both external reviews reached the same conclusion:
-  splitting it before the call budget is protected turns a refactor into another
-  behavioural change, with nothing to catch the difference.
+  test exists.** That test now exists (`TestApiCallBudget`, v4.13.5), so the
+  recorded blocker is cleared; the split itself is still deferred. The file has
+  grown to 411 lines / 19.2 KB and does read like a god object (scheduling, API
+  orchestration, historical caching, turbines, Open-Meteo, stale-state). Both
+  external reviews reached the same conclusion: splitting it before the call
+  budget is protected turns a refactor into another behavioural change, with
+  nothing to catch the difference.
 
 ## Price persistence and historical caching
 
@@ -221,11 +223,11 @@ decision changes.
   today's generation live on the SCADA diagram, per-turbine history in each
   pop-out, and the coordinates in the turbine modal link to Google Maps. Existing
   installs prune History, Finances and Turbines views via
-  `_OBSOLETE_VIEW_PATHS` / `_OBSOLETE_CARD_KEYS` on merge.
+  `OBSOLETE_VIEW_PATHS` / `OBSOLETE_CARD_KEYS` on merge.
 
 ## Deployment state
 
-- **2026-09-17 — Production is aligned with the repository at `4.8.80`.**
+- **2026-10-03 — Production is aligned with the repository at `4.13.6`.**
   `CHANGELOG.md` is the authoritative version history. GitHub Releases/HACS are
   for other users; this host deploys from `origin/main` commits mirrored into
   `/homeassistant/custom_components/kirkhill_wind/`.

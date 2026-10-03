@@ -63,8 +63,10 @@ retry the restore forever.
 - Python 3.11+ compatible, `from __future__ import annotations` in every module.
 - Line length 120 — but note the **nested
   `custom_components/kirkhill_wind/pyproject.toml` sets 88**, which is why
-  `ruff check .` reports pre-existing E501s. Reconciling the two is tracked in
-  `TODO.md`; ruff is not yet a CI gate.
+  `ruff check .` reports pre-existing E501s (48 lines exceed 88; none exceed
+  120). CI runs `ruff check custom_components/ --config pyproject.toml` — the
+  root config — and passes. `main` has no branch protection, so no check
+  actually blocks a merge. Reconciling the two configs is tracked in `TODO.md`.
 - Bump `VERSION` via `scripts/version_sync.py sync`, never by hand. It
   propagates to `manifest.json` and `pyproject.toml`.
 - Any change under `custom_components/` needs a full Home Assistant restart.

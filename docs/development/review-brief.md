@@ -4,7 +4,7 @@ Give the repository a **design-focused** review. CI already passes (ruff, HACS
 validation, Hassfest, version-sync); you are NOT reviewing for "does it pass CI".
 Focus on correctness, robustness, and design with these specific questions below.
 
-Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.13.4)
+Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.13.6)
 Start here: `custom_components/kirkhill_wind/`, then `AGENTS.md`, then
 `docs/development/decisions.md` (read the decisions doc — it records why the
 code is shaped this way and answers several questions below already).
@@ -12,8 +12,8 @@ code is shaped this way and answers several questions below already).
 ## Context
 - Tiny custom integration: one coordinator polling a wind-farm API, farm-level +
   per-turbine sensors/binary_sensors, a bundled JS SCADA card, and dashboard
-  generation/merge code in `dashboard.py` (`__init__.py` is setup/unload only,
-  207 lines).
+  generation/merge code in `dashboard.py` (`__init__.py` is setup/unload plus
+  `async_migrate_entry`, 227 lines).
 - `via_device_id` replaced the deprecated `via_device=(DOMAIN, entry.entry_id)`
   tuple (HA Core 2027.8 compat). The hub device id is resolved once in
   `__init__.py::async_setup_entry` and stored on the coordinator. Highest-risk
@@ -56,8 +56,10 @@ Treat them as closed; flag only if you find a new, concrete problem:
   `docs/development/decisions.md`; regression tests are
   `test_number.py::TestPriceBackfillUpgrade` and
   `test_init.py::TestPriceBackfillMigration`.
-- **"Split the 413-line coordinator."** Agreed in principle, deliberately
-  deferred until the API-call-budget test exists. Do not raise it as a defect.
+- **"Split the coordinator."** Agreed in principle, deliberately deferred until
+  the API-call-budget test exists — which it now does (`TestApiCallBudget`,
+  v4.13.5). The recorded blocker is cleared, but the split itself is still
+  deferred, so do not raise it as a defect.
 - **"Assert on sets of API calls in coordinator tests."** Do not suggest
   reverting to set-based assertions — a set is invariant under duplication,
   which is how a doubled summary fetch shipped. See below.

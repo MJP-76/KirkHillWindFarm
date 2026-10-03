@@ -230,8 +230,8 @@ prescribed three separate PRs so config cleanup does not hide inside a bug fix.
 - [ ] **PR A** — Decide the authoritative lint config. Root `pyproject.toml` sets
       `line-length = 120`; nested `custom_components/kirkhill_wind/pyproject.toml` sets
       `88`. Recommend deleting the nested one so there is a single project config.
-- [ ] **PR B** — Fix the resulting lint debt (40 pre-existing E501s come from the nested
-      88-char setting, not from new code)
+- [ ] **PR B** — Fix the resulting lint debt (48 lines exceed the nested 88-char
+      setting, not from new code)
 - [ ] **PR C** — Enforce `ruff check .` in CI
 - [ ] Enable `pytest-cov` in CI as **reporting only** (`--cov-report=term-missing`), no
       threshold yet. `pytest-cov` is in `requirements-dev.txt` but has never been invoked.
@@ -269,10 +269,11 @@ Remaining work:
 - [ ] Extract payment-tracking setup (`_async_setup_payment_tracking`) into its own module
 - [ ] Re-export from `__init__.py` where tests import `_CONFIG_ENTRY_VERSION` / `async_migrate_entry`
 - [ ] Tests must pass unchanged at each step — refactor only, no behaviour changes
-- [ ] **Deferred:** split the coordinator (413 lines / 19.2 KB) into summary / turbine /
+- [ ] **Deferred:** split the coordinator (411 lines / 19.2 KB) into summary / turbine /
       forecast managers. Both reviews agree this is premature until the API-call-budget
       test exists, because that test is what makes the split safe rather than another
-      behavioural change.
+      behavioural change. **That test now exists (`TestApiCallBudget`, v4.13.5), so the
+      recorded blocker is cleared — only the split itself is still outstanding.**
 
 Note: do this as a pure structural change. Tests are already in place, so the "establish
 tests before refactoring" precondition from review #62 is satisfied. The v4.13.4 review

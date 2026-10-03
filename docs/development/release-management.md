@@ -18,8 +18,24 @@ All release versions are tracked from a single source-of-truth file:
    - `custom_components/kirkhill_wind/manifest.json`
    - `pyproject.toml`
 3. Validate with `python scripts/version_sync.py check`.
-4. Commit and push to `main`.
-5. Tag and create a GitHub release:
+4. **Update the version references in the docs.** Nothing fails when these go
+   stale, so check them by hand every release:
+
+   | Where | What it holds |
+   |---|---|
+   | `CHANGELOG.md` | a `## Version X.Y.Z` section, newest first |
+   | `docs/installation.md` | "What's in the latest pre-release" names the latest stable |
+   | `docs/development/review-brief.md` | version in the `Repo:` line, plus quoted line counts and symbol names |
+   | `docs/development/decisions.md` | "Deployment state" version; the coordinator-split blocker |
+   | `info.md` | example version in the SCADA version-badge bullet |
+   | `AGENTS.md` | lint/CI claims and any line counts quoted from the code |
+   | `TODO.md` | the release log section at the bottom |
+
+   Verify the numbers instead of carrying them forward: `wc -l` for line counts,
+   `grep` for symbol names, `stat -c %s` for file sizes. Symbols get renamed
+   silently, so confirm each one still exists before leaving it in a doc.
+5. Commit and push to `main`.
+6. Tag and create a GitHub release:
 
    ```bash
    git tag vX.Y.Z && git push origin vX.Y.Z
