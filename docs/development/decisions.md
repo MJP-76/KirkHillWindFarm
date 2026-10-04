@@ -243,7 +243,7 @@ decision changes.
 
 ## Deployment state
 
-- **2026-10-04 — The repository is at `4.13.7` (pre-release); production still
+- **2026-10-04 — The repository is at `4.13.8` (pre-release); production still
   runs `4.13.6`.** Nothing is deployed by releasing: the changed files under
   `custom_components/kirkhill_wind/` reach this host only when `origin/main` is
   mirrored into `/homeassistant/custom_components/kirkhill_wind/` and Home

@@ -291,6 +291,14 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.13.8 (pre-release, 2026-10-04)
+
+- Release tooling: `version_sync.py release` pushes the tag before calling
+  `gh release create`, and its guard checks `origin` instead of the local tag
+  list — the v4.13.7 release had to be completed by hand. Four tests.
+- Docs: the pre-release section was naming the wrong stable version
+- No integration code changes; `custom_components/` is identical to v4.13.7
+
 ### v4.13.7 (pre-release, 2026-10-04)
 
 - Reauth now reloads the entry — the new API key never reached the running
