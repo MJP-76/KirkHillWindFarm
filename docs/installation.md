@@ -66,10 +66,9 @@ the stable release yet.
 
 ## What's in the latest pre-release
 
-No pre-release currently active. The latest stable release is
 **v4.13.7** — see the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
-for what's included.
+for what's included. The latest stable release is **v4.13.6**.
 
 ## Reporting a pre-release problem
 
