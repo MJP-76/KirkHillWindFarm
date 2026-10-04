@@ -94,8 +94,42 @@ def mock_config_entry_data():
 
 
 @pytest.fixture
-def mock_current_payload():
-    """Return a realistic current-data API response."""
+def mock_current_turbines():
+    """Per-turbine rows exactly as /api/v1/current returns them.
+
+    Live state only: the current endpoint carries no generation, rotor speed
+    or coordinates -- those come from /api/v1/turbines (mock_turbine_rows).
+    The two endpoints share nothing but id, capacity_factor_percent and the
+    capacity pair, which is why the fixture keeps them apart.
+    """
+    return [
+        {
+            "id": f"T{i}",
+            "status": "active" if i <= 7 else "inactive",
+            "state_text": ("Turbine in operation" if i <= 7 else "Lack of wind: Wind speed too low"),
+            "power_kw": 987.0 if i <= 7 else 0.0,
+            "capacity_factor_percent": 42.0 if i <= 7 else 0.0,
+            "capacity_watts": 2350000,
+            "capacity_kw": 2350,
+            "wind_speed_mps": 8.5,
+            "latest_power_at": "2026-06-25T12:34:00Z",
+            "latest_wind_speed_at": "2026-06-25T12:34:00Z",
+            "status_started_at": "2026-06-25T12:00:00Z",
+            "state_started_at": "2026-06-25T12:00:00Z",
+        }
+        for i in range(1, 9)
+    ]
+
+
+@pytest.fixture
+def mock_current_payload(mock_current_turbines):
+    """Return a realistic /api/v1/current response.
+
+    One payload answers both the owner and the site request, so its numbers
+    are site-scale and the owner share reads 100% out of this fixture.
+    Scope-aware payloads (real owner capacity is 2559.465 W of 18.8 MW) are a
+    separate job; nothing here asserts on the share.
+    """
     return {
         "reading": {
             "scope": "owner",
@@ -104,60 +138,95 @@ def mock_current_payload():
             "complete": True,
         },
         "summary": {
-            "total_power_kw": 1234.5,
-            "capacity_factor_percent": 42.3,
+            "total_power_kw": 6909.0,
+            "total_power_watts": 6909000,
+            "wind_speed_mps": 8.5,
+            "capacity_factor_percent": 36.75,
             "active_turbines": 7,
             "inactive_turbines": 1,
             "unknown_turbines": 0,
-            "capacity_watts": 4200000,
-            "wind_speed_mps": 8.5,
+            "total_turbines": 8,
+            "capacity_watts": 18800000,
+            "capacity_kw": 18800,
+            "latest_power_at": "2026-06-25T12:34:00Z",
+            "latest_wind_speed_at": "2026-06-25T12:34:00Z",
+            "latest_status_at": "2026-06-25T12:00:00Z",
+            "total_generation_kwh_today": 168062.0,
+            "total_generation_wh_today": 168062000,
         },
-        "turbines": [
-            {
-                "id": f"T{i}",
-                "status": "active" if i <= 7 else "inactive",
-                "state_text": "Turbine in operation" if i <= 7 else "Lack of wind: Wind speed too low",
-                "power_kw": 150.0 if i <= 7 else 0.0,
-                "capacity_factor_percent": 42.0 if i <= 7 else 0.0,
-                "wind_speed_mps": 8.5,
-                "generation_kwh": 3600.0,
-                "generation_share_percent": 12.5,
-                "latest_rotor_speed_rpm": 12.3 if i <= 7 else 0.0,
-                "coordinates": {
-                    "latitude": 54.0 + i * 0.001,
-                    "longitude": -3.0 + i * 0.001,
-                    "source": "osm",
-                    "openstreetmap_node_id": f"node_{i}",
-                },
-            }
-            for i in range(1, 9)
-        ],
+        "turbines": mock_current_turbines,
     }
+
+
+@pytest.fixture
+def mock_turbine_rows():
+    """Rows exactly as /api/v1/turbines returns them.
+
+    Scoped generation, rotor speed and coordinates -- and no live power or
+    state, which is /api/v1/current's job. The coordinator builds
+    turbine_generation and the coordinate map from these.
+    """
+    return [
+        {
+            "id": f"T{i}",
+            "generation_kwh": 3600.0,
+            "generation_share_percent": 12.5,
+            "capacity_factor_percent": 42.0,
+            "latest_generation_interval_end": "2026-06-25T12:30:00Z",
+            "latest_rotor_speed_rpm": 12.3,
+            "latest_rotor_speed_at": "2026-06-25T12:34:00Z",
+            "coordinates": {
+                "latitude": 55.3047599 + i * 0.001,
+                "longitude": -4.7458191 + i * 0.001,
+                "source": "OpenStreetMap",
+                "openstreetmap_node_id": 12134002376 + i,
+            },
+        }
+        for i in range(1, 9)
+    ]
 
 
 @pytest.fixture
 def mock_summary_payload():
-    """Return a realistic summary API response."""
+    """Return a realistic /api/v1/summary response.
+
+    Every key here exists in the live payload; `latest_import_status` is
+    "success"/"running", never "completed" -- that string only ever appeared
+    in the stale openapi.yaml example.
+    """
     return {
         "summary": {
             "total_generation_kwh": 50000.0,
             "capacity_factor_percent": 38.5,
-            "latest_import_status": "completed",
+            "active_turbines": 8,
+            "capacity_watts": 18800000,
+            "capacity_kw": 18800,
+            "co2_avoided_kg": 4500.0,
+            "co2_avoided_assumed_export_factor": 0.99,
+            "co2_avoided_coverage_percent": 98.11,
+            "co2_avoided_matched_intervals": 311,
+            "co2_avoided_expected_intervals": 317,
+            "co2_avoided_complete": False,
+            "latest_carbon_intensity_at": "2026-06-25T12:00:00Z",
             "latest_generation_interval_end": "2026-06-25T12:30:00Z",
+            "latest_import_status": "success",
         },
         "window": {
+            "range": "30d",
             "from": "2025-01-01T00:00:00Z",
             "to": "2025-01-31T23:59:59Z",
+            "bucket": "10m",
+            "scope": "site",
         },
     }
 
 
 @pytest.fixture
-def mock_api_client(mock_current_payload, mock_summary_payload):
-    """Return a mock KirkHillApiClient with default responses."""
+def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payload):
+    """Return a mock KirkHillApiClient with endpoint-shaped responses."""
     client = AsyncMock()
     client.get_current = AsyncMock(return_value=mock_current_payload)
-    client.get_turbines = AsyncMock(return_value=mock_current_payload["turbines"])
+    client.get_turbines = AsyncMock(return_value=mock_turbine_rows)
     client.get_summary = AsyncMock(return_value=mock_summary_payload)
     client.get_wind_speed = AsyncMock(
         return_value={
