@@ -1,4 +1,5 @@
 """Sensor platform for the Kirk Hill Wind Farm integration."""
+
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
@@ -63,6 +64,21 @@ def _as_float(value) -> float | None:
     return None
 
 
+def _summary_kwh(summary) -> float | None:
+    """Return a timeframe summary's generation in kWh, or None if it has none.
+
+    One place for the ``total_generation_kwh`` -> ``total_kwh`` lookup that the
+    All time sum, its components and the per-timeframe readers all repeat.
+    Everywhere compares against ``None``: 0.0 is a real reading, not a gap.
+    """
+    if not isinstance(summary, dict):
+        return None
+    value = _as_float(summary.get("total_generation_kwh"))
+    if value is not None:
+        return value
+    return _as_float(summary.get("total_kwh"))
+
+
 def _display_energy_from_kwh(value_kwh: float | None) -> tuple[str, float | None]:
     if value_kwh is None:
         return UnitOfEnergy.KILO_WATT_HOUR, None
@@ -109,13 +125,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ],
         FarmWindSpeedSensor(coordinator, entry),
         OpenMeteoForecastWindSpeedSensor(
-            coordinator, entry, "next_hour_wind_speed_mps", "Open-Meteo forecast wind (next hour)"
+            coordinator,
+            entry,
+            "next_hour_wind_speed_mps",
+            "Open-Meteo forecast wind (next hour)",
         ),
         OpenMeteoForecastWindSpeedSensor(
-            coordinator, entry, "next_3h_avg_wind_speed_mps", "Open-Meteo forecast wind (next 3h avg)"
+            coordinator,
+            entry,
+            "next_3h_avg_wind_speed_mps",
+            "Open-Meteo forecast wind (next 3h avg)",
         ),
         OpenMeteoForecastWindSpeedSensor(
-            coordinator, entry, "next_24h_avg_wind_speed_mps", "Open-Meteo forecast wind (next 24h avg)"
+            coordinator,
+            entry,
+            "next_24h_avg_wind_speed_mps",
+            "Open-Meteo forecast wind (next 24h avg)",
         ),
         FarmActiveTurbinesSensor(coordinator, entry),
         FarmInactiveTurbinesSensor(coordinator, entry),
@@ -125,9 +150,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     ]
 
     for tid in turbine_ids:
-        entities += [TurbinePowerSensor(coordinator, entry, tid, scope) for scope in SCOPES]
         entities += [
-            TurbineCapacityFactorSensor(coordinator, entry, tid, scope) for scope in SCOPES
+            TurbinePowerSensor(coordinator, entry, tid, scope) for scope in SCOPES
+        ]
+        entities += [
+            TurbineCapacityFactorSensor(coordinator, entry, tid, scope)
+            for scope in SCOPES
         ]
         entities.append(TurbineWindSpeedSensor(coordinator, entry, tid))
         entities.append(TurbineStateSensor(coordinator, entry, tid))
@@ -158,7 +186,9 @@ class FarmPowerSensor(KirkHillScopedEntity, SensorEntity):
         # For owner scope: if API returns 0/None, calculate from site power × owner share
         if self._scope == SCOPE_OWNER:
             if value is None or value == 0:
-                site_summary = self.coordinator.data.get(SCOPE_SITE, {}).get("summary", {})
+                site_summary = self.coordinator.data.get(SCOPE_SITE, {}).get(
+                    "summary", {}
+                )
                 site_power = _as_float(site_summary.get("total_power_kw"))
                 if site_power is not None:
                     owner_share = self._owner_share_pct()
@@ -222,7 +252,9 @@ class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
         return attrs
 
 
-class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, RestoreEntity):
+class FarmGenerationByTimeframeSensor(
+    KirkHillScopedEntity, SensorEntity, RestoreEntity
+):
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -250,34 +282,55 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
                 self._restored_value = None
                 self._restored_attrs = None
 
+    def _expected_year_frames(self) -> tuple[str, ...]:
+        """Year frames the All time figure is built from.
+
+        The current year (``year``) plus every completed year (``year_YYYY``),
+        derived so future years join the sum automatically as they complete.
+        """
+        return ("year", *yearly_timeframes())
+
+    def _missing_year_frames(self) -> list[str]:
+        """Expected year frames the coordinator holds no usable value for.
+
+        A frame whose fetch failed arrives as ``{}`` -- the coordinator keeps
+        last-known summaries only on success -- and then sits in retry backoff
+        for up to an hour. "Missing" therefore means "in backoff or not fetched
+        yet", never "that year generated nothing".
+        """
+        summaries = self.coordinator.data.get("timeframe_summaries", {}).get(
+            self._scope, {}
+        )
+        return [
+            key
+            for key in self._expected_year_frames()
+            if _summary_kwh(summaries.get(key)) is None
+        ]
+
     def _sum_yearly_kwh(self) -> float | None:
         """Sum the per-year timeframes so All time is built from its parts.
 
-        All time is calculated as the sum of every year-based timeframe the
-        coordinator holds (the current `year` frame plus past `year_YYYY`
-        frames), so 2024 + 2025 + ... + the current year to date always equals
-        the All time figure — including any future years added to the yearly
-        timeframe set later.
+        All time is the sum of the current ``year`` frame plus every
+        ``year_YYYY`` frame, so 2024 + 2025 + ... + the current year to date
+        always equals the All time figure.
+
+        An incomplete sum is not a sum. A year whose fetch failed used to be
+        skipped silently, which understated All time by that whole year (2024
+        alone is 25% of it, the current year 35%) while the attribute still
+        claimed ``sum_of_years``. Returning None hands the decision to
+        ``_live_kwh``, which falls back to the API's own ``range=all`` figure
+        -- about 0.1% low, because that window trails the latest import -- and
+        the attributes then name the missing frames.
         """
-        summaries = (
-            self.coordinator.data.get("timeframe_summaries", {}).get(self._scope, {})
+        summaries = self.coordinator.data.get("timeframe_summaries", {}).get(
+            self._scope, {}
         )
         total = 0.0
-        counted = False
-        for key, summary in summaries.items():
-            if key != "year" and not str(key).startswith("year_"):
-                continue
-            if not isinstance(summary, dict):
-                continue
-            value = _as_float(summary.get("total_generation_kwh"))
+        for key in self._expected_year_frames():
+            value = _summary_kwh(summaries.get(key))
             if value is None:
-                value = _as_float(summary.get("total_kwh"))
-            if value is None:
-                continue
+                return None
             total += value
-            counted = True
-        if not counted:
-            return None
         return round(total, 3)
 
     def _live_kwh(self) -> float | None:
@@ -287,8 +340,11 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
             summed = self._sum_yearly_kwh()
             if summed is not None:
                 return summed
-            # No per-year data fetched yet: fall through to the API's range=all
-            # value so the row is not blank on the very first poll.
+            # The per-year frames are absent or incomplete -- not fetched yet,
+            # or a fetch failed and is sitting in retry backoff. Fall through
+            # to the API's own range=all value: it trails the latest import by
+            # about 0.1%, where a partial sum would be short by a whole year
+            # (25-40%), and the row is never blank on the first poll either.
         summary = (
             self.coordinator.data.get("timeframe_summaries", {})
             .get(self._scope, {})
@@ -343,8 +399,16 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
             attrs["display_unit"] = display_unit
             attrs["display_value"] = display_value
             if self._timeframe == "alltime":
-                # All time is calculated as the sum of the per-year figures.
-                attrs["generation_source"] = "sum_of_years"
+                # Normally the sum of the per-year figures. When a year frame
+                # is missing the value above is the API's range=all figure
+                # instead (see _sum_yearly_kwh), so say which of the two it is
+                # rather than claiming an incomplete sum.
+                missing = self._missing_year_frames()
+                if missing:
+                    attrs["generation_source"] = "api_alltime_missing_years"
+                    attrs["missing_year_frames"] = missing
+                else:
+                    attrs["generation_source"] = "sum_of_years"
                 attrs["sum_of_years_kwh"] = self._yearly_components()
         elif self._restored_attrs:
             # Use restored attributes if available
@@ -354,22 +418,20 @@ class FarmGenerationByTimeframeSensor(KirkHillScopedEntity, SensorEntity, Restor
         return attrs
 
     def _yearly_components(self) -> dict[str, float]:
-        """Return the per-year kWh figures that make up the All time sum."""
-        summaries = (
-            self.coordinator.data.get("timeframe_summaries", {}).get(self._scope, {})
+        """Return the per-year kWh figures that make up the All time sum.
+
+        Missing frames are simply absent here; ``missing_year_frames`` in the
+        attributes is what says so.
+        """
+        summaries = self.coordinator.data.get("timeframe_summaries", {}).get(
+            self._scope, {}
         )
         components: dict[str, float] = {}
-        for key, summary in summaries.items():
-            if key != "year" and not str(key).startswith("year_"):
-                continue
-            if not isinstance(summary, dict):
-                continue
-            value = _as_float(summary.get("total_generation_kwh"))
-            if value is None:
-                value = _as_float(summary.get("total_kwh"))
+        for key in self._expected_year_frames():
+            value = _summary_kwh(summaries.get(key))
             if value is None:
                 continue
-            label = key[5:] if str(key).startswith("year_") else "current"
+            label = key[5:] if key.startswith("year_") else "current"
             components[label] = value
         return components
 
@@ -382,7 +444,9 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
     _attr_icon = "mdi:cash"
 
     def __init__(self, coordinator, entry, scope: str, timeframe: str):
-        super().__init__(coordinator, entry, scope, f"farm_generation_value_{timeframe}")
+        super().__init__(
+            coordinator, entry, scope, f"farm_generation_value_{timeframe}"
+        )
         self._timeframe = timeframe
         scope_label = scope.capitalize()
         label = _timeframe_label(timeframe)
@@ -526,7 +590,9 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
                 start_date.isoformat() if start_date is not None else None
             )
             attrs["alltime_factor_source"] = (
-                "api_timeframe_start" if start_date is not None else "legacy_fixed_20y_fallback"
+                "api_timeframe_start"
+                if start_date is not None
+                else "legacy_fixed_20y_fallback"
             )
             return attrs
         if self._scope == SCOPE_OWNER:
@@ -553,7 +619,9 @@ class FarmWindSpeedSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return _as_float(self.coordinator.data[SCOPE_OWNER]["summary"].get("wind_speed_mps"))
+        return _as_float(
+            self.coordinator.data[SCOPE_OWNER]["summary"].get("wind_speed_mps")
+        )
 
 
 class OpenMeteoForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
@@ -571,8 +639,8 @@ class OpenMeteoForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        value = (
-            self.coordinator.data.get("open_meteo_forecast", {}).get(self._forecast_key)
+        value = self.coordinator.data.get("open_meteo_forecast", {}).get(
+            self._forecast_key
         )
         return _as_float(value)
 
@@ -598,7 +666,12 @@ class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {}).get("active_turbines")
+        return (
+            self.coordinator.data.get(SCOPE_OWNER, {})
+            .get("summary", {})
+            .get("active_turbines")
+        )
+
 
 class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
     _attr_name = "Inactive turbines"
@@ -610,7 +683,11 @@ class FarmInactiveTurbinesSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {}).get("inactive_turbines")
+        return (
+            self.coordinator.data.get(SCOPE_OWNER, {})
+            .get("summary", {})
+            .get("inactive_turbines")
+        )
 
 
 class DataGeneratedAtSensor(KirkHillEntity, SensorEntity):
@@ -646,7 +723,11 @@ class UnknownTurbinesSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {}).get("unknown_turbines")
+        return (
+            self.coordinator.data.get(SCOPE_OWNER, {})
+            .get("summary", {})
+            .get("unknown_turbines")
+        )
 
 
 class LatestImportStatusSensor(KirkHillEntity, SensorEntity):
@@ -669,7 +750,9 @@ class LatestImportStatusSensor(KirkHillEntity, SensorEntity):
         summaries = self.coordinator.data.get("timeframe_summaries", {})
         today = summaries.get(SCOPE_OWNER, {}).get("today", {})
         return {
-            "latest_generation_interval_end": today.get("latest_generation_interval_end"),
+            "latest_generation_interval_end": today.get(
+                "latest_generation_interval_end"
+            ),
         }
 
 
@@ -781,12 +864,17 @@ class TurbineGenerationTodaySensor(KirkHillTurbineEntity, SensorEntity, RestoreE
     def extra_state_attributes(self) -> dict:
         data = self._turbine_generation_data()
         attrs = {"share_percent": data.get("generation_today_share_percent")}
-        if self._restored_value is not None and data.get("generation_today_kwh") is None:
+        if (
+            self._restored_value is not None
+            and data.get("generation_today_kwh") is None
+        ):
             attrs["generation_source"] = "restored"
         return attrs
 
 
-class TurbineGenerationAlltimeSensor(KirkHillTurbineEntity, SensorEntity, RestoreEntity):
+class TurbineGenerationAlltimeSensor(
+    KirkHillTurbineEntity, SensorEntity, RestoreEntity
+):
     _attr_name = "Generation all-time"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -818,7 +906,10 @@ class TurbineGenerationAlltimeSensor(KirkHillTurbineEntity, SensorEntity, Restor
     def extra_state_attributes(self) -> dict:
         data = self._turbine_generation_data()
         attrs = {"share_percent": data.get("generation_alltime_share_percent")}
-        if self._restored_value is not None and data.get("generation_alltime_kwh") is None:
+        if (
+            self._restored_value is not None
+            and data.get("generation_alltime_kwh") is None
+        ):
             attrs["generation_source"] = "restored"
         return attrs
 
