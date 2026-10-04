@@ -49,9 +49,7 @@ def normalize_version(raw: str) -> str:
     if value.startswith("v"):
         value = value[1:]
     if not re.fullmatch(r"\d+\.\d+\.\d+", value):
-        raise ValueError(
-            f"Invalid version '{raw.strip()}'. Expected semantic version like 4.3.0."
-        )
+        raise ValueError(f"Invalid version '{raw.strip()}'. Expected semantic version like 4.3.0.")
     return value
 
 
@@ -60,9 +58,7 @@ def read_version() -> str:
 
 
 def read_manifest_version() -> str:
-    return normalize_version(
-        json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))["version"]
-    )
+    return normalize_version(json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))["version"])
 
 
 def read_pyproject_version() -> str:
@@ -83,9 +79,7 @@ def read_pyproject_version() -> str:
 
 def read_scada_version() -> str:
     text = SCADA_CARD_FILE.read_text(encoding="utf-8")
-    match = re.search(
-        r'KIRKHILL_WIND_SCADA_VERSION\s*=\s*"([^"]+)"', text, re.MULTILINE
-    )
+    match = re.search(r'KIRKHILL_WIND_SCADA_VERSION\s*=\s*"([^"]+)"', text, re.MULTILINE)
     if not match:
         raise ValueError("Could not find KIRKHILL_WIND_SCADA_VERSION in the SCADA card JS.")
     if match.group(1) == "@VERSION@":
@@ -96,9 +90,7 @@ def read_scada_version() -> str:
 def write_manifest_version(version: str) -> None:
     manifest = json.loads(MANIFEST_FILE.read_text(encoding="utf-8"))
     manifest["version"] = version
-    MANIFEST_FILE.write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=True) + "\n", encoding="utf-8"
-    )
+    MANIFEST_FILE.write_text(json.dumps(manifest, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
 
 
 def write_pyproject_version(version: str) -> None:
@@ -131,9 +123,7 @@ def write_scada_version(version: str) -> None:
         count=1,
     )
     if count != 1:
-        raise ValueError(
-            "Could not update KIRKHILL_WIND_SCADA_VERSION in the SCADA card JS."
-        )
+        raise ValueError("Could not update KIRKHILL_WIND_SCADA_VERSION in the SCADA card JS.")
     SCADA_CARD_FILE.write_text(replaced, encoding="utf-8")
 
 
@@ -188,13 +178,10 @@ def check_versions() -> bool:
         label = scada or "@VERSION@ placeholder"
         mismatches.append(f"scada-card.js={label} != VERSION={source}")
     if hacs_min != MIN_HA_VERSION:
-        mismatches.append(
-            f"hacs.json homeassistant={hacs_min or '(unset)'} != MIN_HA_VERSION={MIN_HA_VERSION}"
-        )
+        mismatches.append(f"hacs.json homeassistant={hacs_min or '(unset)'} != MIN_HA_VERSION={MIN_HA_VERSION}")
     if requirements_min != MIN_HA_VERSION:
         mismatches.append(
-            f"requirements.txt homeassistant>={requirements_min or '(unset)'} "
-            f"!= MIN_HA_VERSION={MIN_HA_VERSION}"
+            f"requirements.txt homeassistant>={requirements_min or '(unset)'} != MIN_HA_VERSION={MIN_HA_VERSION}"
         )
 
     if mismatches:
@@ -227,17 +214,33 @@ def run_release(prerelease: bool, stable: bool) -> None:
     if not check_versions():
         raise SystemExit("Run `python scripts/version_sync.py sync` before releasing.")
 
-    existing_tag = subprocess.run(
+    local_tag = subprocess.run(
         ["git", "tag", "--list", tag],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
     ).stdout.strip()
-    if existing_tag:
-        raise SystemExit(f"Tag {tag} already exists.")
+    remote_tag = subprocess.run(
+        ["git", "ls-remote", "--tags", "origin", f"refs/tags/{tag}"],
+        cwd=ROOT,
+        # No network is "not pushed yet", not a hard failure: the push below
+        # is what raises if origin really cannot be reached.
+        check=False,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if remote_tag:
+        raise SystemExit(f"Tag {tag} already exists on origin.")
 
-    subprocess.run(["git", "tag", tag], cwd=ROOT, check=True)
+    # gh refuses to publish a release from a tag that exists only locally
+    # ("... has not been pushed ... please push it before continuing"), so the
+    # tag goes up first -- which is also the order release-management.md
+    # documents. A local tag left behind by an earlier attempt that died before
+    # the push is resumed here rather than reported as a conflict.
+    if not local_tag:
+        subprocess.run(["git", "tag", tag], cwd=ROOT, check=True)
+    subprocess.run(["git", "push", "origin", tag], cwd=ROOT, check=True)
 
     cmd = ["gh", "release", "create", tag, "--title", tag, "--generate-notes"]
     # Per project policy, releases are pre-releases by default; only --stable
@@ -254,9 +257,7 @@ def run_release(prerelease: bool, stable: bool) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Keep release versions synchronized from VERSION."
-    )
+    parser = argparse.ArgumentParser(description="Keep release versions synchronized from VERSION.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("check", help="Validate all tracked versions match VERSION.")
     subparsers.add_parser("sync", help="Sync manifest.json and pyproject.toml from VERSION.")
