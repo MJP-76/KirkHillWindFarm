@@ -1,11 +1,16 @@
 """Tests for __init__.py — config entry migration."""
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.kirkhill_wind import _CONFIG_ENTRY_VERSION, async_migrate_entry
+from custom_components.kirkhill_wind import (
+    _CONFIG_ENTRY_VERSION,
+    _async_update_listener,
+    async_migrate_entry,
+)
 from custom_components.kirkhill_wind.const import (
     CONF_API_KEY,
     CONF_BASE_URL,
@@ -89,12 +94,15 @@ class TestConfigMigration:
     async def test_migration_from_v3_removes_dead_keys(self):
         """v3 -> current should remove owner_share_percent and owner_value_rate."""
         hass = MagicMock()
-        entry = _make_entry(3, {
-            CONF_API_KEY: "key",
-            CONF_BASE_URL: DEFAULT_BASE_URL,
-            "owner_share_percent": 25,
-            "owner_value_rate": 0.15,
-        })
+        entry = _make_entry(
+            3,
+            {
+                CONF_API_KEY: "key",
+                CONF_BASE_URL: DEFAULT_BASE_URL,
+                "owner_share_percent": 25,
+                "owner_value_rate": 0.15,
+            },
+        )
 
         result = await async_migrate_entry(hass, entry)
         assert result is True
@@ -107,17 +115,21 @@ class TestConfigMigration:
     async def test_migration_from_v6_removes_projected_earnings(self):
         """v6 -> v7 should remove projected earnings from data and options."""
         hass = MagicMock()
-        entry = _make_entry(6, {
-            CONF_API_KEY: "key",
-            CONF_BASE_URL: DEFAULT_BASE_URL,
-            CONF_CFD_PRICE_GBP_PER_MWH: 50.0,
-            CONF_OWNER_PRICE_PENCE_PER_KWH: 5.0,
-            "owner_projected_annual_earnings_gbp": 1000,
-            "site_projected_annual_earnings_gbp": 5000,
-        }, options={
-            "owner_projected_annual_earnings_gbp": 1200,
-            "site_projected_annual_earnings_gbp": 5500,
-        })
+        entry = _make_entry(
+            6,
+            {
+                CONF_API_KEY: "key",
+                CONF_BASE_URL: DEFAULT_BASE_URL,
+                CONF_CFD_PRICE_GBP_PER_MWH: 50.0,
+                CONF_OWNER_PRICE_PENCE_PER_KWH: 5.0,
+                "owner_projected_annual_earnings_gbp": 1000,
+                "site_projected_annual_earnings_gbp": 5000,
+            },
+            options={
+                "owner_projected_annual_earnings_gbp": 1200,
+                "site_projected_annual_earnings_gbp": 5500,
+            },
+        )
 
         result = await async_migrate_entry(hass, entry)
         assert result is True
@@ -154,16 +166,19 @@ class TestDataOptionsSeparation:
 
     @pytest.mark.asyncio
     async def test_settings_move_from_data_to_options(self):
-        entry = _make_entry(7, {
-            CONF_API_KEY: "key",
-            CONF_BASE_URL: DEFAULT_BASE_URL,
-            CONF_SITE_NAME: "Kirk Hill",
-            CONF_SCAN_INTERVAL: 300,
-            CONF_CREATE_DASHBOARD: False,
-            CONF_ENABLE_PAYMENT_TRACKING: True,
-            CONF_CFD_PRICE_GBP_PER_MWH: 85.0,
-            CONF_OWNER_PRICE_PENCE_PER_KWH: 4.2,
-        })
+        entry = _make_entry(
+            7,
+            {
+                CONF_API_KEY: "key",
+                CONF_BASE_URL: DEFAULT_BASE_URL,
+                CONF_SITE_NAME: "Kirk Hill",
+                CONF_SCAN_INTERVAL: 300,
+                CONF_CREATE_DASHBOARD: False,
+                CONF_ENABLE_PAYMENT_TRACKING: True,
+                CONF_CFD_PRICE_GBP_PER_MWH: 85.0,
+                CONF_OWNER_PRICE_PENCE_PER_KWH: 4.2,
+            },
+        )
 
         data, options = await self._migrated(entry)
 
@@ -181,11 +196,14 @@ class TestDataOptionsSeparation:
 
     @pytest.mark.asyncio
     async def test_connection_details_stay_in_data(self):
-        entry = _make_entry(7, {
-            CONF_API_KEY: "key",
-            CONF_BASE_URL: DEFAULT_BASE_URL,
-            CONF_SITE_NAME: "Kirk Hill",
-        })
+        entry = _make_entry(
+            7,
+            {
+                CONF_API_KEY: "key",
+                CONF_BASE_URL: DEFAULT_BASE_URL,
+                CONF_SITE_NAME: "Kirk Hill",
+            },
+        )
 
         data, options = await self._migrated(entry)
 
@@ -226,11 +244,14 @@ class TestDataOptionsSeparation:
     @pytest.mark.asyncio
     async def test_unknown_keys_are_left_alone(self):
         """Only declared settings move; anything else in data is preserved."""
-        entry = _make_entry(7, {
-            CONF_API_KEY: "key",
-            CONF_BASE_URL: DEFAULT_BASE_URL,
-            "some_future_key": "keep me",
-        })
+        entry = _make_entry(
+            7,
+            {
+                CONF_API_KEY: "key",
+                CONF_BASE_URL: DEFAULT_BASE_URL,
+                "some_future_key": "keep me",
+            },
+        )
 
         data, options = await self._migrated(entry)
 
@@ -240,10 +261,13 @@ class TestDataOptionsSeparation:
     @pytest.mark.asyncio
     async def test_entry_without_settings_in_data(self):
         """An entry that already keeps only connection data migrates cleanly."""
-        entry = _make_entry(7, {
-            CONF_API_KEY: "key",
-            CONF_BASE_URL: DEFAULT_BASE_URL,
-        })
+        entry = _make_entry(
+            7,
+            {
+                CONF_API_KEY: "key",
+                CONF_BASE_URL: DEFAULT_BASE_URL,
+            },
+        )
 
         data, options = await self._migrated(entry)
 
@@ -296,9 +320,7 @@ class TestPriceBackfillMigration:
         set up first would clear it and the other price would never be
         recovered -- a silent, partial data loss.
         """
-        _, options, _ = await self._migrated(
-            _make_entry(4, {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL})
-        )
+        _, options, _ = await self._migrated(_make_entry(4, {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL}))
 
         pending = options[CONF_PRICE_RESTORE_PENDING]
         assert isinstance(pending, list)
@@ -415,6 +437,61 @@ class TestManifestVersion:
         version_file = (root / "VERSION").read_text().strip()
 
         assert manifest["version"] == version_file, (
-            f"manifest.json version ({manifest['version']}) != "
-            f"VERSION file ({version_file})"
+            f"manifest.json version ({manifest['version']}) != VERSION file ({version_file})"
         )
+
+
+class TestUpdateListenerReloadDecision:
+    """entry.data changes reload; entry.options changes are applied in place.
+
+    The API client captures api_key/base_url when the coordinator is built, so
+    a reauth -- which writes entry.data -- only reaches the client through a
+    reload. Home Assistant does not reload for us after a reauth (only
+    async_update_reload_and_abort does, and that helper reports usage when the
+    entry has update listeners), so the listener is what has to decide.
+    """
+
+    def _make_entry(self, *, connection_changed: bool):
+        entry = MagicMock()
+        entry.entry_id = "entry-1"
+        entry.data = {CONF_API_KEY: "new-key", CONF_BASE_URL: DEFAULT_BASE_URL}
+        entry.options = {}
+        coordinator = MagicMock()
+        coordinator.connection_data = (
+            {CONF_API_KEY: "old-key", CONF_BASE_URL: DEFAULT_BASE_URL} if connection_changed else dict(entry.data)
+        )
+        coordinator.async_request_refresh = AsyncMock()
+        entry.runtime_data = coordinator
+        return entry, coordinator
+
+    @pytest.mark.asyncio
+    async def test_connection_change_schedules_reload_without_refreshing(self, hass):
+        """Refreshing here would poll with the stale key and restart reauth."""
+        entry, coordinator = self._make_entry(connection_changed=True)
+
+        await _async_update_listener(hass, entry)
+
+        hass.config_entries.async_schedule_reload.assert_called_once_with(entry.entry_id)
+        coordinator.async_request_refresh.assert_not_called()
+        coordinator.apply_options.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_options_change_applies_and_refreshes_without_reload(self, hass):
+        """Prices and the scan interval must keep applying without a reload."""
+        entry, coordinator = self._make_entry(connection_changed=False)
+
+        await _async_update_listener(hass, entry)
+
+        hass.config_entries.async_schedule_reload.assert_not_called()
+        coordinator.apply_options.assert_called_once()
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_unloaded_entry_is_ignored(self, hass):
+        """runtime_data is None once async_unload_entry has run."""
+        entry, _ = self._make_entry(connection_changed=False)
+        entry.runtime_data = None
+
+        await _async_update_listener(hass, entry)  # must not raise
+
+        hass.config_entries.async_schedule_reload.assert_not_called()

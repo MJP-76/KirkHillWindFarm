@@ -1,4 +1,5 @@
 """Coordinator for the Kirk Hill Wind Farm integration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -54,6 +55,11 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             config_entry=entry,
         )
         self.entry = entry
+        # Connection details this coordinator was built with. The API client
+        # captures api_key/base_url at construction, so _async_update_listener
+        # compares this snapshot to entry.data to decide whether a reload is
+        # required for the change to take effect.
+        self.connection_data: dict[str, Any] = dict(entry.data)
         self.client = KirkHillApiClient(
             api_key=entry.data[CONF_API_KEY],
             base_url=entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
@@ -79,7 +85,9 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self._current_stale: dict[str, bool] = {scope: False for scope in SCOPES}
         # Last known-good summaries/windows per (scope, timeframe), kept so a
         # failed refresh keeps showing old data (marked stale) instead of blanking.
-        self._last_summaries: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
+        self._last_summaries: dict[str, dict[str, dict]] = {
+            scope: {} for scope in SCOPES
+        }
         self._last_windows: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
         # Backoff retry state: consecutive failure count and the UTC time at
         # which a (scope, timeframe) should be retried again after a failure.
@@ -132,7 +140,9 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 # Keep the previous turbine map/generation data on a transient
                 # failure instead of losing the whole tick; coordinates from the
                 # last good fetch stay available for the map.
-                _LOGGER.warning("Failed to fetch turbine data (keeping last known): %s", exc)
+                _LOGGER.warning(
+                    "Failed to fetch turbine data (keeping last known): %s", exc
+                )
             else:
                 self._site_turbines = today_turbines
                 self._turbine_generation = self._build_turbine_generation(
@@ -151,7 +161,9 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             )
 
         # Fast tier (+ slow tier timeframes when due): summary fetches.
-        timeframe_summaries, timeframe_windows = await self._fetch_timeframe_summaries(session, now)
+        timeframe_summaries, timeframe_windows = await self._fetch_timeframe_summaries(
+            session, now
+        )
 
         if slow_due:
             self._open_meteo_forecast = await forecast_task
@@ -281,7 +293,11 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             if now >= retry_at:
                 timeframes.add(timeframe)
                 # Clear the retry entry so a successful fetch below resets it.
-        _LOGGER.debug("Fetching summaries for timeframes=%s (slow_tier=%s)", sorted(timeframes), run_slow)
+        _LOGGER.debug(
+            "Fetching summaries for timeframes=%s (slow_tier=%s)",
+            sorted(timeframes),
+            run_slow,
+        )
 
         for scope in SCOPES:
             for timeframe in sorted(timeframes):
@@ -291,12 +307,17 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     year_str = timeframe.split("_")[1]
                     range_value = year_str
                     # Completed years are immutable — skip if already cached.
-                    if int(year_str) < current_year and (scope, year_str) in self._immutable_year_summaries:
+                    if (
+                        int(year_str) < current_year
+                        and (scope, year_str) in self._immutable_year_summaries
+                    ):
                         continue
                 else:
                     range_value = TIMEFRAME_TO_RANGE[timeframe]
                 task = asyncio.create_task(
-                    self.client.get_summary(session, scope=scope, range_value=range_value)
+                    self.client.get_summary(
+                        session, scope=scope, range_value=range_value
+                    )
                 )
                 tasks.append((scope, timeframe, task))
 
@@ -328,7 +349,9 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     retry_at.isoformat(),
                 )
                 # Keep the last good values instead of blanking the dashboard.
-                summaries[scope][timeframe] = self._last_summaries[scope].get(timeframe, {})
+                summaries[scope][timeframe] = self._last_summaries[scope].get(
+                    timeframe, {}
+                )
                 windows[scope][timeframe] = self._last_windows[scope].get(timeframe, {})
                 continue
 
@@ -351,9 +374,16 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             self._summary_retry_at.pop(key, None)
             self._summary_stale[scope][timeframe] = False
             # Cache completed year data — it never changes.
-            if timeframe.startswith("year_") and int(timeframe.split("_")[1]) < current_year:
-                self._immutable_year_summaries[(scope, timeframe.split("_")[1])] = summary_out
-                self._immutable_year_windows[(scope, timeframe.split("_")[1])] = window_out
+            if (
+                timeframe.startswith("year_")
+                and int(timeframe.split("_")[1]) < current_year
+            ):
+                self._immutable_year_summaries[(scope, timeframe.split("_")[1])] = (
+                    summary_out
+                )
+                self._immutable_year_windows[(scope, timeframe.split("_")[1])] = (
+                    window_out
+                )
 
         return summaries, windows
 
