@@ -1,4 +1,5 @@
 """Services for the Kirk Hill Wind Farm integration."""
+
 from __future__ import annotations
 
 import voluptuous as vol
@@ -12,7 +13,12 @@ SERVICE_RESET_DASHBOARD = "reset_dashboard"
 ATTR_ENTRY_ID = "entry_id"
 SERVICE_SCHEMA_RELOAD = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
 SERVICE_SCHEMA_RESET = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
-SERVICES_REGISTERED = "services_registered"
+# hass.data is a global namespace shared with every other integration, so the
+# flag must be domain-scoped (same convention as _FRONTEND_REGISTERED in
+# __init__.py). The bare "services_registered" key collided with
+# flight_price_tracker, which made whichever integration loaded second skip
+# registering its services entirely -- with no log line.
+SERVICES_REGISTERED = f"{DOMAIN}_services_registered"
 
 
 def _get_target_entry(hass: HomeAssistant, entry_id: str | None = None):

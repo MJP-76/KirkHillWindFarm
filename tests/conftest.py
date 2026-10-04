@@ -1,4 +1,5 @@
 """Shared fixtures for Kirk Hill Wind Farm tests."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -32,6 +33,10 @@ def hass():
     mock_hass.config.components = set()
     mock_hass.config_entries = MagicMock()
     mock_hass.bus = MagicMock()
+    # HomeAssistant.services is assigned in __init__, not on the class, so
+    # MagicMock(spec=HomeAssistant) cannot provide it -- accessing it raises
+    # AttributeError. tests/test_services.py needs a service registry.
+    mock_hass.services = MagicMock()
 
     # DataUpdateCoordinator.__init__ calls frame.report_usage() whenever
     # config_entry is not passed explicitly, because it then has to fall back
@@ -154,10 +159,12 @@ def mock_api_client(mock_current_payload, mock_summary_payload):
     client.get_current = AsyncMock(return_value=mock_current_payload)
     client.get_turbines = AsyncMock(return_value=mock_current_payload["turbines"])
     client.get_summary = AsyncMock(return_value=mock_summary_payload)
-    client.get_wind_speed = AsyncMock(return_value={
-        "series": [
-            {"wind_speed_mps": 8.5, "timestamp": "2025-01-15T12:00:00Z"},
-        ],
-    })
+    client.get_wind_speed = AsyncMock(
+        return_value={
+            "series": [
+                {"wind_speed_mps": 8.5, "timestamp": "2025-01-15T12:00:00Z"},
+            ],
+        }
+    )
     client.test = AsyncMock()
     return client
