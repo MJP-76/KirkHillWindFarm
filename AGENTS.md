@@ -65,8 +65,10 @@ retry the restore forever.
   `custom_components/kirkhill_wind/pyproject.toml` sets 88**, which is why
   `ruff check .` reports pre-existing E501s (48 lines exceed 88; none exceed
   120). CI runs `ruff check custom_components/ --config pyproject.toml` — the
-  root config — and passes. `main` has no branch protection, so no check
-  actually blocks a merge. Reconciling the two configs is tracked in `TODO.md`.
+  root config — and passes. `main` is protected: all three status checks
+  (validate / test / min-ha) are required, so a direct push is declined with
+  `GH006`. Push a branch and open a PR; checks run on the branch and gate the
+  merge. Reconciling the two configs is tracked in `TODO.md`.
 - Bump `VERSION` via `scripts/version_sync.py sync`, never by hand. It
   propagates to `manifest.json` and `pyproject.toml`.
 - Any change under `custom_components/` needs a full Home Assistant restart.

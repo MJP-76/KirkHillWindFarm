@@ -1,4 +1,5 @@
 """The Kirk Hill Wind Farm integration."""
+
 from __future__ import annotations
 
 import logging
@@ -53,14 +54,12 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 _CONFIG_ENTRY_VERSION = 9
 
 
-async def async_migrate_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry
-) -> bool:
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate a stored config entry to the current version."""
     if config_entry.version == _CONFIG_ENTRY_VERSION:
         return True
 
-    entry_data = getattr(config_entry, 'data', {}) or {}
+    entry_data = getattr(config_entry, "data", {}) or {}
     data = dict(entry_data)
     options = dict(getattr(config_entry, "options", {}) or {})
 
@@ -74,9 +73,7 @@ async def async_migrate_entry(
     # The two prices are settings, so they seed into options rather than data.
     # The defaults themselves are declared once in settings.SETTING_DEFAULTS.
     if config_entry.version < 5:
-        options.setdefault(
-            CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH
-        )
+        options.setdefault(CONF_CFD_PRICE_GBP_PER_MWH, DEFAULT_CFD_PRICE_GBP_PER_MWH)
 
     if config_entry.version < 6:
         options.setdefault(
@@ -154,8 +151,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Re-apply scan interval when options change."""
-    coordinator: KirkHillWindCoordinator = entry.runtime_data
+    """Re-apply settings when the entry changes; reload on connection changes."""
+    coordinator: KirkHillWindCoordinator | None = entry.runtime_data
+    if coordinator is None:
+        # async_unload_entry clears runtime_data, and an update landing in
+        # that window must not dereference it.
+        return
+
+    if dict(entry.data) != coordinator.connection_data:
+        # The API client captured entry.data at setup, so a new key or base URL
+        # only takes effect on a reload. Home Assistant does not reload for us
+        # after a reauth -- only async_update_reload_and_abort does, and that
+        # helper reports usage when the entry has update listeners (an error
+        # from 2026.12) -- so the listener schedules it, per HA's guidance.
+        #
+        # Reload rather than refresh: refreshing here would poll with the
+        # stale key, 401, and start a second reauth flow immediately after the
+        # one that just succeeded.
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+        return
+
     coordinator.apply_options()
     await coordinator.async_request_refresh()
     await _async_setup_payment_tracking(hass, entry)
@@ -202,7 +217,9 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     registered_urls.update(new_urls)
 
 
-async def _async_setup_payment_tracking(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_setup_payment_tracking(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
     """Initialize Ethex config flow when payment tracking is enabled."""
     if not payment_tracking_enabled(entry):
         return
