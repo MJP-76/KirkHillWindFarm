@@ -314,16 +314,20 @@ components:
       additionalProperties: false
       required:
         - total_power_kw
+        - total_power_watts
         - wind_speed_mps
         - capacity_factor_percent
         - active_turbines
         - inactive_turbines
         - unknown_turbines
         - total_turbines
-        - site_capacity_watts
+        - capacity_watts
+        - capacity_kw
         - latest_power_at
         - latest_wind_speed_at
         - latest_status_at
+        - total_generation_kwh_today
+        - total_generation_wh_today
       properties:
         total_power_kw:
           type:
@@ -333,6 +337,14 @@ components:
           description: Latest total power for the requested scope.
           examples:
             - 8420.125
+        total_power_watts:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: The same power reading in watts.
+          examples:
+            - 1543.848
         wind_speed_mps:
           type:
             - number
@@ -365,10 +377,33 @@ components:
           type: integer
           examples:
             - 8
-        site_capacity_watts:
-          type: integer
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated capacity of the requested scope (the owner slice or the whole site), in watts.
           examples:
-            - 18800000
+            - 2559.465
+        capacity_kw:
+          type: number
+          format: double
+          description: The same rated capacity in kilowatts.
+          examples:
+            - 2.559465
+        total_generation_kwh_today:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Generation for the current local day in kWh, carried on the current endpoint for convenience.
+          examples:
+            - 22.88
+        total_generation_wh_today:
+          type:
+            - number
+            - 'null'
+          description: The same daily figure in watt-hours.
+          examples:
+            - 22880
         latest_power_at:
           type:
             - string
@@ -393,6 +428,8 @@ components:
         - power_kw
         - wind_speed_mps
         - capacity_factor_percent
+        - capacity_watts
+        - capacity_kw
         - latest_power_at
         - latest_wind_speed_at
         - status_started_at
@@ -429,6 +466,18 @@ components:
             - 'null'
           format: double
           description: Latest turbine power divided by the turbine's rated capacity.
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated capacity of this turbine for the requested scope, in watts.
+          examples:
+            - 2350000
+        capacity_kw:
+          type: number
+          format: double
+          description: The same rated capacity in kilowatts.
+          examples:
+            - 2350
         latest_power_at:
           type:
             - string
@@ -487,7 +536,8 @@ components:
         - total_generation_kwh
         - capacity_factor_percent
         - active_turbines
-        - site_capacity_watts
+        - capacity_watts
+        - capacity_kw
         - latest_generation_interval_end
         - latest_import_status
       properties:
@@ -509,10 +559,44 @@ components:
           type: integer
           examples:
             - 8
-        site_capacity_watts:
-          type: integer
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated capacity of the requested scope (the owner slice or the whole site), in watts.
           examples:
-            - 18800000
+            - 2559.465
+        capacity_kw:
+          type: number
+          format: double
+          description: The same rated capacity in kilowatts.
+          examples:
+            - 2.559465
+        co2_avoided_kg:
+          type: number
+          format: double
+          description: Emissions avoided over the window, in kg CO2. Reported by the API; not consumed by the integration.
+        co2_avoided_assumed_export_factor:
+          type: number
+          format: double
+          description: Assumed grid emissions factor in kg CO2 per kWh used for the calculation.
+        co2_avoided_coverage_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Share of intervals in the window that had a matching carbon-intensity reading.
+        co2_avoided_matched_intervals:
+          type: integer
+        co2_avoided_expected_intervals:
+          type: integer
+        co2_avoided_complete:
+          type: boolean
+        latest_carbon_intensity_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Timestamp of the newest carbon-intensity reading used in the calculation.
         latest_generation_interval_end:
           type:
             - string
@@ -524,8 +608,10 @@ components:
           type:
             - string
             - 'null'
+          description: Import pipeline state for this window; running means the window is still being backfilled.
           examples:
-            - completed
+            - success
+            - running
     SummaryResponse:
       type: object
       additionalProperties: false
