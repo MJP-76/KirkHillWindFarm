@@ -42,6 +42,22 @@ _TURBINE_INTERVAL = timedelta(minutes=10)
 _SLOW_INTERVAL = timedelta(hours=1)
 
 
+async def _reap_forecast_task(task: asyncio.Task) -> None:
+    """Cancel a forecast task and wait for it, swallowing whatever it raises.
+
+    The forecast is side data, so two things must never happen to it: it must
+    not outlive the update that created it (asyncio then reports "Task was
+    destroyed but it is pending"), and its own failure must never replace the
+    error the caller is about to propagate -- a forecast exception masking
+    ConfigEntryAuthFailed would silently disable the reauth flow.
+    """
+    task.cancel()
+    try:
+        await task
+    except BaseException:
+        pass
+
+
 class KirkHillWindCoordinator(DataUpdateCoordinator):
     """Fetches current data from owner/site scopes on each tick."""
 
@@ -155,18 +171,51 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         # summaries (below) when both are due, using cached turbine coordinates
         # so it does not depend on a fresh turbine fetch.
         slow_due = now >= self._next_slow_update
+        forecast_task: asyncio.Task | None = None
         if slow_due:
             forecast_task = asyncio.create_task(
                 self._fetch_open_meteo_forecast(session, self._cached_coordinates)
             )
 
         # Fast tier (+ slow tier timeframes when due): summary fetches.
-        timeframe_summaries, timeframe_windows = await self._fetch_timeframe_summaries(
-            session, now
-        )
+        try:
+            (
+                timeframe_summaries,
+                timeframe_windows,
+            ) = await self._fetch_timeframe_summaries(session, now)
+        except BaseException:
+            # _fetch_timeframe_summaries re-raises ConfigEntryAuthFailed when a
+            # summary answers 401, and any other failure here strands the same
+            # thing: forecast_task is never awaited, so it keeps running its
+            # retry sleeps (2**attempt) in the background while asyncio reports
+            # "Task was destroyed but it is pending". A forecast from a failed
+            # update is worthless, so reap it before propagating rather than
+            # waiting it out. BaseException, not Exception: a cancelled update
+            # must not orphan the task either.
+            if forecast_task is not None:
+                await _reap_forecast_task(forecast_task)
+            raise
 
         if slow_due:
-            self._open_meteo_forecast = await forecast_task
+            try:
+                self._open_meteo_forecast = await forecast_task
+            except asyncio.CancelledError:
+                # The update itself is being torn down: reap the child so it
+                # cannot outlive us, then carry the cancellation outward.
+                await _reap_forecast_task(forecast_task)
+                raise
+            except Exception:
+                # _fetch_open_meteo_forecast advertises "never fail core
+                # update", but a payload it cannot parse escapes it as a
+                # ValueError or AttributeError, and one bad third-party
+                # forecast must not fail the update. Drop to no-forecast --
+                # the sensors read unknown -- exactly what the handled path
+                # inside _fetch_open_meteo_forecast already does.
+                _LOGGER.warning(
+                    "Open-Meteo forecast failed (forecast-only, non-fatal)",
+                    exc_info=True,
+                )
+                self._open_meteo_forecast = {}
             self._next_slow_update = now + _SLOW_INTERVAL
 
         return {
