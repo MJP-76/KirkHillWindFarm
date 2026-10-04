@@ -123,7 +123,7 @@ restatement will silently serve stale earnings.
 - [x] Fetch the Open-Meteo forecast in parallel with timeframe summaries (was sequential; now runs as a parallel task when the slow tier is due, using cached turbine coordinates)
 - [x] Investigate bare `except Exception` guards — both safe: dashboard load (YAML file, no API) and config flow (auth/connection errors caught first). No action needed.
 - [x] `url_already_exists` string matching — replaced with `translation_key` attribute check (more robust than string matching against translated message)
-- [x] ~~Split the ~700-line dashboard generation/merge logic out of `__init__.py`~~ — already done: `__init__.py` is 207 lines (setup/unload/listeners), `dashboard.py` is 519 lines (generation/merge/entity IDs).
+- [x] ~~Split the ~700-line dashboard generation/merge logic out of `__init__.py`~~ — already done: `__init__.py` is 244 lines (setup/unload/listeners), `dashboard.py` is 519 lines (generation/merge/entity IDs).
 - [ ] Add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app
 
 ## Bugs — v4.13.4 ChatGPT review
@@ -230,7 +230,7 @@ prescribed three separate PRs so config cleanup does not hide inside a bug fix.
 - [ ] **PR A** — Decide the authoritative lint config. Root `pyproject.toml` sets
       `line-length = 120`; nested `custom_components/kirkhill_wind/pyproject.toml` sets
       `88`. Recommend deleting the nested one so there is a single project config.
-- [ ] **PR B** — Fix the resulting lint debt (48 lines exceed the nested 88-char
+- [ ] **PR B** — Fix the resulting lint debt (20 lines exceed the nested 88-char
       setting, not from new code)
 - [ ] **PR C** — Enforce `ruff check .` in CI
 - [ ] Enable `pytest-cov` in CI as **reporting only** (`--cov-report=term-missing`), no
@@ -269,7 +269,7 @@ Remaining work:
 - [ ] Extract payment-tracking setup (`_async_setup_payment_tracking`) into its own module
 - [ ] Re-export from `__init__.py` where tests import `_CONFIG_ENTRY_VERSION` / `async_migrate_entry`
 - [ ] Tests must pass unchanged at each step — refactor only, no behaviour changes
-- [ ] **Deferred:** split the coordinator (411 lines / 19.2 KB) into summary / turbine /
+- [ ] **Deferred:** split the coordinator (490 lines / 21.9 KB) into summary / turbine /
       forecast managers. Both reviews agree this is premature until the API-call-budget
       test exists, because that test is what makes the split safe rather than another
       behavioural change. **That test now exists (`TestApiCallBudget`, v4.13.5), so the
@@ -290,6 +290,22 @@ reached the same conclusion independently.
 ## Release history
 
 Completed releases, newest first. Preserved for reference.
+
+### v4.13.7 (pre-release, 2026-10-04)
+
+- Reauth now reloads the entry — the new API key never reached the running
+  client, so a successful reauth re-prompted about a minute later
+- Domain-scoped `hass.data` services flag; the bare key collided with
+  `flight_price_tracker` and either integration could lose its services
+  silently
+- Forecast task reaped on every exit path, and a malformed forecast payload no
+  longer fails the whole update
+- All time falls back to the API `range=all` figure when a year frame is
+  missing instead of showing a partial sum 24–40% low
+- `openapi.yaml` reconciled with the live API; fixtures split by endpoint and
+  pinned to it by `test_openapi_contract.py`
+- 19 new tests (134 → 153); `main`'s required checks recorded in `AGENTS.md`
+  and `decisions.md`
 
 ### v4.13.6 (2026-10-01)
 
