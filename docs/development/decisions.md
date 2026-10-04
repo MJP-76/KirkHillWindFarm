@@ -102,7 +102,7 @@ decision changes.
 - **2026-10-01 — The coordinator is not to be split until the API-call-budget
   test exists.** That test now exists (`TestApiCallBudget`, v4.13.5), so the
   recorded blocker is cleared; the split itself is still deferred. The file has
-  grown to 411 lines / 19.2 KB and does read like a god object (scheduling, API
+  grown to 490 lines / 21.9 KB and does read like a god object (scheduling, API
   orchestration, historical caching, turbines, Open-Meteo, stale-state). Both
   external reviews reached the same conclusion: splitting it before the call
   budget is protected turns a refactor into another behavioural change, with
@@ -203,6 +203,17 @@ decision changes.
   shown in the card's generation/finance panels. The year list is derived from
   the commissioning year (2024) to the last complete year, so future years join
   the sum automatically; their sensors appear after the next restart.
+- **2026-10-04 — When a year frame is missing, All time reports the API's
+  `range=all` figure rather than a partial sum.** *Qualifies the 2026-09-29
+  sum decision directly above; the sum stays the normal path.* A year frame
+  whose fetch fails arrives as `{}` and sits in retry backoff for up to an
+  hour, and `_sum_yearly_kwh` used to skip it silently: All time read 24-40%
+  low (2024 alone is a quarter of the total) while the attribute still claimed
+  `sum_of_years`. The API's own all-time figure is wrong by ~0.1% instead,
+  because that window trails the latest import. The sensor now says which of
+  the two it is: `generation_source=api_alltime_missing_years` plus
+  `missing_year_frames`, or `sum_of_years` when every frame is present.
+  Regression test: `test_sensor.py::TestAlltimeYearSum`.
 - **2026-09-29 — The projected-annual-earnings estimates are removed (config
   version 7).** *Supersedes the 2026-09-04 decision above.* The owner/site
   projected annual earnings (default £132 / £0) were estimated averages feeding
@@ -232,7 +243,11 @@ decision changes.
 
 ## Deployment state
 
-- **2026-10-03 — Production is aligned with the repository at `4.13.6`.**
+- **2026-10-04 — The repository is at `4.13.7` (pre-release); production still
+  runs `4.13.6`.** Nothing is deployed by releasing: the changed files under
+  `custom_components/kirkhill_wind/` reach this host only when `origin/main` is
+  mirrored into `/homeassistant/custom_components/kirkhill_wind/` and Home
+  Assistant is fully restarted — which needs the owner's explicit go-ahead.
   `CHANGELOG.md` is the authoritative version history. GitHub Releases/HACS are
   for other users; this host deploys from `origin/main` commits mirrored into
   `/homeassistant/custom_components/kirkhill_wind/`.

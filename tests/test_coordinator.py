@@ -1,6 +1,8 @@
 """Tests for the coordinator — scheduling, auth errors, stale data."""
+
 from __future__ import annotations
 
+import asyncio
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -28,6 +30,7 @@ from custom_components.kirkhill_wind.exceptions import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_coordinator(hass, entry, mock_api_client, now=None):
     """Build a coordinator with a mocked API client.
@@ -65,9 +68,13 @@ def _make_entry(data=None, options=None):
         CONF_API_KEY: "key",
         CONF_BASE_URL: DEFAULT_BASE_URL,
     }
-    entry.options = options if options is not None else {
-        CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
-    }
+    entry.options = (
+        options
+        if options is not None
+        else {
+            CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+        }
+    )
     return entry
 
 
@@ -82,8 +89,7 @@ def _summary_calls(mock_api_client):
     map to range values ("all", "7d", "30d") before they get here.
     """
     counter = Counter(
-        (call.kwargs["scope"], call.kwargs["range_value"])
-        for call in mock_api_client.get_summary.call_args_list
+        (call.kwargs["scope"], call.kwargs["range_value"]) for call in mock_api_client.get_summary.call_args_list
     )
     return dict(counter)
 
@@ -109,10 +115,7 @@ def _ranges_for(timeframes):
     the union of both.
     """
     current_year = _current_year()
-    return {
-        str(current_year) if tf == "year" else TIMEFRAME_TO_RANGE[tf]
-        for tf in timeframes
-    }
+    return {str(current_year) if tf == "year" else TIMEFRAME_TO_RANGE[tf] for tf in timeframes}
 
 
 def _fast_ranges():
@@ -141,6 +144,7 @@ def _past_year_ranges():
 # ---------------------------------------------------------------------------
 # Time-based scheduling
 # ---------------------------------------------------------------------------
+
 
 class TestTimeBasedScheduling:
     """Verify that medium and slow tiers use real time, not ticks."""
@@ -264,14 +268,11 @@ class TestApiCallBudget:
     def _only_once(calls, label):
         offenders = {k: v for k, v in calls.items() if v != 1}
         assert not offenders, (
-            f"{label}: expected every (scope, range) fetched exactly once, "
-            f"but these were duplicated: {offenders}"
+            f"{label}: expected every (scope, range) fetched exactly once, but these were duplicated: {offenders}"
         )
 
     @pytest.mark.asyncio
-    async def test_summaries_are_fetched_exactly_once_per_update(
-        self, hass, mock_api_client
-    ):
+    async def test_summaries_are_fetched_exactly_once_per_update(self, hass, mock_api_client):
         """Named in coordinator.py: no (scope, range) pair may be fetched twice.
 
         This is the regression test for the v4.13.4 bug. The summary fetch ran
@@ -296,11 +297,7 @@ class TestApiCallBudget:
 
         # Every tier is due on the first poll: the rolling ranges, the current
         # year, and each completed year (none cached yet).
-        expected = {
-            (scope, range_value)
-            for scope in SCOPES
-            for range_value in _rolling_ranges() | _past_year_ranges()
-        }
+        expected = {(scope, range_value) for scope in SCOPES for range_value in _rolling_ranges() | _past_year_ranges()}
         assert set(calls) == expected, (
             "first poll must fetch every timeframe exactly once per scope; "
             f"missing={expected - set(calls)} unexpected={set(calls) - expected}"
@@ -368,9 +365,7 @@ class TestApiCallBudget:
         self._only_once(_summary_calls(mock_api_client), "turbine-due poll")
 
     @pytest.mark.asyncio
-    async def test_slow_tier_fetches_each_timeframe_once_per_scope(
-        self, hass, mock_api_client
-    ):
+    async def test_slow_tier_fetches_each_timeframe_once_per_scope(self, hass, mock_api_client):
         """A slow-tier poll must not double-fetch the historical timeframes.
 
         The completed years were cached on the first poll, so a due slow tier
@@ -402,15 +397,13 @@ class TestApiCallBudget:
         assert set(calls) == {(scope, r) for scope in SCOPES for r in rolling}, (
             "a due slow tier must fetch exactly the rolling ranges -- completed "
             f"years are cached. missing={ {(s, r) for s in SCOPES for r in rolling} - set(calls) } "
-            f"unexpected={ set(calls) - {(s, r) for s in SCOPES for r in rolling} }"
+            f"unexpected={set(calls) - {(s, r) for s in SCOPES for r in rolling}}"
         )
 
         # Explicitly: completed years must not be requested again.
         for scope in SCOPES:
             for year in _past_year_ranges():
-                assert (scope, year) not in calls, (
-                    f"completed year {year} was re-requested for {scope}"
-                )
+                assert (scope, year) not in calls, f"completed year {year} was re-requested for {scope}"
 
     @pytest.mark.asyncio
     async def test_completed_years_are_fetched_once_ever(self, hass, mock_api_client):
@@ -452,8 +445,7 @@ class TestApiCallBudget:
             for scope in SCOPES:
                 for year in past_years:
                     assert (scope, year) not in later, (
-                        f"completed year {year} was re-requested for {scope} "
-                        f"{minutes} minutes in"
+                        f"completed year {year} was re-requested for {scope} {minutes} minutes in"
                     )
             self._only_once(later, f"slow poll at +{minutes}min")
 
@@ -461,6 +453,7 @@ class TestApiCallBudget:
 # ---------------------------------------------------------------------------
 # Auth error handling
 # ---------------------------------------------------------------------------
+
 
 class TestAuthErrorHandling:
     """Auth errors in any path must trigger ConfigEntryAuthFailed."""
@@ -473,9 +466,7 @@ class TestAuthErrorHandling:
         entry = _make_entry()
         now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         coord = _make_coordinator(hass, entry, mock_api_client, now=now)
-        mock_api_client.get_current = AsyncMock(
-            side_effect=KirkHillAuthError("Invalid API key")
-        )
+        mock_api_client.get_current = AsyncMock(side_effect=KirkHillAuthError("Invalid API key"))
 
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
@@ -514,9 +505,7 @@ class TestAuthErrorHandling:
         coord = _make_coordinator(hass, entry, mock_api_client, now=now)
 
         # Make summary fail with connection error
-        mock_api_client.get_summary = AsyncMock(
-            side_effect=KirkHillConnectionError("Timeout")
-        )
+        mock_api_client.get_summary = AsyncMock(side_effect=KirkHillConnectionError("Timeout"))
 
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
@@ -568,3 +557,130 @@ class TestAuthErrorHandling:
         assert result2["current_stale"][SCOPE_OWNER] is True
         # Site scope should NOT be stale
         assert result2["current_stale"][SCOPE_SITE] is False
+
+
+# ---------------------------------------------------------------------------
+# Forecast task lifecycle
+# ---------------------------------------------------------------------------
+
+
+class TestForecastTaskLifecycle:
+    """The slow-tier forecast task must not outlive the update that created it."""
+
+    @pytest.mark.asyncio
+    async def test_forecast_task_is_reaped_when_summary_fetch_raises(self, hass, mock_api_client):
+        """A failing summary fetch cancels the forecast instead of orphaning it.
+
+        _fetch_timeframe_summaries re-raises ConfigEntryAuthFailed (a 401 on any
+        summary), which used to strand forecast_task: it kept running its retry
+        sleeps in the background while asyncio reported "Task was destroyed but
+        it is pending".
+        """
+        from homeassistant.config_entries import ConfigEntryAuthFailed
+
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        cancelled = asyncio.Event()
+
+        async def hanging_forecast(session, coordinates):
+            # Never returns on its own, so an unreaped task stays pending.
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        coord._fetch_open_meteo_forecast = hanging_forecast
+        mock_api_client.get_summary = AsyncMock(side_effect=KirkHillAuthError("Invalid API key"))
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            with pytest.raises(ConfigEntryAuthFailed):
+                await coord._async_update_data()
+
+        assert cancelled.is_set(), "the Open-Meteo forecast task was left running after the update failed"
+        assert coord._next_slow_update == now, "a failed update must not consume the slow-tier slot"
+
+    @pytest.mark.asyncio
+    async def test_forecast_result_is_consumed_on_success(self, hass, mock_api_client):
+        """The happy path still awaits the forecast and advances the slow timer."""
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        async def quick_forecast(session, coordinates):
+            return {"provider": "open_meteo", "next_hour_wind_speed_mps": 7.5}
+
+        coord._fetch_open_meteo_forecast = quick_forecast
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            data = await coord._async_update_data()
+
+        assert data["open_meteo_forecast"]["provider"] == "open_meteo"
+        assert coord._next_slow_update == now + timedelta(hours=1)
+
+    @pytest.mark.asyncio
+    async def test_forecast_exception_does_not_fail_the_update(self, hass, mock_api_client):
+        """A forecast it cannot parse must not take the whole update down.
+
+        _fetch_open_meteo_forecast says "never fail core update", but its
+        except tuple misses ValueError/AttributeError, so the exception used to
+        surface at `await forecast_task` and every entity went unavailable for
+        a poll because a third-party payload was malformed.
+        """
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        async def exploding_forecast(session, coordinates):
+            raise ValueError("malformed forecast payload")
+
+        coord._fetch_open_meteo_forecast = exploding_forecast
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            data = await coord._async_update_data()
+
+        assert data["open_meteo_forecast"] == {}
+        assert coord._next_slow_update == now + timedelta(hours=1)
+
+    @pytest.mark.asyncio
+    async def test_forecast_task_is_reaped_when_the_update_is_cancelled(self, hass, mock_api_client):
+        """Tearing the update down mid-forecast must not strand the task."""
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def hanging_forecast(session, coordinates):
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        coord._fetch_open_meteo_forecast = hanging_forecast
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            update = asyncio.create_task(coord._async_update_data())
+            await asyncio.wait_for(started.wait(), timeout=5)
+            update.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await update
+
+        assert cancelled.is_set(), "the Open-Meteo forecast task outlived the update that created it"
