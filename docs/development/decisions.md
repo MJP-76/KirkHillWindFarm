@@ -40,6 +40,11 @@ decision changes.
 - **Version source of truth is the root `VERSION` file**, propagated by
   `scripts/version_sync.py` to `manifest.json` and `pyproject.toml`. See
   [release-management](release-management.md).
+- **2026-10-04 — `main` requires all three CI checks; push a branch and open a
+  PR.** Branch protection now lists `validate` / `test` / `min-ha` as required
+  status checks, so a direct `git push` to `main` is declined (`GH006`) —
+  checks cannot report on commits that exist only locally. AGENTS.md
+  previously recorded the opposite ("main has no branch protection").
 
 ## Code health
 
