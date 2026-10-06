@@ -243,7 +243,9 @@ class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
         value = _as_float(timeframe_summary.get("capacity_factor_percent"))
         if value is not None:
             return value
-        return _as_float(self._scope_data()["summary"].get("capacity_factor_percent"))
+        return _as_float(
+            self._scope_data().get("summary", {}).get("capacity_factor_percent")
+        )
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -350,10 +352,7 @@ class FarmGenerationByTimeframeSensor(
             .get(self._scope, {})
             .get(self._timeframe, {})
         )
-        value = _as_float(summary.get("total_generation_kwh"))
-        if value is not None:
-            return value
-        value = _as_float(summary.get("total_kwh"))
+        value = _summary_kwh(summary)
         if value is not None:
             return value
 
@@ -364,9 +363,7 @@ class FarmGenerationByTimeframeSensor(
                 .get(SCOPE_SITE, {})
                 .get(self._timeframe, {})
             )
-            site_value = _as_float(site_summary.get("total_generation_kwh"))
-            if site_value is None:
-                site_value = _as_float(site_summary.get("total_kwh"))
+            site_value = _summary_kwh(site_summary)
             if site_value is not None:
                 owner_share = self._owner_share_pct()
                 if owner_share:
@@ -564,19 +561,37 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
         return 0.0
 
     def _live_kwh_for_timeframe(self) -> float | None:
-        """Return live generation in kWh for this timeframe and scope."""
+        """Live generation for this timeframe and scope, in kWh.
+
+        Mirrors FarmGenerationByTimeframeSensor._live_kwh, minus the alltime
+        sum (money is suppressed for alltime anyway). The owner fallback is
+        load-bearing: without it the owner scope could show a derived kWh on
+        the energy sensor while this one returned None -- and so £0.00 next to
+        a configured price, while the attributes still reported
+        projection_basis=live_owner_price_pence_per_kwh.
+        """
         summary = (
             self.coordinator.data.get("timeframe_summaries", {})
             .get(self._scope, {})
             .get(self._timeframe, {})
         )
-        value = _as_float(summary.get("total_generation_kwh"))
+        value = _summary_kwh(summary)
         if value is not None:
             return value
-        # Fall back to total_kwh if total_generation_kwh not available
-        value = _as_float(summary.get("total_kwh"))
-        if value is not None:
-            return value
+
+        # The same fallback the energy sensor applies: derive the owner figure
+        # from the site figure and the owner share when the owner scope has none.
+        if self._scope == SCOPE_OWNER:
+            site_summary = (
+                self.coordinator.data.get("timeframe_summaries", {})
+                .get(SCOPE_SITE, {})
+                .get(self._timeframe, {})
+            )
+            site_value = _summary_kwh(site_summary)
+            if site_value is not None:
+                owner_share = self._owner_share_pct()
+                if owner_share:
+                    return round(site_value * owner_share / 100.0, 3)
         return None
 
     @property
@@ -619,9 +634,8 @@ class FarmWindSpeedSensor(KirkHillEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return _as_float(
-            self.coordinator.data[SCOPE_OWNER]["summary"].get("wind_speed_mps")
-        )
+        summary = self.coordinator.data.get(SCOPE_OWNER, {}).get("summary", {})
+        return _as_float(summary.get("wind_speed_mps"))
 
 
 class OpenMeteoForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
