@@ -5,11 +5,18 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-from custom_components.kirkhill_wind.const import SCOPE_OWNER, yearly_timeframes
+from custom_components.kirkhill_wind.const import (
+    SCOPE_OWNER,
+    SCOPE_SITE,
+    yearly_timeframes,
+)
 from custom_components.kirkhill_wind.sensor import (
     TIMEFRAME_LABELS,
     DataGeneratedAtSensor,
+    FarmCapacityFactorSensor,
     FarmGenerationByTimeframeSensor,
+    FarmWindSpeedSensor,
+    GenerationValueByTimeframeSensor,
     LatestImportStatusSensor,
     UnknownTurbinesSensor,
     _display_energy_from_kwh,
@@ -258,3 +265,88 @@ class TestAlltimeYearSum:
         attrs = sensor.extra_state_attributes
         assert attrs["generation_source"] == "sum_of_years"
         assert "missing_year_frames" not in attrs
+
+
+class TestOwnerScopeDegradation:
+    """The owner scope can be missing while the site scope is fine.
+
+    Owner and site summaries are fetched separately, so a partial API failure
+    leaves one without the other. The owner's kWh sensor and £ sensor must not
+    disagree about what that means, and the current-value sensors must not
+    raise on an empty owner payload.
+    """
+
+    @staticmethod
+    def _entry():
+        entry = MagicMock()
+        entry.entry_id = "test"
+        return entry
+
+    @staticmethod
+    def _coordinator(data) -> MagicMock:
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.owner_price_pence_per_kwh = 6.0
+        coordinator.negotiated_price_gbp_per_mwh = 0.0
+        coordinator.data = data
+        return coordinator
+
+    def test_owner_earnings_follow_the_owner_kwh_fallback(self):
+        """The £ sensor must show what the kWh sensor shows, priced.
+
+        Before the fix the energy sensor derived owner generation from the
+        site figure while the money sensor returned None and therefore
+        £0.00 -- next to a configured price, with its attributes still
+        claiming projection_basis=live_owner_price_pence_per_kwh.
+        """
+        coordinator = self._coordinator(
+            {
+                SCOPE_OWNER: {"summary": {"capacity_watts": 4_200_000.0}},
+                SCOPE_SITE: {"summary": {"capacity_watts": 18_800_000.0}},
+                "timeframe_summaries": {
+                    "owner": {"today": {}},  # owner frame absent
+                    "site": {"today": {"total_generation_kwh": 1000.0}},
+                },
+            }
+        )
+        entry = self._entry()
+        energy = FarmGenerationByTimeframeSensor(coordinator, entry, SCOPE_OWNER, "today")
+        money = GenerationValueByTimeframeSensor(coordinator, entry, SCOPE_OWNER, "today")
+
+        share = 4_200_000.0 / 18_800_000.0 * 100
+        expected_kwh = round(1000.0 * share / 100.0, 3)
+
+        assert energy.native_value == expected_kwh
+        assert expected_kwh > 0, "the fallback has to produce a figure for this test to mean anything"
+        assert money.native_value == round(expected_kwh * 6.0 / 100, 2)
+        assert money.native_value > 0
+
+    def test_owner_earnings_are_zero_only_when_neither_scope_has_data(self):
+        """No data anywhere must still read £0.00, not a fabricated figure."""
+        coordinator = self._coordinator(
+            {
+                SCOPE_OWNER: {"summary": {"capacity_watts": 4_200_000.0}},
+                SCOPE_SITE: {"summary": {"capacity_watts": 18_800_000.0}},
+                "timeframe_summaries": {
+                    "owner": {"today": {}},
+                    "site": {"today": {}},
+                },
+            }
+        )
+        money = GenerationValueByTimeframeSensor(coordinator, self._entry(), SCOPE_OWNER, "today")
+
+        assert money.native_value == 0.0
+
+    def test_wind_speed_survives_an_empty_owner_payload(self):
+        """data[scope] is {} when that scope failed on its first poll."""
+        coordinator = self._coordinator({SCOPE_OWNER: {}})
+        sensor = FarmWindSpeedSensor(coordinator, self._entry())
+
+        assert sensor.native_value is None
+
+    def test_capacity_factor_survives_an_empty_owner_payload(self):
+        """The current-summary fallback must not subscript a missing key."""
+        coordinator = self._coordinator({SCOPE_OWNER: {}, "timeframe_summaries": {}})
+        sensor = FarmCapacityFactorSensor(coordinator, self._entry(), SCOPE_OWNER)
+
+        assert sensor.native_value is None

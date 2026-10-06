@@ -291,6 +291,16 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.13.9 (pre-release, 2026-10-06)
+
+- Owner £ now follows the same fallback as owner kWh — a partial API failure
+  could show £0.00 beside a non-zero kWh reading while claiming live-price maths
+- `Capacity factor` and `Wind speed` no longer raise `KeyError` on an empty
+  owner payload
+- The `total_generation_kwh`/`total_kwh` lookup collapsed into `_summary_kwh`,
+  one implementation for all three sites
+- 4 new tests (157 → 161)
+
 ### v4.13.8 (pre-release, 2026-10-04)
 
 - Release tooling: `version_sync.py release` pushes the tag before calling

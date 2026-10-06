@@ -2,6 +2,12 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.13.9
+- **Fixed: the owner £ sensor could read £0.00 beside a non-zero owner kWh reading.** Owner and site timeframe summaries are fetched separately, so a partial API failure can leave the owner frame absent while the site frame is present. The energy sensor handled that by deriving owner generation from `site generation × owner share`; the money sensor did not — it returned `None`, which `native_value` turns into **£0.00**, while its own attributes still reported `projection_basis: live_owner_price_pence_per_kwh`. Both now apply the same fallback, so they agree by construction (the new test measures it: 0.0 was shown where 13.4 belonged).
+- **Fixed: two sensors raised `KeyError` on an empty owner payload.** `Capacity factor` and `Wind speed` subscripted `["summary"]` directly, but a scope that fails on its *first* poll is held as `{}` — and every other accessor in the package already used `.get("summary", {})`. Each state write raised until that scope recovered, while the rest of the integration was healthy.
+- **Refactor.** The `total_generation_kwh` → `total_kwh` lookup now lives in `_summary_kwh` (introduced for v4.13.7's All time fix) and is used at all three sites instead of three inline copies — the duplication that let the owner paths drift apart.
+- **Tests.** 4 new (`TestOwnerScopeDegradation`), each confirmed to fail against the previous code. The fourth asserts that an absence of data in *both* scopes still reads £0.00, so the fix cannot fabricate a figure.
+
 ## Version 4.13.8
 - **Release tooling: `version_sync.py release` can finish now.** It created the local tag and passed it straight to `gh release create`, which refuses to publish a release from a tag that exists only locally ("... has not been pushed ..."), and its own "Tag already exists" guard then blocked every retry — cutting v4.13.7 had to be completed by hand with an explicit push plus `gh release create`. The tag is now pushed before the release is created (the order `release-management.md` documents), and the guard checks `origin` instead of the local tag list, so an attempt that died mid-way resumes while a published tag is still refused. Four tests, with `subprocess` stubbed.
 - **Docs: the pre-release page named the wrong stable version.** It called v4.13.7 both active and stable after a blind string replace in the v4.13.7 sweep; it now lists v4.13.8 as the pre-release and v4.13.6 as the latest stable.
