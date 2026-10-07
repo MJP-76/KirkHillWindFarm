@@ -254,6 +254,57 @@ class TestTimeBasedScheduling:
         assert second_poll == {(SCOPE_OWNER, "today"): 1, (SCOPE_SITE, "today"): 1}
 
 
+class TestSummaryRetryScope:
+    """A retry belongs to the scope whose fetch failed, not to both of them."""
+
+    @pytest.mark.asyncio
+    async def test_retry_is_scoped_to_the_failed_scope(self, hass, mock_api_client, mock_summary_payload):
+        """site's week frame must not be re-fetched for owner's retry.
+
+        The timeframes set used to be shared by both scopes, so one scope's
+        failure cost an extra call for the other on every backoff tick --
+        extra calls against the budget TestApiCallBudget pins.
+        """
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        failed_once = {"owner:7d": False}
+
+        async def summary_side_effect(session, *, scope, range_value):
+            key = f"{scope}:{range_value}"
+            if key == "owner:7d" and not failed_once[key]:
+                failed_once[key] = True
+                raise KirkHillConnectionError("Timeout")
+            return mock_summary_payload
+
+        mock_api_client.get_summary = AsyncMock(side_effect=summary_side_effect)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            await coord._async_update_data()
+
+        assert ("owner", "week") in coord._summary_retry_at, "the failure must schedule a retry"
+        mock_api_client.get_summary.reset_mock()
+
+        # Past the 60s backoff, but well inside the hourly slow tier: only the
+        # fast tier and the retry should be fetched this poll.
+        t1 = t0 + timedelta(seconds=61)
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t1,
+        ):
+            await coord._async_update_data()
+
+        assert _summary_calls(mock_api_client) == {
+            (SCOPE_OWNER, "today"): 1,
+            (SCOPE_SITE, "today"): 1,
+            (SCOPE_OWNER, "7d"): 1,
+        }, "owner's retry must not re-fetch site's week frame, and the slow tier must not run again yet"
+
+
 class TestApiCallBudget:
     """The coordinator is designed around API request frequency, so pin it.
 

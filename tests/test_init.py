@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.loader import IntegrationNotFound
 
 from custom_components.kirkhill_wind import (
     _CONFIG_ENTRY_VERSION,
+    _async_setup_payment_tracking,
     _async_update_listener,
     async_migrate_entry,
 )
@@ -495,3 +497,74 @@ class TestUpdateListenerReloadDecision:
         await _async_update_listener(hass, entry)  # must not raise
 
         hass.config_entries.async_schedule_reload.assert_not_called()
+
+
+class TestPaymentTrackingSetup:
+    """Payment tracking starts Ethex's config flow only when it can.
+
+    The old check asked ``hass.config.components`` whether Ethex was
+    installed, but a config-flow-only integration joins components only once
+    it already has an entry -- so the "already configured" test below always
+    returned first, the flow-start branch was unreachable, and users were told
+    Ethex was not installed when it was.
+    """
+
+    @staticmethod
+    def _entry(*, enabled: bool = True) -> MagicMock:
+        entry = MagicMock()
+        entry.entry_id = "test_entry"
+        entry.options = {CONF_ENABLE_PAYMENT_TRACKING: enabled}
+        return entry
+
+    @staticmethod
+    def _flow(hass, *, entries=(), progress=()):
+        hass.config_entries.async_entries = MagicMock(return_value=list(entries))
+        hass.config_entries.flow.async_progress_by_handler = MagicMock(return_value=list(progress))
+        hass.config_entries.flow.async_init = AsyncMock()
+        return hass.config_entries.flow
+
+    @pytest.mark.asyncio
+    async def test_installed_but_unconfigured_starts_the_flow(self, hass):
+        flow = self._flow(hass)
+
+        with patch(
+            "custom_components.kirkhill_wind.async_get_integration",
+            AsyncMock(return_value=MagicMock(config_flow=True)),
+        ):
+            await _async_setup_payment_tracking(hass, self._entry())
+
+        flow.async_init.assert_awaited_once_with("ethex", context={"source": "user"})
+
+    @pytest.mark.asyncio
+    async def test_not_installed_starts_nothing(self, hass):
+        flow = self._flow(hass)
+
+        with patch(
+            "custom_components.kirkhill_wind.async_get_integration",
+            AsyncMock(side_effect=IntegrationNotFound("ethex")),
+        ):
+            await _async_setup_payment_tracking(hass, self._entry())
+
+        flow.async_init.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_already_configured_starts_nothing(self, hass):
+        flow = self._flow(hass, entries=[MagicMock()])
+
+        with patch(
+            "custom_components.kirkhill_wind.async_get_integration",
+            AsyncMock(return_value=MagicMock(config_flow=True)),
+        ):
+            await _async_setup_payment_tracking(hass, self._entry())
+
+        flow.async_init.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_disabled_payment_tracking_starts_nothing(self, hass):
+        flow = self._flow(hass)
+
+        with patch("custom_components.kirkhill_wind.async_get_integration", AsyncMock()) as loader:
+            await _async_setup_payment_tracking(hass, self._entry(enabled=False))
+
+        loader.assert_not_awaited()
+        flow.async_init.assert_not_called()
