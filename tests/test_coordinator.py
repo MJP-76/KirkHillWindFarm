@@ -735,3 +735,30 @@ class TestForecastTaskLifecycle:
                 await update
 
         assert cancelled.is_set(), "the Open-Meteo forecast task outlived the update that created it"
+
+
+class TestScopeAwareCurrentPayloads:
+    """The current payload must differ by scope, the way the API does."""
+
+    @pytest.mark.asyncio
+    async def test_owner_share_matches_the_production_capacity_ratio(self, hass, mock_api_client):
+        """One payload for both scopes made this read 100% in tests.
+
+        Production reads 0.013614% (2559.465 W of 18800000 W), and the shared
+        fixture also reported reading.scope as "owner" for the site request.
+        """
+        entry = _make_entry()
+        t0 = datetime(2026, 6, 25, 12, 34, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            data = await coord._async_update_data()
+
+        assert data[SCOPE_OWNER]["reading"]["scope"] == SCOPE_OWNER
+        assert data[SCOPE_SITE]["reading"]["scope"] == SCOPE_SITE
+
+        share = data[SCOPE_OWNER]["summary"]["capacity_watts"] / data[SCOPE_SITE]["summary"]["capacity_watts"] * 100
+        assert round(share, 6) == 0.013614, "the fixture must carry the production owner share, not 100%"

@@ -18,6 +18,8 @@ from custom_components.kirkhill_wind.const import (
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SITE_NAME,
+    SCOPE_OWNER,
+    SCOPE_SITE,
 )
 
 
@@ -93,24 +95,28 @@ def mock_config_entry_data():
     }
 
 
-@pytest.fixture
-def mock_current_turbines():
-    """Per-turbine rows exactly as /api/v1/current returns them.
+def _current_turbines(scope: str) -> list[dict]:
+    """Per-turbine rows exactly as /api/v1/current returns them, for one scope.
 
     Live state only: the current endpoint carries no generation, rotor speed
     or coordinates -- those come from /api/v1/turbines (mock_turbine_rows).
     The two endpoints share nothing but id, capacity_factor_percent and the
     capacity pair, which is why the fixture keeps them apart.
     """
+    owner = scope == SCOPE_OWNER
     return [
         {
             "id": f"T{i}",
             "status": "active" if i <= 7 else "inactive",
-            "state_text": ("Turbine in operation" if i <= 7 else "Lack of wind: Wind speed too low"),
-            "power_kw": 987.0 if i <= 7 else 0.0,
+            "state_text": (
+                "Turbine in operation"
+                if i <= 7
+                else "Lack of wind: Wind speed too low"
+            ),
+            "power_kw": (0.134 if i <= 7 else 0.0) if owner else (987.0 if i <= 7 else 0.0),
             "capacity_factor_percent": 42.0 if i <= 7 else 0.0,
-            "capacity_watts": 2350000,
-            "capacity_kw": 2350,
+            "capacity_watts": 319.933125 if owner else 2350000,
+            "capacity_kw": 0.3199331 if owner else 2350,
             "wind_speed_mps": 8.5,
             "latest_power_at": "2026-06-25T12:34:00Z",
             "latest_wind_speed_at": "2026-06-25T12:34:00Z",
@@ -121,41 +127,61 @@ def mock_current_turbines():
     ]
 
 
-@pytest.fixture
-def mock_current_payload(mock_current_turbines):
-    """Return a realistic /api/v1/current response.
+def _current_payload(scope: str) -> dict:
+    """A /api/v1/current response for one scope, with that scope's own numbers.
 
-    One payload answers both the owner and the site request, so its numbers
-    are site-scale and the owner share reads 100% out of this fixture.
-    Scope-aware payloads (real owner capacity is 2559.465 W of 18.8 MW) are a
-    separate job; nothing here asserts on the share.
+    Owner and site differ exactly where the API makes them differ --
+    reading.scope, capacity, power and the per-turbine rows. One payload for
+    both scopes lied twice: it reported reading.scope="owner" for the site
+    request, and made the owner share read 100% where production reads
+    0.013614%. The capacity pair below is the production ratio, so the share
+    derived from these two payloads matches the live figure exactly.
     """
+    owner = scope == SCOPE_OWNER
     return {
         "reading": {
-            "scope": "owner",
+            "scope": scope,
             "source_interval": "1m",
             "generated_at": "2026-06-25T12:34:00Z",
             "complete": True,
         },
         "summary": {
-            "total_power_kw": 6909.0,
-            "total_power_watts": 6909000,
+            "total_power_kw": 0.941 if owner else 6909.0,
+            "total_power_watts": 941 if owner else 6909000,
             "wind_speed_mps": 8.5,
             "capacity_factor_percent": 36.75,
             "active_turbines": 7,
             "inactive_turbines": 1,
             "unknown_turbines": 0,
             "total_turbines": 8,
-            "capacity_watts": 18800000,
-            "capacity_kw": 18800,
+            "capacity_watts": 2559.465 if owner else 18800000,
+            "capacity_kw": 2.559465 if owner else 18800,
             "latest_power_at": "2026-06-25T12:34:00Z",
             "latest_wind_speed_at": "2026-06-25T12:34:00Z",
             "latest_status_at": "2026-06-25T12:00:00Z",
-            "total_generation_kwh_today": 168062.0,
-            "total_generation_wh_today": 168062000,
+            "total_generation_kwh_today": 22.88 if owner else 168062.0,
+            "total_generation_wh_today": 22880 if owner else 168062000,
         },
-        "turbines": mock_current_turbines,
+        "turbines": _current_turbines(scope),
     }
+
+
+@pytest.fixture
+def mock_current_turbines():
+    """The site-scope per-turbine rows, for tests that want them directly."""
+    return _current_turbines(SCOPE_SITE)
+
+
+@pytest.fixture
+def mock_current_payload():
+    """The site-scope /api/v1/current response.
+
+    Owner and site are different payloads; mock_api_client answers each
+    request with its own (see _current_payload). This fixture stays
+    site-shaped because the one test that uses it directly does so for the
+    site call.
+    """
+    return _current_payload(SCOPE_SITE)
 
 
 @pytest.fixture
@@ -225,7 +251,9 @@ def mock_summary_payload():
 def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payload):
     """Return a mock KirkHillApiClient with endpoint-shaped responses."""
     client = AsyncMock()
-    client.get_current = AsyncMock(return_value=mock_current_payload)
+    client.get_current = AsyncMock(
+        side_effect=lambda session, scope: _current_payload(scope)
+    )
     client.get_turbines = AsyncMock(return_value=mock_turbine_rows)
     client.get_summary = AsyncMock(return_value=mock_summary_payload)
     client.get_wind_speed = AsyncMock(

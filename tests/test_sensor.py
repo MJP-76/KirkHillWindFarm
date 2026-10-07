@@ -157,19 +157,19 @@ class TestLatestImportStatusSensor:
         summaries = {
             "owner": {
                 "today": {
-                    "latest_import_status": "completed",
+                    "latest_import_status": "success",
                     "latest_generation_interval_end": "2026-06-25T12:30:00Z",
                 }
             }
         }
         sensor = self._make_sensor(summaries)
-        assert sensor.native_value == "completed"
+        assert sensor.native_value == "success"
 
     def test_extra_attributes_include_interval_end(self):
         summaries = {
             "owner": {
                 "today": {
-                    "latest_import_status": "completed",
+                    "latest_import_status": "success",
                     "latest_generation_interval_end": "2026-06-25T12:30:00Z",
                 }
             }
