@@ -331,25 +331,34 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         # Determine which timeframes to fetch this poll. The slow tier runs
         # when the caller's timestamp passes the slow timer; retries use a
         # real-UTC backoff schedule independent of the poll interval.
-        timeframes: set[str] = set(FAST_TIMEFRAMES)
+        # Keyed by scope: a retry scheduled because one scope's fetch failed
+        # must not re-fetch the other scope's copy as well, which is what a
+        # single shared set did -- extra calls against the budget that
+        # TestApiCallBudget pins. Scope keys come from SCOPES, which is also
+        # where _summary_retry_at's keys are written.
+        timeframes: dict[str, set[str]] = {
+            scope: set(FAST_TIMEFRAMES) for scope in SCOPES
+        }
         run_slow = now >= self._next_slow_update
         if run_slow:
-            timeframes.update(SLOW_TIMEFRAMES)
-            # Past calendar years (year_YYYY) — derived so future years are
-            # fetched automatically as they complete.
-            timeframes.update(yearly_timeframes())
+            past_years = yearly_timeframes()
+            for scope in SCOPES:
+                timeframes[scope].update(SLOW_TIMEFRAMES)
+                # Past calendar years (year_YYYY) — derived so future years are
+                # fetched automatically as they complete.
+                timeframes[scope].update(past_years)
         for (scope, timeframe), retry_at in list(self._summary_retry_at.items()):
             if now >= retry_at:
-                timeframes.add(timeframe)
+                timeframes[scope].add(timeframe)
                 # Clear the retry entry so a successful fetch below resets it.
         _LOGGER.debug(
             "Fetching summaries for timeframes=%s (slow_tier=%s)",
-            sorted(timeframes),
+            {scope: sorted(frames) for scope, frames in timeframes.items()},
             run_slow,
         )
 
         for scope in SCOPES:
-            for timeframe in sorted(timeframes):
+            for timeframe in sorted(timeframes[scope]):
                 if timeframe == "year":
                     range_value = str(current_year)
                 elif timeframe.startswith("year_"):

@@ -12,6 +12,7 @@ from homeassistant.components.frontend import (
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.loader import LoaderError, async_get_integration
 
 from .const import (
     CONF_BASE_URL,
@@ -224,9 +225,27 @@ async def _async_setup_payment_tracking(
     if not payment_tracking_enabled(entry):
         return
 
-    if _ETHEX_DOMAIN not in hass.config.components:
+    # Ask the loader whether Ethex is *installed* rather than reading
+    # hass.config.components: a config-flow-only integration joins components
+    # only once it already has an entry, so the "already configured" check
+    # below always returned first and this branch made the flow start
+    # unreachable -- while warning that Ethex was not installed, which is
+    # usually false.
+    try:
+        ethex = await async_get_integration(hass, _ETHEX_DOMAIN)
+    except LoaderError as err:
+        # IntegrationNotFound covers "not installed"; a broken manifest lands
+        # here too, and that must not take kirkhill's own setup down with it.
         _LOGGER.warning(
-            "Payment tracking is enabled, but the Ethex integration is not installed."
+            "Payment tracking is enabled, but the Ethex integration is not "
+            "available: %s",
+            err,
+        )
+        return
+
+    if not ethex.config_flow:
+        _LOGGER.warning(
+            "Payment tracking is enabled, but the Ethex integration has no config flow."
         )
         return
 

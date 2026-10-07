@@ -112,9 +112,19 @@ async def async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> Non
         config_to_save = new_default
         _LOGGER.debug("No existing dashboard found; saving default config")
 
-    await lovelace_store.async_save(config_to_save)
-
-    hass.bus.async_fire("lovelace_updated", {"url_path": _URL_PATH, "updated": True})
+    if existing_config == config_to_save:
+        # The merge is idempotent, so this is the steady state after the first
+        # write. Saving anyway would rewrite .storage/lovelace and fire
+        # lovelace_updated on *every* config-entry update -- including each
+        # number-entity price change -- which reloads any dashboard that is
+        # open and clobbers an edit in progress. The panel registration below
+        # still runs: it is cheap and has no user-visible effect.
+        _LOGGER.debug("Dashboard already up to date; skipping save")
+    else:
+        await lovelace_store.async_save(config_to_save)
+        hass.bus.async_fire(
+            "lovelace_updated", {"url_path": _URL_PATH, "updated": True}
+        )
 
     frontend.async_register_built_in_panel(
         hass,

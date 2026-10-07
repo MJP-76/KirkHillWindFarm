@@ -1,10 +1,20 @@
 """Tests for the dashboard merge logic — the most fragile part of the integration."""
+
 from __future__ import annotations
 
+import copy
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from homeassistant.components.lovelace.const import LOVELACE_DATA
+
 from custom_components.kirkhill_wind.dashboard import (
+    _URL_PATH,
     OBSOLETE_CARD_KEYS,
     OBSOLETE_VIEW_PATHS,
     _merge_cards,
+    async_ensure_dashboard,
     card_match_key,
     merge_dashboard_config,
 )
@@ -12,6 +22,7 @@ from custom_components.kirkhill_wind.dashboard import (
 # ---------------------------------------------------------------------------
 # card_match_key
 # ---------------------------------------------------------------------------
+
 
 class TestCardMatchKey:
     """Verify cards are matched by stable keys."""
@@ -69,6 +80,7 @@ class TestCardMatchKey:
 # ---------------------------------------------------------------------------
 # _merge_cards
 # ---------------------------------------------------------------------------
+
 
 class TestMergeCards:
     """Verify card merge logic preserves user cards and updates managed cards."""
@@ -140,6 +152,7 @@ class TestMergeCards:
 # merge_dashboard_config
 # ---------------------------------------------------------------------------
 
+
 class TestMergeDashboardConfig:
     """Verify full dashboard merge preserves structure."""
 
@@ -206,3 +219,109 @@ class TestMergeDashboardConfig:
         new = {"views": [{"path": "scada", "cards": []}]}
         result = merge_dashboard_config({}, new)
         assert result["views"][0]["path"] == "scada"
+
+
+# ---------------------------------------------------------------------------
+# async_ensure_dashboard
+# ---------------------------------------------------------------------------
+
+_DEFAULT_CONFIG = {
+    "title": "Wind Farm",
+    "views": [
+        {
+            "title": "Kirk Hill SCADA",
+            "path": "scada",
+            "cards": [{"type": "heading", "heading": "Wind Farm"}],
+        }
+    ],
+}
+
+
+class _Store:
+    """Stand-in for LovelaceStorage that remembers what it was asked to save."""
+
+    def __init__(self, config=None):
+        self.config = config
+        self.saves: list[dict] = []
+
+    async def async_load(self, _allow_yaml_collection):
+        return self.config
+
+    async def async_save(self, config):
+        self.config = config
+        self.saves.append(config)
+
+
+class TestEnsureDashboardDoesNotRewriteAnUnchangedDashboard:
+    """async_ensure_dashboard used to save on every config-entry update.
+
+    The update listener runs it for *any* entry write -- including each
+    number-entity price change -- so .storage/lovelace was rewritten and
+    lovelace_updated fired every time: a dashboard left open reloaded, and an
+    edit in progress was merged over.
+    """
+
+    async def _ensure(self, store: _Store, config: dict):
+        item = {
+            "url_path": _URL_PATH,
+            "title": "Kirk Hill Wind Farm",
+            "icon": "mdi:wind-turbine",
+            "show_in_sidebar": True,
+            "require_admin": False,
+        }
+        collection = MagicMock()
+        collection.async_load = AsyncMock()
+        collection.async_items = MagicMock(return_value=[item])
+
+        entry = MagicMock()
+        entry.options = {}
+
+        hass = MagicMock()
+        hass.data = {LOVELACE_DATA: SimpleNamespace(dashboards={_URL_PATH: store})}
+
+        with (
+            patch(
+                "custom_components.kirkhill_wind.dashboard.lovelace_dashboard.DashboardsCollection",
+                return_value=collection,
+            ),
+            patch(
+                "custom_components.kirkhill_wind.dashboard.build_dashboard_config",
+                return_value=config,
+            ),
+            patch("custom_components.kirkhill_wind.dashboard.frontend.async_register_built_in_panel"),
+        ):
+            await async_ensure_dashboard(hass, entry)
+        return hass
+
+    @pytest.mark.asyncio
+    async def test_saves_the_default_once_then_leaves_it_alone(self):
+        store = _Store()
+        config = copy.deepcopy(_DEFAULT_CONFIG)
+
+        await self._ensure(store, config)
+        await self._ensure(store, config)
+
+        assert len(store.saves) == 1, "the second run must find its own output current"
+
+    @pytest.mark.asyncio
+    async def test_does_not_touch_a_dashboard_that_already_matches(self):
+        store = _Store(copy.deepcopy(_DEFAULT_CONFIG))
+
+        hass = await self._ensure(store, copy.deepcopy(_DEFAULT_CONFIG))
+
+        assert store.saves == [], "an unchanged dashboard must not be rewritten"
+        hass.bus.async_fire.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_saves_when_the_stored_dashboard_has_drifted(self):
+        store = _Store(copy.deepcopy(_DEFAULT_CONFIG))
+        await self._ensure(store, copy.deepcopy(_DEFAULT_CONFIG))
+        assert store.saves == [], "precondition: it starts out current"
+
+        drifted = copy.deepcopy(_DEFAULT_CONFIG)
+        drifted["title"] = "Renamed outside the integration"
+        store.config = drifted
+
+        await self._ensure(store, copy.deepcopy(_DEFAULT_CONFIG))
+
+        assert len(store.saves) == 1, "a dashboard that drifted must still be saved"
