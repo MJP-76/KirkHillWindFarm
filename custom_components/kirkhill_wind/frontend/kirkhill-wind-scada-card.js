@@ -2335,7 +2335,7 @@ _buildHeaderChips(layout) {
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="262">All time</text>
           <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="262" text-anchor="end">—</text>
           <text class="user-gen-value user-gen-fin" data-user-gen="fin-alltime" x="${layout.chipUserGenFinX}" y="262" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="282">Your Share (W)</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="282">Your output (W)</text>
           <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="282" text-anchor="end">—</text>
           <text class="user-gen-value user-gen-fin" data-user-gen="fin-share" x="${layout.chipUserGenFinX}" y="282" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="302">Share (‱)</text>
