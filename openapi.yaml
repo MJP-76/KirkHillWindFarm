@@ -4,11 +4,18 @@ info:
   version: 1.0.0
   summary: Read-only wind farm data API for the Kirk Hill dashboard.
   description: >
-    The API exposes read-only wind farm data. Generation and capacity-factor
+    The API exposes read-only wind farm data. Generation, indicative carbon
+    avoided, and capacity-factor
     values default to the API key holder's share of the wind farm, with
     `scope=site` available for whole-site data. It does not expose owner,
     account, login, password, Watts owned, or ownership percentage data. All
     timestamps in responses are UTC ISO-8601 strings.
+
+
+    API requests are rate limited per account (120 requests per minute by
+    default, shared across all of an account's API keys). Exceeding the limit
+    returns `429 Too Many Requests` with a `Retry-After` header. Per-account
+    limits can be adjusted or lifted by an administrator.
 servers:
   - url: https://dashboard.kirkhillcoop.org
     description: Production
@@ -16,7 +23,7 @@ security:
   - bearerAuth: []
 tags:
   - name: Wind farm data
-    description: Read-only generation, wind speed, and turbine status data.
+    description: Read-only generation, wind speed, indicative carbon avoided, and turbine status data.
 paths:
   /api/v1/current:
     get:
@@ -27,8 +34,9 @@ paths:
         Returns the latest 1-minute power and wind readings, the latest imported
         turbine state text, and current capacity factor. Power values default to
         the API key holder's share of the wind farm; use `scope=site` for
-        whole-site power values. Wind speed and turbine active/inactive state are
-        physical readings and are not changed by `scope`.
+        whole-site power values. Capacity factor, wind speed, and turbine
+        active/inactive state are physical readings and are not changed by
+        `scope`.
       operationId: getWindFarmCurrent
       parameters:
         - $ref: '#/components/parameters/Scope'
@@ -41,6 +49,8 @@ paths:
                 $ref: '#/components/schemas/CurrentResponse'
         '401':
           $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '422':
           $ref: '#/components/responses/ValidationError'
         '423':
@@ -66,6 +76,8 @@ paths:
                 $ref: '#/components/schemas/SummaryResponse'
         '401':
           $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '422':
           $ref: '#/components/responses/ValidationError'
         '423':
@@ -91,6 +103,8 @@ paths:
                 $ref: '#/components/schemas/GenerationResponse'
         '401':
           $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '422':
           $ref: '#/components/responses/ValidationError'
         '423':
@@ -116,6 +130,41 @@ paths:
                 $ref: '#/components/schemas/WindSpeedResponse'
         '401':
           $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+  /api/v1/carbon-avoided:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get indicative CO2 avoided
+      description: >
+        Returns indicative CO2 avoided for the requested range. Each complete
+        30-minute gross-generation interval is weighted by the matching NESO
+        estimated actual GB grid carbon intensity and the configured assumed
+        export factor. Generation and avoided-emissions values default to the
+        API key holder's share; use `scope=site` for whole-wind-farm values.
+        Coverage fields explicitly identify missing generation or carbon data.
+      operationId: getWindFarmCarbonAvoided
+      parameters:
+        - $ref: '#/components/parameters/Range'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Indicative carbon avoided for the requested range.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarbonAvoidedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '422':
           $ref: '#/components/responses/ValidationError'
         '423':
@@ -141,6 +190,8 @@ paths:
                 $ref: '#/components/schemas/TurbinesResponse'
         '401':
           $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '422':
           $ref: '#/components/responses/ValidationError'
         '423':
@@ -195,7 +246,10 @@ components:
       description: >
         Generation scope. `owner` is the default and returns values scaled to
         the API key holder's share of the wind farm. `site` returns whole-site
-        values. This parameter does not change wind speed readings.
+        values. This parameter does not change wind speed readings. Keys can
+        be limited to owner-share data, whole-site data, or both. Owner-only
+        keys reject `scope=site`; site-only keys default to `site` and reject
+        `scope=owner`.
       schema:
         type: string
         enum:
@@ -214,7 +268,7 @@ components:
           - 2026-06-02T00:00:00Z
   responses:
     Unauthorised:
-      description: Missing, invalid, or revoked API key.
+      description: Missing, invalid, revoked, or inactive API key.
       content:
         application/json:
           schema:
@@ -226,6 +280,9 @@ components:
             invalidToken:
               value:
                 message: The API key is not valid.
+            expiredToken:
+              value:
+                message: This API key has expired after 90 days of inactivity. Reactivate it in your dashboard account settings before using it again.
     PasswordChangeRequired:
       description: The dashboard user must change their password before API keys can be used.
       content:
@@ -240,6 +297,23 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ValidationError'
+    TooManyRequests:
+      description: >
+        The account exceeded its per-minute request limit, which is shared
+        across all of the account's API keys. The default limit is 120 requests
+        per minute; a `Retry-After` header (seconds) is returned. Contact
+        support if you need a higher limit for your account.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Too many requests. Please slow down and try again shortly.
   schemas:
     Window:
       type: object
@@ -271,8 +345,11 @@ components:
           enum:
             - 1m
             - 10m
+            - 30m
             - 1h
             - day
+            - month
+            - year
         scope:
           type: string
           description: Generation scope used for the response.
@@ -342,9 +419,9 @@ components:
             - number
             - 'null'
           format: double
-          description: The same power reading in watts.
+          description: Latest total power for the requested scope in watts.
           examples:
-            - 1543.848
+            - 8420125
         wind_speed_mps:
           type:
             - number
@@ -358,7 +435,7 @@ components:
             - number
             - 'null'
           format: double
-          description: Latest whole-site power divided by rated site capacity.
+          description: Latest whole-site power divided by rated site capacity. This is not changed by `scope`.
           examples:
             - 44.79
         active_turbines:
@@ -380,30 +457,15 @@ components:
         capacity_watts:
           type: number
           format: double
-          description: Rated capacity of the requested scope (the owner slice or the whole site), in watts.
+          description: Rated capacity represented by the requested scope.
           examples:
-            - 2559.465
+            - 18800000
         capacity_kw:
           type: number
           format: double
-          description: The same rated capacity in kilowatts.
+          description: Rated capacity represented by the requested scope in kilowatts.
           examples:
-            - 2.559465
-        total_generation_kwh_today:
-          type:
-            - number
-            - 'null'
-          format: double
-          description: Generation for the current local day in kWh, carried on the current endpoint for convenience.
-          examples:
-            - 22.88
-        total_generation_wh_today:
-          type:
-            - number
-            - 'null'
-          description: The same daily figure in watt-hours.
-          examples:
-            - 22880
+            - 18800
         latest_power_at:
           type:
             - string
@@ -419,6 +481,18 @@ components:
             - string
             - 'null'
           format: date-time
+        total_generation_kwh_today:
+          type: number
+          format: double
+          description: Total energy generated since the start of the current UK local day, scaled to the requested scope.
+          examples:
+            - 1234.567
+        total_generation_wh_today:
+          type: integer
+          format: int64
+          description: Total energy generated since the start of the current UK local day in watt-hours, scaled to the requested scope.
+          examples:
+            - 1234567
     CurrentTurbine:
       type: object
       additionalProperties: false
@@ -469,15 +543,11 @@ components:
         capacity_watts:
           type: number
           format: double
-          description: Rated capacity of this turbine for the requested scope, in watts.
-          examples:
-            - 2350000
+          description: Rated turbine capacity represented by the requested scope.
         capacity_kw:
           type: number
           format: double
-          description: The same rated capacity in kilowatts.
-          examples:
-            - 2350
+          description: Rated turbine capacity represented by the requested scope in kilowatts.
         latest_power_at:
           type:
             - string
@@ -534,6 +604,13 @@ components:
       additionalProperties: false
       required:
         - total_generation_kwh
+        - co2_avoided_kg
+        - co2_avoided_assumed_export_factor
+        - co2_avoided_coverage_percent
+        - co2_avoided_matched_intervals
+        - co2_avoided_expected_intervals
+        - co2_avoided_complete
+        - latest_carbon_intensity_at
         - capacity_factor_percent
         - active_turbines
         - capacity_watts
@@ -547,71 +624,79 @@ components:
           description: Total generation for the requested scope.
           examples:
             - 123456.789
+        co2_avoided_kg:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Indicative CO2 avoided by matched intervals for the requested scope.
+          examples:
+            - 18432.125
+        co2_avoided_assumed_export_factor:
+          type: number
+          format: double
+          description: Assumed proportion of gross generation exported to the grid.
+          examples:
+            - 0.99
+        co2_avoided_coverage_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          description: Percentage of expected half-hour intervals with both complete generation and estimated actual carbon intensity data.
+        co2_avoided_matched_intervals:
+          type: integer
+          minimum: 0
+        co2_avoided_expected_intervals:
+          type: integer
+          minimum: 0
+        co2_avoided_complete:
+          type: boolean
+          description: True when every expected half-hour interval is included.
+        latest_carbon_intensity_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         capacity_factor_percent:
           type:
             - number
             - 'null'
           format: double
-          description: Capacity factor for the requested scope.
+          description: Whole-site capacity factor over a verified common observed generation period within the selected window, not the unread tail. For readings up to one native source interval apart, this uses exact shared counter boundaries; total generation still includes newer individual readings. Null if turbines have missing or incomparable observation periods. This is not changed by `scope`.
           examples:
             - 40.8
         active_turbines:
           type: integer
           examples:
             - 8
+          description: Turbines whose latest known operating state is active, regardless of the selected generation period. Missing states are not counted as active.
         capacity_watts:
           type: number
           format: double
-          description: Rated capacity of the requested scope (the owner slice or the whole site), in watts.
+          description: Rated capacity represented by the requested scope.
           examples:
-            - 2559.465
+            - 18800000
         capacity_kw:
           type: number
           format: double
-          description: The same rated capacity in kilowatts.
+          description: Rated capacity represented by the requested scope in kilowatts.
           examples:
-            - 2.559465
-        co2_avoided_kg:
-          type: number
-          format: double
-          description: Emissions avoided over the window, in kg CO2. Reported by the API; not consumed by the integration.
-        co2_avoided_assumed_export_factor:
-          type: number
-          format: double
-          description: Assumed grid emissions factor in kg CO2 per kWh used for the calculation.
-        co2_avoided_coverage_percent:
-          type:
-            - number
-            - 'null'
-          format: double
-          description: Share of intervals in the window that had a matching carbon-intensity reading.
-        co2_avoided_matched_intervals:
-          type: integer
-        co2_avoided_expected_intervals:
-          type: integer
-        co2_avoided_complete:
-          type: boolean
-        latest_carbon_intensity_at:
-          type:
-            - string
-            - 'null'
-          format: date-time
-          description: Timestamp of the newest carbon-intensity reading used in the calculation.
+            - 18800
         latest_generation_interval_end:
           type:
             - string
             - 'null'
           format: date-time
+          description: Oldest contributing turbine end within the selected window, or null if a turbine has no known generation. A mixed-period total can include newer readings from other turbines.
           examples:
             - 2026-06-25T12:30:00Z
         latest_import_status:
           type:
             - string
             - 'null'
-          description: Import pipeline state for this window; running means the window is still being backfilled.
           examples:
-            - success
-            - running
+            - completed
     SummaryResponse:
       type: object
       additionalProperties: false
@@ -665,6 +750,129 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/GenerationPoint'
+    CarbonAvoidedSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - co2_avoided_kg
+        - generation_kwh
+        - assumed_export_factor
+        - coverage_percent
+        - matched_intervals
+        - expected_intervals
+        - complete
+        - latest_intensity_at
+      properties:
+        co2_avoided_kg:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Indicative CO2 avoided by matched intervals for the requested scope.
+        generation_kwh:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Generation included in the estimate for the requested scope.
+        assumed_export_factor:
+          type: number
+          format: double
+          examples:
+            - 0.99
+        coverage_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        matched_intervals:
+          type: integer
+          minimum: 0
+        expected_intervals:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+        latest_intensity_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    CarbonAvoidedPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - timestamp
+        - interval_end
+        - duration_seconds
+        - co2_avoided_kg
+        - generation_kwh
+        - grid_intensity_gco2_per_kwh
+        - coverage_percent
+        - matched_intervals
+        - expected_intervals
+        - complete
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        interval_end:
+          type: string
+          format: date-time
+        duration_seconds:
+          type: integer
+          minimum: 0
+        co2_avoided_kg:
+          type:
+            - number
+            - 'null'
+          format: double
+        generation_kwh:
+          type:
+            - number
+            - 'null'
+          format: double
+        grid_intensity_gco2_per_kwh:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Generation-weighted NESO estimated actual GB grid carbon intensity for the bucket.
+        coverage_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        matched_intervals:
+          type: integer
+          minimum: 0
+        expected_intervals:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+    CarbonAvoidedResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - window
+            - summary
+            - series
+          properties:
+            window:
+              $ref: '#/components/schemas/Window'
+            summary:
+              $ref: '#/components/schemas/CarbonAvoidedSummary'
+            series:
+              type: array
+              items:
+                $ref: '#/components/schemas/CarbonAvoidedPoint'
     WindSpeedPoint:
       type: object
       additionalProperties: false
@@ -735,6 +943,8 @@ components:
         - generation_kwh
         - generation_share_percent
         - capacity_factor_percent
+        - capacity_watts
+        - capacity_kw
         - latest_generation_interval_end
         - latest_rotor_speed_rpm
         - latest_rotor_speed_at
@@ -760,7 +970,15 @@ components:
             - number
             - 'null'
           format: double
-          description: Per-turbine capacity factor for the requested scope.
+          description: Per-turbine capacity factor based on physical output and that turbine's observed generation period. Null when a continuous observed period cannot be established. This is not changed by `scope`.
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated turbine capacity represented by the requested scope.
+        capacity_kw:
+          type: number
+          format: double
+          description: Rated turbine capacity represented by the requested scope in kilowatts.
         latest_generation_interval_end:
           type:
             - string
