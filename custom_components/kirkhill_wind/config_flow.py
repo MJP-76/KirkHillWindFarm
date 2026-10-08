@@ -75,6 +75,11 @@ class KirkHillWindConfigFlow(
     # token exchange hands over the key, the settings step builds the entry.
     _oauth_api_key: str | None = None
 
+    # Why the last validation failed, verbatim from the API. Kept on the flow
+    # so the sign-in abort can quote it; _validate_api_key returns only the
+    # translation key, which by itself hides 401 vs 429 vs a timeout.
+    _validation_detail: str = ""
+
     @property
     def logger(self) -> logging.Logger:
         """Return the logger (abstract on the OAuth base class)."""
@@ -151,11 +156,21 @@ class KirkHillWindConfigFlow(
         # a key revoked mid-flow must not produce an entry that starts out dead.
         errors = await self._validate_api_key(api_key, DEFAULT_BASE_URL)
         if errors:
+            # Quote the API's own words. "Could not be used" with no reason
+            # left nothing to act on -- the detail is what tells a reporter
+            # apart from a dashboard-side fault.
+            detail = self._validation_detail or "no reason was returned"
             if errors.get("base") == "permission_required":
                 # Repeating sign-in with the same narrow consent fails again,
                 # so say which consent option is needed rather than "invalid".
-                return self.async_abort(reason="oauth_permission_denied")
-            return self.async_abort(reason="oauth_key_invalid")
+                return self.async_abort(
+                    reason="oauth_permission_denied",
+                    description_placeholders={"detail": detail},
+                )
+            return self.async_abort(
+                reason="oauth_key_invalid",
+                description_placeholders={"detail": detail},
+            )
         self._oauth_api_key = api_key
         return await self.async_step_settings()
 
@@ -203,20 +218,30 @@ class KirkHillWindConfigFlow(
         self, api_key: str, base_url: str
     ) -> dict[str, str]:
         """Return an errors dict, or empty dict on success."""
+        self._validation_detail = ""
         client = KirkHillApiClient(api_key=api_key, base_url=base_url)
         try:
             # Reuse HA's shared session rather than a throwaway one per attempt.
             await client.test(async_get_clientsession(self.hass))
-        except KirkHillAuthError:
+        except KirkHillAuthError as exc:
+            # Logged, not just returned: before this, a rejected key produced
+            # an opaque one-line abort and left nothing in the log to diagnose.
+            self._validation_detail = str(exc)
+            _LOGGER.warning("Kirk Hill API rejected the key during validation: %s", exc)
             return {"base": "auth_failed"}
-        except KirkHillPermissionError:
+        except KirkHillPermissionError as exc:
             # A different message from auth_failed on purpose: the key is
             # fine, it just may not read everything, and re-entering the same
             # key would fail the same way.
+            self._validation_detail = str(exc)
+            _LOGGER.warning("Kirk Hill API key lacks permission: %s", exc)
             return {"base": "permission_required"}
-        except KirkHillConnectionError:
+        except KirkHillConnectionError as exc:
+            self._validation_detail = str(exc)
+            _LOGGER.warning("Kirk Hill API unreachable during validation: %s", exc)
             return {"base": "cannot_connect"}
         except Exception as exc:  # noqa: BLE001
+            self._validation_detail = str(exc)
             _LOGGER.exception("Unexpected error validating Kirk Hill API key: %s", exc)
             return {"base": "unknown"}
         return {}

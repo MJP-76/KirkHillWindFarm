@@ -69,7 +69,7 @@
       "oauth_failed": "[%key:common::config_flow::abort::oauth2_failed%]",
       "oauth_timeout": "[%key:common::config_flow::abort::oauth2_timeout%]",
       "oauth_unauthorized": "[%key:common::config_flow::abort::oauth2_unauthorized%]",
-      "oauth_key_invalid": "The key returned by the Kirk Hill dashboard could not be used to reach the API. Try signing in again, or add an API key manually.",
+      "oauth_key_invalid": "The key returned by the Kirk Hill dashboard could not be used to reach the API: {detail} Try signing in again, or add an API key manually.",
       "oauth_permission_denied": "The dashboard granted a key that cannot read all of the data this integration uses. Sign in again and choose “My share and whole wind farm”.",
       "user_rejected_authorize": "Sign-in was cancelled before permission was granted."
     }

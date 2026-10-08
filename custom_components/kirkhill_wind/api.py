@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from datetime import datetime, timezone
@@ -20,6 +21,33 @@ from .exceptions import (
 _LOGGER = logging.getLogger(__name__)
 
 TIMEOUT = aiohttp.ClientTimeout(total=20)
+
+
+async def _error_detail(resp: aiohttp.ClientResponse) -> str:
+    """Extract the dashboard's own explanation from an error response.
+
+    The body is read exactly once: ``resp.json()`` consumes it, and a failed
+    decode would leave a follow-up ``resp.text()`` empty. Errors are usually
+    ``{"message": "The API key is not valid."}``, but an HTML error page from
+    the proxy in front of the API is still more useful than nothing.
+    """
+    try:
+        raw = await resp.read()
+    except Exception:  # noqa: BLE001 -- never let diagnosis break the failure
+        return ""
+    if not raw:
+        return ""
+    text = raw.decode("utf-8", errors="replace")
+    try:
+        payload = json.loads(text)
+    except ValueError:
+        return " ".join(text.split())[:300]
+    if isinstance(payload, dict):
+        for key in ("message", "error", "error_description", "detail"):
+            value = payload.get(key)
+            if value:
+                return str(value)[:300]
+    return " ".join(text.split())[:300]
 
 
 class KirkHillApiClient:
@@ -46,18 +74,36 @@ class KirkHillApiClient:
             async with session.get(
                 url, params=params, headers=self._headers, timeout=TIMEOUT
             ) as resp:
+                if resp.status >= 400:
+                    # Read the body *before* raising: the dashboard explains
+                    # itself in {"message": ...} -- "which rejection was this?"
+                    # is the entire point of these exceptions, and without it a
+                    # 401 during sign-in says nothing more than "invalid key".
+                    detail = await _error_detail(resp)
+                else:
+                    detail = ""
                 if resp.status == 401:
-                    raise KirkHillAuthError("Invalid or missing API key")
+                    raise KirkHillAuthError(
+                        "Invalid or missing API key"
+                        + (f": {detail}" if detail else "")
+                    )
                 if resp.status == 403:
                     # Classified before raise_for_status(): otherwise this
                     # lands in the ClientError branch below and a permission
                     # problem reports itself as a network failure forever.
                     raise KirkHillPermissionError(
-                        f"403 Forbidden for {path} (params={params}): the key "
-                        "does not permit this data. It must allow both "
-                        "'My share' and 'Whole wind farm'."
+                        f"403 Forbidden for {path} (params={params}): "
+                        + (detail or "the key does not permit this data")
+                        + ". It must allow both 'My share' and 'Whole wind farm'."
                     )
-                resp.raise_for_status()
+                if resp.status >= 400:
+                    # Previously raise_for_status() -> aiohttp.ClientResponseError
+                    # -> KirkHillConnectionError(str(exc)), which kept the status
+                    # but dropped the body. Same exception type, both halves kept.
+                    raise KirkHillConnectionError(
+                        f"HTTP {resp.status} from {path} (params={params}): "
+                        + (detail or "no detail returned")
+                    )
                 body = await resp.json()
                 _LOGGER.debug(
                     "Kirk Hill API GET %s params=%s -> HTTP %s in %.2fs",

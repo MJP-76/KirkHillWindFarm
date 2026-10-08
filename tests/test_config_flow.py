@@ -10,7 +10,10 @@ from custom_components.kirkhill_wind import _CONFIG_ENTRY_VERSION, config_flow
 from custom_components.kirkhill_wind.api import KirkHillApiClient
 from custom_components.kirkhill_wind.config_flow import KirkHillWindConfigFlow
 from custom_components.kirkhill_wind.const import CONF_API_KEY, DEFAULT_BASE_URL
-from custom_components.kirkhill_wind.exceptions import KirkHillPermissionError
+from custom_components.kirkhill_wind.exceptions import (
+    KirkHillAuthError,
+    KirkHillPermissionError,
+)
 
 
 class TestConfigFlowVersion:
@@ -167,3 +170,50 @@ class TestPermissionGate:
         assert result["reason"] == "oauth_permission_denied", (
             "oauth_key_invalid would blame the key instead of the consent choice."
         )
+
+
+class TestValidationDetail:
+    """A rejected key must leave its reason behind for the abort to quote."""
+
+    @staticmethod
+    def _make_flow(hass) -> KirkHillWindConfigFlow:
+        flow = KirkHillWindConfigFlow()
+        flow.hass = hass
+        flow.flow_id = "flow-1"
+        flow.handler = "kirkhill_wind"
+        flow.context = {"source": "user"}
+        flow._async_current_entries = MagicMock(return_value=[])
+        return flow
+
+    @pytest.mark.asyncio
+    async def test_rejected_key_keeps_the_reason(self, hass):
+        flow = self._make_flow(hass)
+
+        with (
+            patch.object(config_flow, "async_get_clientsession", return_value=object()),
+            patch.object(
+                KirkHillApiClient,
+                "test",
+                side_effect=KirkHillAuthError(
+                    "Invalid or missing API key: The API key is not valid."
+                ),
+            ),
+        ):
+            errors = await flow._validate_api_key("key", DEFAULT_BASE_URL)
+
+        assert errors == {"base": "auth_failed"}
+        assert "not valid" in flow._validation_detail
+
+    @pytest.mark.asyncio
+    async def test_a_successful_validation_clears_the_detail(self, hass):
+        flow = self._make_flow(hass)
+        flow._validation_detail = "stale reason from a previous attempt"
+
+        with (
+            patch.object(config_flow, "async_get_clientsession", return_value=object()),
+            patch.object(KirkHillApiClient, "test", return_value=None),
+        ):
+            errors = await flow._validate_api_key("key", DEFAULT_BASE_URL)
+
+        assert errors == {}
+        assert flow._validation_detail == ""
