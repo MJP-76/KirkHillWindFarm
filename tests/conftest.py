@@ -198,6 +198,8 @@ def mock_turbine_rows():
             "generation_kwh": 3600.0,
             "generation_share_percent": 12.5,
             "capacity_factor_percent": 42.0,
+            "capacity_watts": 2350000,
+            "capacity_kw": 2350,
             "latest_generation_interval_end": "2026-06-25T12:30:00Z",
             "latest_rotor_speed_rpm": 12.3,
             "latest_rotor_speed_at": "2026-06-25T12:34:00Z",
