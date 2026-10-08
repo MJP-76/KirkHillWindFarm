@@ -3,6 +3,14 @@
     "step": {
       "user": {
         "title": "Connect to Kirk Hill Wind Farm",
+        "description": "Sign in with your Kirk Hill dashboard account and the integration gets an API key for you, or enter a key you already have.",
+        "menu_options": {
+          "oauth2": "Sign in with your Kirk Hill dashboard account (recommended)",
+          "manual": "I already have an API key"
+        }
+      },
+      "manual": {
+        "title": "Connect to Kirk Hill Wind Farm",
         "description": "Enter your Kirk Hill dashboard API key. Forecast entities use Open-Meteo automatically (no forecast API key required). You can also enable optional experimental Ethex payment tracking onboarding.",
         "data": {
           "api_key": "API key",
@@ -11,6 +19,28 @@
           "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
           "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
           "site_name": "Site name"
+        }
+      },
+      "oauth2": {
+        "title": "Sign in with the Kirk Hill dashboard",
+        "description": "You will open dashboard.kirkhillcoop.org and approve access to your wind farm data. The dashboard never shares your password, account details or ownership records with this integration."
+      },
+      "settings": {
+        "title": "Set up Kirk Hill Wind Farm",
+        "description": "Signed in. Choose the site name and what to create. Forecast entities use Open-Meteo automatically (no forecast API key required).",
+        "data": {
+          "site_name": "Site name",
+          "create_dashboard": "Create dashboard automatically",
+          "enable_payment_tracking": "Enable payment tracking onboarding (Ethex, experimental)"
+        }
+      },
+      "pick_implementation": {
+        "title": "[%key:common::config_flow::title::oauth2_pick_implementation%]",
+        "data": {
+          "implementation": "[%key:common::config_flow::data::implementation%]"
+        },
+        "data_description": {
+          "implementation": "[%key:common::config_flow::description::implementation%]"
         }
       },
       "reauth": {
@@ -24,12 +54,22 @@
     "error": {
       "auth_failed": "Invalid API key. Check your key and try again.",
       "cannot_connect": "Cannot connect to the Kirk Hill API. Check your network and base URL.",
-      "unknown": "Unexpected error. Check the Home Assistant logs."
+      "unknown": "Unexpected error. Check the Home Assistant logs.",
+      "oauth_unavailable": "Could not reach the Kirk Hill dashboard to sign in. Try again, or choose \"I already have an API key\"."
     },
     "abort": {
       "single_instance_allowed": "Only a single instance of Kirk Hill Wind Farm is allowed.",
       "reauth_successful": "Reauthentication successful.",
-      "reauth_failed": "Reauthentication failed: the config entry could not be found."
+      "reauth_failed": "Reauthentication failed: the config entry could not be found.",
+      "authorize_url_timeout": "[%key:common::config_flow::abort::oauth2_authorize_url_timeout%]",
+      "missing_credentials": "[%key:common::config_flow::abort::oauth2_missing_credentials%]",
+      "no_url_available": "[%key:common::config_flow::abort::oauth2_no_url_available%]",
+      "oauth_error": "[%key:common::config_flow::abort::oauth2_error%]",
+      "oauth_failed": "[%key:common::config_flow::abort::oauth2_failed%]",
+      "oauth_timeout": "[%key:common::config_flow::abort::oauth2_timeout%]",
+      "oauth_unauthorized": "[%key:common::config_flow::abort::oauth2_unauthorized%]",
+      "oauth_key_invalid": "The key returned by the Kirk Hill dashboard could not be used to reach the API. Try signing in again, or add an API key manually.",
+      "user_rejected_authorize": "Sign-in was cancelled before permission was granted."
     }
   },
   "options": {

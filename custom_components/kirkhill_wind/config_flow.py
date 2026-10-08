@@ -8,6 +8,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     TextSelector,
@@ -33,75 +34,161 @@ from .const import (
     MIN_SCAN_INTERVAL,
 )
 from .exceptions import KirkHillAuthError, KirkHillConnectionError
+from .oauth import KirkHillOAuthError, async_get_implementation
 from .settings import form_defaults, merge_options
 
 _LOGGER = logging.getLogger(__name__)
 
+# The optional settings both sign-in paths offer. One definition on purpose:
+# the OAuth path and the paste path must start an entry with the same options,
+# or the two entry shapes would drift apart silently.
+SETTINGS_FIELDS: dict[Any, Any] = {
+    vol.Optional(CONF_SITE_NAME, default=DEFAULT_SITE_NAME): str,
+    vol.Optional(CONF_CREATE_DASHBOARD, default=DEFAULT_CREATE_DASHBOARD): bool,
+    vol.Optional(
+        CONF_ENABLE_PAYMENT_TRACKING, default=DEFAULT_ENABLE_PAYMENT_TRACKING
+    ): bool,
+}
 
-class KirkHillWindConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for the Kirk Hill Wind Farm integration."""
 
+class KirkHillWindConfigFlow(
+    config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
+):
+    """Handle a config flow for the Kirk Hill Wind Farm integration.
+
+    The OAuth inheritance gives the dashboard sign-in Home Assistant's PKCE,
+    redirect and state plumbing. The paste-an-API-key path is the original one,
+    unchanged, so existing users and any install that cannot use OAuth still
+    work exactly as before.
+    """
+
+    # Not implied by the domain= kwarg (that only registers the handler): the
+    # OAuth base's __init__ refuses to build an instance whose DOMAIN is unset.
+    DOMAIN = DOMAIN
     VERSION = 9
+
+    # Set by async_oauth_create_entry and consumed by async_step_settings: the
+    # token exchange hands over the key, the settings step builds the entry.
+    _oauth_api_key: str | None = None
+
+    @property
+    def logger(self) -> logging.Logger:
+        """Return the logger (abstract on the OAuth base class)."""
+        return _LOGGER
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step: API key, site name, and dashboard choice."""
+        """Offer the two ways in: sign in with the dashboard, or paste a key.
+
+        Picking a menu option makes Home Assistant jump straight to that step
+        with ``user_input=None``, so this method only ever shows the menu.
+        """
+        if self._async_current_entries():
+            return self.async_abort(reason="single_instance_allowed")
+        return self.async_show_menu(step_id="user", menu_options=["oauth2", "manual"])
+
+    async def async_step_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the original API key form, unchanged."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
         errors: dict[str, str] = {}
-
         if user_input is not None:
             errors = await self._validate_api_key(
                 user_input[CONF_API_KEY],
                 DEFAULT_BASE_URL,
             )
             if not errors:
-                return self.async_create_entry(
-                    title=user_input.get(CONF_SITE_NAME, DEFAULT_SITE_NAME),
-                    # data carries connection details only. Everything the user
-                    # can change goes in options, where the options flow and the
-                    # number entities can update it.
-                    data={
-                        CONF_API_KEY: user_input[CONF_API_KEY],
-                        CONF_BASE_URL: DEFAULT_BASE_URL,
-                    },
-                    options={
-                        CONF_SITE_NAME: user_input.get(
-                            CONF_SITE_NAME, DEFAULT_SITE_NAME
-                        ),
-                        CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
-                        CONF_CREATE_DASHBOARD: user_input.get(
-                            CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD
-                        ),
-                        CONF_ENABLE_PAYMENT_TRACKING: user_input.get(
-                            CONF_ENABLE_PAYMENT_TRACKING,
-                            DEFAULT_ENABLE_PAYMENT_TRACKING,
-                        ),
-                    },
-                )
+                return self._async_create_entry(user_input[CONF_API_KEY], user_input)
 
         return self.async_show_form(
-            step_id="user",
+            step_id="manual",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY): TextSelector(
                         TextSelectorConfig(type=TextSelectorType.PASSWORD)
                     ),
-                    vol.Optional(
-                        CONF_SITE_NAME, default=DEFAULT_SITE_NAME
-                    ): str,
-                    vol.Optional(
-                        CONF_CREATE_DASHBOARD, default=DEFAULT_CREATE_DASHBOARD
-                    ): bool,
-                    vol.Optional(
-                        CONF_ENABLE_PAYMENT_TRACKING,
-                        default=DEFAULT_ENABLE_PAYMENT_TRACKING,
-                    ): bool,
+                    **SETTINGS_FIELDS,
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_oauth2(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Sign in with the Kirk Hill dashboard account (OAuth 2.1 + PKCE)."""
+        try:
+            await async_get_implementation(
+                self.hass, async_get_clientsession(self.hass)
+            )
+        except KirkHillOAuthError as exc:
+            # Endpoint discovery or client registration failed. Say why and
+            # leave the paste-an-API-key path on offer rather than dead-ending
+            # the flow; submitting the form retries.
+            _LOGGER.warning("Kirk Hill OAuth setup failed: %s", exc)
+            return self.async_show_form(
+                step_id="oauth2",
+                data_schema=vol.Schema({}),
+                errors={"base": "oauth_unavailable"},
+            )
+        return await self.async_step_pick_implementation()
+
+    async def async_oauth_create_entry(self, data: dict) -> FlowResult:
+        """Turn the OAuth token into an entry shaped like the paste path's."""
+        token = data.get("token") or {}
+        api_key = token.get("access_token")
+        if not api_key:
+            return self.async_abort(reason="oauth_error")
+        # The key just came from the dashboard, but confirm it reads the API:
+        # a key revoked mid-flow must not produce an entry that starts out dead.
+        errors = await self._validate_api_key(api_key, DEFAULT_BASE_URL)
+        if errors:
+            return self.async_abort(reason="oauth_key_invalid")
+        self._oauth_api_key = api_key
+        return await self.async_step_settings()
+
+    async def async_step_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Collect the optional settings the paste form offers, after sign-in."""
+        if self._oauth_api_key is None:
+            return self.async_abort(reason="oauth_error")
+        if user_input is not None:
+            return self._async_create_entry(self._oauth_api_key, user_input)
+        return self.async_show_form(
+            step_id="settings",
+            data_schema=vol.Schema(dict(SETTINGS_FIELDS)),
+        )
+
+    def _async_create_entry(self, api_key: str, settings: dict[str, Any]) -> FlowResult:
+        """Create the config entry.
+
+        ``data`` carries connection details only (AGENTS.md rule 2). The
+        ``options`` mapping is the complete initial options dict, so it names
+        every key the options flow and the number entities read -- Home
+        Assistant replaces that mapping wholesale, and the OAuth path must not
+        hand over a shorter one than the paste path did.
+        """
+        return self.async_create_entry(
+            title=settings.get(CONF_SITE_NAME, DEFAULT_SITE_NAME),
+            data={
+                CONF_API_KEY: api_key,
+                CONF_BASE_URL: DEFAULT_BASE_URL,
+            },
+            options={
+                CONF_SITE_NAME: settings.get(CONF_SITE_NAME, DEFAULT_SITE_NAME),
+                CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+                CONF_CREATE_DASHBOARD: settings.get(
+                    CONF_CREATE_DASHBOARD, DEFAULT_CREATE_DASHBOARD
+                ),
+                CONF_ENABLE_PAYMENT_TRACKING: settings.get(
+                    CONF_ENABLE_PAYMENT_TRACKING, DEFAULT_ENABLE_PAYMENT_TRACKING
+                ),
+            },
         )
 
     async def _validate_api_key(
