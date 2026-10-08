@@ -382,3 +382,37 @@ class TestOAuthEntry:
             "The paste-an-API-key path is the fallback; the flow must explain "
             "why sign-in is unavailable rather than dead-ending."
         )
+
+
+class TestAbortDiagnostics:
+    """The sign-in abort must quote the API, not just say "could not be used"."""
+
+    @pytest.mark.asyncio
+    async def test_abort_carries_the_underlying_reason(self, hass):
+        flow = _make_flow(hass)
+        flow._validate_api_key = AsyncMock(return_value={"base": "auth_failed"})
+        flow._validation_detail = "Invalid or missing API key: The API key is not valid."
+
+        result = await flow.async_oauth_create_entry(
+            {"token": {"access_token": "kh_live_doomed"}}
+        )
+
+        assert result["type"] == "abort"
+        assert result["reason"] == "oauth_key_invalid"
+        assert "not valid" in result["description_placeholders"]["detail"], (
+            "Without the placeholder the user sees a reason-less sentence and "
+            "the log is the only place the truth lives."
+        )
+
+    @pytest.mark.asyncio
+    async def test_abort_falls_back_when_no_detail_exists(self, hass):
+        flow = _make_flow(hass)
+        flow._validate_api_key = AsyncMock(return_value={"base": "cannot_connect"})
+        flow._validation_detail = ""
+
+        result = await flow.async_oauth_create_entry(
+            {"token": {"access_token": "kh_live_doomed"}}
+        )
+
+        assert result["type"] == "abort"
+        assert result["description_placeholders"]["detail"]

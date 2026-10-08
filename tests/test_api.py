@@ -248,3 +248,77 @@ class TestPermissionHandling:
         with patch.object(client, "_get", side_effect=fake_get):
             with pytest.raises(KirkHillPermissionError):
                 await client.test(object())
+
+
+class TestValidationDiagnostics:
+    """The failure must carry the dashboard's own words, not just a status.
+
+    A sign-in that dies with "the key could not be used" and no reason is
+    undiagnosable: 401, 429 and a timeout all looked identical. These pin the
+    reason to the exception, which config_flow logs and quotes.
+    """
+
+    class _ErrorResponse:
+        def __init__(self, status: int, body: bytes) -> None:
+            self.status = status
+            self._body = body
+
+        async def read(self) -> bytes:
+            return self._body
+
+        async def json(self):
+            raise AssertionError("error bodies are read once, via read()")
+
+        def raise_for_status(self) -> None:
+            raise AssertionError("statuses are classified explicitly, not via raise_for_status")
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc_info) -> bool:
+            return False
+
+    class _Session:
+        def __init__(self, status: int, body: bytes) -> None:
+            self._status = status
+            self._body = body
+
+        def get(self, url: str, **kwargs) -> "TestValidationDiagnostics._ErrorResponse":
+            return TestValidationDiagnostics._ErrorResponse(self._status, self._body)
+
+    @pytest.mark.asyncio
+    async def test_401_quotes_the_dashboard_message(self):
+        client = KirkHillApiClient(api_key="key")
+        body = b'{"message": "The API key is not valid."}'
+
+        with pytest.raises(KirkHillAuthError, match="The API key is not valid"):
+            await client._get(self._Session(401, body), "/api/v1/current", {"scope": "owner"})
+
+    @pytest.mark.asyncio
+    async def test_401_without_json_still_reports_something(self):
+        """A proxy error page is still better than a bare "invalid key"."""
+        client = KirkHillApiClient(api_key="key")
+
+        with pytest.raises(KirkHillAuthError, match="Bad Gateway"):
+            await client._get(
+                self._Session(401, b"<html><body>Bad Gateway</body></html>"),
+                "/api/v1/current",
+                {"scope": "owner"},
+            )
+
+    @pytest.mark.asyncio
+    async def test_other_http_errors_report_status_and_body(self):
+        """429/500 previously surfaced as a bare aiohttp string ("cannot connect")."""
+        client = KirkHillApiClient(api_key="key")
+        body = b'{"message": "Too many requests"}'
+
+        with pytest.raises(KirkHillConnectionError, match="HTTP 429.*Too many requests"):
+            await client._get(self._Session(429, body), "/api/v1/current", {"scope": "owner"})
+
+    @pytest.mark.asyncio
+    async def test_403_quotes_the_permission_message(self):
+        client = KirkHillApiClient(api_key="key")
+        body = b'{"message": "This key may not read site data"}'
+
+        with pytest.raises(KirkHillPermissionError, match="may not read site data"):
+            await client._get(self._Session(403, body), "/api/v1/current", {"scope": "site"})
