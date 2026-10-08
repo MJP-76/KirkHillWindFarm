@@ -123,6 +123,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             for timeframe in generation_timeframes
             for scope in SCOPES
         ],
+        MemberSavingsValueSensor(coordinator, entry),
         FarmWindSpeedSensor(coordinator, entry),
         OpenMeteoForecastWindSpeedSensor(
             coordinator,
@@ -620,6 +621,81 @@ class GenerationValueByTimeframeSensor(KirkHillScopedEntity, SensorEntity):
             attrs["projection_basis"] = (
                 "live_generation_x_price" if price else "no_price_zero"
             )
+        return attrs
+
+
+class MemberSavingsValueSensor(KirkHillScopedEntity, SensorEntity):
+    """Capacity-based member savings: owned watts x the declared p/W rate.
+
+    A different question from ``GenerationValueByTimeframeSensor``, which asks
+    what your *generation* was worth at your p/kWh. Members are paid for the
+    watts they *own*, and the period never enters the calculation: 1,000 W at
+    21p/W is GBP 210 for whatever span the board declares, so 2,559.465 W is
+    GBP 537.49 -- the figure the web dashboard shows for Feb 2025-Jun 2026.
+    Generation takes no part in it, so this is unaffected by wind.
+
+    There is deliberately no accrual. The board reviews its finances and
+    declares a payment when it declares one, so until then no effective
+    earning rate is knowable -- which is why the web dashboard shows no
+    ongoing earnings at all. This entity holds the last declared rate and
+    nothing more: no daily rate is derived, because none has ever been
+    published. The board's own "15p per watt per 12 months" is an equivalence
+    for its Feb 2025-Jun 2026 declaration, not a rate to apply over time.
+
+    No declared rate (``0.0``) returns ``None`` so the entity reads
+    ``unknown`` -- asserting GBP 0.00 would be a figure the board never made.
+    A *missing* capacity returns GBP 0.00 with
+    ``projection_basis=no_capacity_zero`` instead: there is genuinely nothing
+    to pay on, which is a different statement from "not yet declared".
+    """
+
+    _attr_device_class = SensorDeviceClass.MONETARY
+    # TOTAL and not MEASUREMENT: HA allows only TOTAL for MONETARY
+    # (homeassistant/components/sensor/const.py DEVICE_CLASS_STATE_CLASSES),
+    # which is also what GenerationValueByTimeframeSensor uses.
+    _attr_state_class = SensorStateClass.TOTAL
+    _attr_native_unit_of_measurement = "GBP"
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:cash"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, SCOPE_OWNER, "member_savings_value")
+        self._attr_name = "Member savings value"
+
+    @property
+    def _owned_watts(self) -> float | None:
+        """Owned capacity in watts from the owner scope's current summary."""
+        data = self.coordinator.data.get(SCOPE_OWNER)
+        summary = data.get("summary", {}) if isinstance(data, dict) else {}
+        return _as_float(summary.get("capacity_watts"))
+
+    @property
+    def native_value(self):
+        watts = self._owned_watts
+        rate = getattr(self.coordinator, "owner_rate_pence_per_w", 0.0)
+        if not watts:
+            return 0.0
+        if not rate:
+            # Nothing declared yet: unknown, not zero. The payment is
+            # retrospective, so "no rate" is an absence of information rather
+            # than a statement that the payout is nil.
+            return None
+        return round(watts * rate / 100, 2)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs = super().extra_state_attributes
+        watts = self._owned_watts
+        rate = getattr(self.coordinator, "owner_rate_pence_per_w", 0.0)
+        attrs["owned_watts"] = watts
+        attrs["rate_pence_per_watt"] = rate
+        if not watts:
+            attrs["projection_basis"] = "no_capacity_zero"
+        elif not rate:
+            attrs["projection_basis"] = "no_rate_declared"
+        else:
+            attrs["projection_basis"] = "capacity_x_rate"
+        attrs["data_stale"] = self._current_is_stale()
         return attrs
 
 

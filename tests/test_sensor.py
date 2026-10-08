@@ -18,6 +18,7 @@ from custom_components.kirkhill_wind.sensor import (
     FarmWindSpeedSensor,
     GenerationValueByTimeframeSensor,
     LatestImportStatusSensor,
+    MemberSavingsValueSensor,
     UnknownTurbinesSensor,
     _display_energy_from_kwh,
     _timeframe_label,
@@ -350,3 +351,106 @@ class TestOwnerScopeDegradation:
         sensor = FarmCapacityFactorSensor(coordinator, self._entry(), SCOPE_OWNER)
 
         assert sensor.native_value is None
+
+
+class TestMemberSavingsValue:
+    """The capacity-based member savings sensor: owned watts x rate / 100.
+
+    The board pays for watts owned, not for kilowatt-hours generated, so this
+    figure must track capacity and the published p/W rate only -- never
+    generation, and never a per-day accrual we invented. The headline case is
+    pinned to the board's own announcement: 2,559.465 W x 21p = GBP 537.49
+    for Feb 2025-Jun 2026.
+    """
+
+    BOARD_WATTS = 2559.465
+
+    @staticmethod
+    def _entry():
+        entry = MagicMock()
+        entry.entry_id = "test"
+        return entry
+
+    @classmethod
+    def _coordinator(cls, *, summary=None, rate=21.0, data_extra=None) -> MagicMock:
+        """A coordinator holding one owner summary (None = capacity absent)."""
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.owner_rate_pence_per_w = rate
+        coordinator.data = {
+            SCOPE_OWNER: {"summary": summary} if summary is not None else {},
+            SCOPE_SITE: {"summary": {"capacity_watts": 18_800_000.0}},
+        }
+        if data_extra:
+            coordinator.data.update(data_extra)
+        return coordinator
+
+    @classmethod
+    def _sensor(cls, **kwargs) -> MemberSavingsValueSensor:
+        return MemberSavingsValueSensor(cls._coordinator(**kwargs), cls._entry())
+
+    def test_board_announcement_figure(self):
+        """2,559.465 W at 21p/W is the board's GBP 537.49."""
+        sensor = self._sensor(summary={"capacity_watts": self.BOARD_WATTS})
+
+        assert sensor.native_value == 537.49
+
+        attrs = sensor.extra_state_attributes
+        assert attrs["owned_watts"] == self.BOARD_WATTS
+        assert attrs["rate_pence_per_watt"] == 21.0
+        assert attrs["projection_basis"] == "capacity_x_rate"
+        assert attrs["scope"] == SCOPE_OWNER
+
+    def test_board_equivalence_rate_uses_the_same_multiplication(self):
+        """The board's "15p per watt per 12 months" is that same product.
+
+        An equivalence for a 12-month declaration, not a rate to accrue: the
+        period is never a divisor here.
+        """
+        sensor = self._sensor(summary={"capacity_watts": self.BOARD_WATTS}, rate=15.0)
+
+        assert sensor.native_value == 383.92
+
+    def test_generation_never_enters_the_calculation(self):
+        """No timeframe summaries at all -- the figure is identical."""
+        with_summaries = self._sensor(
+            summary={"capacity_watts": self.BOARD_WATTS},
+            data_extra={
+                "timeframe_summaries": {
+                    SCOPE_OWNER: {"today": {"total_generation_kwh": 999_999.0}},
+                    SCOPE_SITE: {"today": {"total_generation_kwh": 999_999.0}},
+                }
+            },
+        )
+        without = self._sensor(summary={"capacity_watts": self.BOARD_WATTS})
+
+        assert with_summaries.native_value == without.native_value == 537.49
+
+    def test_undeclared_rate_reads_unknown_not_zero(self):
+        """No declared payment must read unknown, never assert GBP 0.00.
+
+        The board pays retrospectively, so an absent rate is missing
+        information -- claiming zero would be a figure it never made, and the
+        web dashboard shows nothing at all for the same reason.
+        """
+        sensor = self._sensor(summary={"capacity_watts": self.BOARD_WATTS}, rate=0.0)
+
+        assert sensor.native_value is None
+        attrs = sensor.extra_state_attributes
+        assert attrs["projection_basis"] == "no_rate_declared"
+        assert attrs["owned_watts"] == self.BOARD_WATTS
+
+    def test_missing_capacity_reads_zero_and_says_so(self):
+        """An owner scope with no summary must not raise or guess."""
+        sensor = self._sensor(summary=None)
+
+        assert sensor.native_value == 0.0
+        attrs = sensor.extra_state_attributes
+        assert attrs["projection_basis"] == "no_capacity_zero"
+        assert attrs["owned_watts"] is None
+
+    def test_empty_owner_payload_does_not_raise(self):
+        """data[owner] is {} when that scope failed on its first poll."""
+        sensor = self._sensor(summary=None, data_extra={SCOPE_OWNER: {}})
+
+        assert sensor.native_value == 0.0

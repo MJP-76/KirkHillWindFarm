@@ -15,6 +15,7 @@ value, and let the options form silently discard settings it does not display.
 Reading a setting is now a single lookup here, and ``OPTION_KEYS`` is what the
 migration uses to decide what moves between the two mappings.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -26,12 +27,14 @@ from .const import (
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_OWNER_RATE_PENCE_PER_W,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
+    DEFAULT_OWNER_RATE_PENCE_PER_W,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SITE_NAME,
 )
@@ -44,6 +47,7 @@ SETTING_DEFAULTS: dict[str, Any] = {
     CONF_ENABLE_PAYMENT_TRACKING: DEFAULT_ENABLE_PAYMENT_TRACKING,
     CONF_CFD_PRICE_GBP_PER_MWH: DEFAULT_CFD_PRICE_GBP_PER_MWH,
     CONF_OWNER_PRICE_PENCE_PER_KWH: DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_OWNER_RATE_PENCE_PER_W: DEFAULT_OWNER_RATE_PENCE_PER_W,
 }
 
 # Keys that belong in entry.options and must never appear in entry.data.
@@ -96,6 +100,11 @@ def get_negotiated_price(entry: ConfigEntry) -> float:
 def get_owner_price(entry: ConfigEntry) -> float:
     """Return the owner price in pence per kWh."""
     return float(get_setting(entry, CONF_OWNER_PRICE_PENCE_PER_KWH))
+
+
+def get_owner_rate(entry: ConfigEntry) -> float:
+    """Return the member savings rate in pence per owned watt."""
+    return float(get_setting(entry, CONF_OWNER_RATE_PENCE_PER_W))
 
 
 def form_defaults(entry: ConfigEntry) -> dict[str, Any]:

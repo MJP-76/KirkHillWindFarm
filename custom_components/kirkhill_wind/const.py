@@ -11,6 +11,7 @@ CONF_SITE_NAME = "site_name"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_CFD_PRICE_GBP_PER_MWH = "cfd_price_gbp_per_mwh"
 CONF_OWNER_PRICE_PENCE_PER_KWH = "owner_price_pence_per_kwh"
+CONF_OWNER_RATE_PENCE_PER_W = "owner_rate_pence_per_w"
 
 # One-shot marker, not a user setting. See AGENTS.md rule 3.
 #
@@ -38,6 +39,12 @@ DEFAULT_SITE_NAME = "Kirk Hill Wind Farm"
 DEFAULT_SCAN_INTERVAL = 60  # seconds between API polls
 DEFAULT_CFD_PRICE_GBP_PER_MWH = 0.0
 DEFAULT_OWNER_PRICE_PENCE_PER_KWH = 0.0
+# Declared member-savings rate in pence per owned watt. Members are paid for
+# watts owned, not kWh generated, and the period never enters the calculation:
+# the board reviews its finances and declares a payment (Feb 2025-Jun 2026 was
+# 21p/W; its "15p per watt per 12 months" is an equivalence for that same
+# declaration, not an accrual rate). 0.0 means "nothing declared yet".
+DEFAULT_OWNER_RATE_PENCE_PER_W = 0.0
 
 MIN_SCAN_INTERVAL = 30
 MAX_SCAN_INTERVAL = 3600
@@ -79,5 +86,6 @@ def yearly_timeframes(current_year: int | None = None) -> tuple[str, ...]:
 
         current_year = dt_util.now().year
     return tuple(f"year_{year}" for year in range(PAST_YEAR_START, current_year))
+
 
 PLATFORMS = ["sensor", "binary_sensor", "number"]
