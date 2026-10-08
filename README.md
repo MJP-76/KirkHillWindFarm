@@ -80,7 +80,8 @@ and an animated dashboard.
 
 > Signing in needs no API key: the setup opens the dashboard, you approve
 > access, and the integration receives an API key for you. Your password is
-> never shared with the integration.
+> never shared with the integration. Pick **My share and whole wind farm** — the
+> integration reads both, and a key that allows only one is rejected at setup.
 >
 > Prefer to use a key? Generate one by logging in to the dashboard
 > <https://dashboard.kirkhillcoop.org>, click your username in the top right,

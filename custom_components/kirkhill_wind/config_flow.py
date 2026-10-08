@@ -33,7 +33,11 @@ from .const import (
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
 )
-from .exceptions import KirkHillAuthError, KirkHillConnectionError
+from .exceptions import (
+    KirkHillAuthError,
+    KirkHillConnectionError,
+    KirkHillPermissionError,
+)
 from .oauth import KirkHillOAuthError, async_get_implementation
 from .settings import form_defaults, merge_options
 
@@ -147,6 +151,10 @@ class KirkHillWindConfigFlow(
         # a key revoked mid-flow must not produce an entry that starts out dead.
         errors = await self._validate_api_key(api_key, DEFAULT_BASE_URL)
         if errors:
+            if errors.get("base") == "permission_required":
+                # Repeating sign-in with the same narrow consent fails again,
+                # so say which consent option is needed rather than "invalid".
+                return self.async_abort(reason="oauth_permission_denied")
             return self.async_abort(reason="oauth_key_invalid")
         self._oauth_api_key = api_key
         return await self.async_step_settings()
@@ -201,6 +209,11 @@ class KirkHillWindConfigFlow(
             await client.test(async_get_clientsession(self.hass))
         except KirkHillAuthError:
             return {"base": "auth_failed"}
+        except KirkHillPermissionError:
+            # A different message from auth_failed on purpose: the key is
+            # fine, it just may not read everything, and re-entering the same
+            # key would fail the same way.
+            return {"base": "permission_required"}
         except KirkHillConnectionError:
             return {"base": "cannot_connect"}
         except Exception as exc:  # noqa: BLE001

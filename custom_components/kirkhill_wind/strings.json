@@ -53,6 +53,7 @@
     },
     "error": {
       "auth_failed": "Invalid API key. Check your key and try again.",
+      "permission_required": "This key cannot read both your share and the whole wind farm. The integration needs both: choose “My share and whole wind farm” when signing in, or use a key that allows both permissions.",
       "cannot_connect": "Cannot connect to the Kirk Hill API. Check your network and base URL.",
       "unknown": "Unexpected error. Check the Home Assistant logs.",
       "oauth_unavailable": "Could not reach the Kirk Hill dashboard to sign in. Try again, or choose \"I already have an API key\"."
@@ -69,6 +70,7 @@
       "oauth_timeout": "[%key:common::config_flow::abort::oauth2_timeout%]",
       "oauth_unauthorized": "[%key:common::config_flow::abort::oauth2_unauthorized%]",
       "oauth_key_invalid": "The key returned by the Kirk Hill dashboard could not be used to reach the API. Try signing in again, or add an API key manually.",
+      "oauth_permission_denied": "The dashboard granted a key that cannot read all of the data this integration uses. Sign in again and choose “My share and whole wind farm”.",
       "user_rejected_authorize": "Sign-in was cancelled before permission was granted."
     }
   },

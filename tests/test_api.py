@@ -11,6 +11,7 @@ from custom_components.kirkhill_wind.exceptions import (
     KirkHillApiError,
     KirkHillAuthError,
     KirkHillConnectionError,
+    KirkHillPermissionError,
 )
 
 
@@ -165,3 +166,85 @@ class TestOpenMeteoClient:
         }
         result = client._summarize_forecast(body)
         assert result == {}
+
+
+class TestPermissionHandling:
+    """403 must mean "reads less than we need", not "can't connect"."""
+
+    class _Response:
+        """Minimal aiohttp response: only the status is under test."""
+
+        def __init__(self, status: int) -> None:
+            self.status = status
+
+        async def json(self) -> dict:
+            return {"data": {}}
+
+        def raise_for_status(self) -> None:
+            raise AssertionError(
+                "401/403 must be classified before raise_for_status(); reaching "
+                "it means a permission failure became a connection error"
+            )
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc_info) -> bool:
+            return False
+
+    class _Session:
+        def __init__(self, status: int) -> None:
+            self._status = status
+
+        def get(self, url: str, **kwargs) -> "TestPermissionHandling._Response":
+            return TestPermissionHandling._Response(self._status)
+
+    @pytest.mark.asyncio
+    async def test_403_raises_a_permission_error(self):
+        client = KirkHillApiClient(api_key="key")
+
+        with pytest.raises(KirkHillPermissionError, match="403"):
+            await client._get(self._Session(403), "/api/v1/current", {"scope": "site"})
+
+    @pytest.mark.asyncio
+    async def test_401_is_still_the_only_reauth_trigger(self):
+        client = KirkHillApiClient(api_key="key")
+
+        with pytest.raises(KirkHillAuthError):
+            await client._get(self._Session(401), "/api/v1/current", {"scope": "owner"})
+
+        assert issubclass(KirkHillPermissionError, KirkHillApiError)
+        assert not issubclass(KirkHillPermissionError, KirkHillAuthError), (
+            "A 403 must not start re-auth: re-entering the same narrow key "
+            "would fail the same way."
+        )
+
+    @pytest.mark.asyncio
+    async def test_validation_asks_for_every_scope_the_integration_reads(self):
+        client = KirkHillApiClient(api_key="key")
+        seen: list[str] = []
+
+        async def fake_get(session, path, params):
+            seen.append(params["scope"])
+            return {"data": {}}
+
+        with patch.object(client, "_get", side_effect=fake_get):
+            await client.test(object())
+
+        assert seen == [SCOPE_OWNER, SCOPE_SITE], (
+            "An owner-only probe waves a share-only key through setup and "
+            "strands the site sensors on the very next poll."
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_share_only_key_fails_validation(self):
+        client = KirkHillApiClient(api_key="key")
+
+        async def fake_get(session, path, params):
+            if params.get("scope") == SCOPE_SITE:
+                raise KirkHillPermissionError("403 for scope=site")
+            return {"data": {}}
+
+        with patch.object(client, "_get", side_effect=fake_get):
+            with pytest.raises(KirkHillPermissionError):
+                await client.test(object())

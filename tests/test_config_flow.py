@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.kirkhill_wind import _CONFIG_ENTRY_VERSION
+from custom_components.kirkhill_wind import _CONFIG_ENTRY_VERSION, config_flow
+from custom_components.kirkhill_wind.api import KirkHillApiClient
 from custom_components.kirkhill_wind.config_flow import KirkHillWindConfigFlow
-from custom_components.kirkhill_wind.const import CONF_API_KEY
+from custom_components.kirkhill_wind.const import CONF_API_KEY, DEFAULT_BASE_URL
+from custom_components.kirkhill_wind.exceptions import KirkHillPermissionError
 
 
 class TestConfigFlowVersion:
@@ -102,3 +104,66 @@ class TestReauth:
         assert entry.data[CONF_API_KEY] == "old-key"
         hass.config_entries.async_update_entry.assert_not_called()
         hass.config_entries.async_schedule_reload.assert_not_called()
+
+
+class TestPermissionGate:
+    """A key that cannot read every scope must not create an entry.
+
+    The integration always reads owner *and* site, so a key granted only one of
+    them would produce an entry whose other sensors are dead from the first poll
+    -- reported before this existed as a connection error.
+    """
+
+    @staticmethod
+    def _make_flow(hass) -> KirkHillWindConfigFlow:
+        flow = KirkHillWindConfigFlow()
+        flow.hass = hass
+        flow.flow_id = "flow-1"
+        flow.handler = "kirkhill_wind"
+        flow.context = {"source": "user"}
+        flow._async_current_entries = MagicMock(return_value=[])
+        return flow
+
+    @pytest.mark.asyncio
+    async def test_validate_maps_a_denied_scope_to_its_own_message(self, hass):
+        flow = self._make_flow(hass)
+
+        with (
+            patch.object(config_flow, "async_get_clientsession", return_value=object()),
+            patch.object(
+                KirkHillApiClient,
+                "test",
+                side_effect=KirkHillPermissionError("403 for scope=site"),
+            ),
+        ):
+            errors = await flow._validate_api_key("key", DEFAULT_BASE_URL)
+
+        assert errors == {"base": "permission_required"}
+        assert errors != {"base": "auth_failed"}, (
+            "auth_failed would tell the user their key is invalid when it "
+            "only lacks permission."
+        )
+
+    @pytest.mark.asyncio
+    async def test_manual_path_refuses_the_key_with_that_message(self, hass):
+        flow = self._make_flow(hass)
+        flow._validate_api_key = AsyncMock(return_value={"base": "permission_required"})
+
+        result = await flow.async_step_manual({CONF_API_KEY: "narrow-key"})
+
+        assert result["type"] == "form"
+        assert result["errors"] == {"base": "permission_required"}
+
+    @pytest.mark.asyncio
+    async def test_signin_aborts_with_the_consent_instructions(self, hass):
+        flow = self._make_flow(hass)
+        flow._validate_api_key = AsyncMock(return_value={"base": "permission_required"})
+
+        result = await flow.async_oauth_create_entry(
+            {"token": {"access_token": "kh_live_narrow"}}
+        )
+
+        assert result["type"] == "abort"
+        assert result["reason"] == "oauth_permission_denied", (
+            "oauth_key_invalid would blame the key instead of the consent choice."
+        )
