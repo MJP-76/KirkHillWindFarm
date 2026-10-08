@@ -1,0 +1,125 @@
+# The upstream dashboard publishes a build stamp (data-release-id) on
+# /api-docs and the spec itself at /api-docs/openapi.yaml. This runs daily and
+# only downloads the spec when that stamp moved since the last sync. If the
+# spec's *content* differs, it refreshes openapi.yaml at the repo root,
+# records the release in .github/openapi-release-id, and opens (or updates) a
+# PR listing what is new upstream.
+#
+# PR_TOKEN (optional, contents + pull_requests scope): pushes made with the
+# default GITHUB_TOKEN do not trigger CI, and main requires those checks --
+# so without a token the bot PR would sit forever with no checks reported.
+# The workflow falls back to the default token and still opens the PR.
+name: OpenAPI sync
+
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# One run at a time: a second schedule firing while a push is in flight would
+# race on the same branch.
+concurrency:
+  group: openapi-sync
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PR_TOKEN || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Same interpreter as the CI test job: the contract test below
+          # imports the integration through tests/conftest.py.
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install homeassistant
+          pip install -r requirements-dev.txt
+
+      - name: Check for a new upstream release
+        id: check
+        run: |
+          python scripts/openapi_check.py check \
+            --summary "$RUNNER_TEMP/openapi-summary.md" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Run the contract test against the refreshed spec
+        id: contract
+        if: steps.check.outputs.changed == 'true'
+        # Deliberately non-blocking: an upstream change that breaks the
+        # fixtures must still produce a PR. The failure is reported in the PR
+        # body and by the final step, not swallowed here.
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pytest tests/test_openapi_contract.py -v --tb=short 2>&1 | tee "$RUNNER_TEMP/contract.txt"
+
+      - name: Build the PR body
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          {
+            cat "$RUNNER_TEMP/openapi-summary.md"
+            echo "### Contract test"
+            echo
+            echo '`pytest tests/test_openapi_contract.py` -> **${{ steps.contract.outcome }}**'
+            echo
+            echo '```'
+            tail -n 80 "$RUNNER_TEMP/contract.txt"
+            echo '```'
+          } > "$RUNNER_TEMP/pr-body.md"
+
+      - name: Push the branch and open or update the PR
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PR_TOKEN || github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # One long-lived branch rather than a dated one per release, so a
+          # second upstream release arriving while the first PR is still open
+          # updates that same PR instead of stacking a second one. The force
+          # push is safe: only this workflow ever writes this branch.
+          git checkout -B chore/openapi-sync
+          git add openapi.yaml .github/openapi-release-id
+          git commit -m "Sync openapi.yaml from upstream release ${{ steps.check.outputs.release }}"
+          git push --force origin chore/openapi-sync
+          open_prs=$(gh pr list --head chore/openapi-sync --state open --json url --jq 'length')
+          if [ "$open_prs" != "0" ]; then
+            gh pr edit chore/openapi-sync --body-file "$RUNNER_TEMP/pr-body.md"
+            echo "Updated the existing PR for chore/openapi-sync."
+          else
+            gh pr create --base main --head chore/openapi-sync \
+              --title "Sync openapi.yaml from the upstream dashboard" \
+              --body-file "$RUNNER_TEMP/pr-body.md"
+          fi
+
+      - name: Write the run summary
+        run: |
+          {
+            echo "## OpenAPI sync"
+            echo
+            if [ "${{ steps.check.outputs.changed }}" = "true" ]; then
+              echo "Upstream spec changed -- PR opened or updated (new features: ${{ steps.check.outputs.features }})."
+            else
+              echo "No spec change to sync."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # After the PR exists, so the report is never lost to a failed run.
+      - name: Fail if the contract test broke
+        if: steps.check.outputs.changed == 'true' && steps.contract.outcome == 'failure'
+        run: |
+          echo "::error::tests/test_openapi_contract.py fails against the refreshed spec; the PR body has the detail."
+          exit 1
