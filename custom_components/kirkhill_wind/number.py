@@ -8,6 +8,7 @@ RestoreEntity.
 RestoreEntity is retained as a *one-time backfill*, not as a source of truth.
 See ``_PriceBackfillMixin`` and AGENTS.md rule 3.
 """
+
 from __future__ import annotations
 
 from homeassistant.components.number import NumberEntity, NumberMode
@@ -16,6 +17,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .const import (
     CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_OWNER_RATE_PENCE_PER_W,
     CONF_PRICE_RESTORE_PENDING,
 )
 from .entity import KirkHillEntity
@@ -29,6 +31,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         [
             NegotiatedPriceNumber(coordinator, entry),
             OwnerPriceNumber(coordinator, entry),
+            OwnerRateNumber(coordinator, entry),
         ]
     )
 
@@ -106,7 +109,9 @@ class _PriceBackfillMixin:
         )
 
 
-class NegotiatedPriceNumber(_PriceBackfillMixin, KirkHillEntity, RestoreEntity, NumberEntity):
+class NegotiatedPriceNumber(
+    _PriceBackfillMixin, KirkHillEntity, RestoreEntity, NumberEntity
+):
     """A user-editable negotiated CfD price in GBP per MWh."""
 
     _price_key = CONF_CFD_PRICE_GBP_PER_MWH
@@ -147,7 +152,9 @@ class NegotiatedPriceNumber(_PriceBackfillMixin, KirkHillEntity, RestoreEntity, 
         await self._async_backfill_price()
 
 
-class OwnerPriceNumber(_PriceBackfillMixin, KirkHillEntity, RestoreEntity, NumberEntity):
+class OwnerPriceNumber(
+    _PriceBackfillMixin, KirkHillEntity, RestoreEntity, NumberEntity
+):
     """A user-editable owner price in pence per kWh."""
 
     _price_key = CONF_OWNER_PRICE_PENCE_PER_KWH
@@ -184,3 +191,52 @@ class OwnerPriceNumber(_PriceBackfillMixin, KirkHillEntity, RestoreEntity, Numbe
         """One-time backfill of a pre-v4.13.0 price; see _PriceBackfillMixin."""
         await super().async_added_to_hass()
         await self._async_backfill_price()
+
+
+class OwnerRateNumber(KirkHillEntity, NumberEntity):
+    """A user-editable member savings rate in pence per owned watt.
+
+    Unlike the two prices above, this key is new -- there has never been a
+    pre-persistence value for it to recover -- so it deliberately carries no
+    ``RestoreEntity``/``_PriceBackfillMixin`` path: ``entry.options`` is its
+    only source of truth from its first release. See AGENTS.md rule 3 before
+    adding one.
+
+    The rate is a declared figure, not a standing price. Members are paid for
+    the watts they own and the period never enters the calculation ("time
+    frame doesn't come into the calculation at all" -- 1,000 W at 21p/W is
+    GBP 210 for whatever span the board declares). The board reviews its
+    finances and declares a payment when it declares one, so this entity
+    holds the latest declaration, and ``0.0`` means nothing has been
+    declared -- the value sensor then reads ``unknown`` rather than a figure
+    the board never promised.
+    """
+
+    _attr_native_unit_of_measurement = "p/W"
+    _attr_mode = NumberMode.BOX
+    _attr_native_min_value = 0.0
+    _attr_native_max_value = 100.0
+    _attr_native_step = 0.1
+    _attr_icon = "mdi:cash-sync"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator, entry, "owner_rate_pence_per_w")
+        self._attr_name = "Owner rate (p/W)"
+
+    @property
+    def native_value(self) -> float | None:
+        return getattr(self.coordinator, "owner_rate_pence_per_w", 0.0)
+
+    async def async_set_native_value(self, value) -> None:
+        self.coordinator.owner_rate_pence_per_w = float(value)
+        # Persist to config entry options so the value survives restarts.
+        # merge_options keeps every other setting; a plain dict literal here
+        # would drop them, because Home Assistant replaces options wholesale.
+        self.hass.config_entries.async_update_entry(
+            self._entry,
+            options=merge_options(
+                dict(self._entry.options),
+                {CONF_OWNER_RATE_PENCE_PER_W: float(value)},
+            ),
+        )
+        self.async_write_ha_state()

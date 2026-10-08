@@ -225,6 +225,31 @@ decision changes.
   the stale keys from existing entries. The real prices (with their effective
   dates) are being sourced from the co-op board — when they land, per-year
   prices replace the estimates entirely.
+- **2026-10-08 — Member savings are capacity-based (`W × p/W`), a second money
+  basis beside `kWh × price`.** Confirmed by the board's announcement and by
+  Klaus Dudas in discussion: *"payment is based per Watt owned, not per kWh
+  generated"*, and *"time frame doesn't come into the calculation at all"* —
+  1,000 W at 21p/W is £210 for whatever span the board declares, so
+  2,559.465 W is £537.49 for Feb 2025–Jun 2026 (£1.6M across ~7.62 MW of
+  member-owned capacity). The new `Member savings value` sensor multiplies the
+  API's owner `capacity_watts` by an `Owner rate (p/W)` number entity and
+  deliberately has **no timeframe and no accrual**: the payment is
+  retrospective — the board reviews its finances and declares a "dividend"
+  when it declares one, so no effective earning rate exists until then, which
+  is why the web dashboard shows no ongoing earnings at all. The board's "15p
+  per watt per 12 months" is an *equivalence for that one declaration*, not a
+  rate to divide over time; deriving a daily accrual would invent a figure
+  nobody published — the same failure the 2026-09-29 suppression decision
+  exists to avoid. The `Value (…)` sensors keep their `kWh × price` meaning
+  untouched (that is the pre-move Ripple model; they answer a different
+  question), and All time / past-year money stays `unknown`, because there is
+  no rate history to value it with. **No declared rate (`0.0`) reads
+  `unknown`, not £0.00** — asserting zero would be a statement the board never
+  made; `projection_basis` is `no_rate_declared`, with `no_capacity_zero` +
+  £0.00 reserved for genuinely having no watts to pay on. The rate is updated
+  whenever a payment is declared. Neither figure is shown on the SCADA card.
+  Regression tests: `test_sensor.py::TestMemberSavingsValue` (pins 537.49 and
+  the undeclared-`unknown` behaviour), `test_number.py` (rate persistence).
 
 ## Dashboard consolidation
 

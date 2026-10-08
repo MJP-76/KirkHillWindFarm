@@ -17,7 +17,9 @@
 - Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
 - Value (yesterday/today/week/month/ytd/year) [GBP] for owner and site — live-accurate when a price is set; otherwise `£0.00`
   - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
+- **Member savings value** [GBP] — the board's capacity-based payment: `owned watts × rate (p/W) ÷ 100`. At 2,559.465 W and a declared 21p/W this reads **£537.49**, the figure the web dashboard shows for Feb 2025–Jun 2026. **Reads `unknown` (`—`) until a rate is declared** — the payment is retrospective, so "no rate" means not yet known, not nil. Attributes: `owned_watts`, `rate_pence_per_watt`, `projection_basis` (`capacity_x_rate`, `no_rate_declared`, or `no_capacity_zero`) and `data_stale`
 - Owner price (number) [p/kWh] — user-set owner price driving the owner £ figures
+- Owner rate (number) [p/W] — the **declared** member savings rate driving **Member savings value**; enter it when the board announces a payment (21p/W for Feb 2025–Jun 2026). `0.0` = nothing declared
 - Negotiated price (number) [GBP/MWh] — user-set CfD price driving the site £ figures
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Wind speed [m/s]
@@ -46,6 +48,24 @@ drives the site figures. When a price is >0, each timeframe's owner value is
 `generation kWh ÷ 1000 × price(£/MWh)`; when it is 0 (or live generation is
 unavailable, e.g. before the first successful API fetch) the sensors read
 `£0.00` — there is no projected-model fallback.
+
+**Two different money questions.** The `Value (…)` sensors price your
+*generation* (`kWh × price`) — the model the co-op itself moved away from when
+it stopped calculating member returns from kWh. Members are now paid for the
+watts they *own*, so **Member savings value** uses that instead:
+`owned watts × rate ÷ 100`, fed by `capacity_watts` from the API — the same
+number the web dashboard multiplies out.
+
+The period never enters the calculation: 1,000 W at 21p/W is £210 for whatever
+span the board declares, so 2,559.465 W is £537.49 for Feb 2025–Jun 2026.
+There is deliberately **no accrual** — the board reviews its finances and
+declares a payment when it declares one, so no effective earning rate is
+knowable until then, which is exactly why the web dashboard shows no ongoing
+earnings. The board's "15p per watt per 12 months" is an equivalence for that
+same declaration, not a daily or monthly rate to divide out. Update
+`Owner rate (p/W)` each time a payment is declared; until then the sensor
+reads `—`. This figure does not depend on generation, so it is unaffected by
+wind, and it is **not** shown on the SCADA card.
 
 The **All-time** value is an exception: it reports `unknown` (the SCADA card
 shows `—`) in every case, because the API records energy only — never money —

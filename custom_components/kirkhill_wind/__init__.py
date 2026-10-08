@@ -32,6 +32,7 @@ from .settings import (
     OPTION_KEYS,
     get_negotiated_price,
     get_owner_price,
+    get_owner_rate,
     payment_tracking_enabled,
 )
 
@@ -138,6 +139,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator.negotiated_price_gbp_per_mwh = get_negotiated_price(entry)
 
     coordinator.owner_price_pence_per_kwh = get_owner_price(entry)
+
+    coordinator.owner_rate_pence_per_w = get_owner_rate(entry)
 
     await async_setup_services(hass)
 

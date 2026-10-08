@@ -1,4 +1,5 @@
 """Tests for number entities — persistence to config entry options."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -9,6 +10,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from custom_components.kirkhill_wind.const import (
     CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_OWNER_RATE_PENCE_PER_W,
     CONF_PRICE_RESTORE_PENDING,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
@@ -16,6 +18,7 @@ from custom_components.kirkhill_wind.const import (
 from custom_components.kirkhill_wind.number import (
     NegotiatedPriceNumber,
     OwnerPriceNumber,
+    OwnerRateNumber,
 )
 
 
@@ -89,6 +92,72 @@ class TestNumberPersistence:
         sensor = OwnerPriceNumber(coordinator, entry)
         assert sensor.native_value == 7.3
 
+    @pytest.mark.asyncio
+    async def test_owner_rate_persists_to_options(self):
+        """Changing the p/W rate should update config entry options.
+
+        The rate has no restore_state path (it is new, so there is nothing
+        pre-persistence to recover) -- options is its only source of truth,
+        which makes this write the one that matters.
+        """
+        coordinator = MagicMock()
+        coordinator.owner_rate_pence_per_w = 15.0
+        entry = MagicMock()
+        entry.entry_id = "test"
+        entry.options = {}
+
+        hass = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+
+        sensor = OwnerRateNumber(coordinator, entry)
+        sensor.hass = hass
+        sensor.async_write_ha_state = MagicMock()
+
+        await sensor.async_set_native_value(21.0)
+
+        assert coordinator.owner_rate_pence_per_w == 21.0
+        hass.config_entries.async_update_entry.assert_called_once()
+        call_args = hass.config_entries.async_update_entry.call_args
+        assert call_args[0][0] == entry
+        assert call_args[1]["options"][CONF_OWNER_RATE_PENCE_PER_W] == 21.0
+
+    @pytest.mark.asyncio
+    async def test_owner_rate_write_keeps_every_other_setting(self):
+        """A rate write must not drop the settings it does not name.
+
+        HA replaces entry.options wholesale, so a bare dict literal here would
+        silently delete the prices and the scan interval (AGENTS.md rule 1).
+        """
+        coordinator = MagicMock()
+        coordinator.owner_rate_pence_per_w = 0.0
+        existing = {CONF_SITE_NAME: "Kirk Hill", CONF_SCAN_INTERVAL: 300}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        entry.options = dict(existing)
+
+        hass = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+
+        sensor = OwnerRateNumber(coordinator, entry)
+        sensor.hass = hass
+        sensor.async_write_ha_state = MagicMock()
+
+        await sensor.async_set_native_value(21.0)
+
+        options = hass.config_entries.async_update_entry.call_args[1]["options"]
+        assert options[CONF_OWNER_RATE_PENCE_PER_W] == 21.0
+        assert options == {**existing, CONF_OWNER_RATE_PENCE_PER_W: 21.0}
+
+    def test_owner_rate_reads_from_coordinator(self):
+        """Native value should come from the coordinator attribute."""
+        coordinator = MagicMock()
+        coordinator.owner_rate_pence_per_w = 21.0
+        entry = MagicMock()
+        entry.entry_id = "test"
+
+        sensor = OwnerRateNumber(coordinator, entry)
+        assert sensor.native_value == 21.0
+
 
 def _make_entry(options):
     """A config entry stand-in whose options actually mutate on write.
@@ -125,9 +194,7 @@ async def _add(sensor, last_state):
     """Drive async_added_to_hass with a stubbed restore record."""
     if isinstance(last_state, str):
         last_state = MagicMock(state=last_state)
-    with patch.object(
-        sensor, "async_get_last_state", new_callable=AsyncMock, return_value=last_state
-    ):
+    with patch.object(sensor, "async_get_last_state", new_callable=AsyncMock, return_value=last_state):
         with patch.object(RestoreEntity, "async_added_to_hass", new_callable=AsyncMock):
             await sensor.async_added_to_hass()
 
@@ -164,9 +231,7 @@ class TestPriceBackfillUpgrade:
         assert coordinator.negotiated_price_gbp_per_mwh == 85.0
         assert entry.options[CONF_CFD_PRICE_GBP_PER_MWH] == 85.0
         # Sibling price still outstanding -- must not be dropped by this entity.
-        assert entry.options[CONF_PRICE_RESTORE_PENDING] == [
-            CONF_OWNER_PRICE_PENCE_PER_KWH
-        ]
+        assert entry.options[CONF_PRICE_RESTORE_PENDING] == [CONF_OWNER_PRICE_PENCE_PER_KWH]
 
     @pytest.mark.asyncio
     async def test_owner_price_recovered_when_migration_flagged(self):
