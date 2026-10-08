@@ -4,7 +4,7 @@ Give the repository a **design-focused** review. CI already passes (ruff, HACS
 validation, Hassfest, version-sync); you are NOT reviewing for "does it pass CI".
 Focus on correctness, robustness, and design with these specific questions below.
 
-Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.14.0)
+Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.14.1)
 Start here: `custom_components/kirkhill_wind/`, then `AGENTS.md`, then
 `docs/development/decisions.md` (read the decisions doc — it records why the
 code is shaped this way and answers several questions below already).

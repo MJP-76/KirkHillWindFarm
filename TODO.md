@@ -291,6 +291,20 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.14.1 (pre-release, 2026-10-08)
+
+- Validation probes **both** scopes now: an owner-only probe waved a
+  share-only key through setup and stranded the site sensors on the next poll
+- 403 classified as `KirkHillPermissionError` before `raise_for_status()`, so a
+  permission problem stops reporting itself as a connection error
+- Not an auth error: setup/sign-in name the consent option needed
+  ("My share and whole wind farm"), and at runtime a 403 holds last-known data
+  instead of starting re-auth — no coordinator changes, it lands in the existing
+  non-auth `KirkHillApiError` paths
+- Sign-in, paste and re-auth all require full access
+- Docs: sign-in bullet and the README say which consent option to pick
+- 8 new tests (184 → 192), three confirmed to fail against the previous code
+
 ### v4.14.0 (pre-release, 2026-10-08)
 
 - Dashboard sign-in in the config flow (OAuth 2.1 + PKCE): the first step is a
