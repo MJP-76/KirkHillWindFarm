@@ -291,6 +291,17 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.14.2 (pre-release, 2026-10-08)
+
+- A failed sign-in quotes the API's own message instead of one opaque
+  sentence: `api.py` reads the error body before raising, so 401 carries
+  `{"message": …}` and 429/5xx carry status *and* body (previously
+  misreported as "cannot connect")
+- `_validate_api_key` logs the verbatim reason and the sign-in abort quotes it
+  through `{detail}`; exception types unchanged, so the reauth-vs-hold-data
+  behaviour is untouched
+- 8 new tests (192 → 200)
+
 ### v4.14.1 (pre-release, 2026-10-08)
 
 - Validation probes **both** scopes now: an owner-only probe waved a
