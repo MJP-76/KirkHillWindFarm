@@ -264,7 +264,7 @@ custom_components/kirkhill_wind/
 Remaining work:
 
 - [ ] Extract `async_migrate_entry` + `_CONFIG_ENTRY_VERSION` into `migration.py`
-- [ ] Split `dashboard.py` (519 lines) into `dashboard/{builder,merge,constants}.py`
+- [ ] Split `dashboard.py` (529 lines) into `dashboard/{builder,merge,constants}.py`
 - [ ] Extract frontend/JS static-path registration into `frontend.py`
 - [ ] Extract payment-tracking setup (`_async_setup_payment_tracking`) into its own module
 - [ ] Re-export from `__init__.py` where tests import `_CONFIG_ENTRY_VERSION` / `async_migrate_entry`
@@ -290,6 +290,25 @@ reached the same conclusion independently.
 ## Release history
 
 Completed releases, newest first. Preserved for reference.
+
+### v4.14.0 (pre-release, 2026-10-08)
+
+- Dashboard sign-in in the config flow (OAuth 2.1 + PKCE): the first step is a
+  menu — sign in with your dashboard account, or paste an API key. The token
+  *is* a `kh_live_*` key, so `entry.data`, options and everything downstream are
+  unchanged; the paste path stays as the fallback
+- Client registration happens once per redirect URI and is cached in a `Store`;
+  endpoints are discovered, the registered URI is pinned, and each attempt gets a
+  fresh PKCE verifier — no `OAuth2Session` is ever built, so the absent refresh
+  token never matters
+- Daily `OpenAPI sync` workflow refreshes `openapi.yaml` when the dashboard's
+  build stamp moves and opens a PR listing new endpoints/schemas/fields with the
+  contract-test result — it has already landed `/api/v1/carbon-avoided` and the
+  `429` responses
+- Docs: setup guides describe both paths, and the release references were updated
+  across `CHANGELOG.md`, `installation.md`, `review-brief.md`, `decisions.md`,
+  `info.md`
+- 23 new tests (161 → 184)
 
 ### v4.13.9 (pre-release, 2026-10-06)
 
