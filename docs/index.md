@@ -52,7 +52,7 @@ development, you can do so here:
   - power (`owner` + `site`)
   - capacity factor (`owner` + `site`)
   - wind speed, state text, active binary sensor, rotor speed, today's generation
-- Config flow with API key validation and masked key entry
+- Config flow with dashboard sign-in, or masked API key entry, validated against the API
 - Optional automatic dashboard creation during setup
 - Configurable prices: Owner price (p/kWh) and Site/CfD price (£/MWh), as `number` entities
 - Open-Meteo forecast integration (forecast only; not authoritative actual generation)
