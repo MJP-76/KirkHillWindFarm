@@ -9,11 +9,12 @@ from typing import Any
 
 import aiohttp
 
-from .const import DEFAULT_BASE_URL, SCOPE_OWNER
+from .const import DEFAULT_BASE_URL, SCOPE_OWNER, SCOPE_SITE
 from .exceptions import (
     KirkHillApiError,
     KirkHillAuthError,
     KirkHillConnectionError,
+    KirkHillPermissionError,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,6 +48,15 @@ class KirkHillApiClient:
             ) as resp:
                 if resp.status == 401:
                     raise KirkHillAuthError("Invalid or missing API key")
+                if resp.status == 403:
+                    # Classified before raise_for_status(): otherwise this
+                    # lands in the ClientError branch below and a permission
+                    # problem reports itself as a network failure forever.
+                    raise KirkHillPermissionError(
+                        f"403 Forbidden for {path} (params={params}): the key "
+                        "does not permit this data. It must allow both "
+                        "'My share' and 'Whole wind farm'."
+                    )
                 resp.raise_for_status()
                 body = await resp.json()
                 _LOGGER.debug(
@@ -157,8 +167,15 @@ class KirkHillApiClient:
         return self._parse_data(body)
 
     async def test(self, session: aiohttp.ClientSession) -> None:
-        """Validate the API key by making a minimal current request."""
+        """Validate the key against every scope this integration reads.
+
+        Probing only the default (owner) scope would wave a share-only key
+        straight through setup and strand the site sensors until the next poll.
+        The API exposes no permission field to inspect, so the only way to know
+        what a key may read is to ask for both scopes.
+        """
         await self.get_current(session, SCOPE_OWNER)
+        await self.get_current(session, SCOPE_SITE)
 
 
 class OpenMeteoApiClient:

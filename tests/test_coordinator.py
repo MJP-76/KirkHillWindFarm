@@ -25,6 +25,7 @@ from custom_components.kirkhill_wind.exceptions import (
     KirkHillApiError,
     KirkHillAuthError,
     KirkHillConnectionError,
+    KirkHillPermissionError,
 )
 
 # ---------------------------------------------------------------------------
@@ -762,3 +763,52 @@ class TestScopeAwareCurrentPayloads:
 
         share = data[SCOPE_OWNER]["summary"]["capacity_watts"] / data[SCOPE_SITE]["summary"]["capacity_watts"] * 100
         assert round(share, 6) == 0.013614, "the fixture must carry the production owner share, not 100%"
+
+
+# ---------------------------------------------------------------------------
+# Permission failures (403) at runtime
+# ---------------------------------------------------------------------------
+
+
+class TestPermissionFailureAtRuntime:
+    """A lost permission holds data and says why -- it never starts re-auth."""
+
+    @pytest.mark.asyncio
+    async def test_denied_scope_keeps_data_and_does_not_reauth(
+        self, hass, mock_api_client, mock_current_payload
+    ):
+        """A 403 on one scope behaves like any other non-auth API failure.
+
+        If it were mistaken for a 401, _resolve_current_result would raise
+        ConfigEntryAuthFailed here and the user would be sent back to re-enter
+        a key that is perfectly valid.
+        """
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            result1 = await coord._async_update_data()
+
+        async def current_with_denial(session, scope):
+            if scope == SCOPE_SITE:
+                raise KirkHillPermissionError("403 for scope=site")
+            return mock_current_payload
+
+        mock_api_client.get_current = AsyncMock(side_effect=current_with_denial)
+
+        t1 = t0 + timedelta(seconds=60)
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t1,
+        ):
+            result2 = await coord._async_update_data()
+
+        # Last known site data is held rather than blanked, and marked stale.
+        assert result2[SCOPE_SITE] == result1[SCOPE_SITE]
+        assert result2["current_stale"][SCOPE_SITE] is True
+        # The scope that still works is unaffected.
+        assert result2["current_stale"][SCOPE_OWNER] is False

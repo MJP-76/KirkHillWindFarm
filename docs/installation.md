@@ -104,9 +104,10 @@ steps above first, then report it.
 Setup first asks how you want to connect:
 
 - **Sign in with your Kirk Hill dashboard account (recommended)** — opens the
-  dashboard in your browser, you approve access (your share, the whole wind
-  farm, or both), and the integration receives an API key for you. Nothing is
-  shown to copy or paste.
+  dashboard in your browser, you approve access, and the integration receives an
+  API key for you. Nothing is shown to copy or paste. **Choose *My share and
+  whole wind farm***: the integration reads both, and a key that allows only one
+  of them is rejected at setup with that message.
 - **I already have an API key** — entered as a masked password field in Home Assistant.
 
 On either path you are then asked for:
