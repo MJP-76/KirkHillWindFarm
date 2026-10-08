@@ -4,7 +4,7 @@ Give the repository a **design-focused** review. CI already passes (ruff, HACS
 validation, Hassfest, version-sync); you are NOT reviewing for "does it pass CI".
 Focus on correctness, robustness, and design with these specific questions below.
 
-Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.14.2)
+Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.15.0)
 Start here: `custom_components/kirkhill_wind/`, then `AGENTS.md`, then
 `docs/development/decisions.md` (read the decisions doc — it records why the
 code is shaped this way and answers several questions below already).
@@ -13,7 +13,7 @@ code is shaped this way and answers several questions below already).
 - Tiny custom integration: one coordinator polling a wind-farm API, farm-level +
   per-turbine sensors/binary_sensors, a bundled JS SCADA card, and dashboard
   generation/merge code in `dashboard.py` (`__init__.py` is setup/unload plus
-  `async_migrate_entry`, 263 lines).
+  `async_migrate_entry`, 266 lines).
 - `via_device_id` replaced the deprecated `via_device=(DOMAIN, entry.entry_id)`
   tuple (HA Core 2027.8 compat). The hub device id is resolved once in
   `__init__.py::async_setup_entry` and stored on the coordinator. Highest-risk

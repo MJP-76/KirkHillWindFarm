@@ -291,6 +291,19 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.15.0 (pre-release, 2026-10-08)
+
+- Member savings sensor on the board's own basis: `owned watts × p/W`
+  (2,559.465 W at 21p/W = £537.49), driven by a new `Owner rate (p/W)`
+  number entity
+- No timeframe and no accrual: an undeclared rate reads `unknown`, not
+  `£0.00`; only a missing capacity reads `£0.00` (`no_capacity_zero`)
+- Generation-based `Value (…)` sensors unchanged; alltime/past-year money
+  still suppressed for want of rate history
+- SCADA label "Your Share (W)" → "Your output (W)" (that row is live output,
+  not owned capacity)
+- 9 new tests (200 → 209)
+
 ### v4.14.2 (pre-release, 2026-10-08)
 
 - A failed sign-in quotes the API's own message instead of one opaque
