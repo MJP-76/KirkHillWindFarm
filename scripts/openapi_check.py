@@ -180,6 +180,10 @@ def render_summary(*, new_release: str, old_release: str, features: list[str], o
         "- `openapi.yaml` -- refreshed from upstream",
         "- `.github/openapi-release-id` -- records the release this sync came from",
         "",
+        # Ends on a blank line: the workflow appends the "### Contract test"
+        # heading directly after this file, so without it the heading lands
+        # glued to the last bullet.
+        "",
     ]
     return "\n".join(lines)
 
