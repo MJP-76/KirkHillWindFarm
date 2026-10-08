@@ -102,7 +102,7 @@ decision changes.
 - **2026-10-01 — The coordinator is not to be split until the API-call-budget
   test exists.** That test now exists (`TestApiCallBudget`, v4.13.5), so the
   recorded blocker is cleared; the split itself is still deferred. The file has
-  grown to 490 lines / 21.9 KB and does read like a god object (scheduling, API
+  grown to 499 lines / 22.5 KB and does read like a god object (scheduling, API
   orchestration, historical caching, turbines, Open-Meteo, stale-state). Both
   external reviews reached the same conclusion: splitting it before the call
   budget is protected turns a refactor into another behavioural change, with
@@ -243,8 +243,8 @@ decision changes.
 
 ## Deployment state
 
-- **2026-10-04 — The repository is at `4.13.9` (pre-release); production runs
-  `4.13.8`.** Nothing is deployed by releasing: the changed files under
+- **2026-10-08 — The repository is at `4.14.0` (pre-release); production runs
+  `4.13.9`.** Nothing is deployed by releasing: the changed files under
   `custom_components/kirkhill_wind/` reach this host only when `origin/main` is
   mirrored into `/homeassistant/custom_components/kirkhill_wind/` and Home
   Assistant is fully restarted — which needs the owner's explicit go-ahead.
