@@ -117,6 +117,26 @@ price inline. Displayed prices never round up (`0.06` shows as `0.06`), and the
 Power rows show a live £/h rate (`ownerExportKw × price` / `sitePowerMw × price`)
 once a price is set.
 
+### Member savings (per watt)
+
+Members are paid for the watts they **own**, not for kilowatt-hours
+generated, so the card carries a second, independent money figure:
+**Member savings**, on its own line in the gap between the Owner and Site
+panels, aligned to the Value column.
+
+- `number.<farm>_owner_rate_p_w` — **the board's declared rate in p/W**
+  (enter `21` for 21 pence per watt). Drives
+  `sensor.<farm>_member_savings_value`, which the card reads.
+- The figure is `owned watts × rate ÷ 100`: at 2,559.465 W and 21p/W the card
+  shows **£537.49** — the same number the web dashboard reports for
+  Feb 2025–Jun 2026.
+- It has **no timeframe and does not accrue**: the board declares a payment
+  when its finances allow, so until a rate is entered the line reads `—`, not
+  a figure nobody published. The board's "15p per watt per 12 months" is an
+  equivalence for that declaration, not a rate to divide over time.
+- The timeframe £ column above is a different question (generation × p/kWh)
+  and is unaffected by this rate.
+
 ### Suppressed £ values (All time)
 
 The **All time** row always shows `—` in the £ column, regardless of price. The
