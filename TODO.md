@@ -291,6 +291,18 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.0 (pre-release, 2026-10-09)
+
+- SCADA card now draws **Member savings** (`owned watts × declared p/W rate`)
+  on a line in the gap between the Owner and Site panels — the sensor has
+  existed since v4.15.0 but nothing rendered it
+- Reads `—` while no rate is declared, matching the sensor's `unknown` state;
+  cards stored without the new config key do too (`_num(undefined)` → null)
+- Purely additive: no row, rect or site coordinate moved, no existing cell
+  replaced (rows end 302, Owner rect 308, Site panel starts 332)
+- Frontend only — needs eyeballing on a real instance, CI has no browser
+- No test count change (216 → 216); display-only
+
 ### v4.15.2 (pre-release, 2026-10-09)
 
 - Dashboard sign-in parked behind `SIGN_IN_ENABLED = False`: setup goes

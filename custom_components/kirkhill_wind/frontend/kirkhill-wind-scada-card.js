@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.15.2";
+const KIRKHILL_WIND_SCADA_VERSION = "4.16.0";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 1300, wMin: 900, wMax: 2200, hMin: 700, hMax: 1900 };
