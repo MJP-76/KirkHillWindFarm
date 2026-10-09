@@ -48,6 +48,14 @@ Home Assistant. The generated dashboard formats those values for display with
 automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and
 rounds them to **2 decimal places**.
 
+!!! warning "All 22 earnings entities are currently disabled"
+    **2026-10-09** — the 19 value/savings sensors and the 3 price/rate `number`
+    entities are **disabled in the entity registry** and every input is `0.0`,
+    so nothing here is visible or computing until the board confirms how member
+    payments are calculated. They still exist; re-enable with
+    `hab entity enable <entity_id>`. See
+    [Development decisions](development/decisions.md).
+
 Financial £ values are **live-accurate when a price is set**. Two independent
 price entities hold the prices, both `0.0` by default:
 `number.kirk_hill_wind_farm_owner_price_p_kwh` (Owner price in p/kWh — enter `6`

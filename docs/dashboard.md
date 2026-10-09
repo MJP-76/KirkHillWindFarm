@@ -88,12 +88,22 @@ and duration.
 
 ## Financials (formerly the Finances tab)
 
+!!! warning "Earnings hidden pending the board's model"
+    **2026-10-09** — every money figure on this card is hidden until the board
+    confirms how member payments are calculated: the **`Value (£)` column, both
+    live `£/h` rates, both price pills and the member-savings line are no longer
+    rendered**, all 22 earnings entities are **disabled** in the entity registry,
+    and all three inputs (`owner_price_p_kwh`, `owner_rate_p_w`,
+    `negotiated_price_gbp_mwh`) are `0.0`. Restoring is `hab entity enable` plus
+    re-adding the markup — nothing was deleted. See
+    [Development decisions](development/decisions.md).
+
 The standalone **Finances tab was removed in v4.8.79** — its content (today's
 earnings, this month, year to date) now lives in the SCADA card itself. Every
 timeframe row (Yesterday, Today, Week, Month, YTD, Year, All time) in both the
-**Owner Capacity** and **Site Capacity** panels shows a **£ value column**
-alongside the kWh figure, so generation and its value are on the same row for
-the same timeframe. Both Owner and Site values are shown.
+**Owner Capacity** and **Site Capacity** panels is built to show a **£ value
+column** alongside the kWh figure, so generation and its value sit on the same
+row. **At present that column is not drawn**, and the card shows energy only.
 
 The **All time** kWh figure is **calculated as the sum of the per-year
 sensors** — `2024 + 2025 + … + the current year to date`, including any future
@@ -101,7 +111,7 @@ years as they complete. The per-year figures themselves are sensors only
 (`Generation (2024)`, `Generation (2025)`, …) and are **not shown on the card**;
 see [Sensors](sensors.md).
 
-### Prices
+### Prices (entities present, currently disabled)
 
 Two independent price entities drive the £ figures:
 
@@ -112,30 +122,30 @@ Two independent price entities drive the £ figures:
   rate.
 
 Both default to `0.0`, in which case the sensors read `£0.00` rather than a
-projected figure. Click the price pill on the panel's title row to edit the
-price inline. Displayed prices never round up (`0.06` shows as `0.06`), and the
-Power rows show a live £/h rate (`ownerExportKw × price` / `sitePowerMw × price`)
-once a price is set.
+projected figure. Displayed prices never round up (`0.06` shows as `0.06`), and
+the Power rows can show a live £/h rate (`ownerExportKw × price` /
+`sitePowerMw × price`) once a price is set.
 
-### Member savings (per watt)
+**All of that is switched off:** both entities are disabled in the registry,
+both sit at `0.0`, and the card no longer renders the price pills or the £/h
+rates. They remain in the codebase so restoring them needs no reinstall.
+
+### Member savings (per watt) — hidden
 
 Members are paid for the watts they **own**, not for kilowatt-hours
-generated, so the card carries a second, independent money figure:
-**Member savings**, on its own line in the gap between the Owner and Site
-panels, aligned to the Value column.
+generated. `sensor.<farm>_member_savings_value` computes
+`owned watts × rate ÷ 100` from `number.<farm>_owner_rate_p_w` — at 2,559.465 W
+and 21p/W that is **£537.49**, the figure the web dashboard reports for
+Feb 2025–Jun 2026.
 
-- `number.<farm>_owner_rate_p_w` — **the board's declared rate in p/W**
-  (enter `21` for 21 pence per watt). Drives
-  `sensor.<farm>_member_savings_value`, which the card reads.
-- The figure is `owned watts × rate ÷ 100`: at 2,559.465 W and 21p/W the card
-  shows **£537.49** — the same number the web dashboard reports for
-  Feb 2025–Jun 2026.
-- It has **no timeframe and does not accrue**: the board declares a payment
-  when its finances allow, so until a rate is entered the line reads `—`, not
-  a figure nobody published. The board's "15p per watt per 12 months" is an
-  equivalence for that declaration, not a rate to divide over time.
-- The timeframe £ column above is a different question (generation × p/kWh)
-  and is unaffected by this rate.
+**The card line that displayed it has been removed**, and both entities are
+disabled with the rate set to `0.0`, as part of the back-out above.
+
+It has **no timeframe and does not accrue**: the board declares a payment when
+its finances allow, and the board's "15p per watt per 12 months" is an
+equivalence for one declaration rather than a rate to divide over time. How
+`All time` should accumulate across declared periods is one of the open
+questions — see [Development decisions](development/decisions.md).
 
 ### Suppressed £ values (All time)
 
