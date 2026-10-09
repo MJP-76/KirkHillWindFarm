@@ -25,12 +25,14 @@
 - Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`. These are **sensors only** (not shown on the SCADA card). More years appear automatically as time passes.
 - Generation (alltime) [kWh] for owner and site — **calculated as the sum of all the year figures**: `2024 + 2025 + … + the current year to date`, including any future years. The `sum_of_years_kwh` attribute lists the per-year components.
 - Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
-- Value (yesterday/today/week/month/ytd/year) [GBP] for owner and site — live-accurate when a price is set; otherwise `£0.00`
+- **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry and the card no longer draws them; previously `live generation × configured price`, `£0.00` when no price was set
   - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
-- **Member savings value** [GBP] — the board's capacity-based payment: `owned watts × rate (p/W) ÷ 100`. At 2,559.465 W and a declared 21p/W this reads **£537.49**, the figure the web dashboard shows for Feb 2025–Jun 2026. **Reads `unknown` (`—`) until a rate is declared** — the payment is retrospective, so "no rate" means not yet known, not nil. Attributes: `owned_watts`, `rate_pence_per_watt`, `projection_basis` (`capacity_x_rate`, `no_rate_declared`, or `no_capacity_zero`) and `data_stale`
-- Owner price (number) [p/kWh] — user-set owner price driving the owner £ figures
-- Owner rate (number) [p/W] — the **declared** member savings rate driving **Member savings value**; enter it when the board announces a payment (21p/W for Feb 2025–Jun 2026). `0.0` = nothing declared
-- Negotiated price (number) [GBP/MWh] — user-set CfD price driving the site £ figures
+- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` (2,559.465 W × 21p = **£537.49** for Feb 2025–Jun 2026). Disabled with everything else until the board confirms the model; its attributes were `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`
+- **Owner price (number) [p/kWh] — DISABLED from v4.16.1**, input `0.0`
+- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0` (was the declared member savings rate, e.g. 21p/W for Feb 2025–Jun 2026)
+- **Negotiated price (number) [GBP/MWh] — DISABLED from v4.16.1**, input `0.0`
+
+Re-enable any of them with `hab entity enable <entity_id>` — nothing was deleted.
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Wind speed [m/s]
 - Active turbines

@@ -75,7 +75,7 @@ the stable release yet.
 
 ## What's in the latest pre-release
 
-**v4.16.0** — see the
+**v4.16.1** — see the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
 for what's included. The latest stable release is **v4.13.6**.
 
@@ -124,12 +124,15 @@ After setup, the **Configure** options let you change:
 - Create dashboard automatically
 - Enable payment tracking onboarding (Ethex, experimental)
 
-Prices are **not** options fields — they are `number` entities you set from the
-entity's controls or the dashboard's price pills:
-`number.<farm>_owner_price_p_kwh` (Owner price, p/kWh) and
-`number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh). When a price
-is above 0, the dashboard's £ value column shows actual generation × price;
-when it is 0 the sensors read `£0.00` (see [Sensors](sensors.md)).
+Prices are **not** options fields — they are `number` entities. **From v4.16.1
+all three are disabled in the entity registry and set to `0.0`**:
+`number.<farm>_owner_price_p_kwh` (Owner price, p/kWh),
+`number.<farm>_owner_rate_p_w` (Owner rate, p/W) and
+`number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh). The
+dashboard's price pills and £ value column are no longer drawn at all, so there
+is nothing to configure on the card (see [Sensors](sensors.md)). Re-enable with
+`hab entity enable <entity_id>` once the board confirms how member payments are
+calculated.
 
 > **Note:** v4.11.7 removed the "projected annual earnings" setup fields. Those
 > were estimated averages feeding a projected model retired in v4.11.5 — earnings
