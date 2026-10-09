@@ -138,17 +138,17 @@ no reinstall.
 
 Members are paid for the watts they **own**, not for kilowatt-hours
 generated. `sensor.<farm>_member_savings_value` computes
-`owned watts × rate ÷ 100` from `number.<farm>_owner_rate_p_w` — at 2,559.465 W
-and 21p/W that is **£537.49**, the figure the web dashboard reports for
-Feb 2025–Jun 2026.
+`owned watts × rate ÷ 100` from `number.<farm>_owner_rate_p_w` — for example,
+2,000 W at a declared 20p/W reads **£400.00**, which is what the web dashboard
+reports for that rate.
 
 **The card line is drawn but reads `—`**: both entities are disabled and the
 rate is `0.0`, so nothing is calculated until the board confirms the model. The
 empty line is kept on purpose as a reminder.
 
 It has **no timeframe and does not accrue**: the board declares a payment when
-its finances allow, and the board's "15p per watt per 12 months" is an
-equivalence for one declaration rather than a rate to divide over time. How
+its finances allow, and any yearly figure it quotes is an equivalence for one
+declaration rather than a rate to divide over time. How
 `All time` should accumulate across declared periods is one of the open
 questions — see [Development decisions](development/decisions.md).
 

@@ -406,7 +406,7 @@ Completed releases, newest first. Preserved for reference.
 ### v4.15.0 (pre-release, 2026-10-08)
 
 - Member savings sensor on the board's own basis: `owned watts × p/W`
-  (2,559.465 W at 21p/W = £537.49), driven by a new `Owner rate (p/W)`
+  (owned watts × the declared p/W rate), driven by a new `Owner rate (p/W)`
   number entity
 - No timeframe and no accrual: an undeclared rate reads `unknown`, not
   `£0.00`; only a missing capacity reads `£0.00` (`no_capacity_zero`)
