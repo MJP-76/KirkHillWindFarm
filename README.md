@@ -16,12 +16,12 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-> - **Financial figures are shown but deliberately empty (v4.16.2).** The £ value
->   column, the £/h cells, both price pills and the savings line are drawn
->   **empty** — every money cell reads `—` and the Owner pill reads `Rate —` —
->   with all price/rate entities disabled and their inputs at `0.0`, until the
->   Kirk Hill board confirms how member payments are calculated. The empty
->   layout is the reminder. Generation, power and capacity are unaffected.
+> - **Financial figures are on hold for now (v4.16.2).** The £ value column, the
+>   £/h cells, the price pills and the savings line show but stay **empty** —
+>   every money cell reads `—` and the Owner pill reads `Rate —`, so nothing is
+>   calculated. The Owner pill now edits the **p/W rate**. Figures are being
+>   worked on in the background against the board's last announcement.
+>   Generation, power and capacity are unaffected.
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me

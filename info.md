@@ -15,12 +15,11 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 ## Project notes
 
 Owner/site generation kWh values are **live dynamic API values**. **Financial
-figures are shown but deliberately empty (v4.16.2):** the £ value column, £/h
-cells, price pills and savings line are drawn with nothing populated — every
-money cell reads `—` and the Owner pill reads `Rate —` — because all 22
-earnings entities are disabled and their inputs are `0.0`, until the Kirk Hill
-board confirms how member payments are calculated. The empty layout is the
-reminder. Kirk Hill
+figures are on hold for now (v4.16.2):** the £ value column, £/h cells, price
+pills and savings line show but stay **empty** (`—`, and `Rate —` on the Owner
+pill), so nothing is calculated. The Owner pill now edits the **p/W rate**.
+Figures are being worked on in the background against the board's last
+announcement. Kirk Hill
 API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
 Dev updates can be published as GitHub pre-releases for early testing while stable releases remain marked as Latest.
 Stable release flow uses a full merge into `main` before final tagging/publishing.
