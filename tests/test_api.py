@@ -5,7 +5,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.kirkhill_wind.api import KirkHillApiClient, OpenMeteoApiClient
+from custom_components.kirkhill_wind.api import (
+    KirkHillApiClient,
+    OpenMeteoApiClient,
+    describe_key,
+)
 from custom_components.kirkhill_wind.const import SCOPE_OWNER, SCOPE_SITE
 from custom_components.kirkhill_wind.exceptions import (
     KirkHillApiError,
@@ -322,3 +326,52 @@ class TestValidationDiagnostics:
 
         with pytest.raises(KirkHillPermissionError, match="may not read site data"):
             await client._get(self._Session(403, body), "/api/v1/current", {"scope": "site"})
+
+
+class TestKeyShape:
+    """A 401 on a freshly issued key is undecidable without the key's shape.
+
+    "The dashboard rejected its own key" and "we sent the wrong bytes" produce
+    the identical error; length and format separate them. These also pin the
+    harder rule: the description must never contain the key.
+    """
+
+    def test_reports_length_and_format_but_not_the_key(self):
+        key = "kh_live_abcdEFGH1234567890"
+        described = describe_key(key)
+
+        assert f"{len(key)}-char value" in described
+        assert "matches the kh_live_ API-key format" in described
+        assert "abcdEFGH1234567890" not in described, (
+            "The description lands in the log, an abort message and a bug "
+            "report -- none of which may carry key material."
+        )
+
+    def test_flags_whitespace_at_the_edges(self):
+        described = describe_key("  kh_live_short  ")
+
+        assert "4 whitespace character(s)" in described
+        assert "matches the kh_live_ API-key format" in described
+        # The whitespace itself is the finding: it makes the API answer
+        # "not valid" while every other part of the request is correct.
+        assert "kh_live_short" not in described
+
+    def test_reports_a_value_that_is_not_a_kh_live_key(self):
+        described = describe_key("eyJhbGciOiJIUzI1NiJ9.payload-signature")
+
+        assert "does not start with kh_live_" in described
+        assert "eyJ" not in described
+
+    def test_reports_a_key_with_unexpected_characters(self):
+        described = describe_key("kh_live_has spaces inside")
+
+        assert "starts with kh_live_ but contains other characters" in described
+        assert "has spaces inside" not in described
+
+    def test_client_strips_whitespace_before_sending(self):
+        client = KirkHillApiClient(api_key="  kh_live_padded\n")
+
+        assert client._headers["Authorization"] == "Bearer kh_live_padded", (
+            "A trailing newline in the Authorization header is enough for the "
+            "API to reply 'The API key is not valid.'"
+        )

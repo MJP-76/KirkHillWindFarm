@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -21,6 +22,31 @@ from .exceptions import (
 _LOGGER = logging.getLogger(__name__)
 
 TIMEOUT = aiohttp.ClientTimeout(total=20)
+
+
+def describe_key(key: str) -> str:
+    """Describe a key without revealing it: length and shape, never characters.
+
+    This string ends up in a log line, an abort message and quite possibly a
+    bug report to whoever runs the dashboard, so it must never carry any part
+    of the key. The one exception is the literal ``kh_live_`` prefix, which the
+    dashboard's own oauth.md publishes as public documentation.
+
+    Worth having: a sign-in that fails with "the key is not valid" is
+    undecidable between "the dashboard issued a key the API rejects" and "we
+    sent the wrong bytes" -- length and format answer that in one line.
+    """
+    stripped = key.strip()
+    if re.fullmatch(r"kh_live_[A-Za-z0-9_-]+", stripped):
+        shape = "matches the kh_live_ API-key format"
+    elif stripped.startswith("kh_live_"):
+        shape = "starts with kh_live_ but contains other characters"
+    else:
+        shape = "does not start with kh_live_"
+    whitespace = ""
+    if key != stripped:
+        whitespace = f", {len(key) - len(stripped)} whitespace character(s) at the edges"
+    return f"{len(stripped)}-char value{whitespace}, {shape}"
 
 
 async def _error_detail(resp: aiohttp.ClientResponse) -> str:
@@ -54,7 +80,10 @@ class KirkHillApiClient:
     """Async HTTP client aligned with the Kirk Hill Wind Farm OpenAPI spec."""
 
     def __init__(self, api_key: str, base_url: str = DEFAULT_BASE_URL) -> None:
-        self._api_key = api_key
+        # Whitespace makes the API answer "The API key is not valid." while
+        # every other part of the request is correct -- cheaper to strip it
+        # here than to spend a release diagnosing it later.
+        self._api_key = api_key.strip()
         self._base_url = base_url.rstrip("/")
 
     @property
