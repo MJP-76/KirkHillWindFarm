@@ -27,9 +27,9 @@
 - Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
 - **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry; the card still draws the column and shows `—` in every cell. Previously `live generation × configured price`, `£0.00` when no price was set
   - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
-- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` (2,559.465 W × 21p = **£537.49** for Feb 2025–Jun 2026). The card line is drawn but reads `—`; its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`
+- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` — for example, at a declared 20p/W, 1,000 owned watts reads **£200**. The card line is drawn but reads `—`; its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`
 - **Owner price (number) [p/kWh] — DISABLED from v4.16.1**, input `0.0`
-- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. **This is what the Owner pill on the card edits** (was the declared member savings rate, e.g. 21p/W for Feb 2025–Jun 2026)
+- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. **This is what the Owner pill on the card edits** (was the declared member savings rate)
 - **Negotiated price (number) [GBP/MWh] — DISABLED from v4.16.1**, input `0.0`
 
 Re-enable any of them with `hab entity enable <entity_id>` — nothing was deleted.
@@ -76,12 +76,12 @@ watts they *own*, so **Member savings value** uses that instead:
 `owned watts × rate ÷ 100`, fed by `capacity_watts` from the API — the same
 number the web dashboard multiplies out.
 
-The period never enters the calculation: 1,000 W at 21p/W is £210 for whatever
-span the board declares, so 2,559.465 W is £537.49 for Feb 2025–Jun 2026.
+The period never enters the calculation: 1,000 W at a declared 20p/W reads
+£200 for whatever span the board declares.
 There is deliberately **no accrual** — the board reviews its finances and
 declares a payment when it declares one, so no effective earning rate is
 knowable until then, which is exactly why the web dashboard shows no ongoing
-earnings. The board's "15p per watt per 12 months" is an equivalence for that
+earnings. Any yearly figure the board quotes is an equivalence for that
 same declaration, not a daily or monthly rate to divide out. Update
 `Owner rate (p/W)` each time a payment is declared; until then the sensor
 reads `—`. This figure does not depend on generation, so it is unaffected by

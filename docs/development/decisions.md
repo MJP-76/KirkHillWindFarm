@@ -227,17 +227,16 @@ decision changes.
   prices replace the estimates entirely.
 - **2026-10-08 — Member savings are capacity-based (`W × p/W`), a second money
   basis beside `kWh × price`.** Confirmed by the board's announcement and by
-  Klaus Dudas in discussion: *"payment is based per Watt owned, not per kWh
-  generated"*, and *"time frame doesn't come into the calculation at all"* —
-  1,000 W at 21p/W is £210 for whatever span the board declares, so
-  2,559.465 W is £537.49 for Feb 2025–Jun 2026 (£1.6M across ~7.62 MW of
-  member-owned capacity). The new `Member savings value` sensor multiplies the
+  a co-op representative in discussion: *"payment is based per Watt owned,
+  not per kWh generated"*, and *"time frame doesn't come into the calculation
+  at all"* — 1,000 W at a declared 20p/W is £200 for whatever span the board
+  declares. The new `Member savings value` sensor multiplies the
   API's owner `capacity_watts` by an `Owner rate (p/W)` number entity and
   deliberately has **no timeframe and no accrual**: the payment is
   retrospective — the board reviews its finances and declares a "dividend"
   when it declares one, so no effective earning rate exists until then, which
-  is why the web dashboard shows no ongoing earnings at all. The board's "15p
-  per watt per 12 months" is an *equivalence for that one declaration*, not a
+  is why the web dashboard shows no ongoing earnings at all. A yearly figure
+  the board quotes is an *equivalence for that one declaration*, not a
   rate to divide over time; deriving a daily accrual would invent a figure
   nobody published — the same failure the 2026-09-29 suppression decision
   exists to avoid. The `Value (…)` sensors keep their `kWh × price` meaning
@@ -248,15 +247,15 @@ decision changes.
   made; `projection_basis` is `no_rate_declared`, with `no_capacity_zero` +
   £0.00 reserved for genuinely having no watts to pay on. The rate is updated
   whenever a payment is declared. Neither figure is shown on the SCADA card.
-  Regression tests: `test_sensor.py::TestMemberSavingsValue` (pins 537.49 and
-  the undeclared-`unknown` behaviour), `test_number.py` (rate persistence).
+  Regression tests: `test_sensor.py::TestMemberSavingsValue` (pins the example
+  figures and the undeclared-`unknown` behaviour), `test_number.py` (rate persistence).
 - **2026-10-09 — All earnings figures are hidden until the board defines the
   model.** *Supersedes the display half of the 2026-10-08 entry above.* Two
   bases had collided on one card: the timeframe `Value (£)` column
-  (`kWh × p/kWh`) and the capacity figure (`watts × p/W`) — and when the owner
-  price was back at 21 p/kWh, the column reported ~£1,350 for a year against
-  the board's £537.49 for 17 months. Rather than keep choosing between them,
-  money is switched off everywhere, reversibly:
+  (`kWh × p/kWh`) and the capacity figure (`watts × p/W`) — and with the owner
+  price set to a per-kWh value the column reported figures an order of
+  magnitude away from what the board actually pays. Rather than keep choosing
+  between them, money is switched off everywhere, reversibly:
 
   - **22 entities disabled** in the registry (`disabled_by: user`): the 19
     value/savings sensors and all 3 `number` inputs
