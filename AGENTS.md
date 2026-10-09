@@ -63,7 +63,7 @@ retry the restore forever.
 - Python 3.11+ compatible, `from __future__ import annotations` in every module.
 - Line length 120 — but note the **nested
   `custom_components/kirkhill_wind/pyproject.toml` sets 88**, which is why
-  `ruff check .` reports pre-existing E501s (20 lines exceed 88; none exceed
+  `ruff check .` reports pre-existing E501s (19 lines exceed 88; none exceed
   120). CI runs `ruff check custom_components/ --config pyproject.toml` — the
   root config — and passes. `main` is protected: all three status checks
   (validate / test / min-ha) are required, so a direct push is declined with

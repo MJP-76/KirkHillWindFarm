@@ -291,6 +291,17 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.15.1 (pre-release, 2026-10-09)
+
+- A rejected sign-in key now reports its shape — length, format verdict and
+  edge whitespace, never a character of the key — so "the dashboard rejected
+  its own key" and "we sent the wrong bytes" are finally distinguishable
+- The API client strips whitespace before building the Authorization header;
+  one trailing newline is enough to produce this exact 401
+- 6 new tests (209 → 215), the "never echo the key" property asserted directly
+- Docs: `AGENTS.md`'s E501 claim corrected from 20 to **19** (re-measured with
+  `ruff check .` as the text itself specifies)
+
 ### v4.15.0 (pre-release, 2026-10-08)
 
 - Member savings sensor on the board's own basis: `owned watts × p/W`
