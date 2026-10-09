@@ -3,6 +3,13 @@
 All notable changes to the Kirk Hill Wind Farm integration.
 
 ## Version 4.16.2
+
+- **Stable jump — everything since v4.13.6 in one update.** The stable tag moves forward twelve releases, so here is the short version instead of the full history below:
+  - **Sign in with your dashboard account** — the setup flow opens with a menu offering OAuth sign-in against your Kirk Hill dashboard login instead of pasting a key (v4.14.0). *Sign-in is currently parked* because the API rejects the keys it hands out, so setup goes straight to the API-key form and paste-a-key is the path until that is resolved (v4.15.2).
+  - **Keys are validated for both scopes** — a key that can read only your share, or only the site, is now rejected at setup with a message naming the consent option required ("My share and whole wind farm"), instead of being waved through and failing on the next poll as "cannot connect" (v4.14.1).
+  - **Sign-in failures explain themselves** — the API's own error text is quoted rather than one opaque sentence, and the rejected key's shape is reported so the two remaining causes stop looking identical (v4.14.2, v4.15.1).
+  - **Member savings, on the board's basis** — `sensor.<farm>_member_savings_value` values the watts you own at a p/W rate (v4.15.0), and the card carries it alongside the timeframe figures (v4.16.0). The figure itself is on hold, below.
+  - **Fixes:** a successful re-authentication finally takes effect instead of re-prompting for the key forever (v4.13.7), and the owner £ sensor could read `£0.00` beside a non-zero kWh figure (v4.13.9).
 - **Financial figures are on hold for now.** The SCADA card still shows the £ column, the £/h cells, the price pills and the member-savings line, but they are deliberately empty (`—`, and `Rate —` on the Owner pill) while the model is confirmed — nothing is calculated, and no figure is asserted.
 - **The Owner pill now edits p/W, not p/kWh** — `number.<farm>_owner_rate_p_w` (max 100, step 0.1) through a new `owner_rate_entity` card key, because members are paid per watt owned. The modal hint reads *"Member savings = owned watts × this rate."* The p/kWh price still drives the £ column and the £/h rate behind it.
 - **Figures are being worked on in the background** against the board's last announcement — 21p/W for Feb 2025–Jun 2026, a £1.6m member savings payment. They come back as soon as the method is confirmed; re-enabling an entity with `hab entity enable <entity_id>` restores it with no reinstall.
