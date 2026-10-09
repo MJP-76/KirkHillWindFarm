@@ -291,6 +291,18 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.15.2 (pre-release, 2026-10-09)
+
+- Dashboard sign-in parked behind `SIGN_IN_ENABLED = False`: setup goes
+  straight to the API-key form, because the key sign-in issues (56-char
+  `kh_live_…`, same length and format as a working key) is rejected by the API
+  with 401 "The API key is not valid."
+- Nothing deleted — `oauth.py`, `describe_key`, the diagnostics, the permission
+  gate and all OAuth tests stay and keep running in CI; re-enabling is one line
+  plus a docs revert
+- Docs return to key-only instructions, with a note on why sign-in is unavailable
+- 215 → 216 tests (parked path asserted, re-enable path asserted)
+
 ### v4.15.1 (pre-release, 2026-10-09)
 
 - A rejected sign-in key now reports its shape — length, format verdict and
