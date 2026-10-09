@@ -2345,6 +2345,11 @@ _buildHeaderChips(layout) {
             <rect x="${layout.chipUserGenFinX - 128 * layout.scaleX}" y="84" width="${128 * layout.scaleX}" height="20" rx="10"/>
             <text class="price-edit-label" data-price-text="owner" x="${layout.chipUserGenFinX - 8 * layout.scaleX}" y="98" text-anchor="end">Price —</text>
           </g>
+          <!-- Member savings: owned watts × the board's declared p/W rate. Not a
+               timeframe, and the table above is full, so it takes its own line in
+               the empty gap between the Owner and Site panels, right-aligned to
+               the Value column. "—" while no rate is declared. -->
+          <text class="user-gen-savings" x="${layout.chipUserGenFinX}" y="322" text-anchor="end"><tspan class="user-gen-savings-label">Member savings </tspan><tspan class="user-gen-fin" data-user-gen="savings">—</tspan></text>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
@@ -2474,6 +2479,13 @@ _buildHeaderChips(layout) {
     // Owner live earnings rate: share of export (kW) × price (p/kWh) / 100 = £/h
     const ownerRateLph = ownerExportKw !== null && ownerPrice > 0 ? (ownerExportKw * ownerPrice) / 100 : null;
     this._setText(root, '[data-user-gen="fin-share"]', ownerRateLph === null ? "—" : `£${this._fmt(ownerRateLph, 2)}/h`);
+
+    // Member savings: owned watts × the board's declared p/W rate. The sensor
+    // is unknown until a rate is declared, so this reads "—" -- the board's own
+    // dashboard shows no ongoing earnings for exactly that reason.
+    const savings = this._num(config.member_savings_entity);
+    this._setText(root, '[data-user-gen="savings"]', savings === null ? "—" : `£${this._fmt(savings, 2)}`);
+    this._setChipStale(root.querySelector('[data-user-gen="savings"]'), config.member_savings_entity);
 
     // Site Capacity panel — timeframe values
     (config.site_generation_entities || []).forEach((item) => {
@@ -2836,6 +2848,7 @@ _buildHeaderChips(layout) {
       .user-gen-colh, .site-gen-colh { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.6px; }
       .user-gen-value { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-power-color); }
       .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .user-gen-savings-label { fill: var(--khscada-secondary-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .site-gen-value { fill: var(--khscada-power-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .user-gen-share { fill: var(--khscada-power-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
