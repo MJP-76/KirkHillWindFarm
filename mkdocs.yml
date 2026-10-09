@@ -52,6 +52,7 @@ nav:
   - Guides:
       - WhatsApp alerts: whatsapp-alerts.md
   - Farm reference: farm-reference.md
+  - The Kirk Hill API: api.md
   - Development:
       - Release management: development/release-management.md
       - Development decisions: development/decisions.md
