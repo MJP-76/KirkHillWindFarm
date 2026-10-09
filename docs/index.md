@@ -12,21 +12,14 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-!!! warning "Financial figures — shown but deliberately empty"
-
-    **As of v4.16.2 the money UI is on the card but nothing is populated.** The
-    £ value column, both £/h cells, both price pills and the member-savings line
-    are drawn **empty** — every money cell reads `—` and the Owner pill reads
-    `Rate —` — because all **22 earnings entities are disabled** in the entity
-    registry and all three inputs (`owner_price_p_kwh`, `owner_rate_p_w`,
-    `negotiated_price_gbp_mwh`) are `0.0`.
-
-    This is deliberate and temporary: the integration had two competing bases —
-    `kWh × p/kWh` for timeframes and `watts × p/W` for capacity — and rather
-    than guess which the board means, nothing is calculated until they confirm
-    how member payments are calculated. The empty cells are kept as a visual
-    reminder. Generation, power and capacity are unaffected; re-enable an entity
-    with `hab entity enable <entity_id>` to bring a figure back.
+!!! note "Financial figures are on hold"
+    **As of v4.16.2** the £ column, the £/h cells, the price pills and the
+    member-savings line are shown but **empty** — every money cell reads `—` and
+    the Owner pill reads `Rate —` — so nothing is calculated and no figure is
+    asserted. The Owner pill now edits the **p/W rate**. Figures are being
+    worked on in the background against the board's last announcement and return
+    via `hab entity enable <entity_id>`; generation, power and capacity are
+    unaffected.
 
     Separately, the **All-time** and **past-year (2025, 2024)** £ values are
     suppressed (showing `—`), because the API records energy only — never money.

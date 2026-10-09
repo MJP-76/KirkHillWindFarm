@@ -88,16 +88,13 @@ and duration.
 
 ## Financials (formerly the Finances tab)
 
-!!! warning "Earnings shown but deliberately empty"
-    **2026-10-09** — the money UI is **back on the card as a visual reminder**,
-    but nothing is populated or calculated: the `Value (£)` column, both `£/h`
-    cells, both price pills and the member-savings line are drawn **empty** —
-    every cell reads `—` and the Owner pill reads `Rate —` — because all **22
-    earnings entities are disabled** in the entity registry and all three inputs
-    (`owner_price_p_kwh`, `owner_rate_p_w`, `negotiated_price_gbp_mwh`) are
-    `0.0`. Nothing computes a figure until the board confirms how member
-    payments are calculated. The Owner pill now edits the **p/W rate**, not the
-    p/kWh price. See [Development decisions](development/decisions.md).
+!!! note "Financial figures are on hold"
+    **2026-10-09** — the £ column, the £/h cells, the price pills and the
+    member-savings line are shown but left **empty** (`—`, and `Rate —` on the
+    Owner pill) while the model is confirmed: nothing is calculated and no
+    figure is asserted. The Owner pill now edits the **p/W rate**, not the p/kWh
+    price. Figures are being worked on in the background against the board's
+    last announcement, and return via `hab entity enable <entity_id>`.
 
 The standalone **Finances tab was removed in v4.8.79** — its content (today's
 earnings, this month, year to date) now lives in the SCADA card itself. Every

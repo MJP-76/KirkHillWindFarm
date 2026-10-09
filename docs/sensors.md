@@ -50,14 +50,13 @@ Home Assistant. The generated dashboard formats those values for display with
 automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and
 rounds them to **2 decimal places**.
 
-!!! warning "All 22 earnings entities are currently disabled"
+!!! note "Financial figures are on hold"
     **2026-10-09** — the 19 value/savings sensors and the 3 price/rate `number`
-    entities are **disabled in the entity registry** and every input is `0.0`.
-    The card still draws the `Value (£)` column, the pills and the savings line
-    — deliberately kept as a reminder — but **nothing is populated or
-    calculated**, so every money cell reads `—`. Re-enable with
-    `hab entity enable <entity_id>` to bring figures back. See
-    [Development decisions](development/decisions.md).
+    entities are **disabled** with their inputs at `0.0`, so the card's money
+    cells read `—` and nothing is calculated. The Owner pill now edits the
+    **p/W rate**. Figures are being worked on in the background against the
+    board's last announcement; re-enable one with
+    `hab entity enable <entity_id>` to bring it back.
 
 Financial £ values are **live-accurate when a price is set**. Two independent
 price entities hold the prices, both `0.0` by default:
