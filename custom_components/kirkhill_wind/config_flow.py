@@ -16,7 +16,7 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .api import KirkHillApiClient
+from .api import KirkHillApiClient, describe_key
 from .const import (
     CONF_API_KEY,
     CONF_BASE_URL,
@@ -160,6 +160,17 @@ class KirkHillWindConfigFlow(
             # left nothing to act on -- the detail is what tells a reporter
             # apart from a dashboard-side fault.
             detail = self._validation_detail or "no reason was returned"
+            if errors.get("base") == "auth_failed":
+                # 401 on a key the dashboard had just issued is either the
+                # dashboard rejecting its own key or us sending the wrong
+                # bytes. Length and format -- never the key -- settle it.
+                shape = describe_key(api_key)
+                _LOGGER.warning(
+                    "Kirk Hill sign-in: API rejected the issued key (%s); it said: %s",
+                    shape,
+                    detail,
+                )
+                detail = f"{detail} Key we sent: {shape}."
             if errors.get("base") == "permission_required":
                 # Repeating sign-in with the same narrow consent fails again,
                 # so say which consent option is needed rather than "invalid".

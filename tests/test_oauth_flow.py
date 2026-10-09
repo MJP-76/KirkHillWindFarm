@@ -416,3 +416,21 @@ class TestAbortDiagnostics:
 
         assert result["type"] == "abort"
         assert result["description_placeholders"]["detail"]
+
+    @pytest.mark.asyncio
+    async def test_abort_reports_the_key_shape_but_not_the_key(self, hass):
+        flow = _make_flow(hass)
+        flow._validate_api_key = AsyncMock(return_value={"base": "auth_failed"})
+        flow._validation_detail = (
+            "Invalid or missing API key: The API key is not valid."
+        )
+
+        result = await flow.async_oauth_create_entry(
+            {"token": {"access_token": "kh_live_supersecret9999"}}
+        )
+
+        detail = result["description_placeholders"]["detail"]
+        assert "The API key is not valid." in detail, "the API's own words must stay"
+        assert "Key we sent:" in detail
+        assert "matches the kh_live_ API-key format" in detail
+        assert "supersecret9999" not in detail, "never echo the key back"
