@@ -14,11 +14,12 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 
 ## Project notes
 
-Owner/site generation kWh values are **live dynamic API values**. Owner/site financial
-earnings shown in the dashboard are **projected values** by default, switching to
-live-accurate (actual generation × negotiated price) once the
-`number.<farm>_negotiated_price_gbp_mwh` entity is set above 0. All-time projected value uses the API all-time timeframe start date when available.
-Kirk Hill
+Owner/site generation kWh values are **live dynamic API values**. **Financial
+figures are removed for the time being (v4.16.1):** no £ value column, £/h
+rate, price pill or savings figure is drawn on the dashboard, and all 22
+earnings entities are disabled with their inputs set to `0.0`, until the Kirk
+Hill board confirms how member payments are calculated. The sensors still exist
+in the codebase, so restoring needs no reinstall. Kirk Hill
 API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
 Dev updates can be published as GitHub pre-releases for early testing while stable releases remain marked as Latest.
 Stable release flow uses a full merge into `main` before final tagging/publishing.
@@ -43,9 +44,13 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Farm sensors** — live power, capacity factor, wind speed, active/inactive turbine count, and alarm state
 - **Generation sensors** — yesterday, today, week, month, year-to-date, year, and all-time totals for both your owner share and the whole site
   - Dashboard display auto-scales generation units from kWh up to EWh for large values
-- **Owner + site projected value sensors** — estimated GBP value for each timeframe from configured annual projections (non-dynamic)
-- **Projected finance inputs** — configurable annual owner/site projected earnings values used by projected finance sensors
-- **AGM/published-books manual finance inputs removed** — owner/site projected figures remain available
+- **Owner + site value sensors exist but are disabled (v4.16.1)** — the GBP value
+  sensors and all three price/rate `number` entities are **disabled in the entity
+  registry** with their inputs at `0.0`, and no £ figure is drawn on the SCADA
+  card, until the board confirms how member payments are calculated. Re-enable
+  with `hab entity enable <entity_id>` — no reinstall needed
+- **AGM/published-books manual finance inputs removed** — those estimates were
+  dropped in an earlier release and stay dropped
 - **Open-Meteo forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative), using automatic farm-location lookup
 - **Optional experimental Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, active binary sensor, generation today (site), generation all-time (site), and rotor speed for each of the 8 turbines
@@ -54,7 +59,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   - Active/inactive turbine count and alarm status (alarm = actual thermal/electrical turbine fault)
   - Per-turbine status, power, and generation today shown on the SCADA diagram; per-turbine history in each turbine's pop-out modal
   - **History tab removed** (v4.8.77) — its 25h owner/site/wind charts are covered by the SCADA card's Owner/Site pop-out modals with selectable 6H–1Y timeframes
-  - **Finances tab removed** (v4.8.79) — earnings now shown per timeframe in the SCADA card's Capacity panels
+  - **Finances tab removed** (v4.8.79) — earnings were then shown per timeframe in the SCADA card's Capacity panels; **that display is itself removed from v4.16.1** pending the board's model
   - **Turbines tab removed** (v4.8.80) — the standalone turbine map and status view retired; all data now on the SCADA diagram
   - **Turbine map card deprecated** (v4.8.81) — the standalone `kirkhill-wind-turbine-map` card shows a deprecation banner and will be removed in a future release
   - **Wind Speed detail modal** (v4.8.81) — click the Wind panel for current speed, the one-hour forecast and the live difference
@@ -64,11 +69,11 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
 - **Power & Wind (25h) time-series (Plotly)** — owner power (kW), site power (kW), and wind speed (m/s)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.16.0`), so a stale browser cache is easy to spot
+- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.16.1`), so a stale browser cache is easy to spot
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
-- **Negotiated CfD price entity** — set `number.<farm>_negotiated_price_gbp_mwh` (GBP/MWh) to switch the £ value column from projected to live actual-generation × price; 0.0 (default) keeps the projected model
+- **Price and rate entities — disabled from v4.16.1** — `number.<farm>_negotiated_price_gbp_mwh`, `number.<farm>_owner_price_p_kwh` and `number.<farm>_owner_rate_p_w` still exist but are disabled in the entity registry and set to `0.0`; the £ value column and £/h rates they drove are no longer drawn until the board confirms the payment model
 - **Overview tab removed** — dashboard is now the single **Kirk Hill SCADA** tab (History removed in v4.8.77, Finances removed in v4.8.79, Turbines removed in v4.8.80)
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
 - **Optimized fetch tiers** — "yesterday" moved to hourly tier (static once day ends); week/month/ytd/year/alltime also hourly; only "today" fetches every poll

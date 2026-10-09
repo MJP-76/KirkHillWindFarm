@@ -16,8 +16,11 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-> - **Financial figures are projected by default** and become live-accurate only
->   when a negotiated price is set (see below).
+> - **Financial figures are removed for the time being (v4.16.1).** No £ value
+>   column, no £/h rate, no price pill and no savings figure are drawn, and the
+>   price/rate entities are disabled, until the Kirk Hill board confirms how
+>   member payments are calculated. Generation, power and capacity are
+>   unaffected.
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
@@ -35,12 +38,13 @@ and an animated dashboard.
 
 - **Owner & Site scopes** — pulls data for both your ownership share (`owner`)
   and the whole farm (`site`), covering power, capacity factor, and generation
-  for yesterday, today, week, month, YTD, year, and all time — plus projected
-  owner/site value in GBP for each timeframe.
-- **Negotiated CfD price** — set a price (GBP/MWh) via the
-  `number.<farm>_negotiated_price_gbp_mwh` entity and the £ value column is
-  calculated from actual generation (kWh ÷ 1000 × price); leave at 0 for the
-  projected model.
+  for yesterday, today, week, month, YTD, year, and all time. **Financial
+  figures are removed for the time being** (see the note above): the GBP value
+  sensors still exist but are disabled, and no £ figure is drawn on the card.
+- **Prices are dormant** — `number.<farm>_owner_price_p_kwh`,
+  `number.<farm>_owner_rate_p_w` and `number.<farm>_negotiated_price_gbp_mwh`
+  remain in the codebase but are disabled and set to `0.0` until the board
+  confirms how member payments are calculated.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
   **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up

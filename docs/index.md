@@ -12,19 +12,24 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-!!! warning "Financial figures"
+!!! warning "Financial figures — removed for the time being"
 
-    Financial £ values are **live-accurate** only when a price is set. By default
-    both price entities are `0.0` and the £ column reads `£0.00`. Set
-    `number.<farm>_owner_price_p_kwh` (Owner price, p/kWh) or
-    `number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh) to switch
-    to actual generation × price. The Kirk Hill API remains the authoritative
-    source for actual farm generation.
+    **As of v4.16.1 no financial figure is shown.** The £ value column, both
+    live £/h rates, both price pills and the member-savings line are no longer
+    drawn on the SCADA card, all **22 earnings entities are disabled** in the
+    entity registry, and all three inputs (`owner_price_p_kwh`, `owner_rate_p_w`,
+    `negotiated_price_gbp_mwh`) are `0.0`.
 
-    The **All-time** and **past-year (2025, 2024)** £ values are suppressed
-    (show `—`), because the API records energy only — never money — and applying
-    today's price to history would revalue it whenever the price is edited. This
-    stands until the CfD strike price history is confirmed.
+    This is deliberate and temporary: the integration had two competing bases —
+    `kWh × p/kWh` for timeframes and `watts × p/W` for capacity — and rather than
+    guess which the board means, nothing is asserted until they confirm how
+    member payments are calculated. Generation, power and capacity are
+    unaffected, and restoring is `hab entity enable` plus re-adding the markup.
+
+    Separately, the **All-time** and **past-year (2025, 2024)** £ values were
+    already suppressed (showing `—`), because the API records energy only —
+    never money. See
+    [Development decisions](development/decisions.md#owner-share-and-earnings-figures).
 
 ## Support me
 
@@ -42,7 +47,7 @@ development, you can do so here:
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
-  - owner and site value by timeframe (GBP) — live generation × the configured price, `£0.00` when no price is set
+  - owner and site value by timeframe (GBP) — **removed from v4.16.1**: the entities still exist but are disabled and nothing is drawn; previously `live generation × configured price`
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -54,11 +59,11 @@ development, you can do so here:
   - wind speed, state text, active binary sensor, rotor speed, today's generation
 - Config flow with masked API key entry, validated against the API
 - Optional automatic dashboard creation during setup
-- Configurable prices: Owner price (p/kWh) and Site/CfD price (£/MWh), as `number` entities
+- Configurable prices: Owner price (p/kWh), Owner rate (p/W) and Site/CfD price (£/MWh) as `number` entities — **all three disabled from v4.16.1** pending the board's model
 - Open-Meteo forecast integration (forecast only; not authoritative actual generation)
 - Optional experimental Ethex payment-tracking onboarding toggle
 - Configurable polling interval via Options
-- Auto-generated Lovelace dashboard: SCADA (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe £ earnings, Wind Speed detail modal, pop-out charts including a labelled turbine activity swimlane). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80 (its standalone map card deprecated in v4.8.81).
+- Auto-generated Lovelace dashboard: SCADA (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe generation — **the per-timeframe £ earnings display was removed in v4.16.1** — Wind Speed detail modal, pop-out charts including a labelled turbine activity swimlane). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80 (its standalone map card deprecated in v4.8.81).
 - Dashboard customisations are preserved across reloads and updates; `kirkhill_wind.reset_dashboard` restores defaults
 
 ## Where to go next

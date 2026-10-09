@@ -339,6 +339,21 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.1 (pre-release, 2026-10-09)
+
+- **Financial figures removed for the time being**: the card no longer draws
+  the `Value (£)` column, the £/h rates, the price pills or the member-savings
+  line
+- All 22 earnings entities **disabled** (`disabled_by: user`); owner price,
+  owner rate and CfD price all `0.0` — restoring is `hab entity enable`
+- Nothing deleted: sensor classes, number entities and render calls stay, so
+  reversing is markup-only; `decisions.md` records the three open questions
+  for the board (rate + period, undeclared periods, All time as a ledger)
+- Docs brought in line with reality: README, info, index, sensors, dashboard,
+  installation
+- Docs: `docs/api.md` upstream API reference and change history (PR #88)
+- Frontend only — verify on a real instance; CI has no browser
+
 ### v4.16.0 (pre-release, 2026-10-09)
 
 - SCADA card now draws **Member savings** (`owned watts × declared p/W rate`)
