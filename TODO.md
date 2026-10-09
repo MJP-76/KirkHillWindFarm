@@ -17,6 +17,16 @@ Fields the coordinator already fetches but discards. No API changes needed.
 - [x] `latest_import_status` → sensor — import pipeline health (e.g. "completed")
 - [x] `latest_rotor_speed_at` → per-turbine sensor (TIMESTAMP) — rotor data freshness (as `sampled_at` attribute on Rotor speed)
 - [x] ~~Use full `/api/v1/wind-speed` time series~~ — dropped entirely; wind speed is already in the `current` endpoint summary. HA recorder handles historical charts. Saves 6 API calls/hour.
+- [ ] `co2_avoided_kg` → sensors (owner + site) — WEIGHT, kg, windowed `measurement`, fed
+      from the timeframe summaries we already fetch (no new API calls — `/api/v1/carbon-avoided`
+      duplicates the same figure). Must carry the coverage attributes
+      (`co2_avoided_coverage_percent`, `_matched/_expected_intervals`, `_complete`,
+      `assumed_export_factor`, `latest_carbon_intensity_at`) so it reads "indicative, 98%
+      coverage" rather than a bare number. Expose owner + site only (today/YTD), not the full
+      timeframe matrix. Reference: `njp970/ha_kirkhill` `co2_avoided_owner`/`co2_avoided_site`.
+- [ ] Site `capacity_watts` → sensor (POWER, W, DIAGNOSTIC, disabled by default) — the 18.8 MW
+      figure arrives in every `/api/v1/current` payload; only *owner* capacity surfaces today,
+      as an attribute of Member savings value.
 
 ### #55 — API feature requests (require upstream API changes)
 
@@ -115,8 +125,28 @@ restatement will silently serve stale earnings.
 
 ### Dashboard & integration
 
-- [ ] Rate limiting: expose `rate_limited` attribute on API status entity when API supports 429
+- [ ] Rate limiting: classify 429 (`KirkHillRateLimitError`, honour `Retry-After` in the
+      summary backoff) and expose `rate_limited` on the API status entity instead of folding
+      it into `KirkHillConnectionError`. The API does return 429 — `tests/test_api.py:319`
+      pins `HTTP 429 … Too many requests` — and the SCADA card already reads the attribute
+      (`kirkhill-wind-scada-card.js:903`, `:2528`), so its amber "LIMITED" pill is dead code
+      until this lands.
 - [x] ~~Remove the deprecated turbine map card~~ — JS file already deleted; OBSOLETE_CARD_KEYS entry stays to prune old dashboards.
+- [ ] 423 password-change-required → actionable reauth ("change your dashboard password, then
+      reconfigure") via `ConfigEntryAuthFailed`, next to the existing 401/403 branches in
+      `api.py`. Today a 423 becomes `KirkHillConnectionError`: last-known data held forever,
+      API Status down, no hint of the cause — and a member changing their password is a
+      member-doable event.
+- [ ] `EntityCategory.DIAGNOSTIC` for the bookkeeping entities (`Latest import status`,
+      `Data generated at`, `Unknown turbines`, `Data complete`, plus the new site capacity
+      sensor) so they stay out of default dashboards and entity pickers. The integration
+      uses `EntityCategory` nowhere today.
+- [ ] Calendar month-to-date revenue + a 12-month `monthly` breakdown attribute
+      (`{month, generation_kwh, revenue_gbp}` × 12) on the YTD value entity, for a
+      revenue-by-month chart. Our `month` timeframe is a rolling 30d window, so that chart
+      is impossible today. Needs `range=custom` with `from`/`to` (already on #55). Current
+      months at the current price only — same basis as the existing YTD value, so the
+      suppress-historical-£ decision is untouched.
 
 ## Code review backlog
 
