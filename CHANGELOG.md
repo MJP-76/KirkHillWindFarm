@@ -2,6 +2,13 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.16.0
+- **New: the member savings figure is now drawn on the SCADA card.** v4.15.0 added `sensor.<farm>_member_savings_value`, but nothing rendered it, so every money figure on the card was still generation-based (`kWh × p/kWh`) — which is exactly what upgrading users reported. The card now shows **Member savings £537.49** (2,559.465 W × 21p/W) on a labelled line, fed by a new `member_savings_entity` card config key.
+- **Purely additive — no row, rect or coordinate moved, and nothing existing was replaced.** The Owner table is full (9 rows end at `y=302`, its rect at `308`, the Site panel starts at `332`) and the National Grid box occupies the same x band below it, so a new row would have meant resizing and shifting the Site panel. The line instead takes the empty 24 px gap between the two panels, right-aligned to the Value column. The timeframe £ column, the live £/h rate, `Share (‱)` and the All time suppression are all untouched.
+- **Undeclared reads `—`, not `£0.00`.** It mirrors the sensor's `unknown` state and the board's own dashboard, which shows no ongoing earnings because the payment is declared retrospectively. Cards stored before this key existed render `—` too rather than throwing: `_num(undefined)` returns `null`.
+- **Docs.** `dashboard.md` gains a "Member savings (per watt)" section — the p/W entity, the arithmetic, and why there is no timeframe.
+- **Not covered by CI.** Frontend only; the pipeline has no browser. Placement in the panel gap needs checking on a real instance.
+
 ## Version 4.15.2
 - **Dashboard sign-in is parked, not removed.** Setup now goes straight to the API-key form. The sign-in path hands back a well-formed 56-character `kh_live_` key that the API rejects with `401 The API key is not valid.` — identical in length and format to a working key, and passed through byte for byte (`access_token` → `strip()` → `Authorization` header) — so the fault is server-side key activation upstream of us, and offering the option would send every new user into a dead end. The switch is a single documented constant, `SIGN_IN_ENABLED = False`, carrying that evidence in its comment.
 - **Nothing was deleted.** `oauth.py`, `describe_key()`, the permission gate, the validation diagnostics, every string and every OAuth test remain in the tree and keep running in CI — so re-enabling later is one line plus a docs revert, not a rewrite, and none of it rots while parked.
