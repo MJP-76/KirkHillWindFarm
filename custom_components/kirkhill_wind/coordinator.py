@@ -40,6 +40,11 @@ FAST_TIMEFRAMES = ("today",)
 SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
 _TURBINE_INTERVAL = timedelta(minutes=10)
 _SLOW_INTERVAL = timedelta(hours=1)
+# Seconds for the whole Open-Meteo attempt -- retries and backoff sleeps
+# included. Without it three attempts at the client's own 20s timeout,
+# plus 1s and 2s of backoff, can take ~63s: longer than the 60s scan
+# interval, so one hung forecast silently costs a poll.
+_FORECAST_BUDGET = 10.0
 
 
 async def _reap_forecast_task(task: asyncio.Task) -> None:
@@ -450,17 +455,48 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         session: aiohttp.ClientSession,
         coordinates: dict[str, dict[str, float | str | None]],
     ) -> dict:
-        """Fetch optional Open-Meteo forecast; never fail core update."""
+        """Fetch optional Open-Meteo forecast; never fail core update.
 
+        Bounded by _FORECAST_BUDGET: the retries below, at the client's own
+        20s timeout with 1s/2s of backoff, can otherwise take ~63s -- longer
+        than the 60s scan interval -- so one hung forecast silently costs a
+        poll. wait_for also cancels the attempt, so nothing is left running.
+        """
         latitude, longitude = self._resolve_forecast_location(coordinates)
         if latitude is None or longitude is None:
             return {}
 
-        last_exc = None
+        try:
+            return await asyncio.wait_for(
+                self._forecast_with_retries(session, latitude, longitude),
+                timeout=_FORECAST_BUDGET,
+            )
+        except asyncio.TimeoutError:
+            _LOGGER.warning(
+                "Open-Meteo forecast exceeded its %ss budget "
+                "(forecast-only, non-fatal)",
+                _FORECAST_BUDGET,
+            )
+            return {}
+        except (aiohttp.ClientError, KirkHillApiError) as exc:
+            _LOGGER.warning(
+                "Open-Meteo forecast fetch failed (forecast-only, non-fatal): %s",
+                exc,
+            )
+            return {}
+
+    async def _forecast_with_retries(
+        self,
+        session: aiohttp.ClientSession,
+        latitude: float,
+        longitude: float,
+    ) -> dict:
+        """Three attempts with short backoff; raises the last error if all fail."""
+        last_exc: Exception | None = None
 
         for attempt in range(3):
             try:
-                forecast = await self.open_meteo_client.get_point_forecast(
+                return await self.open_meteo_client.get_point_forecast(
                     session,
                     latitude=latitude,
                     longitude=longitude,
@@ -471,14 +507,8 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     # Short exponential backoff between attempts — same spirit
                     # as the summary retry schedule, but bounded within this tick.
                     await asyncio.sleep(2**attempt)
-            else:
-                return forecast
 
-        _LOGGER.warning(
-            "Open-Meteo forecast fetch failed (forecast-only, non-fatal): %s",
-            last_exc,
-        )
-        return {}
+        raise last_exc
 
     def _resolve_forecast_location(
         self, coordinates: dict[str, dict[str, float | str | None]]

@@ -738,6 +738,37 @@ class TestForecastTaskLifecycle:
         assert cancelled.is_set(), "the Open-Meteo forecast task outlived the update that created it"
 
 
+    @pytest.mark.asyncio
+    async def test_hung_forecast_is_bounded_by_the_budget(self, hass, mock_api_client, monkeypatch):
+        """A hung Open-Meteo must not eat the whole poll.
+
+        Three attempts at the client's own 20s timeout with 1s/2s of backoff
+        is ~63s -- longer than the 60s scan interval -- so one hung forecast
+        silently cost a poll. The outer wait_for turns "no budget" into a
+        timeout failure instead of a test that hangs forever.
+        """
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        async def hang(session, *, latitude, longitude):
+            await asyncio.Event().wait()
+
+        coord.open_meteo_client.get_point_forecast = hang
+        monkeypatch.setattr(
+            "custom_components.kirkhill_wind.coordinator._FORECAST_BUDGET", 0.05
+        )
+
+        result = await asyncio.wait_for(
+            coord._fetch_open_meteo_forecast(
+                None, {"T1": {"latitude": 55.0, "longitude": -4.0}}
+            ),
+            timeout=2,
+        )
+
+        assert result == {}
+
+
 class TestScopeAwareCurrentPayloads:
     """The current payload must differ by scope, the way the API does."""
 
