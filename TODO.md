@@ -41,6 +41,24 @@ Fields the coordinator already fetches but discards. No API changes needed.
       below, and [#55 §6](https://github.com/MJP-76/KirkHillWindFarm/issues/55) for the
       upstream request. **Awaiting the board** (asked 2026-10-01).
 
+### API change log upkeep
+
+`docs/api.md` is the standing record of what the upstream API contains and what
+it changed — but it only moves when someone updates it, and upstream moves
+without telling us. The daily `OpenAPI sync` PR is the prompt; this is the
+follow-through.
+
+- [ ] When the `chore/openapi-sync` PR lands, add a dated row to **Change
+      history** in `docs/api.md` — endpoint, field, enum or `required` changes,
+      copied from that PR body's feature list (spec release id included)
+- [ ] When an entity appears, changes value, or stops reporting **because of**
+      an upstream change, record it under **What this did to the entities** in
+      the same commit that ships the fix — added, changed value, or removed
+- [ ] If a change is caught only by an entity misbehaving on a live instance
+      (no spec diff — `site_capacity_watts` was in the spec for three months
+      while the API never sent it), add it anyway and note that the sync
+      missed it
+
 ### Target design: prices owned by the API
 
 **The goal.** CfD strike rate, sell/export price, and owner price all come from the API
