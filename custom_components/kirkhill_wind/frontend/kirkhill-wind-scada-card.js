@@ -2306,7 +2306,7 @@ _buildHeaderChips(layout) {
         </g>
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
-        <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation, Capacity & Earnings</text>
+        <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation &amp; Capacity</text>
         <g class="user-gen" data-user-gen="panel">
           <rect x="${layout.chipUserGenX}" y="76" width="${layout.chipUserGenW}" height="232" rx="8"/>
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="98">Owner</text>
