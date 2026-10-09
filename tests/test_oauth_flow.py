@@ -135,19 +135,30 @@ def my_component(hass):
 
 
 class TestMenu:
-    """The first step must offer both ways in, and keep the single-instance rule."""
+    """Sign-in is parked; the single-instance rule and the menu must survive."""
 
     @pytest.mark.asyncio
-    async def test_user_step_offers_both_paths(self, hass):
+    async def test_signin_is_parked_so_the_form_shows_directly(self, hass):
+        flow = _make_flow(hass)
+
+        result = await flow.async_step_user()
+
+        assert not config_flow.SIGN_IN_ENABLED, "parked on purpose, not by accident"
+        assert result["type"] == "form"
+        assert result["step_id"] == "manual", (
+            "Setup must land on the working API-key form while sign-in is parked"
+        )
+
+    @pytest.mark.asyncio
+    async def test_enabling_signin_restores_the_menu(self, hass, monkeypatch):
+        """Re-enabling must bring both paths back, not a half-working flow."""
+        monkeypatch.setattr(config_flow, "SIGN_IN_ENABLED", True)
         flow = _make_flow(hass)
 
         result = await flow.async_step_user()
 
         assert result["type"] == "menu"
-        assert set(result["menu_options"]) == {"oauth2", "manual"}, (
-            "Both paths must stay reachable: sign-in is the convenience, the "
-            "pasted key is the fallback when OAuth cannot run."
-        )
+        assert set(result["menu_options"]) == {"oauth2", "manual"}
 
     @pytest.mark.asyncio
     async def test_single_instance_rule_still_applies(self, hass):

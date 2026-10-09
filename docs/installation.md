@@ -2,15 +2,18 @@
 
 ## Pre-requisites
 
-**Signing in (recommended) needs nothing in advance.** During setup the
-integration opens the [dashboard](https://dashboard.kirkhillcoop.org), you
-approve access to your wind farm data, and it receives an API key for you. Your
-password is never shared with the integration.
-
-**Using an API key instead?** Log in to the
+Generate your Kirk Hill Wind Farm API key by logging in to the
 [dashboard](https://dashboard.kirkhillcoop.org), click your username/account
 in the top right corner, scroll down to the API section, press **Generate**
 and copy the API key.
+
+!!! note "Dashboard sign-in is temporarily unavailable"
+
+    Setup offers the API-key path only. An upstream issue means the key issued
+    by the sign-in flow is well formed (56 characters, `kh_live_…`) yet rejected
+    by the API with `401 The API key is not valid.` — so sign-in is parked
+    rather than offered as a dead end. The code and its tests stay in the
+    integration; the option returns once the dashboard is fixed.
 
 ## Install via HACS
 
@@ -18,9 +21,8 @@ and copy the API key.
 2. Install **Kirk Hill Wind Farm**
 3. Restart Home Assistant
 4. Add the integration via **Settings → Devices & Services → Add Integration → Kirk Hill Wind Farm**
-5. Choose **Sign in with your Kirk Hill dashboard account** (recommended) or
-   **I already have an API key**, then choose whether to create the dashboard
-   automatically and set a site name
+5. Enter your API key, choose whether to create the dashboard automatically,
+   and set a site name
 
 !!! note "Ethex earnings"
 
@@ -101,16 +103,11 @@ steps above first, then report it.
 
 ## Configuration
 
-Setup first asks how you want to connect:
+During setup, the integration asks for:
 
-- **Sign in with your Kirk Hill dashboard account (recommended)** — opens the
-  dashboard in your browser, you approve access, and the integration receives an
-  API key for you. Nothing is shown to copy or paste. **Choose *My share and
-  whole wind farm***: the integration reads both, and a key that allows only one
-  of them is rejected at setup with that message.
-- **I already have an API key** — entered as a masked password field in Home Assistant.
+- **API key** — entered as a masked password field in Home Assistant
 
-On either path you are then asked for:
+Then:
 
 - **Create dashboard automatically** — whether the integration should create/update its Lovelace dashboard tab
 - **Enable payment tracking onboarding (Ethex, experimental)** — optionally starts the Ethex setup flow
