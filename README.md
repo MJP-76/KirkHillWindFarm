@@ -63,7 +63,7 @@ and an animated dashboard.
   a future release).
 - **Notifiable** — entities support a WhatsApp alert guide for turbine
   down/recovery.
-- **Config flow & options** — dashboard sign-in or masked API key entry, optional
+- **Config flow & options** — masked API key entry, optional
   auto-dashboard, and
   configurable polling interval. Customisations and user-added cards are
   preserved across reloads and updates.
@@ -74,18 +74,17 @@ and an animated dashboard.
 2. Install **Kirk Hill Wind Farm**.
 3. Restart Home Assistant.
 4. Add the integration via **Settings → Devices & Services → Add Integration → "Kirk Hill Wind Farm"**.
-5. Choose how to connect: **Sign in with your Kirk Hill dashboard account**
-   (recommended) or **I already have an API key**, then choose whether to create
-   the dashboard automatically and set a site name.
+5. Enter your API key, choose whether to create the dashboard automatically,
+   and set a site name.
 
-> Signing in needs no API key: the setup opens the dashboard, you approve
-> access, and the integration receives an API key for you. Your password is
-> never shared with the integration. Pick **My share and whole wind farm** — the
-> integration reads both, and a key that allows only one is rejected at setup.
->
-> Prefer to use a key? Generate one by logging in to the dashboard
+> Generate your API key by logging in to the dashboard
 > <https://dashboard.kirkhillcoop.org>, click your username in the top right,
 > scroll to the API section, select **Generate**, and copy the key.
+>
+> **Dashboard sign-in is temporarily unavailable.** An upstream issue means
+> keys issued by the sign-in flow are rejected by the API, so setup offers the
+> API-key path only. The code stays in the integration and the option returns
+> once the dashboard is fixed.
 
 > Want to include earnings from the Ethex Investment Platform? Add
 > <https://github.com/mjp-76/ha-ethex> too (experimental; awaiting Ethex go-live).

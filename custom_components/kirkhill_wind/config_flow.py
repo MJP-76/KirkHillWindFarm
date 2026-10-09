@@ -55,6 +55,23 @@ SETTINGS_FIELDS: dict[Any, Any] = {
 }
 
 
+# Dashboard sign-in is PARKED, not deleted.
+#
+# The dashboard's token endpoint issues a 56-character kh_live_ key -- the same
+# length and format as a working key -- that /api/v1/* then rejects with
+# 401 "The API key is not valid." Reproduced across several attempts over
+# several hours; the integration passes the value through byte for byte
+# (access_token -> strip() -> Authorization header), so the fault is server-side
+# key activation, upstream of us. Offering it would send every new user into a
+# dead end, so setup goes straight to the API-key form instead.
+#
+# Everything else stays live: oauth.py, describe_key(), the permission gate and
+# the OAuth tests all still run in CI, so nothing rots while parked. Flip this
+# to True -- and revert the docs note -- once the dashboard team confirms
+# OAuth-issued keys are accepted.
+SIGN_IN_ENABLED = False
+
+
 class KirkHillWindConfigFlow(
     config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
 ):
@@ -88,13 +105,19 @@ class KirkHillWindConfigFlow(
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Offer the two ways in: sign in with the dashboard, or paste a key.
+        """Offer sign-in and paste-a-key -- or, while sign-in is parked, just paste.
 
         Picking a menu option makes Home Assistant jump straight to that step
-        with ``user_input=None``, so this method only ever shows the menu.
+        with ``user_input=None``, so this method only ever decides *whether* to
+        show a menu.
         """
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
+        if not SIGN_IN_ENABLED:
+            # Parked: offering a sign-in the API currently rejects would be a
+            # dead end. The step_id stays "manual", so the strings this form
+            # renders are already the right ones -- no i18n change needed.
+            return await self.async_step_manual()
         return self.async_show_menu(step_id="user", menu_options=["oauth2", "manual"])
 
     async def async_step_manual(
