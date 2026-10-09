@@ -339,6 +339,20 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.2 (pre-release, 2026-10-09)
+
+- Money layout **put back but left empty**: the `Value (£)` column, £/h cells,
+  price pills and member-savings line are drawn again with every money cell
+  reading `—` — a standing visual reminder to finish the model
+- Entities stay **disabled** and all three inputs stay `0.0`, so nothing is
+  calculated; bringing a figure back is now only `hab entity enable`
+- Owner pill rewired from p/kWh to **p/W** (`owner_rate_entity` config key,
+  max 100, step 0.1) — the board's basis; p/kWh still drives the £ column
+- Section heading reads "Generation & Capacity" (PR #91), not "…& Earnings"
+- Docs reworded from *removed* to *shown but empty* across README, info, index,
+  sensors, dashboard, installation; decisions.md amended
+- Frontend only — verify on a real instance; CI has no browser
+
 ### v4.16.1 (pre-release, 2026-10-09)
 
 - **Financial figures removed for the time being**: the card no longer draws

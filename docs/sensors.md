@@ -25,11 +25,11 @@
 - Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`. These are **sensors only** (not shown on the SCADA card). More years appear automatically as time passes.
 - Generation (alltime) [kWh] for owner and site — **calculated as the sum of all the year figures**: `2024 + 2025 + … + the current year to date`, including any future years. The `sum_of_years_kwh` attribute lists the per-year components.
 - Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
-- **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry and the card no longer draws them; previously `live generation × configured price`, `£0.00` when no price was set
+- **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry; the card still draws the column and shows `—` in every cell. Previously `live generation × configured price`, `£0.00` when no price was set
   - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
-- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` (2,559.465 W × 21p = **£537.49** for Feb 2025–Jun 2026). Disabled with everything else until the board confirms the model; its attributes were `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`
+- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` (2,559.465 W × 21p = **£537.49** for Feb 2025–Jun 2026). The card line is drawn but reads `—`; its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`
 - **Owner price (number) [p/kWh] — DISABLED from v4.16.1**, input `0.0`
-- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0` (was the declared member savings rate, e.g. 21p/W for Feb 2025–Jun 2026)
+- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. **This is what the Owner pill on the card edits** (was the declared member savings rate, e.g. 21p/W for Feb 2025–Jun 2026)
 - **Negotiated price (number) [GBP/MWh] — DISABLED from v4.16.1**, input `0.0`
 
 Re-enable any of them with `hab entity enable <entity_id>` — nothing was deleted.
@@ -52,10 +52,11 @@ rounds them to **2 decimal places**.
 
 !!! warning "All 22 earnings entities are currently disabled"
     **2026-10-09** — the 19 value/savings sensors and the 3 price/rate `number`
-    entities are **disabled in the entity registry** and every input is `0.0`,
-    so nothing here is visible or computing until the board confirms how member
-    payments are calculated. They still exist; re-enable with
-    `hab entity enable <entity_id>`. See
+    entities are **disabled in the entity registry** and every input is `0.0`.
+    The card still draws the `Value (£)` column, the pills and the savings line
+    — deliberately kept as a reminder — but **nothing is populated or
+    calculated**, so every money cell reads `—`. Re-enable with
+    `hab entity enable <entity_id>` to bring figures back. See
     [Development decisions](development/decisions.md).
 
 Financial £ values are **live-accurate when a price is set**. Two independent

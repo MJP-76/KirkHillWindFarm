@@ -4,7 +4,7 @@ Give the repository a **design-focused** review. CI already passes (ruff, HACS
 validation, Hassfest, version-sync); you are NOT reviewing for "does it pass CI".
 Focus on correctness, robustness, and design with these specific questions below.
 
-Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.16.1)
+Repo: https://github.com/MJP-76/KirkHillWindFarm (branch `main`, v4.16.2)
 Start here: `custom_components/kirkhill_wind/`, then `AGENTS.md`, then
 `docs/development/decisions.md` (read the decisions doc — it records why the
 code is shaped this way and answers several questions below already).
@@ -89,7 +89,7 @@ Treat them as closed; flag only if you find a new, concrete problem:
   missing value.
 
 ### 4. Dashboard generation code in `dashboard.py`
-- Dashboard create/merge/reset now lives in `dashboard.py` (530 lines), split
+- Dashboard create/merge/reset now lives in `dashboard.py` (531 lines), split
   out of `__init__.py` in v4.13.0. Public surface: `build_dashboard_config`,
   `merge_dashboard_config`, `card_match_key`, `OBSOLETE_CARD_KEYS`.
 - Dead code was removed across several releases (owner/site_value_entities,

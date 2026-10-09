@@ -88,22 +88,24 @@ and duration.
 
 ## Financials (formerly the Finances tab)
 
-!!! warning "Earnings hidden pending the board's model"
-    **2026-10-09** — every money figure on this card is hidden until the board
-    confirms how member payments are calculated: the **`Value (£)` column, both
-    live `£/h` rates, both price pills and the member-savings line are no longer
-    rendered**, all 22 earnings entities are **disabled** in the entity registry,
-    and all three inputs (`owner_price_p_kwh`, `owner_rate_p_w`,
-    `negotiated_price_gbp_mwh`) are `0.0`. Restoring is `hab entity enable` plus
-    re-adding the markup — nothing was deleted. See
-    [Development decisions](development/decisions.md).
+!!! warning "Earnings shown but deliberately empty"
+    **2026-10-09** — the money UI is **back on the card as a visual reminder**,
+    but nothing is populated or calculated: the `Value (£)` column, both `£/h`
+    cells, both price pills and the member-savings line are drawn **empty** —
+    every cell reads `—` and the Owner pill reads `Rate —` — because all **22
+    earnings entities are disabled** in the entity registry and all three inputs
+    (`owner_price_p_kwh`, `owner_rate_p_w`, `negotiated_price_gbp_mwh`) are
+    `0.0`. Nothing computes a figure until the board confirms how member
+    payments are calculated. The Owner pill now edits the **p/W rate**, not the
+    p/kWh price. See [Development decisions](development/decisions.md).
 
 The standalone **Finances tab was removed in v4.8.79** — its content (today's
 earnings, this month, year to date) now lives in the SCADA card itself. Every
 timeframe row (Yesterday, Today, Week, Month, YTD, Year, All time) in both the
 **Owner Capacity** and **Site Capacity** panels is built to show a **£ value
 column** alongside the kWh figure, so generation and its value sit on the same
-row. **At present that column is not drawn**, and the card shows energy only.
+row. **At present that column is drawn but left empty** — every cell reads `—`,
+because the entities behind it are disabled and their inputs are `0.0`.
 
 The **All time** kWh figure is **calculated as the sum of the per-year
 sensors** — `2024 + 2025 + … + the current year to date`, including any future
@@ -113,24 +115,29 @@ see [Sensors](sensors.md).
 
 ### Prices (entities present, currently disabled)
 
-Two independent price entities drive the £ figures:
+Three entities drive the money figures:
 
-- `number.<farm>_owner_price_p_kwh` — **Owner price in p/kWh** (enter `6` for
-  6 pence). Drives the Owner panel's £ column and the owner £/h rate.
+- `number.<farm>_owner_rate_p_w` — **Owner rate in p/W** (enter `21` for 21 pence
+  per watt). **This is what the Owner pill edits**, and it drives
+  `sensor.<farm>_member_savings_value`.
+- `number.<farm>_owner_price_p_kwh` — **Owner price in p/kWh**. Drives the Owner
+  panel's £ column and the owner £/h rate.
 - `number.<farm>_negotiated_price_gbp_mwh` — **Site/CfD price in £/MWh**
   (CfD-style strike price). Drives the Site panel's £ column and the site £/h
   rate.
 
-Both default to `0.0`, in which case the sensors read `£0.00` rather than a
+All three default to `0.0`, in which case the sensors read `£0.00` rather than a
 projected figure. Displayed prices never round up (`0.06` shows as `0.06`), and
 the Power rows can show a live £/h rate (`ownerExportKw × price` /
 `sitePowerMw × price`) once a price is set.
 
-**All of that is switched off:** both entities are disabled in the registry,
-both sit at `0.0`, and the card no longer renders the price pills or the £/h
-rates. They remain in the codebase so restoring them needs no reinstall.
+**All of that is switched off:** every entity is disabled in the registry and
+sits at `0.0`, so the pills and the £/h cells render **empty** (`Rate —`, `—`)
+and no calculation runs at all. The card deliberately keeps them visible as a
+reminder to finish the model. Re-enabling an entity brings its figure back with
+no reinstall.
 
-### Member savings (per watt) — hidden
+### Member savings (per watt) — shown, but empty
 
 Members are paid for the watts they **own**, not for kilowatt-hours
 generated. `sensor.<farm>_member_savings_value` computes
@@ -138,8 +145,9 @@ generated. `sensor.<farm>_member_savings_value` computes
 and 21p/W that is **£537.49**, the figure the web dashboard reports for
 Feb 2025–Jun 2026.
 
-**The card line that displayed it has been removed**, and both entities are
-disabled with the rate set to `0.0`, as part of the back-out above.
+**The card line is drawn but reads `—`**: both entities are disabled and the
+rate is `0.0`, so nothing is calculated until the board confirms the model. The
+empty line is kept on purpose as a reminder.
 
 It has **no timeframe and does not accrue**: the board declares a payment when
 its finances allow, and the board's "15p per watt per 12 months" is an

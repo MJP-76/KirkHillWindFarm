@@ -256,21 +256,24 @@ decision changes.
   (`kWh × p/kWh`) and the capacity figure (`watts × p/W`) — and when the owner
   price was back at 21 p/kWh, the column reported ~£1,350 for a year against
   the board's £537.49 for 17 months. Rather than keep choosing between them,
-  money is backed out entirely, reversibly:
+  money is switched off everywhere, reversibly:
 
   - **22 entities disabled** in the registry (`disabled_by: user`): the 19
     value/savings sensors and all 3 `number` inputs
   - **all three inputs zeroed** — `owner_price_p_kwh`, `owner_rate_p_w`,
     `negotiated_price_gbp_mwh` all `0.0`
-  - **card no longer renders** the `Value (£)` column (both panels), either
-    live `£/h` rate, either price pill, or the member-savings line
+  - **card renders the money UI empty** — the `Value (£)` column (both panels),
+    both `£/h` cells, both price pills and the member-savings line are drawn but
+    unpopulated (every money cell `—`), *amended the same day: the maintainer
+    preferred the empty layout back as a standing visual reminder to finish the
+    work, rather than the columns disappearing*. The Owner pill was rewired from
+    p/kWh to the **p/W rate**, the board's basis.
 
   Generation, power, capacity, wind and share are untouched. **Nothing was
-  deleted:** the sensor classes, `number` entities and even the card's render
-  code remain, so restoring is `hab entity enable` plus re-adding markup —
-  deliberate, because the back-out is explicitly *"for now"*. The one layout
-  consequence: `widestFin` no longer exists, so the generation column's clamp
-  is now just the panel's right edge.
+  deleted:** the sensor classes and `number` entities remain, and v4.16.2 put
+  the card's markup and render code back — drawn but empty — so bringing a
+  figure back is now only `hab entity enable`. Deliberate, because the back-out
+  is explicitly *"for now"*.
 
   Revisit when the board answers three things: the per-watt rate and the period
   it covers, whether a period counts before it is declared, and how `All time`
@@ -294,7 +297,7 @@ decision changes.
 
 ## Deployment state
 
-- **2026-10-09 — The repository is at `4.16.1` (pre-release); production runs
+- **2026-10-09 — The repository is at `4.16.2` (pre-release); production runs
   `4.15.1`.** Nothing is deployed by releasing: the changed files under
   `custom_components/kirkhill_wind/` reach this host only when `origin/main` is
   mirrored into `/homeassistant/custom_components/kirkhill_wind/` and Home

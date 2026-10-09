@@ -12,23 +12,25 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-!!! warning "Financial figures — removed for the time being"
+!!! warning "Financial figures — shown but deliberately empty"
 
-    **As of v4.16.1 no financial figure is shown.** The £ value column, both
-    live £/h rates, both price pills and the member-savings line are no longer
-    drawn on the SCADA card, all **22 earnings entities are disabled** in the
-    entity registry, and all three inputs (`owner_price_p_kwh`, `owner_rate_p_w`,
+    **As of v4.16.2 the money UI is on the card but nothing is populated.** The
+    £ value column, both £/h cells, both price pills and the member-savings line
+    are drawn **empty** — every money cell reads `—` and the Owner pill reads
+    `Rate —` — because all **22 earnings entities are disabled** in the entity
+    registry and all three inputs (`owner_price_p_kwh`, `owner_rate_p_w`,
     `negotiated_price_gbp_mwh`) are `0.0`.
 
     This is deliberate and temporary: the integration had two competing bases —
-    `kWh × p/kWh` for timeframes and `watts × p/W` for capacity — and rather than
-    guess which the board means, nothing is asserted until they confirm how
-    member payments are calculated. Generation, power and capacity are
-    unaffected, and restoring is `hab entity enable` plus re-adding the markup.
+    `kWh × p/kWh` for timeframes and `watts × p/W` for capacity — and rather
+    than guess which the board means, nothing is calculated until they confirm
+    how member payments are calculated. The empty cells are kept as a visual
+    reminder. Generation, power and capacity are unaffected; re-enable an entity
+    with `hab entity enable <entity_id>` to bring a figure back.
 
-    Separately, the **All-time** and **past-year (2025, 2024)** £ values were
-    already suppressed (showing `—`), because the API records energy only —
-    never money. See
+    Separately, the **All-time** and **past-year (2025, 2024)** £ values are
+    suppressed (showing `—`), because the API records energy only — never money.
+    See
     [Development decisions](development/decisions.md#owner-share-and-earnings-figures).
 
 ## Support me
@@ -47,7 +49,7 @@ development, you can do so here:
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
-  - owner and site value by timeframe (GBP) — **removed from v4.16.1**: the entities still exist but are disabled and nothing is drawn; previously `live generation × configured price`
+  - owner and site value by timeframe (GBP) — **empty from v4.16.1**: the entities exist but are disabled, so the column is drawn with `—` in every cell (previously `live generation × configured price`)
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -63,7 +65,7 @@ development, you can do so here:
 - Open-Meteo forecast integration (forecast only; not authoritative actual generation)
 - Optional experimental Ethex payment-tracking onboarding toggle
 - Configurable polling interval via Options
-- Auto-generated Lovelace dashboard: SCADA (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe generation — **the per-timeframe £ earnings display was removed in v4.16.1** — Wind Speed detail modal, pop-out charts including a labelled turbine activity swimlane). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80 (its standalone map card deprecated in v4.8.81).
+- Auto-generated Lovelace dashboard: SCADA (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe generation plus an **empty £ value column** — earnings entities disabled from v4.16.1, so no figure is calculated — Wind Speed detail modal, pop-out charts including a labelled turbine activity swimlane). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80 (its standalone map card deprecated in v4.8.81).
 - Dashboard customisations are preserved across reloads and updates; `kirkhill_wind.reset_dashboard` restores defaults
 
 ## Where to go next
