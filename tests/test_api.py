@@ -1,6 +1,7 @@
 """Tests for the API client — exception hierarchy and response parsing."""
 from __future__ import annotations
 
+import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -375,3 +376,25 @@ class TestKeyShape:
             "A trailing newline in the Authorization header is enough for the "
             "API to reply 'The API key is not valid.'"
         )
+
+
+class TestGetTurbinesDefaultRange:
+    """The default must be a range the endpoint actually serves."""
+
+    def test_default_range_is_served_by_the_endpoint(self):
+        """docs/api.md: only today and all are known to work on /turbines.
+
+        The spec advertises the full Range set for that endpoint, but the
+        intermediate values are not served -- so a "7d" default turned every
+        bare get_turbines() call into a 422 the caller had to diagnose. Both
+        call sites pass an explicit range, which is why this stayed latent.
+        """
+        default = (
+            inspect.signature(KirkHillApiClient.get_turbines)
+            .parameters["range_value"]
+            .default
+        )
+        assert default in {"today", "all"}, (
+            f"get_turbines must default to a range the endpoint serves, got {default!r}"
+        )
+

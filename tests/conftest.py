@@ -258,12 +258,5 @@ def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payloa
     )
     client.get_turbines = AsyncMock(return_value=mock_turbine_rows)
     client.get_summary = AsyncMock(return_value=mock_summary_payload)
-    client.get_wind_speed = AsyncMock(
-        return_value={
-            "series": [
-                {"wind_speed_mps": 8.5, "timestamp": "2025-01-15T12:00:00Z"},
-            ],
-        }
-    )
     client.test = AsyncMock()
     return client

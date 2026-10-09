@@ -198,7 +198,10 @@ class KirkHillApiClient:
         self,
         session: aiohttp.ClientSession,
         scope: str = SCOPE_OWNER,
-        range_value: str = "7d",
+        # docs/api.md: the spec advertises the full Range set for this
+        # endpoint, but only today and all are known to be served, so the
+        # default must not be one of the values that 422s.
+        range_value: str = "today",
     ) -> list[dict[str, Any]]:
         """GET /api/v1/turbines?scope={scope}&range={range_value}."""
         body = await self._get(
@@ -223,20 +226,6 @@ class KirkHillApiClient:
         body = await self._get(
             session,
             "/api/v1/summary",
-            {"scope": scope, "range": range_value},
-        )
-        return self._parse_data(body)
-
-    async def get_wind_speed(
-        self,
-        session: aiohttp.ClientSession,
-        scope: str = SCOPE_OWNER,
-        range_value: str = "today",
-    ) -> dict[str, Any]:
-        """GET /api/v1/wind-speed?scope={scope}&range={range_value}."""
-        body = await self._get(
-            session,
-            "/api/v1/wind-speed",
             {"scope": scope, "range": range_value},
         )
         return self._parse_data(body)
