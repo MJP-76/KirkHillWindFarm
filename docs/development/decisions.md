@@ -250,6 +250,32 @@ decision changes.
   whenever a payment is declared. Neither figure is shown on the SCADA card.
   Regression tests: `test_sensor.py::TestMemberSavingsValue` (pins 537.49 and
   the undeclared-`unknown` behaviour), `test_number.py` (rate persistence).
+- **2026-10-09 — All earnings figures are hidden until the board defines the
+  model.** *Supersedes the display half of the 2026-10-08 entry above.* Two
+  bases had collided on one card: the timeframe `Value (£)` column
+  (`kWh × p/kWh`) and the capacity figure (`watts × p/W`) — and when the owner
+  price was back at 21 p/kWh, the column reported ~£1,350 for a year against
+  the board's £537.49 for 17 months. Rather than keep choosing between them,
+  money is backed out entirely, reversibly:
+
+  - **22 entities disabled** in the registry (`disabled_by: user`): the 19
+    value/savings sensors and all 3 `number` inputs
+  - **all three inputs zeroed** — `owner_price_p_kwh`, `owner_rate_p_w`,
+    `negotiated_price_gbp_mwh` all `0.0`
+  - **card no longer renders** the `Value (£)` column (both panels), either
+    live `£/h` rate, either price pill, or the member-savings line
+
+  Generation, power, capacity, wind and share are untouched. **Nothing was
+  deleted:** the sensor classes, `number` entities and even the card's render
+  code remain, so restoring is `hab entity enable` plus re-adding markup —
+  deliberate, because the back-out is explicitly *"for now"*. The one layout
+  consequence: `widestFin` no longer exists, so the generation column's clamp
+  is now just the panel's right edge.
+
+  Revisit when the board answers three things: the per-watt rate and the period
+  it covers, whether a period counts before it is declared, and how `All time`
+  accumulates across declared periods (a ledger of `Σ watts × rate` per
+  declaration, not a time integral).
 
 ## Dashboard consolidation
 
