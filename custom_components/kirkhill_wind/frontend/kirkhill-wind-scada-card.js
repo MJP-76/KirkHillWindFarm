@@ -992,13 +992,24 @@ class KirkHillWindScada extends HTMLElement {
     if (this._apiBoundKeydown) { window.removeEventListener("keydown", this._apiBoundKeydown); this._apiBoundKeydown = null; }
   }
 
+  _canEdit(entityId) {
+    // A disabled entity has no state at all, and an unavailable one cannot
+    // take a write. Either way a save would only produce Home Assistant's
+    // "Referenced entities … are missing or not currently available" warning,
+    // so the pill is treated as inert instead of offering an editor that
+    // cannot work.
+    if (!entityId) return false;
+    const state = this._hass?.states?.[entityId];
+    return Boolean(state) && state.state !== "unavailable";
+  }
+
   _openPriceEdit(scope) {
     // scope: "owner" -> Owner rate (p/W, the board's per-watt basis);
     //        "site"  -> Site/CfD price (GBP/MWh)
     const config = this.config;
     const owner = scope === "owner";
     const entity = owner ? config.owner_rate_entity : config.negotiated_price_entity;
-    if (!entity) return;
+    if (!this._canEdit(entity)) return;
     const label = owner ? "Owner rate" : "Site price (CfD)";
     const unit = owner ? "p/W" : "£/MWh";
     const hint = owner
@@ -2319,7 +2330,7 @@ _buildHeaderChips(layout) {
         </g>
 
         <!-- Right side: Owner Generation & Capacity (far right) -->
-        <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation &amp; Capacity</text>
+        <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation, Capacity & Earnings</text>
         <g class="user-gen" data-user-gen="panel">
           <rect x="${layout.chipUserGenX}" y="76" width="${layout.chipUserGenW}" height="232" rx="8"/>
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="98">Owner</text>
@@ -2463,6 +2474,17 @@ _buildHeaderChips(layout) {
     this._setText(root, '[data-price-text="owner"]', ownerRate === null || ownerRate === 0 ? "Rate —" : `Rate ${this._fmt(ownerRate, 2)} p/W`);
     const sitePrice = this._num(config.negotiated_price_entity);
     this._setText(root, '[data-price-text="site"]', sitePrice === null || sitePrice === 0 ? "Price —" : `Price £${this._fmt(sitePrice, 2)}/MWh`);
+
+    // A pill whose entity cannot take a write (disabled or unavailable) is
+    // dimmed and unhoverable, so it never looks like an action that would
+    // only end in a Home Assistant warning.
+    root.querySelectorAll("[data-price-edit]").forEach((pill) => {
+      const id =
+        pill.getAttribute("data-price-edit") === "owner"
+          ? config.owner_rate_entity
+          : config.negotiated_price_entity;
+      pill.classList.toggle("price-edit--inert", !this._canEdit(id));
+    });
 
     // Generation & capacity panel (top right) — timeframe values
     (config.owner_generation_entities || []).forEach((item) => {
@@ -2914,6 +2936,10 @@ _buildHeaderChips(layout) {
       .price-edit:hover rect { stroke: var(--khscada-accent-color); }
       .price-edit text { fill: var(--khscada-secondary-color); font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); cursor: pointer; }
       .price-edit:hover text { fill: var(--khscada-primary-color); }
+      .price-edit--inert, .price-edit--inert:hover rect, .price-edit--inert:hover text { cursor: default; }
+      .price-edit--inert rect, .price-edit--inert text { opacity: 0.5; }
+      .price-edit--inert:hover rect { stroke: var(--khscada-divider); }
+      .price-edit--inert:hover text { fill: var(--khscada-secondary-color); }
 
       /* Price edit modal form */
       .price-edit-form { display: flex; flex-direction: column; gap: 12px; }
