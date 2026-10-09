@@ -204,9 +204,9 @@ class OwnerRateNumber(KirkHillEntity, NumberEntity):
 
     The rate is a declared figure, not a standing price. Members are paid for
     the watts they own and the period never enters the calculation ("time
-    frame doesn't come into the calculation at all" -- 1,000 W at 21p/W is
-    GBP 210 for whatever span the board declares). The board reviews its
-    finances and declares a payment when it declares one, so this entity
+    frame doesn't come into the calculation at all" -- 1,000 W at a declared
+    20p/W is GBP 200 for whatever span the board declares). The board reviews
+    its finances and declares a payment when it declares one, so this entity
     holds the latest declaration, and ``0.0`` means nothing has been
     declared -- the value sensor then reads ``unknown`` rather than a figure
     the board never promised.

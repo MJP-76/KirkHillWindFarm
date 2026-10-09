@@ -630,8 +630,7 @@ class MemberSavingsValueSensor(KirkHillScopedEntity, SensorEntity):
     A different question from ``GenerationValueByTimeframeSensor``, which asks
     what your *generation* was worth at your p/kWh. Members are paid for the
     watts they *own*, and the period never enters the calculation: 1,000 W at
-    21p/W is GBP 210 for whatever span the board declares, so 2,559.465 W is
-    GBP 537.49 -- the figure the web dashboard shows for Feb 2025-Jun 2026.
+    a declared 20p/W is GBP 200 for whatever span the board declares.
     Generation takes no part in it, so this is unaffected by wind.
 
     There is deliberately no accrual. The board reviews its finances and
@@ -639,8 +638,8 @@ class MemberSavingsValueSensor(KirkHillScopedEntity, SensorEntity):
     earning rate is knowable -- which is why the web dashboard shows no
     ongoing earnings at all. This entity holds the last declared rate and
     nothing more: no daily rate is derived, because none has ever been
-    published. The board's own "15p per watt per 12 months" is an equivalence
-    for its Feb 2025-Jun 2026 declaration, not a rate to apply over time.
+    published. A yearly figure the board quotes is an equivalence for
+    its declaration, not a rate to apply over time.
 
     No declared rate (``0.0``) returns ``None`` so the entity reads
     ``unknown`` -- asserting GBP 0.00 would be a figure the board never made.

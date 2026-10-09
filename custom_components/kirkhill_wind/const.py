@@ -41,9 +41,9 @@ DEFAULT_CFD_PRICE_GBP_PER_MWH = 0.0
 DEFAULT_OWNER_PRICE_PENCE_PER_KWH = 0.0
 # Declared member-savings rate in pence per owned watt. Members are paid for
 # watts owned, not kWh generated, and the period never enters the calculation:
-# the board reviews its finances and declares a payment (Feb 2025-Jun 2026 was
-# 21p/W; its "15p per watt per 12 months" is an equivalence for that same
-# declaration, not an accrual rate). 0.0 means "nothing declared yet".
+# the board reviews its finances and declares a payment (a yearly figure it
+# quotes is an equivalence for that declaration, not an accrual rate).
+# 0.0 means "nothing declared yet".
 DEFAULT_OWNER_RATE_PENCE_PER_W = 0.0
 
 MIN_SCAN_INTERVAL = 30
