@@ -70,6 +70,7 @@ development, you can do so here:
 | Dashboard tabs and cards | [Dashboard](dashboard.md) |
 | Turbine down/recovery WhatsApp alerts | [WhatsApp alerts](whatsapp-alerts.md) |
 | Farm and turbine technical specs | [Farm reference](farm-reference.md) |
+| What the upstream API contains, and what it has changed | [The Kirk Hill API](api.md) |
 | Versioning and cutting releases | [Release management](development/release-management.md) |
 | Full version history | [Changelog](changelog.md) |
 

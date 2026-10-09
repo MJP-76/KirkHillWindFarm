@@ -1,5 +1,15 @@
 # Sensors
 
+!!! note "This list tracks an API that changes"
+
+    Everything below reflects what the upstream API returns **today**. The
+    integration depends on an API it does not control, and that API has
+    already changed under it — a field renamed, a value enum changed, a
+    capacity pair replaced, and sensors added and removed along the way. If an
+    entity on this list is missing or reads `unknown`, see
+    [The Kirk Hill API](api.md) for what changed upstream and
+    [the changelog](changelog.md) for the release that followed it.
+
 ## Farm hub device
 
 - Power (owner) [kW]
