@@ -16,11 +16,12 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-> - **Financial figures are removed for the time being (v4.16.1).** No £ value
->   column, no £/h rate, no price pill and no savings figure are drawn, and the
->   price/rate entities are disabled, until the Kirk Hill board confirms how
->   member payments are calculated. Generation, power and capacity are
->   unaffected.
+> - **Financial figures are shown but deliberately empty (v4.16.2).** The £ value
+>   column, the £/h cells, both price pills and the savings line are drawn
+>   **empty** — every money cell reads `—` and the Owner pill reads `Rate —` —
+>   with all price/rate entities disabled and their inputs at `0.0`, until the
+>   Kirk Hill board confirms how member payments are calculated. The empty
+>   layout is the reminder. Generation, power and capacity are unaffected.
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
@@ -39,12 +40,13 @@ and an animated dashboard.
 - **Owner & Site scopes** — pulls data for both your ownership share (`owner`)
   and the whole farm (`site`), covering power, capacity factor, and generation
   for yesterday, today, week, month, YTD, year, and all time. **Financial
-  figures are removed for the time being** (see the note above): the GBP value
-  sensors still exist but are disabled, and no £ figure is drawn on the card.
+  figures are shown but empty** (see the note above): the GBP value sensors
+  still exist but are disabled, so every £ cell on the card reads `—`.
 - **Prices are dormant** — `number.<farm>_owner_price_p_kwh`,
   `number.<farm>_owner_rate_p_w` and `number.<farm>_negotiated_price_gbp_mwh`
   remain in the codebase but are disabled and set to `0.0` until the board
-  confirms how member payments are calculated.
+  confirms how member payments are calculated. The card's Owner pill is wired
+  to the **p/W rate**, ready for when it is re-enabled.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
   **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up

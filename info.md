@@ -15,11 +15,12 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 ## Project notes
 
 Owner/site generation kWh values are **live dynamic API values**. **Financial
-figures are removed for the time being (v4.16.1):** no £ value column, £/h
-rate, price pill or savings figure is drawn on the dashboard, and all 22
-earnings entities are disabled with their inputs set to `0.0`, until the Kirk
-Hill board confirms how member payments are calculated. The sensors still exist
-in the codebase, so restoring needs no reinstall. Kirk Hill
+figures are shown but deliberately empty (v4.16.2):** the £ value column, £/h
+cells, price pills and savings line are drawn with nothing populated — every
+money cell reads `—` and the Owner pill reads `Rate —` — because all 22
+earnings entities are disabled and their inputs are `0.0`, until the Kirk Hill
+board confirms how member payments are calculated. The empty layout is the
+reminder. Kirk Hill
 API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
 Dev updates can be published as GitHub pre-releases for early testing while stable releases remain marked as Latest.
 Stable release flow uses a full merge into `main` before final tagging/publishing.
@@ -46,8 +47,9 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   - Dashboard display auto-scales generation units from kWh up to EWh for large values
 - **Owner + site value sensors exist but are disabled (v4.16.1)** — the GBP value
   sensors and all three price/rate `number` entities are **disabled in the entity
-  registry** with their inputs at `0.0`, and no £ figure is drawn on the SCADA
-  card, until the board confirms how member payments are calculated. Re-enable
+  registry** with their inputs at `0.0`; the SCADA card keeps the £ column, pills
+  and savings line but draws them **empty** (`—`) as a reminder, until the board
+  confirms how member payments are calculated. Re-enable
   with `hab entity enable <entity_id>` — no reinstall needed
 - **AGM/published-books manual finance inputs removed** — those estimates were
   dropped in an earlier release and stay dropped
@@ -59,7 +61,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   - Active/inactive turbine count and alarm status (alarm = actual thermal/electrical turbine fault)
   - Per-turbine status, power, and generation today shown on the SCADA diagram; per-turbine history in each turbine's pop-out modal
   - **History tab removed** (v4.8.77) — its 25h owner/site/wind charts are covered by the SCADA card's Owner/Site pop-out modals with selectable 6H–1Y timeframes
-  - **Finances tab removed** (v4.8.79) — earnings were then shown per timeframe in the SCADA card's Capacity panels; **that display is itself removed from v4.16.1** pending the board's model
+  - **Finances tab removed** (v4.8.79) — earnings were then shown per timeframe in the SCADA card's Capacity panels; **from v4.16.1 those cells are drawn but empty** (entities disabled) pending the board's model
   - **Turbines tab removed** (v4.8.80) — the standalone turbine map and status view retired; all data now on the SCADA diagram
   - **Turbine map card deprecated** (v4.8.81) — the standalone `kirkhill-wind-turbine-map` card shows a deprecation banner and will be removed in a future release
   - **Wind Speed detail modal** (v4.8.81) — click the Wind panel for current speed, the one-hour forecast and the live difference
@@ -69,11 +71,11 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
 - **Power & Wind (25h) time-series (Plotly)** — owner power (kW), site power (kW), and wind speed (m/s)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.16.1`), so a stale browser cache is easy to spot
+- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.16.2`), so a stale browser cache is easy to spot
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
-- **Price and rate entities — disabled from v4.16.1** — `number.<farm>_negotiated_price_gbp_mwh`, `number.<farm>_owner_price_p_kwh` and `number.<farm>_owner_rate_p_w` still exist but are disabled in the entity registry and set to `0.0`; the £ value column and £/h rates they drove are no longer drawn until the board confirms the payment model
+- **Price and rate entities — disabled from v4.16.1** — `number.<farm>_negotiated_price_gbp_mwh`, `number.<farm>_owner_price_p_kwh` and `number.<farm>_owner_rate_p_w` still exist but are disabled in the entity registry and set to `0.0`, so the £ value column, the £/h rates and the pills they drive all render empty until the board confirms the payment model. The Owner pill on the card is wired to the **p/W rate**
 - **Overview tab removed** — dashboard is now the single **Kirk Hill SCADA** tab (History removed in v4.8.77, Finances removed in v4.8.79, Turbines removed in v4.8.80)
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
 - **Optimized fetch tiers** — "yesterday" moved to hourly tier (static once day ends); week/month/ytd/year/alltime also hourly; only "today" fetches every poll
