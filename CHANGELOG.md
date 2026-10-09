@@ -2,6 +2,11 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.16.3
+- **The section heading reads "Generation, Capacity & Earnings" again.** v4.16.1 dropped "Earnings" while the money was off the card, but v4.16.2 brought the columns, pills and savings line **back** and the heading did not follow — so the title promised less than the panel drew. Restored. (The Owner and Site panel titles were never affected.)
+- **The price pill no longer offers an action that cannot work.** The 22 earnings entities are disabled, yet both pills stayed clickable: pressing Save called `number.set_value` against an entity that has no state, and Home Assistant logged *"Referenced entities … are missing or not currently available"* (three of them at 14:57). The card now checks the entity before opening the editor — missing or `unavailable` means no editor — and the pill is dimmed with an unhoverable cursor so it stops advertising a dead action. No automation or script was involved: the card's pill was the only caller, and this was its only `set_value`.
+- **Not covered by CI** — frontend only. After updating, check the heading reads *Generation, Capacity & Earnings*, that the pills look dimmed while the entities are disabled, and that clicking one leaves no log entry.
+
 ## Version 4.16.2
 
 - **Stable jump — everything since v4.13.6 in one update.** The stable tag moves forward twelve releases, so here is the short version instead of the full history below:

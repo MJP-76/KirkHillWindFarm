@@ -339,6 +339,18 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.3 (pre-release, 2026-10-09)
+
+- Section heading restored to **Generation, Capacity & Earnings** — v4.16.1
+  dropped "Earnings" while the money was off the card, and v4.16.2 put the
+  columns back without bringing the heading back
+- Price pills are **inert while their entity is disabled or unavailable**: no
+  editor opens, so the `number.set_value` call never happens and the
+  "Referenced entities … not available" warnings stop; the pill is dimmed
+  with an unhoverable cursor
+- Frontend only — verify on a real instance; CI has no browser
+- No test count change (216 → 216)
+
 ### v4.16.2 (pre-release, 2026-10-09)
 
 - Money layout **put back but left empty**: the `Value (£)` column, £/h cells,

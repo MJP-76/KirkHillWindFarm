@@ -70,7 +70,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
 - **Power & Wind (25h) time-series (Plotly)** — owner power (kW), site power (kW), and wind speed (m/s)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.16.2`), so a stale browser cache is easy to spot
+- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.16.3`), so a stale browser cache is easy to spot
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
