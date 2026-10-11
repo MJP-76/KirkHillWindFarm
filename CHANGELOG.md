@@ -2,6 +2,15 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.16.4
+
+**Published as the latest stable release** — everything in v4.16.3 plus three API-review cleanups.
+
+- **A hung forecast can no longer stall a poll.** The Open-Meteo fetch had no time bound: three attempts at the client's own 20s timeout plus backoff is ~63s, on top of a slow-tier API gather bounded at 20s, so a hung Open-Meteo could stretch one poll to ~80s — longer than the 60s scan interval. The fetch now runs under `asyncio.wait_for` against a **10s budget**, retries and sleeps included, which also cancels the work so nothing is left running behind the update.
+- **`get_turbines` no longer defaults to a range the endpoint does not serve.** It defaulted to `range=7d`, which `docs/api.md` records as unsupported in practice — *"the spec advertises the full range set, but in practice only `today` and `all` are known to work"*. Both call sites passed an explicit range, which is why it stayed latent; the default is now `today`, and a test pins it against the set the endpoint serves.
+- **The dead wind-speed client is gone.** `api.get_wind_speed` had no callers since v4.13.1 dropped the redundant `/api/v1/wind-speed` call — and neither did its `conftest` stub.
+- **Also reaching stable users from v4.16.3:** the SCADA heading reads **"Generation, Capacity & Earnings"** again, and the price pills are **inert while their entities are disabled** — pressing Save no longer produces *"Referenced entities … are missing or not currently available"*.
+
 ## Version 4.16.3
 - **The section heading reads "Generation, Capacity & Earnings" again.** v4.16.1 dropped "Earnings" while the money was off the card, but v4.16.2 brought the columns, pills and savings line **back** and the heading did not follow — so the title promised less than the panel drew. Restored. (The Owner and Site panel titles were never affected.)
 - **The price pill no longer offers an action that cannot work.** The 22 earnings entities are disabled, yet both pills stayed clickable: pressing Save called `number.set_value` against an entity that has no state, and Home Assistant logged *"Referenced entities … are missing or not currently available"* (three of them at 14:57). The card now checks the entity before opening the editor — missing or `unavailable` means no editor — and the pill is dimmed with an unhoverable cursor so it stops advertising a dead action. No automation or script was involved: the card's pill was the only caller, and this was its only `set_value`.

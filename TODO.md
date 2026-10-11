@@ -339,6 +339,18 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.4 (stable, 2026-10-11)
+
+- **Stable release** — everything in v4.16.3 plus the API-review cleanups
+- Open-Meteo fetch bounded to **10s** (retries and sleeps included) so a hung
+  forecast can no longer stretch a poll past the 60s scan interval
+- `get_turbines` defaults to `today` instead of `7d`, which the endpoint does
+  not serve in practice; a test pins the served range set
+- Dead `api.get_wind_speed` client and its `conftest` stub removed (no callers
+  since v4.13.1)
+- From v4.16.3: heading restored to "Generation, Capacity & Earnings"; price
+  pills inert while their entities are disabled
+
 ### v4.16.3 (pre-release, 2026-10-09)
 
 - Section heading restored to **Generation, Capacity & Earnings** — v4.16.1
