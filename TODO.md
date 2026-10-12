@@ -339,6 +339,16 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.5 (pre-release, 2026-10-12)
+
+- Config entry **v10**: an upgrade removes any earnings input still at its
+  declared default, so nothing is stored behind — `entry.options` survives
+  upgrades by design, which is why zeroing never removed anything
+- Only defaults go: a price another install actually configured is never
+  destroyed, and the v9 backfill marker is left alone (AGENTS.md rule 3)
+- `config_flow.VERSION` moves to 10 in step
+- Tests: 222 (+4), two default-expectation assertions updated
+
 ### v4.16.4 (stable, 2026-10-11)
 
 - **Stable release** — everything in v4.16.3 plus the API-review cleanups

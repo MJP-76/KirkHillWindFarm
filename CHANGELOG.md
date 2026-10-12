@@ -2,6 +2,12 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.16.5
+
+- **Upgrades now clear the stored earnings inputs.** An in-place upgrade previously left them in `entry.options` — Home Assistant keeps a config entry's options across updates by design, so zeroing an input stored `0.0` rather than removing it and the value survived the upgrade. Config entry version **9 → 10** now removes any of the three (`owner_price_pence_per_kwh`, `owner_rate_pence_per_w`, `cfd_price_gbp_per_mwh`) still sitting at its declared default. Behaviour does not change: `settings.SETTING_DEFAULTS` still answers `get_setting()` with `0.0`, so the only difference is that nothing is stored any more.
+- **Two limits, both deliberate.** A price an install actually configured is **never destroyed** — only defaults are stripped, since another install may legitimately run on a p/kWh price. And the v9 price-backfill marker is left alone, because it is what lets a pre-v4.13.0 price be recovered (AGENTS.md rule 3).
+- **Tests.** 4 new (218 → 222): defaults removed · configured price kept · marker kept · current entry untouched. Two assertions that expected seeded defaults now expect them gone, and `config_flow.VERSION` moves to 10 alongside `_CONFIG_ENTRY_VERSION`.
+
 ## Version 4.16.4
 
 **Published as the latest stable release** — everything in v4.16.3 plus three API-review cleanups.
