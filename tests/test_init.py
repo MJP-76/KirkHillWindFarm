@@ -20,6 +20,7 @@ from custom_components.kirkhill_wind.const import (
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_OWNER_RATE_PENCE_PER_W,
     CONF_PRICE_RESTORE_PENDING,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
@@ -78,11 +79,14 @@ class TestConfigMigration:
         assert updated_data[CONF_API_KEY] == "key"
         # base_url is defaulted for pre-v3 entries.
         assert updated_data[CONF_BASE_URL] == DEFAULT_BASE_URL
-        # Price fields added in v5 and v6 get their defaults. They are settings,
-        # so since v8 they live in options rather than data.
+        # v5/v6 seeded the price defaults, then v10 removed them again: a value
+        # that is only the declared default is not worth storing, and
+        # settings.SETTING_DEFAULTS still answers get_setting() with it. They
+        # were settings rather than data from v8 onwards either way.
         updated_options = update_call[1]["options"]
-        assert updated_options[CONF_CFD_PRICE_GBP_PER_MWH] == DEFAULT_CFD_PRICE_GBP_PER_MWH
-        assert updated_options[CONF_OWNER_PRICE_PENCE_PER_KWH] == DEFAULT_OWNER_PRICE_PENCE_PER_KWH
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in updated_options
+        assert CONF_OWNER_PRICE_PENCE_PER_KWH not in updated_options
+        assert CONF_OWNER_RATE_PENCE_PER_W not in updated_options
         assert CONF_CFD_PRICE_GBP_PER_MWH not in updated_data
         assert CONF_OWNER_PRICE_PENCE_PER_KWH not in updated_data
         # Dead keys removed in v4 are gone.
@@ -305,10 +309,12 @@ class TestPriceBackfillMigration:
         )
 
         assert version == _CONFIG_ENTRY_VERSION
-        # The migrations seed the declared default -- they cannot recover the
-        # real price, which is the whole reason the marker exists.
-        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == DEFAULT_CFD_PRICE_GBP_PER_MWH
-        assert options[CONF_OWNER_PRICE_PENCE_PER_KWH] == DEFAULT_OWNER_PRICE_PENCE_PER_KWH
+        # v5/v6 seeded the declared defaults; v10 strips them again, because a
+        # value that is only the default is not worth storing. The marker stays
+        # -- it still has a real price sitting in restore_state to recover,
+        # which is the whole reason it exists.
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in options
+        assert CONF_OWNER_PRICE_PENCE_PER_KWH not in options
         assert set(options[CONF_PRICE_RESTORE_PENDING]) == {
             CONF_CFD_PRICE_GBP_PER_MWH,
             CONF_OWNER_PRICE_PENCE_PER_KWH,
@@ -375,6 +381,98 @@ class TestPriceBackfillMigration:
         assert CONF_PRICE_RESTORE_PENDING not in SETTING_DEFAULTS
         with pytest.raises(KeyError):
             get_setting(_make_entry(9), CONF_PRICE_RESTORE_PENDING)
+
+
+class TestV10EarningsInputsStripped:
+    """v10 removes earnings inputs that are only the declared default.
+
+    Money is on hold (decisions.md, 2026-10-09) and an in-place upgrade must
+    not leave an input stored behind. Only defaults go: a price an install
+    actually configured is never destroyed, and the v9 backfill marker is
+    deliberately left alone so AGENTS.md rule 3 still holds.
+    """
+
+    @pytest.mark.asyncio
+    async def test_default_valued_inputs_are_removed(self):
+        """All three inputs at 0.0 are dropped; unrelated settings are not."""
+        entry = _make_entry(
+            9,
+            {CONF_API_KEY: "key"},
+            {
+                CONF_OWNER_PRICE_PENCE_PER_KWH: 0.0,
+                CONF_OWNER_RATE_PENCE_PER_W: 0.0,
+                CONF_CFD_PRICE_GBP_PER_MWH: 0.0,
+                "site_name": "Kirk Hill",
+                "scan_interval": 300,
+            },
+        )
+        hass = MagicMock()
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        call = hass.config_entries.async_update_entry.call_args[1]
+        assert call["version"] == 10
+        options = call["options"]
+        assert CONF_OWNER_PRICE_PENCE_PER_KWH not in options
+        assert CONF_OWNER_RATE_PENCE_PER_W not in options
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in options
+        # Non-earnings settings survive untouched.
+        assert options["site_name"] == "Kirk Hill"
+        assert options["scan_interval"] == 300
+
+    @pytest.mark.asyncio
+    async def test_a_configured_price_is_never_destroyed(self):
+        """Only defaults are removed -- another install's real price stays."""
+        entry = _make_entry(
+            9,
+            {CONF_API_KEY: "key"},
+            {
+                CONF_OWNER_PRICE_PENCE_PER_KWH: 6.0,
+                CONF_CFD_PRICE_GBP_PER_MWH: 85.0,
+            },
+        )
+        hass = MagicMock()
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        options = hass.config_entries.async_update_entry.call_args[1]["options"]
+        assert options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 6.0
+        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == 85.0
+
+    @pytest.mark.asyncio
+    async def test_the_backfill_marker_is_left_alone(self):
+        """Rule 3: v10 must not strip what lets number.py recover a price."""
+        entry = _make_entry(
+            9,
+            {CONF_API_KEY: "key"},
+            {
+                CONF_PRICE_RESTORE_PENDING: [
+                    CONF_CFD_PRICE_GBP_PER_MWH,
+                    CONF_OWNER_PRICE_PENCE_PER_KWH,
+                ]
+            },
+        )
+        hass = MagicMock()
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        options = hass.config_entries.async_update_entry.call_args[1]["options"]
+        assert options[CONF_PRICE_RESTORE_PENDING] == [
+            CONF_CFD_PRICE_GBP_PER_MWH,
+            CONF_OWNER_PRICE_PENCE_PER_KWH,
+        ]
+        assert CONF_OWNER_RATE_PENCE_PER_W not in options
+
+    @pytest.mark.asyncio
+    async def test_a_current_entry_is_untouched(self):
+        """Already at v10: the migration returns before touching an option."""
+        entry = _make_entry(10, {CONF_API_KEY: "key"}, {CONF_OWNER_PRICE_PENCE_PER_KWH: 6.0})
+        hass = MagicMock()
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        hass.config_entries.async_update_entry.assert_not_called()
+        assert entry.options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 6.0
 
 
 class TestSettingsAccess:

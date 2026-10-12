@@ -33,6 +33,11 @@
 - **Negotiated price (number) [GBP/MWh] — DISABLED from v4.16.1**, input `0.0`
 
 Re-enable any of them with `hab entity enable <entity_id>` — nothing was deleted.
+
+Since config entry **v10**, an upgrade also removes any input still sitting at
+its default from `entry.options`, so a `0.0` is no longer stored at all — the
+default in `settings.SETTING_DEFAULTS` answers instead.
+
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Wind speed [m/s]
 - Active turbines

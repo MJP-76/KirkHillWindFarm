@@ -28,7 +28,7 @@ class TestConfigFlowVersion:
         )
 
     def test_version_is_current(self):
-        """Version should be 9 (the current schema version).
+        """Version should be 10 (the current schema version).
 
         v8 split connection details from settings: entry.data keeps only the
         API key and base URL, and every user-configurable setting moved to
@@ -36,8 +36,11 @@ class TestConfigFlowVersion:
 
         v9 adds the price-backfill marker, so prices set before v4.13.0 can be
         recovered from restore_state on the next start.
+
+        v10 removes any earnings input still sitting at its declared default,
+        so an in-place upgrade cannot leave one stored behind.
         """
-        assert KirkHillWindConfigFlow.VERSION == 9
+        assert KirkHillWindConfigFlow.VERSION == 10
 
 
 def _make_entry() -> MagicMock:
