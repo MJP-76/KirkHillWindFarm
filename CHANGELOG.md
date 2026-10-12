@@ -2,6 +2,13 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.16.6
+
+- **Upgrades now purge the earnings inputs outright.** v4.16.5 removed only inputs still sitting at their declared default, so an install that had actually configured a price kept it — on the production install that meant the upgrade cleared nothing at all. Config entry version **10 → 11** removes the three keys (`owner_price_pence_per_kwh`, `owner_rate_pence_per_w`, `cfd_price_gbp_per_mwh`) whatever they hold, and the v9 price-backfill marker with them, so `restore_state` cannot resurrect a purged price on the next setup.
+- **Runtime behaviour does not change.** `settings.SETTING_DEFAULTS` still declares the keys, so `get_setting()` answers `0.0` and every sensor reads exactly as before; the values simply stop being stored.
+- **The cost is deliberate, and recorded.** Any configured monetary value on **any** install is deleted by the next upgrade and must be re-entered once the board's model is settled. `number.py`'s `RestoreEntity` read path is untouched (AGENTS.md rule 3) — a migrated entry can just never carry the marker again, and rule 3 now says so.
+- **Tests.** 222 — `TestMonetaryInputsPurged` (defaults purged · configured price purged · marker purged · current entry untouched), and six earlier assertions that prices or the marker survived a migration now assert the opposite.
+
 ## Version 4.16.5
 
 - **Upgrades now clear the stored earnings inputs.** An in-place upgrade previously left them in `entry.options` — Home Assistant keeps a config entry's options across updates by design, so zeroing an input stored `0.0` rather than removing it and the value survived the upgrade. Config entry version **9 → 10** now removes any of the three (`owner_price_pence_per_kwh`, `owner_rate_pence_per_w`, `cfd_price_gbp_per_mwh`) still sitting at its declared default. Behaviour does not change: `settings.SETTING_DEFAULTS` still answers `get_setting()` with `0.0`, so the only difference is that nothing is stored any more.
