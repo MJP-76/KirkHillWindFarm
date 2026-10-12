@@ -55,7 +55,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 ]
 
 # Keep in sync with the VERSION in config_flow.py.
-_CONFIG_ENTRY_VERSION = 10
+_CONFIG_ENTRY_VERSION = 11
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -140,6 +140,25 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         ):
             if options.get(_setting) == SETTING_DEFAULTS[_setting]:
                 options.pop(_setting, None)
+
+    if config_entry.version < 11:
+        # Monetary values are on hold entirely (decisions.md, 2026-10-12): the
+        # earnings inputs are purged whatever they hold, so an upgrade cannot
+        # leave a stored monetary value behind on any install -- v10 spared a
+        # configured price, which on a real install meant the money survived
+        # the upgrade it was supposed to clear.
+        #
+        # The v9 backfill marker goes with them. Leaving it behind would let
+        # restore_state resurrect a price on the very next setup -- the exact
+        # value this migration exists to remove. number.py's read path is
+        # untouched (AGENTS.md rule 3); it simply never sees a marker again.
+        for _setting in (
+            CONF_OWNER_PRICE_PENCE_PER_KWH,
+            CONF_OWNER_RATE_PENCE_PER_W,
+            CONF_CFD_PRICE_GBP_PER_MWH,
+        ):
+            options.pop(_setting, None)
+        options.pop(CONF_PRICE_RESTORE_PENDING, None)
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, options=options, version=_CONFIG_ENTRY_VERSION

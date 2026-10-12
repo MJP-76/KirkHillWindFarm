@@ -34,9 +34,9 @@
 
 Re-enable any of them with `hab entity enable <entity_id>` — nothing was deleted.
 
-Since config entry **v10**, an upgrade also removes any input still sitting at
-its default from `entry.options`, so a `0.0` is no longer stored at all — the
-default in `settings.SETTING_DEFAULTS` answers instead.
+Since config entry **v11**, an upgrade purges all three inputs from
+`entry.options` whatever they hold, so no monetary value is stored at all — the
+defaults in `settings.SETTING_DEFAULTS` answer instead.
 
 - Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
 - Wind speed [m/s]
