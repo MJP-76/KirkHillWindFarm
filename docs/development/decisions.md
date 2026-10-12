@@ -279,6 +279,27 @@ decision changes.
   accumulates across declared periods (a ledger of `Σ watts × rate` per
   declaration, not a time integral).
 
+- **2026-10-12 — Config version 10 strips earnings inputs that are only the
+  declared default.** *A consequence of the 2026-10-09 hold.* An in-place
+  upgrade was expected to clear the stored inputs and did not: `entry.options`
+  survives upgrades by design, so a zeroed input simply stayed stored. Any of
+  the three (`owner_price_pence_per_kwh`, `owner_rate_pence_per_w`,
+  `cfd_price_gbp_per_mwh`) whose value is still its declared default is now
+  removed on migration — `settings.SETTING_DEFAULTS` keeps declaring the keys,
+  so `get_setting()` falls back to `0.0` and runtime behaviour is identical; the
+  key just stops being stored. New entries are created at v10 by
+  `config_flow.VERSION`, which a test keeps in step.
+
+  Two deliberate limits: **a price an install actually configured is never
+  destroyed** (another install may legitimately run on a p/kWh price), and the
+  **v9 backfill marker is left alone**, because it is what lets `number.py`
+  recover a pre-v4.13.0 price (AGENTS.md rule 3). Only defaults are removed, so
+  the strip is invisible at runtime — which is the point: nothing earnings
+  related survives an upgrade, and nothing else changes.
+
+  Regression tests: `test_init.py::TestV10EarningsInputsStripped` (defaults
+  removed, configured price kept, marker kept, current entry untouched).
+
 ## Dashboard consolidation
 
 - **2026-09-16 — SCADA is the sole live dashboard; History, Finances and

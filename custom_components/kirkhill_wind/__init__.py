@@ -18,6 +18,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_OWNER_PRICE_PENCE_PER_KWH,
+    CONF_OWNER_RATE_PENCE_PER_W,
     CONF_PRICE_RESTORE_PENDING,
     DEFAULT_BASE_URL,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
@@ -30,6 +31,7 @@ from .device import get_farm_device_id
 from .services import async_setup_services, async_unload_services
 from .settings import (
     OPTION_KEYS,
+    SETTING_DEFAULTS,
     get_negotiated_price,
     get_owner_price,
     get_owner_rate,
@@ -53,7 +55,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 ]
 
 # Keep in sync with the VERSION in config_flow.py.
-_CONFIG_ENTRY_VERSION = 9
+_CONFIG_ENTRY_VERSION = 10
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -119,6 +121,25 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             CONF_CFD_PRICE_GBP_PER_MWH,
             CONF_OWNER_PRICE_PENCE_PER_KWH,
         ]
+
+    if config_entry.version < 10:
+        # Money is on hold (decisions.md, 2026-10-09), and an in-place upgrade
+        # must not leave an earnings input stored behind. Remove any input still
+        # at its declared default: settings.SETTING_DEFAULTS keeps declaring the
+        # keys, so get_setting() falls back to 0.0 and runtime behaviour is
+        # identical -- the key simply stops being stored.
+        #
+        # Only defaults are removed. A price an install actually configured is
+        # never destroyed, and CONF_PRICE_RESTORE_PENDING is deliberately left
+        # alone: it is what lets number.py recover a pre-v4.13.0 price
+        # (AGENTS.md rule 3), and stripping it would abandon that silently.
+        for _setting in (
+            CONF_OWNER_PRICE_PENCE_PER_KWH,
+            CONF_OWNER_RATE_PENCE_PER_W,
+            CONF_CFD_PRICE_GBP_PER_MWH,
+        ):
+            if options.get(_setting) == SETTING_DEFAULTS[_setting]:
+                options.pop(_setting, None)
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, options=options, version=_CONFIG_ENTRY_VERSION
