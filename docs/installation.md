@@ -73,11 +73,12 @@ the stable release yet.
     Switching the **Pre-release** diagnostic back off stops HACS offering
     pre-releases as updates.
 
-## What's in the latest pre-release
+## What's in the latest release
 
 **v4.16.6** — see the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
-for what's included. The latest stable release is **v4.16.4**.
+for what's included. It is the latest **stable** release; v4.16.5 remains
+available as a pre-release for anyone who wants the earlier cut.
 
 ## Reporting a pre-release problem
 
