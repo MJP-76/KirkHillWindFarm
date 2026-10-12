@@ -279,26 +279,31 @@ decision changes.
   accumulates across declared periods (a ledger of `Σ watts × rate` per
   declaration, not a time integral).
 
-- **2026-10-12 — Config version 10 strips earnings inputs that are only the
-  declared default.** *A consequence of the 2026-10-09 hold.* An in-place
-  upgrade was expected to clear the stored inputs and did not: `entry.options`
-  survives upgrades by design, so a zeroed input simply stayed stored. Any of
-  the three (`owner_price_pence_per_kwh`, `owner_rate_pence_per_w`,
-  `cfd_price_gbp_per_mwh`) whose value is still its declared default is now
-  removed on migration — `settings.SETTING_DEFAULTS` keeps declaring the keys,
-  so `get_setting()` falls back to `0.0` and runtime behaviour is identical; the
-  key just stops being stored. New entries are created at v10 by
-  `config_flow.VERSION`, which a test keeps in step.
+- **2026-10-12 — Config version 11 purges the earnings inputs outright.**
+  *A consequence of the 2026-10-09 hold.* An in-place upgrade was expected to
+  clear the stored inputs and did not: `entry.options` survives upgrades by
+  design, so a zeroed input simply stayed stored. **v10** removed any of the
+  three (`owner_price_pence_per_kwh`, `owner_rate_pence_per_w`,
+  `cfd_price_gbp_per_mwh`) still at its declared default and spared a
+  configured one — which on the production install was precisely the case that
+  mattered: its values were non-zero, so the upgrade cleared nothing at all.
+  **v11** therefore purges the keys whatever they hold, and the v9 backfill
+  marker with them: leaving the marker would let `restore_state` resurrect a
+  purged price on the very next setup.
 
-  Two deliberate limits: **a price an install actually configured is never
-  destroyed** (another install may legitimately run on a p/kWh price), and the
-  **v9 backfill marker is left alone**, because it is what lets `number.py`
-  recover a pre-v4.13.0 price (AGENTS.md rule 3). Only defaults are removed, so
-  the strip is invisible at runtime — which is the point: nothing earnings
-  related survives an upgrade, and nothing else changes.
+  `settings.SETTING_DEFAULTS` still declares the keys, so `get_setting()`
+  answers `0.0` and runtime behaviour is unchanged — the values simply stop
+  existing. `number.py`'s `RestoreEntity` read path is untouched (AGENTS.md
+  rule 3); a migrated entry can just never carry a marker again.
 
-  Regression tests: `test_init.py::TestV10EarningsInputsStripped` (defaults
-  removed, configured price kept, marker kept, current entry untouched).
+  The cost is deliberate and should be re-read before the hold lifts: **any
+  configured monetary value on any install is deleted by the next upgrade**, so
+  the values have to be re-entered when the board's model is settled. New
+  entries are created at v11 by `config_flow.VERSION`, which a test keeps in
+  step.
+
+  Regression tests: `test_init.py::TestMonetaryInputsPurged` (defaults purged,
+  configured price purged, marker purged, current entry untouched).
 
 ## Dashboard consolidation
 

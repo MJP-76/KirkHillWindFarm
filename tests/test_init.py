@@ -146,10 +146,10 @@ class TestConfigMigration:
         assert "site_projected_annual_earnings_gbp" not in updated_data
         assert "owner_projected_annual_earnings_gbp" not in updated_options
         assert "site_projected_annual_earnings_gbp" not in updated_options
-        # The prices that were in data at v6 are carried into options, keeping
-        # the 50.0/5.0 this entry had been running with.
-        assert updated_options[CONF_CFD_PRICE_GBP_PER_MWH] == 50.0
-        assert updated_options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 5.0
+        # The prices that were in data at v6 do reach options on the way, and
+        # v11 then purges them: a monetary value no longer survives a migration.
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in updated_options
+        assert CONF_OWNER_PRICE_PENCE_PER_KWH not in updated_options
         assert CONF_CFD_PRICE_GBP_PER_MWH not in updated_data
         assert CONF_OWNER_PRICE_PENCE_PER_KWH not in updated_data
 
@@ -193,8 +193,9 @@ class TestDataOptionsSeparation:
         assert options[CONF_SCAN_INTERVAL] == 300
         assert options[CONF_CREATE_DASHBOARD] is False
         assert options[CONF_ENABLE_PAYMENT_TRACKING] is True
-        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == 85.0
-        assert options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 4.2
+        # The monetary inputs are purged by v11 rather than carried over.
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in options
+        assert CONF_OWNER_PRICE_PENCE_PER_KWH not in options
 
         # ...and none of them are left behind in data.
         for key in OPTION_KEYS:
@@ -242,10 +243,11 @@ class TestDataOptionsSeparation:
 
         data, options = await self._migrated(entry)
 
+        # scan_interval carries the precedence argument; the monetary key that
+        # used to appear here is purged by v11, so it no longer can.
         assert options[CONF_SCAN_INTERVAL] == 900
-        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == 85.0
         assert CONF_SCAN_INTERVAL not in data
-        assert CONF_CFD_PRICE_GBP_PER_MWH not in data
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in options
 
     @pytest.mark.asyncio
     async def test_unknown_keys_are_left_alone(self):
@@ -278,10 +280,11 @@ class TestDataOptionsSeparation:
         data, options = await self._migrated(entry)
 
         assert data == {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL}
-        # No settings are invented, but the v9 price-backfill marker is added --
-        # it is not a setting, so compare on the setting keys only.
+        # No settings are invented -- compare on the setting keys only -- and
+        # the v9 marker does not survive either: v11 purges it along with the
+        # monetary values it exists to recover.
         assert not set(options) & set(OPTION_KEYS)
-        assert CONF_PRICE_RESTORE_PENDING in options
+        assert CONF_PRICE_RESTORE_PENDING not in options
 
 
 class TestPriceBackfillMigration:
@@ -302,46 +305,42 @@ class TestPriceBackfillMigration:
         return call["data"], call["options"], call["version"]
 
     @pytest.mark.asyncio
-    async def test_v4_11_6_entry_is_flagged_for_backfill(self):
-        """A v4 entry (the schema version v4.11.6 wrote) gets the marker."""
+    async def test_v4_11_6_entry_loses_the_marker(self):
+        """A v4 entry ends up with neither inputs nor a marker.
+
+        v5/v6 seed the declared defaults and v9 adds the marker; v11 then
+        purges both. The marker existed only to recover a price, and monetary
+        values no longer survive a migration at all.
+        """
         data, options, version = await self._migrated(
             _make_entry(4, {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL})
         )
 
         assert version == _CONFIG_ENTRY_VERSION
-        # v5/v6 seeded the declared defaults; v10 strips them again, because a
-        # value that is only the default is not worth storing. The marker stays
-        # -- it still has a real price sitting in restore_state to recover,
-        # which is the whole reason it exists.
         assert CONF_CFD_PRICE_GBP_PER_MWH not in options
         assert CONF_OWNER_PRICE_PENCE_PER_KWH not in options
-        assert set(options[CONF_PRICE_RESTORE_PENDING]) == {
-            CONF_CFD_PRICE_GBP_PER_MWH,
-            CONF_OWNER_PRICE_PENCE_PER_KWH,
-        }
+        assert CONF_PRICE_RESTORE_PENDING not in options
 
     @pytest.mark.asyncio
-    async def test_marker_covers_both_prices_separately(self):
-        """A list, not a single boolean.
+    async def test_the_marker_does_not_survive(self):
+        """The marker is gone outright rather than half-cleared.
 
-        The two number entities share one entry. With a shared boolean, whichever
-        set up first would clear it and the other price would never be
-        recovered -- a silent, partial data loss.
+        number.py still requires it to be a *list* covering both prices (a
+        shared boolean would let whichever entity set up first strand the
+        other); that invariant lives on in the backfill tests in test_number.
+        What migration guarantees now is that nothing monetary is left behind.
         """
         _, options, _ = await self._migrated(_make_entry(4, {CONF_API_KEY: "key", CONF_BASE_URL: DEFAULT_BASE_URL}))
 
-        pending = options[CONF_PRICE_RESTORE_PENDING]
-        assert isinstance(pending, list)
-        assert len(pending) == 2
-        assert len(set(pending)) == 2, "a price must not appear twice"
+        assert CONF_PRICE_RESTORE_PENDING not in options
 
     @pytest.mark.asyncio
     async def test_v8_entry_also_flagged(self):
-        """Entries written by v4.13.x never backfilled, because nothing asked them to.
+        """Entries written by v4.13.x carry a real price, and lose it anyway.
 
-        They are consistent already, so this is a redundant restore read at
-        worst -- the alternative is a value-equality guess that would treat a
-        deliberate 0.0 as un-backfilled forever.
+        v4.13.x never backfilled, so their marker promised a restore read that
+        would resurrect exactly the value v11 exists to remove -- hence the
+        marker goes with the values.
         """
         _, options, _ = await self._migrated(
             _make_entry(
@@ -351,10 +350,9 @@ class TestPriceBackfillMigration:
             )
         )
 
-        assert CONF_PRICE_RESTORE_PENDING in options
-        # Existing values must not be disturbed by the migration itself.
-        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == 85.0
-        assert options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 4.2
+        assert CONF_PRICE_RESTORE_PENDING not in options
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in options
+        assert CONF_OWNER_PRICE_PENCE_PER_KWH not in options
 
     @pytest.mark.asyncio
     async def test_already_migrated_entry_is_not_reflagged(self):
@@ -383,18 +381,19 @@ class TestPriceBackfillMigration:
             get_setting(_make_entry(9), CONF_PRICE_RESTORE_PENDING)
 
 
-class TestV10EarningsInputsStripped:
-    """v10 removes earnings inputs that are only the declared default.
+class TestMonetaryInputsPurged:
+    """v11 purges the earnings inputs whatever they hold.
 
-    Money is on hold (decisions.md, 2026-10-09) and an in-place upgrade must
-    not leave an input stored behind. Only defaults go: a price an install
-    actually configured is never destroyed, and the v9 backfill marker is
-    deliberately left alone so AGENTS.md rule 3 still holds.
+    Monetary values are on hold entirely (decisions.md, 2026-10-12). v10 only
+    stripped defaults, so on an install that had actually configured a price the
+    money survived the upgrade that was meant to clear it -- v11 removes the
+    keys outright, and the v9 backfill marker with them, so nothing monetary can
+    come back.
     """
 
     @pytest.mark.asyncio
-    async def test_default_valued_inputs_are_removed(self):
-        """All three inputs at 0.0 are dropped; unrelated settings are not."""
+    async def test_default_valued_inputs_are_purged(self):
+        """All three inputs at 0.0 are gone; unrelated settings are not."""
         entry = _make_entry(
             9,
             {CONF_API_KEY: "key"},
@@ -411,7 +410,7 @@ class TestV10EarningsInputsStripped:
         assert await async_migrate_entry(hass, entry) is True
 
         call = hass.config_entries.async_update_entry.call_args[1]
-        assert call["version"] == 10
+        assert call["version"] == _CONFIG_ENTRY_VERSION
         options = call["options"]
         assert CONF_OWNER_PRICE_PENCE_PER_KWH not in options
         assert CONF_OWNER_RATE_PENCE_PER_W not in options
@@ -421,27 +420,24 @@ class TestV10EarningsInputsStripped:
         assert options["scan_interval"] == 300
 
     @pytest.mark.asyncio
-    async def test_a_configured_price_is_never_destroyed(self):
-        """Only defaults are removed -- another install's real price stays."""
+    async def test_a_configured_price_is_purged_too(self):
+        """v10 spared a configured price; v11 does not."""
         entry = _make_entry(
             9,
             {CONF_API_KEY: "key"},
-            {
-                CONF_OWNER_PRICE_PENCE_PER_KWH: 6.0,
-                CONF_CFD_PRICE_GBP_PER_MWH: 85.0,
-            },
+            {CONF_OWNER_PRICE_PENCE_PER_KWH: 6.0, CONF_CFD_PRICE_GBP_PER_MWH: 85.0},
         )
         hass = MagicMock()
 
         assert await async_migrate_entry(hass, entry) is True
 
         options = hass.config_entries.async_update_entry.call_args[1]["options"]
-        assert options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 6.0
-        assert options[CONF_CFD_PRICE_GBP_PER_MWH] == 85.0
+        assert CONF_OWNER_PRICE_PENCE_PER_KWH not in options
+        assert CONF_CFD_PRICE_GBP_PER_MWH not in options
 
     @pytest.mark.asyncio
-    async def test_the_backfill_marker_is_left_alone(self):
-        """Rule 3: v10 must not strip what lets number.py recover a price."""
+    async def test_the_backfill_marker_is_purged(self):
+        """Leaving it would let restore_state resurrect a purged price."""
         entry = _make_entry(
             9,
             {CONF_API_KEY: "key"},
@@ -457,16 +453,17 @@ class TestV10EarningsInputsStripped:
         assert await async_migrate_entry(hass, entry) is True
 
         options = hass.config_entries.async_update_entry.call_args[1]["options"]
-        assert options[CONF_PRICE_RESTORE_PENDING] == [
-            CONF_CFD_PRICE_GBP_PER_MWH,
-            CONF_OWNER_PRICE_PENCE_PER_KWH,
-        ]
+        assert CONF_PRICE_RESTORE_PENDING not in options
         assert CONF_OWNER_RATE_PENCE_PER_W not in options
 
     @pytest.mark.asyncio
     async def test_a_current_entry_is_untouched(self):
-        """Already at v10: the migration returns before touching an option."""
-        entry = _make_entry(10, {CONF_API_KEY: "key"}, {CONF_OWNER_PRICE_PENCE_PER_KWH: 6.0})
+        """Already current: the migration returns before touching an option."""
+        entry = _make_entry(
+            _CONFIG_ENTRY_VERSION,
+            {CONF_API_KEY: "key"},
+            {CONF_OWNER_PRICE_PENCE_PER_KWH: 6.0},
+        )
         hass = MagicMock()
 
         assert await async_migrate_entry(hass, entry) is True

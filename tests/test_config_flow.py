@@ -39,8 +39,11 @@ class TestConfigFlowVersion:
 
         v10 removes any earnings input still sitting at its declared default,
         so an in-place upgrade cannot leave one stored behind.
+
+        v11 purges the earnings inputs whatever they hold, because a
+        configured value survived the upgrade it was meant to clear.
         """
-        assert KirkHillWindConfigFlow.VERSION == 10
+        assert KirkHillWindConfigFlow.VERSION == 11
 
 
 def _make_entry() -> MagicMock:
