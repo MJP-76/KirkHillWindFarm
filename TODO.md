@@ -339,6 +339,20 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.6 (pre-release, 2026-10-12)
+
+- Config entry **v11** purges the three earnings inputs **whatever they hold** —
+  v4.16.5 stripped only defaults, so production's configured values survived
+  the upgrade that was meant to clear them
+- The v9 backfill marker is purged with them, so `restore_state` cannot
+  resurrect a purged price on the next setup
+- Runtime behaviour unchanged: `settings.SETTING_DEFAULTS` still answers
+  `get_setting()` with `0.0`
+- Cost: any configured price is deleted and must be re-entered when the hold
+  lifts — recorded in decisions.md; AGENTS.md rule 3 now notes the marker is
+  cleared during migration
+- Tests: 222 (`TestMonetaryInputsPurged`, six survival assertions flipped)
+
 ### v4.16.5 (pre-release, 2026-10-12)
 
 - Config entry **v10**: an upgrade removes any earnings input still at its
