@@ -44,9 +44,12 @@ _FRONTEND_REGISTERED = "kirkhill_wind_frontend_registered"
 _FRONTEND_URLS = "kirkhill_wind_frontend_urls"
 _ETHEX_DOMAIN = "ethex"
 
+# Only our own card. The dashboard we generate uses custom:kirkhill-wind-scada
+# and nothing else, so vendoring third-party cards here served no one -- and
+# cost every user who also installs them from HACS a customElements collision.
+# The SCADA card loads apexcharts.js (the *library*) on demand from
+# _FRONTEND_ASSETS below; that one stays.
 _FRONTEND_CARDS: list[tuple[str, Path]] = [
-    ("/kirkhill_wind/apexcharts-card.js", _FRONTEND_DIR / "apexcharts-card.js"),
-    ("/kirkhill_wind/plotly-graph-card.js", _FRONTEND_DIR / "plotly-graph-card.js"),
     ("/kirkhill_wind/scada-card.js", _FRONTEND_DIR / "kirkhill-wind-scada-card.js"),
 ]
 
@@ -249,7 +252,10 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     new_urls: set[str] = set()
 
     for url, path in _FRONTEND_CARDS:
-        js_version = int(path.stat().st_mtime)
+        # stat() is filesystem I/O and setup runs on the event loop, so hand it
+        # to the executor. The mtime is the cache buster: a card edit is picked
+        # up without a version bump.
+        js_version = int((await hass.async_add_executor_job(path.stat)).st_mtime)
         new_url = f"{url}?v={js_version}"
         new_urls.add(new_url)
         if new_url not in registered_urls:

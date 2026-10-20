@@ -1,6 +1,6 @@
 [project]
 name = "kirkhill-wind-farm"
-version = "4.16.6"
+version = "4.16.7"
 description = "Home Assistant integration for the Kirk Hill Wind Farm dashboard"
 license = "GPL-3.0-or-later"
 
