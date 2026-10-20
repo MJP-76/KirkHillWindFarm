@@ -2,6 +2,11 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.16.7
+- **Removed two vendored third-party cards that nothing used, and that collided with HACS installs.** `frontend/apexcharts-card.js` (1.6 MB) and `frontend/plotly-graph-card.js` (3.1 MB) were registered on **every** Home Assistant page via `add_extra_js_url`, but the dashboard this integration generates uses only `custom:kirkhill-wind-scada`, which loads `apexcharts.js` — the *library*, still shipped — on demand from our own static path. Both bundles call `customElements.define` with no `customElements.get` guard, so anyone who also installed those cards from HACS hit *"name has already been used"*, the second copy to load broke, or their dashboards silently rendered our bundled build instead of the one they chose. Both files, their two `_FRONTEND_CARDS` entries and four matching `THIRD_PARTY_NOTICES` entries are gone; the standalone `apexcharts.js` notice stays. **If your own dashboard used `custom:apexcharts-card` or `custom:plotly-graph` from our bundle, install those cards from HACS** — the merge logic still recognises those names when pruning old dashboards. (HACS review note from frenck on PR #11379.)
+- **Setup no longer stats files on the event loop.** The cache-busting mtime read in `_async_register_frontend` now runs through `hass.async_add_executor_job`.
+- **Shipped frontend bundle: 574 KB**, down from 4.7 MB.
+
 ## Version 4.16.6
 
 - **Upgrades now purge the earnings inputs outright.** v4.16.5 removed only inputs still sitting at their declared default, so an install that had actually configured a price kept it — on the production install that meant the upgrade cleared nothing at all. Config entry version **10 → 11** removes the three keys (`owner_price_pence_per_kwh`, `owner_rate_pence_per_w`, `cfd_price_gbp_per_mwh`) whatever they hold, and the v9 price-backfill marker with them, so `restore_state` cannot resurrect a purged price on the next setup.

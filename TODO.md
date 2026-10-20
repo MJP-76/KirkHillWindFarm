@@ -339,6 +339,17 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.16.7 (pre-release, 2026-10-20)
+
+- Removed the two vendored third-party cards (`apexcharts-card.js`,
+  `plotly-graph-card.js` — 4.75 MB): the generated dashboard never used them,
+  they loaded on every HA page, and their unguarded `customElements.define`
+  collided with the HACS installs of the same cards. HACS review note from
+  frenck on PR #11379.
+- Setup no longer stats files on the event loop (cache-buster mtime now goes
+  through the executor)
+- Shipped frontend bundle: 574 KB, down from 4.7 MB
+
 ### v4.16.6 (pre-release, 2026-10-12)
 
 - Config entry **v11** purges the three earnings inputs **whatever they hold** —
