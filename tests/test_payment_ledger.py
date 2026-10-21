@@ -138,6 +138,29 @@ class TestNormaliseRecord:
         stored = normalise_record(_record(note="x" * 400))
         assert len(stored["note"]) == 200
 
+    def test_periods_snap_to_whole_months(self):
+        # The board declares months, not days: Feb 2025 -> Jun 2026 is the
+        # 1st to the last day whichever days were picked in the form.
+        stored = normalise_record(_record(period_start="2025-02-15", period_end="2026-06-10"))
+        assert stored["period_start"] == "2025-02-01"
+        assert stored["period_end"] == "2026-06-30"
+
+    def test_month_only_shorthand_is_accepted(self):
+        # The card's form deals in months and may send "2025-02" directly.
+        stored = normalise_record(_record(period_start="2025-02", period_end="2026-06"))
+        assert stored["period_start"] == "2025-02-01"
+        assert stored["period_end"] == "2026-06-30"
+
+    def test_end_month_snap_handles_leap_february(self):
+        stored = normalise_record(_record(period_start="2024-01", period_end="2024-02-10"))
+        assert stored["period_end"] == "2024-02-29"
+
+    def test_end_before_start_is_still_rejected(self):
+        # The ordering check runs before snapping, so whole months cannot
+        # quietly rescue a period that runs backwards.
+        with pytest.raises(ValueError):
+            normalise_record(_record(period_start="2025-03", period_end="2025-02"))
+
 
 class TestFigures:
     """Watts x declared rate per period, summed -- never a time integral."""

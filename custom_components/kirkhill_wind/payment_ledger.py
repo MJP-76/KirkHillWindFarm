@@ -3,12 +3,15 @@
 The board pays members for the watts they own, at a p/W rate it announces for
 a period. Four facts shape this module:
 
-* **The period matters, the calendar does not.** The rate is not an accrual --
-  2,000 W at 20 p/W is GBP 400 whether the period is a fortnight or a year --
-  but the period is what says *which* declaration applies. Entries therefore
-  carry a period, not a timestamp, and the twice-a-year rhythm the AGM implies
-  is a convention the user enters, never a rule the code imposes. Payment dates
-  are not final yet, so a period must stay editable after the fact.
+* **The period matters, the calendar does not — and a period is measured in
+  whole months.** The rate is not an accrual -- 2,000 W at 20 p/W is GBP 400
+  whether the period is a fortnight or a year -- but the period is what says
+  *which* declaration applies. The board declares for months and the exact
+  payment dates are not settled to a day, so every stored period runs from the
+  1st to the last day of its months, the card's form offers months only, and a
+  new line is offered the month after the latest one ends. The twice-a-year
+  rhythm the AGM implies is still a convention the user enters, never a rule
+  the code imposes, and a period stays editable after the fact.
 
 * **All time is a sum of declarations, not a time integral** (decisions.md,
   2026-10-09, the third open question for the board): ``capacity_watts ×
@@ -36,7 +39,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
@@ -81,6 +84,18 @@ def _as_float(value: Any) -> float | None:
     return None
 
 
+def month_start(value: date) -> date:
+    """Return the first day of the month ``value`` falls in."""
+    return value.replace(day=1)
+
+
+def month_end(value: date) -> date:
+    """Return the last day of the month ``value`` falls in (handles February)."""
+    if value.month == 12:
+        return date(value.year, 12, 31)
+    return date(value.year, value.month + 1, 1) - timedelta(days=1)
+
+
 def _sorted(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Order entries by the period they cover, earliest first."""
     return sorted(records, key=lambda r: (r["period_start"], r["period_end"]))
@@ -97,12 +112,21 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any]:
 
     period_start = _parse_date(record.get("period_start"))
     if period_start is None:
-        raise ValueError("period_start is required and must be YYYY-MM-DD")
+        raise ValueError("period_start is required and must be YYYY-MM or YYYY-MM-DD")
     period_end = _parse_date(record.get("period_end"))
     if period_end is None:
-        raise ValueError("period_end is required and must be YYYY-MM-DD")
+        raise ValueError("period_end is required and must be YYYY-MM or YYYY-MM-DD")
     if period_end < period_start:
         raise ValueError("period_end must not be before period_start")
+
+    # Periods are month-granular: the board declares for months and the exact
+    # payment dates are not settled to a day, so a stored period always runs
+    # from the 1st to the last day of its months -- "Feb 2025 to Jun 2026"
+    # means those whole months and nothing in between. Snapping happens after
+    # the ordering check, so an end before its start stays an error instead of
+    # quietly widening into a valid month.
+    period_start = month_start(period_start)
+    period_end = month_end(period_end)
 
     rate = _as_float(record.get("rate_p_per_w"))
     if rate is None or not 0 < rate <= MAX_RATE_P_PER_W:
@@ -136,7 +160,11 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _parse_date(value: Any) -> date | None:
-    """Parse a date from an ISO string, a ``date`` or a ``datetime``; None if unparseable."""
+    """Parse a date from ``YYYY-MM-DD``, ``YYYY-MM``, a ``date`` or a ``datetime``.
+
+    None if unparseable. The month-only form is how a period reads in the UI:
+    it resolves to the 1st, and ``month_end`` puts an end month on its last day.
+    """
     if isinstance(value, datetime):
         return value.date()
     if isinstance(value, date):
@@ -148,7 +176,13 @@ def _parse_date(value: Any) -> date | None:
         try:
             return date.fromisoformat(text[:10])
         except ValueError:
-            return None
+            pass
+        if len(text) == 7 and text[4] == "-":
+            try:
+                return date.fromisoformat(f"{text}-01")
+            except ValueError:
+                return None
+        return None
     return None
 
 

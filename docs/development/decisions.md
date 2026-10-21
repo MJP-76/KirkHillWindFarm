@@ -361,6 +361,35 @@ decision changes.
   `test_services.py::TestServiceRegistrationFlag` (five services registered and
   unloaded).
 
+- **2026-10-21 — Periods are whole months, and a new line offers the month
+  after the latest one.** *Refines the ledger entry above, after reviewing it
+  on the live install.* The board does not settle payment dates to a day — it
+  declared "Feb 2025 to June 2026" and the AGM sets the twice-yearly rhythm —
+  so a day-level period would assert precision nobody has published, and every
+  later re-date would look like a different declaration.
+
+  - **Stored periods are month-granular.** `normalise_record` snaps
+    `period_start` to the 1st and `period_end` to the last day of its month
+    (leap February included), **after** the end-not-before-start check, so a
+    backwards period stays an error instead of widening into a valid month.
+    `YYYY-MM` is accepted as input and resolves the same way. One place does
+    this — `payment_ledger.py` — so a record is aligned whichever door it came
+    in by: the card, the service, or a hand-edited storage file.
+  - **The card's form deals in months, not days** (`type="month"`, `YYYY-MM`),
+    validates both fields before calling the service, and expands them to the
+    1st/last day it sends. Rows read `Feb 2025 – Jun 2026`.
+  - **Adding a line prefills the start with the month after the latest period
+    ends** (Jun 2026 offers `2026-07`) and leaves the end blank: only the start
+    follows from what is already declared — when the next period closes is the
+    board's to say, not ours to guess. Editing keeps the stored months.
+  - Stored shape, service schemas and `total_gbp` are untouched: precision was
+    removed, the model did not change, so an existing record survives an
+    upgrade unmoved (the live one already read 1 Feb 2025 – 30 Jun 2026).
+
+  Regression tests: `tests/test_payment_ledger.py::TestNormaliseRecord` (month
+  snap · month-only shorthand · leap February · backwards period still
+  rejected).
+
 ## Dashboard consolidation
 
 - **2026-09-16 — SCADA is the sole live dashboard; History, Finances and
