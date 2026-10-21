@@ -1116,11 +1116,38 @@ class KirkHillWindScada extends HTMLElement {
     );
   }
 
-  _fmtDate(iso) {
+  _fmtMonth(iso) {
+    // Rows read as "Feb 2025 – Jun 2026": a period is whole months, so the
+    // day of the stored 1st/last-day boundary is noise on screen.
     if (!iso) return "—";
     const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
     if (Number.isNaN(d.getTime())) return String(iso);
-    return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+    return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  }
+
+  _monthLastDay(month) {
+    // "2026-06" -> "2026-06-30". Day 0 of the next month is the last day of
+    // this one, so February leap years come out right without a lookup table.
+    const year = Number(month.slice(0, 4));
+    const monthIndex = Number(month.slice(5, 7));
+    const last = new Date(year, monthIndex, 0).getDate();
+    return `${month}-${String(last).padStart(2, "0")}`;
+  }
+
+  _nextPeriodStart() {
+    // A new line is offered the month after the latest declared period ends:
+    // Feb 2025 -> Jun 2026 offers 2026-07. Only the start is offered -- when
+    // the board's next period ends is not ours to guess.
+    const id = this._ledgerEntityId();
+    const records = this._ledgerRecords(id);
+    if (!records.length) return "";
+    const latest = records.reduce((a, b) => ((a.period_end || "") > (b.period_end || "") ? a : b));
+    const iso = String(latest.period_end || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+    let year = Number(iso.slice(0, 4));
+    let month = Number(iso.slice(5, 7)) + 1;
+    if (month > 12) { month = 1; year += 1; }
+    return `${year}-${String(month).padStart(2, "0")}`;
   }
 
   _recordValueGbp(record) {
@@ -1183,7 +1210,7 @@ class KirkHillWindScada extends HTMLElement {
       return `
         <div class="ledger-row" data-record="${this._esc(r.id)}">
           <div class="ledger-row-main">
-            <span class="ledger-dates">${this._fmtDate(r.period_start)} – ${this._fmtDate(r.period_end)}</span>
+            <span class="ledger-dates">${this._fmtMonth(r.period_start)} – ${this._fmtMonth(r.period_end)}</span>
             <span class="ledger-rate">${this._fmt(Number(r.rate_p_per_w), 2)} p/W × ${this._fmt(Number(r.capacity_watts), 0)} W${r.note ? ` · <span class="ledger-note">${this._esc(r.note)}</span>` : ""}</span>
           </div>
           <div class="ledger-row-value">${value === null ? "—" : `£${this._fmt(value, 2)}`}</div>
@@ -1278,18 +1305,26 @@ class KirkHillWindScada extends HTMLElement {
     // Capacity is blank for a new record on purpose: the service defaults it
     // to the owner watts the API reports now, so the common case needs no
     // typing, while a historical edit sends the watts that were in force then.
+    //
+    // Periods are months, never days: a new line opens on the month after the
+    // latest declared period (Feb 2025 -> Jun 2026 offers 2026-07) and leaves
+    // the end blank, because when the board's next period closes is not ours
+    // to guess. Editing keeps the stored months.
+    const startMonth = record ? String(r.period_start || "").slice(0, 7) : this._nextPeriodStart();
+    const endMonth = record ? String(r.period_end || "").slice(0, 7) : "";
     return `
       <div class="price-edit-form ledger-form">
-        <label class="price-edit-label" for="ledger-start">Period start</label>
-        <input class="price-edit-input" id="ledger-start" type="date" value="${this._esc(r.period_start || "")}" />
-        <label class="price-edit-label" for="ledger-end">Period end</label>
-        <input class="price-edit-input" id="ledger-end" type="date" value="${this._esc(r.period_end || "")}" />
+        <label class="price-edit-label" for="ledger-start">Period start (month)</label>
+        <input class="price-edit-input" id="ledger-start" type="month" placeholder="YYYY-MM" value="${this._esc(startMonth)}" />
+        <label class="price-edit-label" for="ledger-end">Period end (month)</label>
+        <input class="price-edit-input" id="ledger-end" type="month" placeholder="YYYY-MM" value="${this._esc(endMonth)}" />
         <label class="price-edit-label" for="ledger-rate">Rate announced (p/W)</label>
         <input class="price-edit-input" id="ledger-rate" type="number" min="0.01" max="1000" step="0.1" value="${r.rate_p_per_w ?? ""}" />
         <label class="price-edit-label" for="ledger-watts">Watts owned (W)</label>
         <input class="price-edit-input" id="ledger-watts" type="number" min="0" step="1" value="${r.capacity_watts ?? ""}" placeholder="defaults to today's capacity" />
         <label class="price-edit-label" for="ledger-note">Note (optional)</label>
         <input class="price-edit-input" id="ledger-note" type="text" maxlength="200" value="${this._esc(r.note || "")}" placeholder="AGM, meeting, statement" />
+        <div class="price-edit-hint">Months only: a period runs from the 1st to the last day.</div>
         <div class="price-edit-actions">
           <button class="price-edit-btn" data-ledger-action="cancel">Cancel</button>
           <button class="price-edit-btn price-edit-save" data-ledger-action="save">Save</button>
@@ -1309,6 +1344,8 @@ class KirkHillWindScada extends HTMLElement {
 
     // Validate here as well as on the backend: a rejected service call is a
     // silent no-op from the user's side of a modal unless the form says why.
+    // Periods are months, so both fields must be YYYY-MM; the payload expands
+    // them to the 1st and the last day, which the backend snaps to anyway.
     const fail = (message, input) => {
       const slot = root.querySelector('[data-ledger="error"]');
       if (slot) slot.textContent = message;
@@ -1316,14 +1353,18 @@ class KirkHillWindScada extends HTMLElement {
       if (el) { el.setAttribute("data-error", "true"); el.focus(); }
       return false;
     };
-    if (!start || !end) return fail("Both period dates are required.", "#ledger-end");
-    if (end < start) return fail("The period end must not be before its start.", "#ledger-end");
+    if (!start || !end) return fail("Both period months are required.", start ? "#ledger-end" : "#ledger-start");
+    const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+    if (!MONTH_RE.test(start) || !MONTH_RE.test(end)) {
+      return fail("A period is two months, entered as YYYY-MM (e.g. 2026-07).", MONTH_RE.test(start) ? "#ledger-end" : "#ledger-start");
+    }
+    if (end < start) return fail("The end month must not be before the start month.", "#ledger-end");
     if (!Number.isFinite(rate) || rate <= 0) return fail("Enter the rate the board announced, in p/W.", "#ledger-rate");
     if (watts !== null && (!Number.isFinite(watts) || watts < 0)) return fail("Watts owned must be 0 or more.", "#ledger-watts");
 
     const payload = {
-      period_start: start,
-      period_end: end,
+      period_start: `${start}-01`,
+      period_end: this._monthLastDay(end),
       rate_p_per_w: rate,
     };
     if (watts !== null) payload.capacity_watts = watts;

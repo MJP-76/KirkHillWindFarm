@@ -149,17 +149,23 @@ reinstall.
 Money the board has actually announced is held as a **ledger of declared
 periods**, not as a price applied to generation:
 
-- **Each line item is a period plus the rate the board announced for it** —
-  `{period start, period end, rate p/W, watts owned, announced on, note}`.
-  The figure for a line is `watts × p/W ÷ 100`; the period only says *which*
-  declaration applies, never how long the money accrues for.
-- **Clicking the Owner pill pops the ledger out**: one dated row per
-  declaration with its rate, watts and £ figure, plus **Add / edit / remove**.
-  The pill itself names the **latest published rate** (`Published 20 p/W`,
+- **Each line item is a run of whole months plus the rate the board announced
+  for it** — `{start month, end month, rate p/W, watts owned, announced on,
+  note}`. The figure for a line is `watts × p/W ÷ 100`; the period only says
+  *which* declaration applies, never how long the money accrues for. Days are
+  not part of it: a period is stored as the **1st to the last day** of its
+  months, so "Feb 2025 – Jun 2026" means exactly those months whatever dates
+  were picked.
+- **Clicking the Owner pill pops the ledger out**: one row per declaration with
+  its months, rate, watts and £ figure, plus **Add / edit / remove**. The pill
+  itself names the **latest published rate** (`Published 20 p/W`,
   `Published —` while nothing has been declared) and shows **no money**: the
   figures live on Member savings and All time, so the pill never repeats them.
-  Payment dates are not final yet, so a period is edited by changing its dates —
-  the figures do not move with them.
+- **A new line opens prefilled with the month after the latest period ends** —
+  Feb 2025 → Jun 2026 offers **2026-07** — with the end month left blank, since
+  when the board's next period closes is not ours to guess. Both fields are
+  months (`YYYY-MM`), never days. Payment dates are not final yet, so a period
+  is edited by changing its months — the figures do not move with them.
 - **`All time` shows the declared total.** It is a sum of what the board
   declared, which is why it can be shown where `kWh × today's price` is still
   suppressed (see below).
