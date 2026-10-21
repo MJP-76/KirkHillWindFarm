@@ -17,11 +17,11 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 Owner/site generation kWh values are **live dynamic API values**. **Money is a
 panel, not a column**: the Owner and Site panels carry generation, power,
 capacity and wind only, while a **Return on investment** panel leads the right
-column above them in the same box — invested, all periods, from the board, your
-estimates and the return, with the full payment ledger and both forms behind a
-click (every period the board has declared a p/W rate for, its £ figure and
-ROI; your-estimate lines tagged `~`). The old price/rate entities stay
-disabled and zeroed while the model is confirmed. Kirk Hill
+column above them in the same box — invested, payments from Co-op, your
+estimates, all payments and the return, with the full payment ledger and both
+forms behind a click (every period the board has declared a p/W rate for, its
+£ figure and ROI; your-estimate lines tagged `~`). The old price/rate entities
+stay disabled and zeroed while the model is confirmed. Kirk Hill
 API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
 Dev updates can be published as GitHub pre-releases for early testing while stable releases remain marked as Latest.
 Stable release flow uses a full merge into `main` before final tagging/publishing.
@@ -59,7 +59,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, active binary sensor, generation today (site), generation all-time (site), and rotor speed for each of the 8 turbines
 - **Kirk Hill SCADA tab** — the single tab on the auto-generated dashboard (titled **Kirk Hill SCADA**), a full-bleed animated single-line diagram (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; national grid block shows Owner and Site export and to-grid-today, with wind/forecast chips and a flashing alarm indicator; **top-right "Your Generation" panel shows your generation (auto-scaled), last updated timestamp, and your share in watts**; panel view so it fills the entire tab; **pinch to zoom (up to 6x), drag to pan, and double-tap to reset on mobile**; National Grid box and Your Generation panel text enlarged for readability on small screens; owner export auto-derived from site export × owner generation share when the API reports no owner power; **consistent colour scheme**: amber=power/energy, cyan=wind speed, green=financial values (the ROI panel), primary=titles/labels
 - **Auto-generated Lovelace dashboard** — created automatically during setup with a single **Kirk Hill SCADA** tab:
-  - **Return on investment panel (2026-10-21)** — the top panel of the right column, above Owner and Site, in the same box and columns: invested, all periods, from the board, your estimates, return, period count, published rate and current period. Click it for the ledger modal — the rows (months, rate × watts, £, ROI %, board/your-estimate tag), the capital input, and the add & edit forms
+  - **Return on investment panel (2026-10-21)** — the top panel of the right column, above Owner and Site, in the same box and columns: invested, payments from Co-op, your estimates, all payments, return, period count, published rate and current period. Click it for the ledger modal — the rows (months, rate × watts, £, ROI %, board/your-estimate tag), the capital input, and the add & edit forms
   - Active/inactive turbine count and alarm status (alarm = actual thermal/electrical turbine fault)
   - Per-turbine status, power, and generation today shown on the SCADA diagram; per-turbine history in each turbine's pop-out modal
   - **History tab removed** (v4.8.77) — its 25h owner/site/wind charts are covered by the SCADA card's Owner/Site pop-out modals with selectable 6H–1Y timeframes
@@ -78,7 +78,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
 - **Price and rate entities — disabled from v4.16.1** — `number.<farm>_negotiated_price_gbp_mwh`, `number.<farm>_owner_price_p_kwh` and `number.<farm>_owner_rate_p_w` still exist but are disabled in the entity registry and set to `0.0`; nothing reads them, since rates now live per declared period in the ledger
-- **Return on investment panel** — the top panel of the right column, above Owner and Site, in the same box and columns: invested, all-periods / from-the-board / your-estimates totals, return, period count, published rate and current period. Click it for the ledger modal — one row per period (months, rate × watts, £, ROI %, board or yours), the **invested amount** set through `kirkhill_wind.set_invested_amount`, and the add & edit forms. ROI is `value ÷ invested × 100`, deliberately not annualised, and reads `—` until capital is entered
+- **Return on investment panel** — the top panel of the right column, above Owner and Site, in the same box and columns: invested, the three totals (payments from Co-op, your estimates, all payments), return, period count, published rate and current period. Click it for the ledger modal — one row per period (months, rate × watts, £, ROI %, board or yours), the **invested amount** set through `kirkhill_wind.set_invested_amount`, and the add & edit forms. ROI is `value ÷ invested × 100`, deliberately not annualised, and reads `—` until capital is entered
 - **Payment ledger** — `sensor.<farm>_payment_ledger` holds one line item per declared period (`watts × p/W ÷ 100` each) and reports the declared total, which reads `unknown` until something is declared; `records` carry `value_gbp` and `roi_pct`, with `board_total_gbp`, `self_total_gbp`, `invested_gbp` and `total_roi_pct` alongside. Changed only through the `kirkhill_wind.add/update/remove_payment_record` and `set_invested_amount` services
 - **Dashboard tabs** — one: **Kirk Hill SCADA** (History removed in v4.8.77, Finances removed in v4.8.79, Turbines removed in v4.8.80); an `roi` tab existed briefly on 2026-10-21 and is pruned as obsolete
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)

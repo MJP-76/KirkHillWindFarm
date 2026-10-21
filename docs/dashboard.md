@@ -108,9 +108,9 @@ the value column — carrying the headline only:
 | Measure | Value |
 | --- | --- |
 | Invested | `£5,000`, or `Not set` until you enter it |
-| All periods | `£1,074.98` |
-| From the board | `£1,074.98` |
+| Payments from Co-op | `£1,074.98` |
 | Your estimates | `—` until one exists |
+| All Payments | `£1,074.98` |
 | Return | `21.50%`, or `—` with no capital entered |
 | Periods | `2` |
 | Published rate | `21 p/W` — board declarations only |
