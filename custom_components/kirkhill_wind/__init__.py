@@ -52,7 +52,6 @@ _ETHEX_DOMAIN = "ethex"
 # _FRONTEND_ASSETS below; that one stays.
 _FRONTEND_CARDS: list[tuple[str, Path]] = [
     ("/kirkhill_wind/scada-card.js", _FRONTEND_DIR / "kirkhill-wind-scada-card.js"),
-    ("/kirkhill_wind/roi-card.js", _FRONTEND_DIR / "kirkhill-wind-roi-card.js"),
 ]
 
 _FRONTEND_ASSETS: list[tuple[str, Path]] = [

@@ -12,15 +12,16 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-!!! note "Money lives on its own card"
+!!! note "Money is a panel on the SCADA card"
     **2026-10-21** — the £ column, the £/h cells, the price pills and the
-    member-savings line are **gone from the SCADA card**, Owner and Site both.
-    All money sits on the **Return on investment** tab: the payment ledger of
-    the periods the board has declared a p/W rate for, the amount you invested,
-    and the return against it — board-announced and self-estimated figures kept
-    apart, and nothing reads `£0.00` before something is declared. The old
-    price/rate entities stay disabled; generation, power and capacity are
-    unaffected.
+    member-savings line are **gone from the Owner and Site panels**. Money sits
+    in a third panel, **Return on investment**, below Site in the same box:
+    invested, declared total, board/self split and return, with the payment
+    ledger and both forms behind a click — the periods the board has declared a
+    p/W rate for, their £ figures and ROI. Board-announced and self-estimated
+    figures stay apart, and nothing reads `£0.00` before something is declared.
+    The old price/rate entities stay disabled; generation, power and capacity
+    are unaffected.
 
     Separately, the **All-time** and **past-year (2025, 2024)** £ *sensors* are
     still suppressed (showing `—`), because the API records energy only — never

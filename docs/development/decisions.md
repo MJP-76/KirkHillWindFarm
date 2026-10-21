@@ -397,22 +397,31 @@ decision changes.
   card showed the result of scattering money across a generation display: seven
   timeframe rows that could not honestly carry a figure, two panels asking two
   different money questions, and an Owner pill that had changed meaning three
-  times. The owner's call: **all money off the Owner and Site panels**, one
-  card for finance.
+  times. The owner's call: **all money off the Owner and Site panels** — and,
+  once a standalone tab existed to look at, *"the ROI needs to be displayed the
+  same as site / owner cards"*. Finance ended the day as a **third panel on the
+  SCADA card**, with its detail in a modal.
 
-  - **Removed from `kirkhill-wind-scada`:** the `Value (£)` column (both
-    panels), both `£/h` cells, the Member savings line, both price pills, the
-    ledger pop-out, and every config key that fed them
-    (`owner_price_entity`, `owner_rate_entity`, `negotiated_price_entity`,
-    `member_savings_entity`, `payment_ledger_entity`, plus `value_entity` in
-    the generation lists). Generation now owns the right-hand edge of both
-    panels instead of leaving the old money column's gap. 3069 → 2878 lines.
-  - **New `custom:kirkhill-wind-roi`**, in its own `roi` view: the ledger table
-    (months · rate × watts · £ · ROI · source), the invested amount, and the
-    totals split **declared / board / self** with the return on each. The
-    add/edit form and the capital input live inline on it, so nothing
-    financial is behind a modal any more. It is matched by type in
-    `card_match_key`, like the SCADA card, or every merge would append a copy.
+  - **Removed from the Owner and Site panels:** the `Value (£)` column, both
+    `£/h` cells, the Member savings line, both price pills, the ledger pop-out,
+    and every config key that fed them (`owner_price_entity`,
+    `owner_rate_entity`, `negotiated_price_entity`, `member_savings_entity`,
+    plus `value_entity` in the generation lists). Generation now owns the
+    right-hand edge of both panels instead of leaving the old money column's
+    gap. `payment_ledger_entity` stayed: the new panel reads it. The SCADA card
+    went 3069 → 2878 lines before the panel brought some back.
+  - **A third panel, `Return on investment`, below the Site panel** — the same
+    232-unit box, the same `Measure | Value` columns, the same `site-gen`
+    styling and click affordance, because it is meant to read as one of the
+    family. It carries the headline only: invested, declared total, board /
+    self split, return, period count, published rate (board declarations only)
+    and the current period (`~` while pending or self-estimated). **Clicking it
+    opens the ledger modal** — rows with edit and remove, the capital input and
+    both forms — the exact panel-plus-modal pattern Owner and Site already use.
+    A standalone `custom:kirkhill-wind-roi` card in its own `roi` view existed
+    for part of the same day; it is deleted rather than left unreferenced, and
+    the view is in `OBSOLETE_VIEW_PATHS` so installed dashboards lose the
+    orphaned tab on the next setup.
   - **ROI is plain percentage of capital per period**: `value ÷ invested × 100`,
     **deliberately unannualised** — the board pays per period regardless of how
     long it runs (2026-10-08), so a per-year figure would be a rate of our own
@@ -441,9 +450,9 @@ decision changes.
 
   Regression tests: `test_payment_ledger.py` (source validation · board/self
   split · board-only published rate · year attribution · invested persistence ·
-  `roi_pct` rules · null-not-zero · service round trip) — 266 → 290;
-  `test_dashboard_merge.py::test_roi_card_matched_by_type`;
-  `test_services.py` (six services).
+  `roi_pct` rules · null-not-zero · service round trip) — 266 → 289;
+  `test_services.py` (six services). The panel and its modal are frontend: CI
+  has no browser, so they need an eyeball on a real instance.
 
 ## Dashboard consolidation
 

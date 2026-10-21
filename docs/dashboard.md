@@ -88,37 +88,56 @@ and duration.
 
 ## Financials (formerly the Finances tab)
 
-!!! note "Money lives on its own card"
+!!! note "Money is a panel on the SCADA card, not a column"
     **2026-10-09** — the £ column, the £/h cells, the price pills and the
     member-savings line were switched off while the model was confirmed, and
     deliberately left drawn-but-empty as a standing reminder.
 
-    **2026-10-21 — removed outright.** All money now lives on the **Return on
-    investment** card below; the SCADA card shows generation, power, capacity
-    and wind only, on both the Owner and Site panels. The 22 earnings entities
-    stay disabled and zeroed, and nothing on the SCADA card reads them.
+    **2026-10-21 — the column is gone and a panel took its place.** The Owner
+    and Site panels carry generation only; money lives in a third panel,
+    **Return on investment**, drawn with the same box, columns and styling as
+    those two, below the Site panel. Click it for the full ledger and its
+    forms. The 22 earnings entities stay disabled and zeroed, and nothing else
+    on the card reads them.
 
-### Return on investment (its own view, path `roi`)
+### Return on investment (third panel on the SCADA card)
 
-`custom:kirkhill-wind-roi` is the single place financial figures appear:
+Same geometry as the Owner and Site panels — the same box, right-aligned to
+the value column — carrying the headline only:
 
-- **Header** — the **invested amount** (click to set it; stored in the ledger's
-  Store, never `entry.options`) beside four stats: **Declared total**,
-  **Board announced**, **Self estimated** and **Return**.
+| Measure | Value |
+| --- | --- |
+| Invested | `£5,000`, or `Not set` until you enter it |
+| Declared total | `£1,074.98` |
+| Board announced | `£1,074.98` |
+| Self estimated | `—` until one exists |
+| Return | `21.50%`, or `—` with no capital entered |
+| Periods | `2` |
+| Published rate | `21 p/W` — board declarations only |
+| Current period | `£537.49`, drawn `~` while pending or self-estimated |
+
+**Clicking the panel opens the ledger modal**, which holds everything else:
+
 - **Rows** — one per declared period, e.g.
   `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
   edit and remove, plus **Add period**.
 - **Return is a plain percentage of capital**: `value ÷ invested × 100` per
-  period and the same across the total. It is deliberately **not annualised** —
-  the board pays per period regardless of how long it runs, so a per-year figure
+  period and across the total. It is deliberately **not annualised** — the
+  board pays per period regardless of how long it runs, so a per-year figure
   would be a rate of our own invention. With no capital entered the ROI reads
   `—`, never `0%`.
-- **A caption under the rows** says which of three things the current period is:
-  board-declared, your own estimate, or an estimate awaiting the board
+- **Invested** — set or cleared in the modal; stored in the ledger's Store,
+  never `entry.options`.
+- **A caption under the rows** says which of three things the current period
+  is: board-declared, your own estimate, or an estimate awaiting the board
   (`~£537.49`, priced from the last announced rate).
 - **Adding a period opens prefilled** with the month after the latest one ends —
   Feb 2025 → Jun 2026 offers **`2026-07`** — and the end month left blank, since
   when the board's next period closes is not ours to guess.
+
+An `roi` **tab** existed for part of 2026-10-21; it was replaced by this panel
+and is listed in `OBSOLETE_VIEW_PATHS`, so installed dashboards have it pruned
+on the next setup.
 
 #### The ledger behind it
 
@@ -145,12 +164,11 @@ and duration.
   `latest_board_rate_p_per_w`, `current_gbp`, `current_basis`,
   `current_source`, `current_year_gbp` and `year_totals_gbp`.
 
-### What the SCADA card no longer shows
+### What the Owner and Site panels no longer show
 
 - Gone from both panels: the **`Value (£)` column**, the **`£/h`** cells, the
-  **Member savings** line and both **price pills** (Owner and Site). Generation
-  now takes the right-hand edge of each panel instead of leaving the old money
-  column's gap.
+  **Member savings** line and both **price pills**. Generation now takes the
+  right-hand edge of each panel instead of leaving the old money column's gap.
 - **The timeframe rows stay moneyless on purpose.** `Yesterday … Year` are
   `kWh × price` sensors that remain disabled, and slicing a per-watt
   declaration across days would be the accrual the board's basis rules out —
@@ -165,7 +183,7 @@ and duration.
 `sensor.<farm>_member_savings_value` still exist, **disabled and set to
 `0.0`**. They feed no card any more: rates live per declared period in the
 ledger. Re-enable one with `hab entity enable <entity_id>` if you want it for
-something else — nothing on either card will change. The suppression rule for
+something else — nothing on the card will change. The suppression rule for
 valuing history as `kWh × today's price` still stands for those sensors
 themselves (see [Sensors](sensors.md)).
 
