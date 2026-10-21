@@ -23,11 +23,14 @@ a period. Four facts shape this module:
   next upgrade (decisions.md, 2026-10-12). The ledger lives in HA's ``Store``,
   the way ``oauth.py`` keeps its registration, and outlives migrations.
 
-* **An estimate is a labelled derivation, never a declaration.** While today
-  falls outside every declared period the figure for the current one comes from
-  the last declared rate and is labelled ``estimated_from_last_declared_rate``.
-  It is shown, never added to the declared total: the board has not said it.
-  The moment the board declares, that period becomes an entry.
+* **No estimate until the board's split exists.** While today falls outside
+  every declared period the current figure is **withheld, not derived**:
+  ``current_basis=estimate_withheld_split_unknown`` with ``current_gbp`` None.
+  Every payment is going to split into capital and interest, and until that
+  split is published a figure of unknown composition cannot be estimated
+  honestly -- a derived number would be neither what the board pays nor safely
+  ignorable (decision, 2026-10-21). The moment the board declares the period,
+  it becomes an entry.
 
 Nothing here reaches for generation data. Money derives from capacity and the
 declared rate only -- the same reason ``MemberSavingsValueSensor`` ignores the
@@ -63,7 +66,8 @@ SOURCES = (SOURCE_BOARD, SOURCE_SELF)
 # attribute values, so the card and the sensors agree on the wording
 BASIS_NO_ENTRIES = "no_entries"
 BASIS_DECLARED = "declared"
-BASIS_ESTIMATED = "estimated_from_last_declared_rate"
+# An undeclared period produces no figure at all: capital/interest split unknown.
+BASIS_WITHHELD = "estimate_withheld_split_unknown"
 
 # A p/W rate is a small number of pence; anything past this is a typo, and a
 # silent one would show a plausible-looking figure the board never declared.
@@ -232,20 +236,20 @@ def current_figure(
     """Return (figure, basis) for the period that is current now.
 
     ``declared`` when today falls inside the latest declared period -- the board
-    has spoken about it. ``estimated_from_last_declared_rate`` when today is
-    past every declared period, so the pending one is priced at the last rate
-    the board announced and clearly marked as derived. ``no_entries`` when the
-    ledger is empty: there is no last rate to derive from.
+    has spoken about it. ``estimate_withheld_split_unknown`` when today is past
+    every declared period: the figure is **withheld rather than derived**,
+    because a payment still splits into capital and interest, and a number of
+    unknown composition is a guess rather than an estimate. ``no_entries`` when
+    the ledger is empty: nothing has ever been declared.
     """
     latest = latest_record(records)
     if latest is None:
         return None, BASIS_NO_ENTRIES
-    value = record_value_gbp(latest)
     if today is None:
         today = dt_util.now().date()
     if latest["period_start"] <= today.isoformat() <= latest["period_end"]:
-        return value, BASIS_DECLARED
-    return value, BASIS_ESTIMATED
+        return record_value_gbp(latest), BASIS_DECLARED
+    return None, BASIS_WITHHELD
 
 
 def source_totals_gbp(records: list[dict[str, Any]]) -> dict[str, float | None]:

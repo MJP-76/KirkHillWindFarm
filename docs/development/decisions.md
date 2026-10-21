@@ -330,13 +330,12 @@ decision changes.
     `latest_rate_p_per_w`, `latest_period_*` and `current_gbp` +
     `current_basis`. It is always available — a failed API poll must not blank
     figures that live on disk.
-  - **The estimate is labelled, and never counted.** When today is past every
-    declared period, `current_basis=estimated_from_last_declared_rate` prices
-    the pending period at the last announced rate and the card draws it
-    `~£400.00`. It stays out of `total_gbp` until the board declares. This does
-    not reopen the "no accrual" rule of 2026-10-08 — it is its visible
-    companion: derived, marked, and never presented as something announced.
-    It also answers "does a period count before it is declared": **no.**
+  - **The estimate is labelled, and never counted.** *(Superseded later the
+    same day by the withholding rule below.)* When today was past every
+    declared period the pending period was priced at the last announced rate
+    and drawn `~` — derived, marked, never presented as announced, and never
+    added to `total_gbp`. It also answered "does a period count before it is
+    declared": **no.**
   - **Exactly three cells return, and no more:** the Owner pill (the latest
     published p/W rate — deliberately no money on the pill, so it does not
     repeat the row below it — and also the pop-out's entry point), the Owner
@@ -453,6 +452,30 @@ decision changes.
   `roi_pct` rules · null-not-zero · service round trip) — 266 → 289;
   `test_services.py` (six services). The panel and its modal are frontend: CI
   has no browser, so they need an eyeball on a real instance.
+
+- **2026-10-21 (later) — estimates are withheld outright, and the ROI panel
+  moves above Owner.** *Supersedes the "estimate is labelled" bullet above and
+  the earlier panel position.* Two owner inputs, after seeing it live:
+
+  - **No estimate until the board's split exists.** Every payment is going to
+    divide into **capital and interest**, and the split is unknown — so a
+    figure of unknown composition cannot be estimated honestly: a derived
+    number would be neither what the board pays nor safely ignorable (decision
+    note `2026-10-21-payments-split-into-capital-and`). `current_figure` now
+    returns **`(None, estimate_withheld_split_unknown)`** for an undeclared
+    period instead of pricing it at the last announced rate: the panel's
+    *Current period* row draws `—`, the modal caption says nothing, and only a
+    self-entered record can still show `~`. Declared periods, totals and ROI
+    are untouched, and `current_source` still reports so a self entry remains
+    distinguishable. Backing it out means restoring the derivation and the
+    literal basis string `estimated_from_last_declared_rate`.
+  - **The panel sits at the top of the right column:** order is now
+    Return on investment (y=76) → Owner (332) → Site (588), each still 232
+    units tall and clear of the National Grid box (914) — finance first, in the
+    same box and columns as the panels it leads.
+
+  Regression tests: `test_payment_ledger.py` (withheld basis · figure is None ·
+  source still reported · total unchanged) — 289 passing.
 
 ## Dashboard consolidation
 

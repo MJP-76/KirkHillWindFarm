@@ -1098,14 +1098,15 @@ class KirkHillWindScada extends HTMLElement {
       `<div class="roi-actions"><button class="roi-btn roi-btn--primary" data-roi-action="add">Add period</button></div>`;
 
     if (caption) {
-      const pending = attrs.current_basis === "estimated_from_last_declared_rate";
+      // An undeclared period reports no figure at all -- the estimate is
+      // withheld until the board's capital/interest split exists -- so the
+      // caption stays empty rather than inventing a number. A self-entered
+      // record does have a figure, but it is the member's, not the board's.
       const selfNow = attrs.current_source === "self";
       const figure = attrs.current_gbp === null || attrs.current_gbp === undefined || !Number.isFinite(Number(attrs.current_gbp))
         ? null : Number(attrs.current_gbp);
       if (figure === null) {
         caption.innerHTML = "";
-      } else if (pending) {
-        caption.innerHTML = `Current period not yet declared — estimated at the last rate: <b>~£${this._fmt(figure, 2)}</b>`;
       } else if (selfNow) {
         caption.innerHTML = `Current period is <b>your own estimate</b>, not a board announcement: <b>£${this._fmt(figure, 2)}</b>`;
       } else {
@@ -2617,87 +2618,87 @@ _buildHeaderChips(layout) {
           <text x="${layout.chipLeftColX + 458 * layout.scaleX}" y="44"><tspan class="chip-label">Wind Speed: Current </tspan><tspan class="chip-value" data-chip="wind">—</tspan><tspan class="chip-label"> Forecast: </tspan><tspan class="chip-value" data-chip="forecast">—</tspan></text>
         </g>
 
-        <!-- Right side: Owner Generation & Capacity (far right) -->
+        <!-- Right side: Owner Generation & Capacity (below Return on investment) -->
         <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation, Capacity & Earnings</text>
         <g class="user-gen" data-user-gen="panel">
-          <rect x="${layout.chipUserGenX}" y="76" width="${layout.chipUserGenW}" height="232" rx="8"/>
-          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="98">Owner</text>
-          <text class="user-gen-colh" data-colh="label" x="${layout.chipUserGenTitleX}" y="120">Timeframe</text>
-          <text class="user-gen-colh" data-colh="gen" x="${layout.chipUserGenValueX}" y="120" text-anchor="end">Generation</text>
+          <rect x="${layout.chipUserGenX}" y="332" width="${layout.chipUserGenW}" height="232" rx="8"/>
+          <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="354">Owner</text>
+          <text class="user-gen-colh" data-colh="label" x="${layout.chipUserGenTitleX}" y="376">Timeframe</text>
+          <text class="user-gen-colh" data-colh="gen" x="${layout.chipUserGenValueX}" y="376" text-anchor="end">Generation</text>
           <!-- Generation timeframes -->
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="142">Yesterday</text>
-          <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="142" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="162">Today</text>
-          <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="162" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="182">Week</text>
-          <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="182" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="202">Month</text>
-          <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="202" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="222">YTD</text>
-          <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="222" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="242">Year</text>
-          <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="242" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="262">All time</text>
-          <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="262" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="282">Your output (W)</text>
-          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="282" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="302">Share (‱)</text>
-          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="302" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="398">Yesterday</text>
+          <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="398" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="418">Today</text>
+          <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="418" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="438">Week</text>
+          <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="438" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="458">Month</text>
+          <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="458" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="478">YTD</text>
+          <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="478" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="498">Year</text>
+          <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="498" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="518">All time</text>
+          <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="518" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="538">Your output (W)</text>
+          <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="538" text-anchor="end">—</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="558">Share (‱)</text>
+          <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="558" text-anchor="end">—</text>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
         <g class="site-gen" data-site-gen="panel">
-          <rect x="${layout.chipSiteGenX}" y="332" width="${layout.chipSiteGenW}" height="232" rx="8"/>
-          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="354">Site</text>
-          <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="376">Timeframe</text>
-          <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="376" text-anchor="end">Generation</text>
+          <rect x="${layout.chipSiteGenX}" y="588" width="${layout.chipSiteGenW}" height="232" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="610">Site</text>
+          <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="632">Timeframe</text>
+          <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="632" text-anchor="end">Generation</text>
           <!-- Site timeframes -->
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="398">Yesterday</text>
-          <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="398" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="418">Today</text>
-          <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="418" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="438">Week</text>
-          <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="438" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="458">Month</text>
-          <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="458" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="478">YTD</text>
-          <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="478" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="498">Year</text>
-          <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="498" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="518">All time</text>
-          <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="518" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="538">Capacity Factor</text>
-          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="538" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="558">Power (MW)</text>
-          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="558" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="654">Yesterday</text>
+          <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="654" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="674">Today</text>
+          <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="674" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="694">Week</text>
+          <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="694" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="714">Month</text>
+          <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="714" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="734">YTD</text>
+          <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="734" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="754">Year</text>
+          <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="754" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="774">All time</text>
+          <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="774" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="794">Capacity Factor</text>
+          <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="794" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="814">Power (MW)</text>
+          <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="814" text-anchor="end">—</text>
         </g>
 
-        <!-- Return on investment: the same box, columns and styling as Owner
-             and Site, because finance belongs beside them rather than on a tab
-             of its own. Clicking it opens the ledger modal -- this is the only
-             place money appears on the card. -->
+        <!-- Return on investment: at the top of the right column, above Owner
+             and Site, in the same box and columns -- finance leads the column.
+             Clicking it opens the ledger modal -- this is the only place money
+             appears on the card. -->
         <g class="roi-gen" data-roi-panel="group">
-          <rect x="${layout.chipSiteGenX}" y="588" width="${layout.chipSiteGenW}" height="232" rx="8"/>
-          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="610">Return on investment</text>
-          <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="632">Measure</text>
-          <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="632" text-anchor="end">Value</text>
+          <rect x="${layout.chipSiteGenX}" y="76" width="${layout.chipSiteGenW}" height="232" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="98">Return on investment</text>
+          <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="120">Measure</text>
+          <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="120" text-anchor="end">Value</text>
 
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="654">Invested</text>
-          <text class="site-gen-value" data-roi-cell="invested" x="${layout.chipSiteGenValueX}" y="654" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="674">Declared total</text>
-          <text class="site-gen-value" data-roi-cell="total" x="${layout.chipSiteGenValueX}" y="674" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="694">Board announced</text>
-          <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="694" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="714">Self estimated</text>
-          <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="714" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="734">Return</text>
-          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="734" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="754">Periods</text>
-          <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="754" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="774">Published rate</text>
-          <text class="site-gen-value" data-roi-cell="rate" x="${layout.chipSiteGenValueX}" y="774" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="794">Current period</text>
-          <text class="site-gen-value" data-roi-cell="current" x="${layout.chipSiteGenValueX}" y="794" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="142">Invested</text>
+          <text class="site-gen-value" data-roi-cell="invested" x="${layout.chipSiteGenValueX}" y="142" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="162">Declared total</text>
+          <text class="site-gen-value" data-roi-cell="total" x="${layout.chipSiteGenValueX}" y="162" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">Board announced</text>
+          <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Self estimated</text>
+          <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Return</text>
+          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="242">Periods</text>
+          <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="242" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="262">Published rate</text>
+          <text class="site-gen-value" data-roi-cell="rate" x="${layout.chipSiteGenValueX}" y="262" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="282">Current period</text>
+          <text class="site-gen-value" data-roi-cell="current" x="${layout.chipSiteGenValueX}" y="282" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -2811,9 +2812,11 @@ _buildHeaderChips(layout) {
       setRoi("periods", `${roiRecords.length}`);
       const published = roiAttrs.latest_board_rate_p_per_w;
       setRoi("rate", published === null || published === undefined ? "—" : `${this._fmt(Number(published), 2)} p/W`);
-      // "~" whenever the figure is not a board declaration: a period awaiting
-      // the board, or one the member estimated themselves.
-      const pending = roiAttrs.current_basis === "estimated_from_last_declared_rate" || roiAttrs.current_source === "self";
+      // "~" marks a figure the board has not announced. Today only a
+      // self-entered record can produce one: an undeclared period reports no
+      // figure at all (estimate withheld until the capital/interest split
+      // exists), so there is nothing left to mark.
+      const pending = roiAttrs.current_source === "self";
       const current = roiAttrs.current_gbp;
       const currentFigure = current === null || current === undefined || !Number.isFinite(Number(current)) ? null : Number(current);
       setRoi("current", currentFigure === null ? "—" : `${pending ? "~" : ""}£${this._fmt(currentFigure, 2)}`);

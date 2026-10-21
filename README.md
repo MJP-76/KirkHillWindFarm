@@ -58,8 +58,9 @@ and an animated dashboard.
   reads `—` until you say what you invested.
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
   actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
-  something is declared, and marks the current period `~` while it is still an
-  estimate from the last announced rate. Entries change only through the
+  something is declared, and **withholds any figure for an undeclared period**
+  until the board publishes the capital/interest split — no estimate is
+  derived. Entries change only through the
   `kirkhill_wind.add_payment_record` / `update_payment_record` /
   `remove_payment_record` / `set_invested_amount` services.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
