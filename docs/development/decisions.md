@@ -474,6 +474,16 @@ decision changes.
     units tall and clear of the National Grid box (914) — finance first, in the
     same box and columns as the panels it leads.
 
+  - **On-screen wording, the same day.** The three figures now read **All
+    periods · From the board · Your estimates** — "declared" had been doing
+    double duty (it meant *in the ledger*, not *said by the board*), so
+    provenance is carried by **board** vs **yours** everywhere the user looks:
+    the modal stats, the `your estimate` row tag, the *Announced by the board*
+    tick, and both captions. Display strings only — attribute keys and values
+    (`total_gbp`, `board_total_gbp`, `self_total_gbp`,
+    `current_basis=declared`) are deliberately unchanged, so templates, tests
+    and the documented attribute list stay valid.
+
   Regression tests: `test_payment_ledger.py` (withheld basis · figure is None ·
   source still reported · total unchanged) — 289 passing.
 

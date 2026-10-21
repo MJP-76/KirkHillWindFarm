@@ -108,9 +108,9 @@ the value column — carrying the headline only:
 | Measure | Value |
 | --- | --- |
 | Invested | `£5,000`, or `Not set` until you enter it |
-| Declared total | `£1,074.98` |
-| Board announced | `£1,074.98` |
-| Self estimated | `—` until one exists |
+| All periods | `£1,074.98` |
+| From the board | `£1,074.98` |
+| Your estimates | `—` until one exists |
 | Return | `21.50%`, or `—` with no capital entered |
 | Periods | `2` |
 | Published rate | `21 p/W` — board declarations only |
@@ -129,7 +129,7 @@ the value column — carrying the headline only:
 - **Invested** — set or cleared in the modal; stored in the ledger's Store,
   never `entry.options`.
 - **A caption under the rows** says which of two things the current period is:
-  **declared by the board**, or **your own estimate**. An undeclared period
+  **announced by the board**, or **your own estimate**. An undeclared period
   shows neither a caption nor a figure: the estimate is withheld until the
   board publishes the capital/interest split.
 - **Adding a period opens prefilled** with the month after the latest one ends —
@@ -148,12 +148,13 @@ on the next setup.
   applies, never how long money accrues for. A period is stored as the **1st to
   the last day** of its months, so "Feb 2025 – Jun 2026" means exactly those
   months whatever dates were picked.
-- **`source` is `board` or `self`.** The form's *Board announced* box is
-  pre-ticked; untick it to record your own estimate for a period the board has
-  not declared. Records predating the field normalise to `board`. The total
-  still sums both, `board_total_gbp` / `self_total_gbp` say how much of it was
-  announced, self rows are dashed, tagged and `~`-prefixed, and **only board
-  records feed the published rate** — a self estimate is not a published figure.
+- **`source` is `board` or `self`.** The form's *Announced by the board* box
+  is pre-ticked; untick it to record your own estimate for a period the board
+  has not covered. Records predating the field normalise to `board`. The total
+  still sums both — `board_total_gbp` / `self_total_gbp` say how much of it was
+  announced — your-estimate rows are dashed, tagged `your estimate` and
+  `~`-prefixed, and **only board records feed the published rate**: your
+  estimate is not a published figure.
 - **Storage and writes** — one Store file per config entry (never
   `entry.options`: config-entry migrations purge monetary keys there). Changed
   only through `kirkhill_wind.add_payment_record`, `update_payment_record`,

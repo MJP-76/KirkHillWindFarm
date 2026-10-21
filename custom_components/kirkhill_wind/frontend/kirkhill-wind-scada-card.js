@@ -1085,16 +1085,16 @@ class KirkHillWindScada extends HTMLElement {
         <span class="roi-capital-value">${invested === null || invested === undefined ? "Set amount" : this._gbp(invested)}</span>
       </button>
       <div class="roi-stats">
-        <div class="roi-stat"><span>Declared total</span><b>${this._gbp(attrs.total_gbp)}</b></div>
-        <div class="roi-stat"><span>Board announced</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
-        <div class="roi-stat"><span>Self estimated</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
+        <div class="roi-stat"><span>All periods</span><b>${this._gbp(attrs.total_gbp)}</b></div>
+        <div class="roi-stat"><span>From the board</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
+        <div class="roi-stat"><span>Your estimates</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
         <div class="roi-stat"><span>Return</span><b>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
       </div>`;
 
     list.innerHTML =
       (records.length
         ? records.map((r) => this._roiRowHTML(r)).join("")
-        : `<div class="roi-empty">No period declared yet. Add the first figure the board announced.</div>`) +
+        : `<div class="roi-empty">No periods yet. Add the first one the board announced.</div>`) +
       `<div class="roi-actions"><button class="roi-btn roi-btn--primary" data-roi-action="add">Add period</button></div>`;
 
     if (caption) {
@@ -1108,9 +1108,9 @@ class KirkHillWindScada extends HTMLElement {
       if (figure === null) {
         caption.innerHTML = "";
       } else if (selfNow) {
-        caption.innerHTML = `Current period is <b>your own estimate</b>, not a board announcement: <b>£${this._fmt(figure, 2)}</b>`;
+        caption.innerHTML = `Current period — <b>your own estimate</b>: <b>£${this._fmt(figure, 2)}</b>`;
       } else {
-        caption.innerHTML = `Current period declared by the board: <b>£${this._fmt(figure, 2)}</b>`;
+        caption.innerHTML = `Current period — <b>announced by the board</b>: <b>£${this._fmt(figure, 2)}</b>`;
       }
     }
 
@@ -1127,7 +1127,7 @@ class KirkHillWindScada extends HTMLElement {
     return `
       <div class="roi-row${self ? " roi-row--self" : ""}" data-record="${this._escape(record.id)}">
         <div class="roi-row-main">
-          <span class="roi-row-dates">${this._fmtMonth(record.period_start)} – ${this._fmtMonth(record.period_end)}${self ? ` <span class="roi-tag">self estimate</span>` : ""}</span>
+          <span class="roi-row-dates">${this._fmtMonth(record.period_start)} – ${this._fmtMonth(record.period_end)}${self ? ` <span class="roi-tag">your estimate</span>` : ""}</span>
           <span class="roi-row-rate">${this._fmt(Number(record.rate_p_per_w), 2)} p/W × ${this._fmt(Number(record.capacity_watts), 0)} W${record.note ? ` · <span class="roi-note">${this._escape(record.note)}</span>` : ""}</span>
         </div>
         <div class="roi-row-money">
@@ -1244,9 +1244,9 @@ class KirkHillWindScada extends HTMLElement {
         <input class="roi-input" id="roi-note" type="text" maxlength="200" value="${this._escape(r.note || "")}" placeholder="AGM, meeting, statement" />
         <label class="roi-check">
           <input type="checkbox" id="roi-source" ${sourceChecked ? "checked" : ""} />
-          <span>Board announced</span>
+          <span>Announced by the board</span>
         </label>
-        <div class="roi-hint">Untick to keep it as your own estimate: it is tagged with ~ and counted under the self total.</div>
+        <div class="roi-hint">Untick to record it as your own estimate: it is tagged with ~ and counted under Your estimates.</div>
         <div class="roi-hint">Months only: a period runs from the 1st to the last day.</div>
         <div class="roi-actions">
           <button class="roi-btn" data-roi-action="cancel">Cancel</button>
@@ -2685,11 +2685,11 @@ _buildHeaderChips(layout) {
 
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="142">Invested</text>
           <text class="site-gen-value" data-roi-cell="invested" x="${layout.chipSiteGenValueX}" y="142" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="162">Declared total</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="162">All periods</text>
           <text class="site-gen-value" data-roi-cell="total" x="${layout.chipSiteGenValueX}" y="162" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">Board announced</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">From the board</text>
           <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Self estimated</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Your estimates</text>
           <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Return</text>
           <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>

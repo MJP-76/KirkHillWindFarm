@@ -16,8 +16,8 @@ It pulls current data for both OpenAPI scopes:
     **2026-10-21** — the £ column, the £/h cells, the price pills and the
     member-savings line are **gone from the Owner and Site panels**. Money sits
     in a **Return on investment** panel at the top of the right column, above
-    Owner and Site in the same box: invested, declared total, board/self split
-    and return, with the payment
+    Owner and Site in the same box: invested, all periods, from the board, your
+    estimates and the return, with the payment
     ledger and both forms behind a click — the periods the board has declared a
     p/W rate for, their £ figures and ROI. Board-announced and self-estimated
     figures stay apart, and nothing reads `£0.00` before something is declared.

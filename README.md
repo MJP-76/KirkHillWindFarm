@@ -18,13 +18,13 @@ It pulls current data for both OpenAPI scopes:
 
 > - **Money is a panel, not a column.** The Owner and Site panels carry
 >   generation, power, capacity and wind only — the `Value (£)` column, the
->   `£/h` cells, the Member savings line and both price pills are gone. A third
->   panel, **Return on investment**, sits below them in the same box and shows
->   the headline: invested amount, declared total, board/self split and your
->   return — click it for the full ledger (every period the board declared a
->   p/W rate for, its £ figure and ROI) and the add/edit forms. The old
->   price/rate entities stay disabled and zeroed while the model is confirmed.
->   Generation, power and capacity are unaffected.
+>   `£/h` cells, the Member savings line and both price pills are gone. A
+>   **Return on investment** panel leads the right column above them, in the
+>   same box, showing the headline: invested amount, all periods, from the
+>   board, your estimates and your return — click it for the full ledger
+>   (every period the board declared a p/W rate for, its £ figure and ROI) and
+>   the add/edit forms. The old price/rate entities stay disabled and zeroed
+>   while the model is confirmed. Generation, power and capacity are unaffected.
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
@@ -49,11 +49,11 @@ and an animated dashboard.
   `number.<farm>_owner_rate_p_w` and `number.<farm>_negotiated_price_gbp_mwh`
   remain in the codebase but are disabled and set to `0.0`; nothing reads them.
   Rates now live per declared period in the ledger.
-- **Return on investment panel** — the third panel on the SCADA card, below
-  Site, drawn in the same box and columns: invested amount, declared total,
-  board/self split, return, period count, published rate and the current
-  period. Click it for the ledger modal — one row per declared period (months,
-  rate × watts, £, ROI %, board or self), the capital input and the add/edit
+- **Return on investment panel** — the top panel of the right column, above
+  Owner and Site, in the same box and columns: invested amount, all periods,
+  from the board, your estimates, return, period count, published rate and the
+  current period. Click it for the ledger modal — one row per period (months,
+  rate × watts, £, ROI %, board or yours), the capital input and the add/edit
   forms. ROI is `value ÷ invested × 100`, deliberately not annualised, and
   reads `—` until you say what you invested.
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
