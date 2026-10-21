@@ -2828,7 +2828,12 @@ _buildHeaderChips(layout) {
     if (ledgerId) {
       const alltimeCell = root.querySelector('[data-user-gen="fin-alltime"]');
       const declaredTotal = this._num(ledgerId);
-      this._setText(alltimeCell, declaredTotal === null ? "—" : `£${this._fmt(declaredTotal, 2)}`);
+      // Written directly: _setText takes (root, selector, value), and the row
+      // element is already resolved above -- passing it as `root` swallowed
+      // the write and left the All time cell reading the suppressed "—".
+      if (alltimeCell) {
+        alltimeCell.textContent = declaredTotal === null ? "—" : `£${this._fmt(declaredTotal, 2)}`;
+      }
       this._setChipStale(alltimeCell, ledgerId);
     }
 
