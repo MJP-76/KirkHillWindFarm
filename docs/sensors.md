@@ -27,9 +27,10 @@
 - Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
 - **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry; the card still draws the column and shows `—` in every cell. Previously `live generation × configured price`, `£0.00` when no price was set
   - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
-- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` — for example, at a declared 20p/W, 1,000 owned watts reads **£200**. The card line is drawn but reads `—`; its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`
+- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` — for example, at a declared 20p/W, 1,000 owned watts reads **£200**. Its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`. **The card line no longer reads this entity** — it reads the payment ledger below
+- **Payment ledger [GBP] — enabled; the figure behind the Owner pill, the Owner All time £ cell and Member savings.** One line item per period the board declared a p/W rate for, stored in Home Assistant's storage (one file per config entry, never `entry.options`). State is the **declared total**, `Σ watts × rate ÷ 100`, and reads **`unknown` while no period has been declared — never `£0.00`**. Attributes: `records` (each `{id, period_start, period_end, rate_p_per_w, capacity_watts, announced_on, note, value_gbp}`), `record_count`, `total_gbp`, `latest_rate_p_per_w`, `latest_period_start`, `latest_period_end`, `current_gbp` and `current_basis` (`declared` · `estimated_from_last_declared_rate` · `no_entries`). `current_gbp` is the *current* period's figure and is deliberately excluded from `total_gbp` until it is declared. Writable only through the `kirkhill_wind.add_payment_record`, `update_payment_record` and `remove_payment_record` services. Always available — it reads local storage, not the API
 - **Owner price (number) [p/kWh] — DISABLED from v4.16.1**, input `0.0`
-- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. **This is what the Owner pill on the card edits** (was the declared member savings rate)
+- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. The Owner pill used to edit this; it now opens the payment ledger's dated line items
 - **Negotiated price (number) [GBP/MWh] — DISABLED from v4.16.1**, input `0.0`
 
 Re-enable any of them with `hab entity enable <entity_id>` — nothing was deleted.
@@ -55,13 +56,18 @@ Home Assistant. The generated dashboard formats those values for display with
 automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and
 rounds them to **2 decimal places**.
 
-!!! note "Financial figures are on hold"
+!!! note "Financial figures are on hold — three cells excepted"
     **2026-10-09** — the 19 value/savings sensors and the 3 price/rate `number`
     entities are **disabled** with their inputs at `0.0`, so the card's money
-    cells read `—` and nothing is calculated. The Owner pill now edits the
-    **p/W rate**. Figures are being worked on in the background against the
-    board's last announcement; re-enable one with
+    cells read `—` and nothing is calculated. Figures are being worked on in
+    the background against the board's last announcement; re-enable one with
     `hab entity enable <entity_id>` to bring it back.
+
+    **2026-10-21 — three cells are back, from the Payment ledger sensor above:**
+    the Owner pill (declared total), the Owner panel's **All time** £ cell and
+    **Member savings** (current period, `~` while undeclared). They calculate
+    from declared periods, not from the disabled entities — those stay
+    disabled, and every other money cell is unchanged.
 
 Financial £ values are **live-accurate when a price is set**. Two independent
 price entities hold the prices, both `0.0` by default:

@@ -10,6 +10,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfPower, UnitOfSpeed
+from homeassistant.core import callback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
@@ -26,6 +27,13 @@ from .entity import (
     KirkHillScopedTurbineEntity,
     KirkHillTurbineEntity,
     turbine_status_category,
+)
+from .payment_ledger import (
+    current_figure,
+    get_ledger,
+    latest_record,
+    ledger_total_gbp,
+    record_value_gbp,
 )
 
 TIMEFRAME_LABELS = {
@@ -109,6 +117,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # complete; they feed the All time sum but are not shown on the SCADA card.
     generation_timeframes = TIMEFRAME_ORDER + yearly_timeframes()
 
+    # Loaded by async_setup_entry immediately before the platforms. None here
+    # is a wiring bug, so it fails loudly rather than drawing an empty ledger --
+    # "no declarations" and "not loaded" must never look the same on a card.
+    ledger = get_ledger(hass, entry.entry_id)
+    if ledger is None:
+        raise RuntimeError("payment ledger was not loaded before the sensor platform")
+
     entities: list = [
         *[FarmPowerSensor(coordinator, entry, scope) for scope in SCOPES],
         *[FarmCapacityFactorSensor(coordinator, entry, scope) for scope in SCOPES],
@@ -124,6 +139,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             for scope in SCOPES
         ],
         MemberSavingsValueSensor(coordinator, entry),
+        PaymentLedgerSensor(coordinator, entry, ledger),
         FarmWindSpeedSensor(coordinator, entry),
         OpenMeteoForecastWindSpeedSensor(
             coordinator,
@@ -695,6 +711,87 @@ class MemberSavingsValueSensor(KirkHillScopedEntity, SensorEntity):
         else:
             attrs["projection_basis"] = "capacity_x_rate"
         attrs["data_stale"] = self._current_is_stale()
+        return attrs
+
+
+class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
+    """Declared board payments as a ledger total: Σ(watts × p/W) per period.
+
+    This is the only money figure on the card that is *declared history* rather
+    than a projection, which is exactly why it can appear on the All time row
+    where ``kWh × today's price`` was suppressed: every pound in
+    ``native_value`` came from a period the board actually announced, so
+    editing a price later cannot retroactively revalue it.
+
+    Two rules the card depends on:
+
+    * **No entries reads unknown**, never GBP 0.00 -- an empty ledger is the
+      board having declared nothing, not a declaration of nothing.
+    * **The current period stays an estimate until it is declared.** It is
+      exposed as ``current_gbp`` + ``current_basis`` and kept out of
+      ``total_gbp``, so a derived figure can never be counted twice or mistaken
+      for something announced.
+
+    Both figures change when a record is added, edited or removed: the ledger
+    notifies this entity directly, because a declaration is not coordinator data
+    and does not wait for the next API poll to matter.
+    """
+
+    _attr_name = "Payment ledger"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    # TOTAL, not MEASUREMENT: HA permits only TOTAL for MONETARY, and the
+    # figure is a sum of declarations rather than a sampled reading.
+    _attr_state_class = SensorStateClass.TOTAL
+    _attr_native_unit_of_measurement = "GBP"
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:cash-multiple"
+
+    def __init__(self, coordinator, entry, ledger) -> None:
+        super().__init__(coordinator, entry, SCOPE_OWNER, "payment_ledger")
+        self._ledger = ledger
+
+    @property
+    def available(self) -> bool:
+        """Always available: this reads local storage, not the API.
+
+        Inheriting the coordinator's flag would blank the All time figure and
+        the Owner pill every time a poll failed, and neither has anything to do
+        with the poll -- the declarations are on disk.
+        """
+        return True
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self._ledger.async_add_listener(self._handle_ledger_change)
+        )
+
+    @callback
+    def _handle_ledger_change(self) -> None:
+        """Re-render as soon as a declaration is saved, not on the next poll."""
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self):
+        """Declared total, or unknown while nothing has been declared."""
+        return ledger_total_gbp(self._ledger.records)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs = super().extra_state_attributes
+        records = self._ledger.records
+        latest = latest_record(records)
+        current_gbp, current_basis = current_figure(records)
+        attrs["record_count"] = len(records)
+        attrs["records"] = [
+            {**record, "value_gbp": record_value_gbp(record)} for record in records
+        ]
+        attrs["total_gbp"] = ledger_total_gbp(records)
+        attrs["latest_rate_p_per_w"] = latest["rate_p_per_w"] if latest else None
+        attrs["latest_period_start"] = latest["period_start"] if latest else None
+        attrs["latest_period_end"] = latest["period_end"] if latest else None
+        attrs["current_gbp"] = current_gbp
+        attrs["current_basis"] = current_basis
         return attrs
 
 

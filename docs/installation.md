@@ -127,13 +127,13 @@ After setup, the **Configure** options let you change:
 
 Prices are **not** options fields — they are `number` entities. **From v4.16.1
 all three are disabled in the entity registry and set to `0.0`**:
-`number.<farm>_owner_rate_p_w` (Owner rate, p/W — **what the Owner pill on the
-card edits**), `number.<farm>_owner_price_p_kwh` (Owner price, p/kWh) and
-`number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh). The price
-pills and the £ value column are still drawn but render **empty** (`Rate —`,
-`—`) as a reminder that the model is unfinished (see [Sensors](sensors.md)).
-Re-enable with `hab entity enable <entity_id>` once the board confirms how
-member payments are calculated.
+`number.<farm>_owner_rate_p_w` (Owner rate, p/W — superseded on the card by the
+payment ledger the Owner pill now opens), `number.<farm>_owner_price_p_kwh`
+(Owner price, p/kWh) and `number.<farm>_negotiated_price_gbp_mwh` (Site/CfD
+price, £/MWh). The £ value column and the £/h cells are still drawn but render
+**empty** (`—`) as a reminder that the model is unfinished (see
+[Sensors](sensors.md)). Re-enable with `hab entity enable <entity_id>` once the
+board confirms how member payments are calculated.
 
 > **Note:** v4.11.7 removed the "projected annual earnings" setup fields. Those
 > were estimated averages feeding a projected model retired in v4.11.5 — earnings

@@ -28,6 +28,7 @@ from .const import (
 from .coordinator import KirkHillWindCoordinator
 from .dashboard import async_ensure_dashboard
 from .device import get_farm_device_id
+from .payment_ledger import async_setup_ledger, async_unload_ledger
 from .services import async_setup_services, async_unload_services
 from .settings import (
     OPTION_KEYS,
@@ -189,6 +190,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
+    # The payment ledger is local state rather than coordinator data, so it has
+    # to exist before the sensor platform asks for it -- and it deliberately
+    # lives in a Store, never in entry.options (config v11 purges earnings
+    # inputs; see payment_ledger module docstring).
+    await async_setup_ledger(hass, entry)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await _async_setup_payment_tracking(hass, entry)
     await _async_register_frontend(hass)
@@ -230,6 +237,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if unload_ok:
         entry.runtime_data = None
+        async_unload_ledger(hass, entry.entry_id)
         await async_unload_services(hass)
         for url in hass.data.pop(_FRONTEND_URLS, ()):
             remove_extra_js_url(hass, url)

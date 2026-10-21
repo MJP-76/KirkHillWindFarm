@@ -16,12 +16,14 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-> - **Financial figures are on hold for now (v4.16.2).** The £ value column, the
->   £/h cells, the price pills and the savings line show but stay **empty** —
->   every money cell reads `—` and the Owner pill reads `Rate —`, so nothing is
->   calculated. The Owner pill now edits the **p/W rate**. Figures are being
->   worked on in the background against the board's last announcement.
->   Generation, power and capacity are unaffected.
+> - **Financial figures are on hold for now (v4.16.2)** — with one exception:
+>   the **Owner pill** (declared total), the Owner panel's **All time** £ cell
+>   and **Member savings** now come from a **payment ledger** of the periods
+>   the board has declared a p/W rate for, and clicking the pill pops those
+>   dated line items out to add, edit or remove. Every other money cell still
+>   reads `—` and the price/rate entities stay disabled while the model is
+>   confirmed. Figures are being worked on in the background against the
+>   board's last announcement. Generation, power and capacity are unaffected.
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
@@ -39,14 +41,23 @@ and an animated dashboard.
 
 - **Owner & Site scopes** — pulls data for both your ownership share (`owner`)
   and the whole farm (`site`), covering power, capacity factor, and generation
-  for yesterday, today, week, month, YTD, year, and all time. **Financial
+  for yesterday, today, week, month, YTD, year, and all time. **Most financial
   figures are shown but empty** (see the note above): the GBP value sensors
-  still exist but are disabled, so every £ cell on the card reads `—`.
+  still exist but are disabled, so every £ cell on the card reads `—` — except
+  the Owner **All time** £ cell and **Member savings**, which show the payment
+  ledger's declared figures.
 - **Prices are dormant** — `number.<farm>_owner_price_p_kwh`,
   `number.<farm>_owner_rate_p_w` and `number.<farm>_negotiated_price_gbp_mwh`
   remain in the codebase but are disabled and set to `0.0` until the board
-  confirms how member payments are calculated. The card's Owner pill is wired
-  to the **p/W rate**, ready for when it is re-enabled.
+  confirms how member payments are calculated. The card's Owner pill now opens
+  the **payment ledger** — one dated line item per p/W rate the board has
+  declared — instead of editing a single rate.
+- **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
+  actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
+  something is declared, and marks the current period `~` while it is still an
+  estimate from the last announced rate. Entries are changed only through the
+  `kirkhill_wind.add_payment_record` / `update_payment_record` /
+  `remove_payment_record` services.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
   **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up

@@ -1004,10 +1004,19 @@ class KirkHillWindScada extends HTMLElement {
   }
 
   _openPriceEdit(scope) {
-    // scope: "owner" -> Owner rate (p/W, the board's per-watt basis);
+    // scope: "owner" -> the payment ledger (dated periods the board declared
+    //                   a p/W rate for). The pill pops out the line items and
+    //                   edits them through kirkhill_wind.*_payment_record.
     //        "site"  -> Site/CfD price (GBP/MWh)
     const config = this.config;
     const owner = scope === "owner";
+    if (owner && config.payment_ledger_entity) {
+      // A card stored before the ledger key has no entity here and keeps the
+      // old single-value editor below -- a missing key is a stale dashboard,
+      // not a reason for the pill to go dead.
+      if (this._canEdit(config.payment_ledger_entity)) this._openPaymentLedger();
+      return;
+    }
     const entity = owner ? config.owner_rate_entity : config.negotiated_price_entity;
     if (!this._canEdit(entity)) return;
     const label = owner ? "Owner rate" : "Site price (CfD)";
@@ -1083,6 +1092,255 @@ class KirkHillWindScada extends HTMLElement {
   _closePriceEditModal() {
     if (this._priceEditModal) { this._priceEditModal.remove(); this._priceEditModal = null; }
     if (this._priceBoundKeydown) { window.removeEventListener("keydown", this._priceBoundKeydown); this._priceBoundKeydown = null; }
+  }
+
+  // ---- payment ledger pop-out --------------------------------------------
+
+  _ledgerEntityId() {
+    // A card stored before the ledger key has no entity here. Everything
+    // below then reads as "not available" rather than as a broken modal, and
+    // the pill falls back to its old single-value editor.
+    const id = this.config?.payment_ledger_entity;
+    return id && this._hass?.states?.[id] ? id : null;
+  }
+
+  _ledgerRecords(id) {
+    const records = this._attr(id, "records");
+    return Array.isArray(records) ? records.filter((r) => r && r.id) : [];
+  }
+
+  _esc(value) {
+    // Notes are free text typed into a form; they are rendered back as HTML.
+    return String(value ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+    );
+  }
+
+  _fmtDate(iso) {
+    if (!iso) return "—";
+    const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  _recordValueGbp(record) {
+    // The sensor stamps value_gbp on each record; recompute only if a stored
+    // record predates that attribute, so a missing field never renders as NaN.
+    const stamped = Number(record.value_gbp);
+    if (Number.isFinite(stamped)) return stamped;
+    const watts = Number(record.capacity_watts);
+    const rate = Number(record.rate_p_per_w);
+    if (!Number.isFinite(watts) || !Number.isFinite(rate)) return null;
+    return Math.round((watts * rate) / 100 * 100) / 100;
+  }
+
+  _openPaymentLedger() {
+    const id = this._ledgerEntityId();
+    if (!id) return;
+    this._closePaymentLedger();
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content" style="max-width: 560px">
+        <div class="modal-header">
+          <h2>Payments declared by the board</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="ledger" data-ledger="root"></div>
+        </div>
+      </div>`;
+    this.shadowRoot.appendChild(modal);
+    this._ledgerModal = modal;
+    this._ledgerFormOpen = false;
+    modal.querySelectorAll("[data-close]").forEach((el) =>
+      el.addEventListener("click", () => this._closePaymentLedger()));
+    this._bindLedgerRoot();
+    this._ledgerBoundKeydown = (e) => { if (e.key === "Escape") this._closePaymentLedger(); };
+    window.addEventListener("keydown", this._ledgerBoundKeydown);
+  }
+
+  _closePaymentLedger() {
+    if (this._ledgerModal) { this._ledgerModal.remove(); this._ledgerModal = null; }
+    if (this._ledgerFormOpen) this._ledgerFormOpen = false;
+    if (this._ledgerBoundKeydown) { window.removeEventListener("keydown", this._ledgerBoundKeydown); this._ledgerBoundKeydown = null; }
+  }
+
+  _ledgerRoot() {
+    return this._ledgerModal?.querySelector('[data-ledger="root"]') || null;
+  }
+
+  _ledgerListHTML() {
+    const id = this._ledgerEntityId();
+    const records = this._ledgerRecords(id);
+    const basis = this._attr(id, "current_basis");
+    const current = this._attr(id, "current_gbp");
+    const total = this._num(id);
+
+    const rows = records.map((r) => {
+      const value = this._recordValueGbp(r);
+      return `
+        <div class="ledger-row" data-record="${this._esc(r.id)}">
+          <div class="ledger-row-main">
+            <span class="ledger-dates">${this._fmtDate(r.period_start)} – ${this._fmtDate(r.period_end)}</span>
+            <span class="ledger-rate">${this._fmt(Number(r.rate_p_per_w), 2)} p/W × ${this._fmt(Number(r.capacity_watts), 0)} W${r.note ? ` · <span class="ledger-note">${this._esc(r.note)}</span>` : ""}</span>
+          </div>
+          <div class="ledger-row-value">${value === null ? "—" : `£${this._fmt(value, 2)}`}</div>
+          <div class="ledger-row-actions">
+            <button class="ledger-btn" data-ledger-edit="${this._esc(r.id)}" aria-label="Edit this period">&#9998;</button>
+            <button class="ledger-btn ledger-btn--danger" data-ledger-remove="${this._esc(r.id)}" aria-label="Remove this period">&#10005;</button>
+          </div>
+        </div>`;
+    }).join("");
+
+    // The period with no declaration yet is shown as an estimate, never
+    // counted into the declared total -- visible and marked, not folded in.
+    let pending = "";
+    if (basis === "estimated_from_last_declared_rate" && Number.isFinite(Number(current))) {
+      pending = `<div class="ledger-caption">Current period not yet declared — estimated at the last rate:
+        <b>~£${this._fmt(Number(current), 2)}</b></div>`;
+    }
+
+    const empty = records.length
+      ? ""
+      : `<div class="ledger-caption">No period declared yet. Add the first figure the board announced.</div>`;
+
+    return `
+      <div class="ledger-list">
+        ${empty}
+        ${rows}
+        ${pending}
+        <div class="ledger-total">Declared total <b>${total === null ? "—" : `£${this._fmt(total, 2)}`}</b></div>
+      </div>
+      <div class="price-edit-actions">
+        <button class="price-edit-btn price-edit-save" data-ledger-action="add">Add period</button>
+      </div>`;
+  }
+
+  _bindLedgerRoot() {
+    const root = this._ledgerRoot();
+    if (!root) return;
+    root.innerHTML = this._ledgerListHTML();
+    root.querySelectorAll("[data-ledger-edit]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const record = this._ledgerRecords(this._ledgerEntityId())
+          .find((r) => r.id === btn.getAttribute("data-ledger-edit"));
+        if (record) this._showLedgerForm(record);
+      }));
+    root.querySelectorAll("[data-ledger-remove]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        const recordId = btn.getAttribute("data-ledger-remove");
+        if (!window.confirm("Remove this payment record?")) return;
+        try {
+          await this._hass.callService("kirkhill_wind", "remove_payment_record", { record_id: recordId });
+          this._bindLedgerRoot();
+        } catch (err) {
+          this._ledgerError(err);
+        }
+      }));
+    const add = root.querySelector('[data-ledger-action="add"]');
+    if (add) add.addEventListener("click", () => this._showLedgerForm(null));
+  }
+
+  _refreshLedgerList() {
+    // State changes arrive after the service call resolves, so a list drawn
+    // straight after a save can be one step behind. _update() calls this on
+    // every hass change, which catches the real value a moment later.
+    if (this._ledgerModal && !this._ledgerFormOpen) this._bindLedgerRoot();
+  }
+
+  _ledgerError(err) {
+    const root = this._ledgerRoot();
+    const slot = root?.querySelector('[data-ledger="error"]');
+    if (slot) slot.textContent = err?.message || "Save failed";
+  }
+
+  _showLedgerForm(record) {
+    const root = this._ledgerRoot();
+    if (!root) return;
+    this._ledgerFormOpen = true;
+    root.innerHTML = this._ledgerFormHTML(record);
+    root.querySelector('[data-ledger-action="cancel"]')
+      .addEventListener("click", () => { this._ledgerFormOpen = false; this._bindLedgerRoot(); });
+    const save = root.querySelector('[data-ledger-action="save"]');
+    save.addEventListener("click", () => this._saveLedgerForm(root, record));
+    root.querySelectorAll("input").forEach((input) =>
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") save.click();
+      }));
+    const first = root.querySelector("input");
+    if (first) first.focus();
+  }
+
+  _ledgerFormHTML(record) {
+    const r = record || {};
+    // Capacity is blank for a new record on purpose: the service defaults it
+    // to the owner watts the API reports now, so the common case needs no
+    // typing, while a historical edit sends the watts that were in force then.
+    return `
+      <div class="price-edit-form ledger-form">
+        <label class="price-edit-label" for="ledger-start">Period start</label>
+        <input class="price-edit-input" id="ledger-start" type="date" value="${this._esc(r.period_start || "")}" />
+        <label class="price-edit-label" for="ledger-end">Period end</label>
+        <input class="price-edit-input" id="ledger-end" type="date" value="${this._esc(r.period_end || "")}" />
+        <label class="price-edit-label" for="ledger-rate">Rate announced (p/W)</label>
+        <input class="price-edit-input" id="ledger-rate" type="number" min="0.01" max="1000" step="0.1" value="${r.rate_p_per_w ?? ""}" />
+        <label class="price-edit-label" for="ledger-watts">Watts owned (W)</label>
+        <input class="price-edit-input" id="ledger-watts" type="number" min="0" step="1" value="${r.capacity_watts ?? ""}" placeholder="defaults to today's capacity" />
+        <label class="price-edit-label" for="ledger-note">Note (optional)</label>
+        <input class="price-edit-input" id="ledger-note" type="text" maxlength="200" value="${this._esc(r.note || "")}" placeholder="AGM, meeting, statement" />
+        <div class="price-edit-actions">
+          <button class="price-edit-btn" data-ledger-action="cancel">Cancel</button>
+          <button class="price-edit-btn price-edit-save" data-ledger-action="save">Save</button>
+        </div>
+        <div class="price-edit-hint" data-ledger="error"></div>
+      </div>`;
+  }
+
+  async _saveLedgerForm(root, record) {
+    const value = (sel) => root.querySelector(sel)?.value?.trim() || "";
+    const start = value("#ledger-start");
+    const end = value("#ledger-end");
+    const rate = parseFloat(value("#ledger-rate"));
+    const wattsRaw = value("#ledger-watts");
+    const watts = wattsRaw === "" ? null : parseFloat(wattsRaw);
+    const note = value("#ledger-note");
+
+    // Validate here as well as on the backend: a rejected service call is a
+    // silent no-op from the user's side of a modal unless the form says why.
+    const fail = (message, input) => {
+      const slot = root.querySelector('[data-ledger="error"]');
+      if (slot) slot.textContent = message;
+      const el = root.querySelector(input);
+      if (el) { el.setAttribute("data-error", "true"); el.focus(); }
+      return false;
+    };
+    if (!start || !end) return fail("Both period dates are required.", "#ledger-end");
+    if (end < start) return fail("The period end must not be before its start.", "#ledger-end");
+    if (!Number.isFinite(rate) || rate <= 0) return fail("Enter the rate the board announced, in p/W.", "#ledger-rate");
+    if (watts !== null && (!Number.isFinite(watts) || watts < 0)) return fail("Watts owned must be 0 or more.", "#ledger-watts");
+
+    const payload = {
+      period_start: start,
+      period_end: end,
+      rate_p_per_w: rate,
+    };
+    if (watts !== null) payload.capacity_watts = watts;
+    if (note) payload.note = note;
+
+    const service = record ? "update_payment_record" : "add_payment_record";
+    if (record) payload.record_id = record.id;
+    try {
+      await this._hass.callService("kirkhill_wind", service, payload);
+    } catch (err) {
+      const slot = root.querySelector('[data-ledger="error"]');
+      if (slot) slot.textContent = err?.message || "Save failed";
+      return false;
+    }
+    this._ledgerFormOpen = false;
+    this._bindLedgerRoot();
+    return true;
   }
 
   _openTurbineStatus() { this._showTurbineStatusModal(); }
@@ -2464,24 +2722,33 @@ _buildHeaderChips(layout) {
     const forecast = this._num(config.wind_forecast_entity);
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
 
-    // Price chips: Owner price (p/kWh) and Site/CfD price (£/MWh).
+    // Price chips: Owner payment ledger, and Site/CfD price (£/MWh).
     // Two decimals on display so a sub-0.1 price (e.g. 0.06) is never rounded
     // up to 0.1 in the pill; the stored value is always shown exactly.
     const ownerPrice = this._num(config.owner_price_entity);
-    // The Owner pill edits the per-watt rate (p/W), not the p/kWh price:
-    // members are paid per watt owned. Disabled or unset reads "Rate —".
-    const ownerRate = this._num(config.owner_rate_entity);
-    this._setText(root, '[data-price-text="owner"]', ownerRate === null || ownerRate === 0 ? "Rate —" : `Rate ${this._fmt(ownerRate, 2)} p/W`);
+    // The Owner pill reports the ledger's declared total and pops out the
+    // dated line items it is built from -- members are paid per watt owned,
+    // for each period the board declared. A card stored without the ledger
+    // key keeps the old single-rate text so nothing silently blanks.
+    const ledgerId = config.payment_ledger_entity;
+    if (ledgerId) {
+      const declaredTotal = this._num(ledgerId);
+      this._setText(root, '[data-price-text="owner"]', declaredTotal === null ? "Total —" : `Total £${this._fmt(declaredTotal, 2)}`);
+    } else {
+      const ownerRate = this._num(config.owner_rate_entity);
+      this._setText(root, '[data-price-text="owner"]', ownerRate === null || ownerRate === 0 ? "Rate —" : `Rate ${this._fmt(ownerRate, 2)} p/W`);
+    }
     const sitePrice = this._num(config.negotiated_price_entity);
     this._setText(root, '[data-price-text="site"]', sitePrice === null || sitePrice === 0 ? "Price —" : `Price £${this._fmt(sitePrice, 2)}/MWh`);
 
     // A pill whose entity cannot take a write (disabled or unavailable) is
     // dimmed and unhoverable, so it never looks like an action that would
-    // only end in a Home Assistant warning.
+    // only end in a Home Assistant warning. For the Owner pill that entity is
+    // the ledger when there is one: a service-backed edit, not a number write.
     root.querySelectorAll("[data-price-edit]").forEach((pill) => {
       const id =
         pill.getAttribute("data-price-edit") === "owner"
-          ? config.owner_rate_entity
+          ? config.payment_ledger_entity || config.owner_rate_entity
           : config.negotiated_price_entity;
       pill.classList.toggle("price-edit--inert", !this._canEdit(id));
     });
@@ -2497,6 +2764,19 @@ _buildHeaderChips(layout) {
       this._setText(root, `[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`, fin === null ? "—" : `£${this._fmt(fin, 2)}`);
       this._setChipStale(root.querySelector(`[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`), item.value_entity);
     });
+
+    // All time Value (£): the ledger's declared total, overriding whatever the
+    // suppressed value sensor reported. Not kWh × today's price -- that reading
+    // is suppressed on purpose (decisions.md) because it revalues history every
+    // time a price changes, and the API records energy, never money. A sum of
+    // what the board actually declared has neither problem, which is what makes
+    // it the one £ figure here with a real history behind it.
+    if (ledgerId) {
+      const alltimeCell = root.querySelector('[data-user-gen="fin-alltime"]');
+      const declaredTotal = this._num(ledgerId);
+      this._setText(alltimeCell, declaredTotal === null ? "—" : `£${this._fmt(declaredTotal, 2)}`);
+      this._setChipStale(alltimeCell, ledgerId);
+    }
 
     const siteCap = this._num(config.capacity_entity);
     // Your share: owner export power is reported in kW; display in watts.
@@ -2518,12 +2798,26 @@ _buildHeaderChips(layout) {
     const ownerRateLph = ownerExportKw !== null && ownerPrice > 0 ? (ownerExportKw * ownerPrice) / 100 : null;
     this._setText(root, '[data-user-gen="fin-share"]', ownerRateLph === null ? "—" : `£${this._fmt(ownerRateLph, 2)}/h`);
 
-    // Member savings: owned watts × the board's declared p/W rate. The sensor
-    // is unknown until a rate is declared, so this reads "—" -- the board's own
-    // dashboard shows no ongoing earnings for exactly that reason.
-    const savings = this._num(config.member_savings_entity);
-    this._setText(root, '[data-user-gen="savings"]', savings === null ? "—" : `£${this._fmt(savings, 2)}`);
-    this._setChipStale(root.querySelector('[data-user-gen="savings"]'), config.member_savings_entity);
+    // Member savings: the current period's figure -- the last p/W rate the
+    // board declared against owned watts. While today sits past every declared
+    // period it is an *estimate*, so it carries "~" and the sensor reports
+    // current_basis=estimated_from_last_declared_rate: shown, never presented
+    // as something the board announced. With no records at all it reads "—".
+    // A card stored without the ledger key falls back to the savings sensor.
+    if (ledgerId) {
+      const rawCurrent = this._attr(ledgerId, "current_gbp");
+      const estimated = this._attr(ledgerId, "current_basis") === "estimated_from_last_declared_rate";
+      const current =
+        rawCurrent === null || rawCurrent === undefined || !Number.isFinite(Number(rawCurrent))
+          ? null
+          : Number(rawCurrent);
+      this._setText(root, '[data-user-gen="savings"]', current === null ? "—" : `${estimated ? "~" : ""}£${this._fmt(current, 2)}`);
+      this._setChipStale(root.querySelector('[data-user-gen="savings"]'), ledgerId);
+    } else {
+      const savings = this._num(config.member_savings_entity);
+      this._setText(root, '[data-user-gen="savings"]', savings === null ? "—" : `£${this._fmt(savings, 2)}`);
+      this._setChipStale(root.querySelector('[data-user-gen="savings"]'), config.member_savings_entity);
+    }
 
     // Site Capacity panel — timeframe values
     (config.site_generation_entities || []).forEach((item) => {
@@ -2648,6 +2942,11 @@ _buildHeaderChips(layout) {
     // Generation / Value (£) columns slide to fit the widest figure shown, so a
     // large site value can never overlap the generation numbers.
     this._fitValueColumns();
+
+    // An open ledger pop-out reads entity attributes too, so it gets the same
+    // refresh the cells just did -- but only while it shows the list; a
+    // half-typed form must never be rebuilt under the user's cursor.
+    this._refreshLedgerList();
   }
 
   // Size each top-row pill to the text it actually holds, then lay the row out
@@ -2952,6 +3251,25 @@ _buildHeaderChips(layout) {
       .price-edit-btn:hover { color: var(--khscada-primary-color); }
       .price-edit-save { background: color-mix(in srgb, var(--khscada-accent-color) 20%, transparent); color: var(--khscada-accent-color); }
       .price-edit-hint { font: var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
+
+      /* Payment ledger pop-out: one row per period the board declared */
+      .ledger { display: flex; flex-direction: column; gap: 10px; }
+      .ledger-list { display: flex; flex-direction: column; gap: 6px; }
+      .ledger-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--khscada-divider); border-radius: 8px; background: var(--khscada-card-bg); }
+      .ledger-row-main { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .ledger-dates { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-primary-color); }
+      .ledger-rate { font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); overflow-wrap: anywhere; }
+      .ledger-note { font-style: italic; }
+      .ledger-row-value { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-primary-color); white-space: nowrap; }
+      .ledger-row-actions { display: flex; gap: 6px; }
+      .ledger-btn { width: 28px; height: 28px; border: 1px solid var(--khscada-divider); border-radius: 6px; background: var(--khscada-card-bg); color: var(--khscada-secondary-color); cursor: pointer; font-size: 14px; line-height: 1; }
+      .ledger-btn:hover { color: var(--khscada-primary-color); border-color: var(--khscada-accent-color); }
+      .ledger-btn--danger:hover { color: var(--khscada-error-color); border-color: var(--khscada-error-color); }
+      .ledger-caption { font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); }
+      .ledger-caption b { color: var(--khscada-primary-color); }
+      .ledger-total { display: flex; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid var(--khscada-divider); font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); }
+      .ledger-total b { color: var(--khscada-primary-color); }
+      .ledger-form { gap: 8px; }
 
       .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
 
