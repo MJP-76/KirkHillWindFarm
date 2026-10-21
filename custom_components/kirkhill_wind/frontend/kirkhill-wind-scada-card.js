@@ -350,6 +350,11 @@ class KirkHillWindScada extends HTMLElement {
         this._zoomReset();
         return;
       }
+      const roiPanel = ev.target.closest("[data-roi-panel='group']");
+      if (roiPanel) {
+        this._openRoiDetail();
+        return;
+      }
       const site = ev.target.closest("[data-site-gen='panel']");
       if (site) { this._openSiteDetail(); return; }
       const owner = ev.target.closest("[data-user-gen='panel']");
@@ -985,6 +990,391 @@ class KirkHillWindScada extends HTMLElement {
   _closeApiDetailModal() {
     if (this._apiDetailModal) { this._apiDetailModal.remove(); this._apiDetailModal = null; }
     if (this._apiBoundKeydown) { window.removeEventListener("keydown", this._apiBoundKeydown); this._apiBoundKeydown = null; }
+  }
+
+  // ---- return on investment modal -----------------------------------------
+  //
+  // The ROI panel opens this: the full ledger, the capital input and both
+  // forms. It lives here rather than in a card of its own because the owner
+  // wanted finance displayed the same way as the Owner and Site panels --
+  // a panel on the SCADA card, detail on click.
+
+  _openRoiDetail() { this._showRoiModal(); }
+
+  _showRoiModal() {
+    this._closeRoiModal();
+    const modal = document.createElement("div");
+    modal.className = "turbine-detail-modal";
+    modal.innerHTML = `
+      <div class="modal-backdrop" data-close="backdrop"></div>
+      <div class="modal-content" style="max-width: 660px">
+        <div class="modal-header">
+          <h2>Return on investment</h2>
+          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="modal-body">
+          <div class="roi-summary" data-roi="summary"></div>
+          <div class="roi-list" data-roi="list"></div>
+          <div class="roi-caption" data-roi="caption"></div>
+          <div data-roi="slot"></div>
+        </div>
+      </div>`;
+    this.shadowRoot.appendChild(modal);
+    this._roiModal = modal;
+    this._roiFormOpen = false;
+    modal.querySelectorAll("[data-close]").forEach((el) =>
+      el.addEventListener("click", () => this._closeRoiModal()));
+    this._renderRoiModal();
+    this._roiBoundKeydown = (e) => { if (e.key === "Escape") this._closeRoiModal(); };
+    window.addEventListener("keydown", this._roiBoundKeydown);
+  }
+
+  _closeRoiModal() {
+    if (this._roiModal) { this._roiModal.remove(); this._roiModal = null; }
+    this._roiFormOpen = false;
+    if (this._roiBoundKeydown) { window.removeEventListener("keydown", this._roiBoundKeydown); this._roiBoundKeydown = null; }
+  }
+
+  _roiModalRoot(part) {
+    return this._roiModal?.querySelector(`[data-roi="${part}"]`) || null;
+  }
+
+  _refreshRoiModal() {
+    // State changes arrive after a service call resolves, so a list rendered
+    // straight from a save can be one step behind; _update() calls this on
+    // every state change, which catches the real value a moment later. A form
+    // mid-entry is never rebuilt.
+    if (this._roiModal && !this._roiFormOpen) this._renderRoiModal();
+  }
+
+  _roiLedger() {
+    const id = this.config?.payment_ledger_entity;
+    const state = id ? this._hass?.states?.[id] : null;
+    if (!state) return null;
+    const attrs = state.attributes || {};
+    const records = Array.isArray(attrs.records) ? attrs.records.filter((r) => r && r.id) : [];
+    return { id, attrs, records };
+  }
+
+  _gbp(v) {
+    return v === null || v === undefined || !Number.isFinite(Number(v))
+      ? "—"
+      : `£${this._fmt(Number(v), 2)}`;
+  }
+
+  _renderRoiModal() {
+    const ledger = this._roiLedger();
+    const summary = this._roiModalRoot("summary");
+    const list = this._roiModalRoot("list");
+    const caption = this._roiModalRoot("caption");
+    if (!summary || !list) return;
+
+    if (!ledger) {
+      summary.innerHTML = "";
+      list.innerHTML = `<div class="roi-empty">The payment ledger entity is not available.</div>`;
+      if (caption) caption.innerHTML = "";
+      return;
+    }
+
+    const { attrs, records } = ledger;
+    const invested = attrs.invested_gbp;
+    const roiPct = attrs.total_roi_pct;
+    summary.innerHTML = `
+      <button class="roi-capital" data-roi-action="edit-invested" title="Set what you invested">
+        <span class="roi-capital-label">Invested</span>
+        <span class="roi-capital-value">${invested === null || invested === undefined ? "Set amount" : this._gbp(invested)}</span>
+      </button>
+      <div class="roi-stats">
+        <div class="roi-stat"><span>Declared total</span><b>${this._gbp(attrs.total_gbp)}</b></div>
+        <div class="roi-stat"><span>Board announced</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
+        <div class="roi-stat"><span>Self estimated</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
+        <div class="roi-stat"><span>Return</span><b>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
+      </div>`;
+
+    list.innerHTML =
+      (records.length
+        ? records.map((r) => this._roiRowHTML(r)).join("")
+        : `<div class="roi-empty">No period declared yet. Add the first figure the board announced.</div>`) +
+      `<div class="roi-actions"><button class="roi-btn roi-btn--primary" data-roi-action="add">Add period</button></div>`;
+
+    if (caption) {
+      const pending = attrs.current_basis === "estimated_from_last_declared_rate";
+      const selfNow = attrs.current_source === "self";
+      const figure = attrs.current_gbp === null || attrs.current_gbp === undefined || !Number.isFinite(Number(attrs.current_gbp))
+        ? null : Number(attrs.current_gbp);
+      if (figure === null) {
+        caption.innerHTML = "";
+      } else if (pending) {
+        caption.innerHTML = `Current period not yet declared — estimated at the last rate: <b>~£${this._fmt(figure, 2)}</b>`;
+      } else if (selfNow) {
+        caption.innerHTML = `Current period is <b>your own estimate</b>, not a board announcement: <b>£${this._fmt(figure, 2)}</b>`;
+      } else {
+        caption.innerHTML = `Current period declared by the board: <b>£${this._fmt(figure, 2)}</b>`;
+      }
+    }
+
+    summary.querySelectorAll('[data-roi-action="edit-invested"]').forEach((btn) =>
+      btn.addEventListener("click", () => this._showInvestedForm()));
+    this._bindRoiList();
+  }
+
+  _roiRowHTML(record) {
+    const value = Number.isFinite(Number(record.value_gbp)) ? Number(record.value_gbp) : null;
+    const roiRaw = record.roi_pct;
+    const roi = roiRaw === null || roiRaw === undefined || !Number.isFinite(Number(roiRaw)) ? null : Number(roiRaw);
+    const self = record.source === "self";
+    return `
+      <div class="roi-row${self ? " roi-row--self" : ""}" data-record="${this._escape(record.id)}">
+        <div class="roi-row-main">
+          <span class="roi-row-dates">${this._fmtMonth(record.period_start)} – ${this._fmtMonth(record.period_end)}${self ? ` <span class="roi-tag">self estimate</span>` : ""}</span>
+          <span class="roi-row-rate">${this._fmt(Number(record.rate_p_per_w), 2)} p/W × ${this._fmt(Number(record.capacity_watts), 0)} W${record.note ? ` · <span class="roi-note">${this._escape(record.note)}</span>` : ""}</span>
+        </div>
+        <div class="roi-row-money">
+          <span class="roi-row-value">${value === null ? "—" : `${self ? "~" : ""}£${this._fmt(value, 2)}`}</span>
+          <span class="roi-row-roi">${roi === null ? "ROI —" : `ROI ${this._fmt(roi, 2)}%`}</span>
+        </div>
+        <div class="roi-row-actions">
+          <button class="roi-btn roi-icon" data-roi-action="edit" aria-label="Edit this period">&#9998;</button>
+          <button class="roi-btn roi-icon roi-icon--danger" data-roi-action="delete" aria-label="Remove this period">&#10005;</button>
+        </div>
+      </div>`;
+  }
+
+  _bindRoiList() {
+    const list = this._roiModalRoot("list");
+    if (!list) return;
+    list.querySelectorAll('[data-roi-action="add"]').forEach((btn) =>
+      btn.addEventListener("click", () => this._showRoiForm(null)));
+    list.querySelectorAll('[data-roi-action="edit"]').forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const record = (this._roiLedger()?.records || [])
+          .find((r) => r.id === btn.closest("[data-record]")?.getAttribute("data-record"));
+        if (record) this._showRoiForm(record);
+      }));
+    list.querySelectorAll('[data-roi-action="delete"]').forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        const recordId = btn.closest("[data-record]")?.getAttribute("data-record");
+        if (!recordId || !window.confirm("Remove this payment record?")) return;
+        try {
+          await this._hass.callService("kirkhill_wind", "remove_payment_record", { record_id: recordId });
+          this._renderRoiModal();
+        } catch (err) {
+          this._roiFormError(err);
+        }
+      }));
+  }
+
+  // ---- ledger forms (periods + capital) -----------------------------------
+
+  _fmtMonth(iso) {
+    // Rows read as "Feb 2025 - Jun 2026": a period is whole months, so the
+    // day of the stored 1st/last-day boundary is noise on screen.
+    if (!iso) return "—";
+    const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  }
+
+  _monthLastDay(month) {
+    // "2026-06" -> "2026-06-30". Day 0 of the next month is the last day of
+    // this one, so leap February comes out right without a lookup table.
+    const year = Number(month.slice(0, 4));
+    const monthIndex = Number(month.slice(5, 7));
+    const last = new Date(year, monthIndex, 0).getDate();
+    return `${month}-${String(last).padStart(2, "0")}`;
+  }
+
+  _nextPeriodStart(records) {
+    // A new line starts the month after the latest declared period ends:
+    // Feb 2025 -> Jun 2026 offers 2026-07. Only the start is offered -- when
+    // the board's next period ends is not ours to guess.
+    if (!records || !records.length) return "";
+    const latest = records.reduce((a, b) => ((a.period_end || "") > (b.period_end || "") ? a : b));
+    const iso = String(latest.period_end || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+    let year = Number(iso.slice(0, 4));
+    let month = Number(iso.slice(5, 7)) + 1;
+    if (month > 12) { month = 1; year += 1; }
+    return `${year}-${String(month).padStart(2, "0")}`;
+  }
+
+  _roiSlot() {
+    return this._roiModalRoot("slot");
+  }
+
+  _roiClearForm() {
+    const slot = this._roiSlot();
+    if (slot) slot.innerHTML = "";
+    this._roiFormOpen = false;
+  }
+
+  _roiFormError(err) {
+    const slot = this._roiSlot();
+    const target = slot?.querySelector('[data-roi="error"]') || this._roiModalRoot("caption");
+    if (target) {
+      target.innerHTML = "";
+      target.textContent = err?.message || "Save failed";
+    }
+  }
+
+  _showRoiForm(record) {
+    const slot = this._roiSlot();
+    if (!slot) return;
+    this._roiFormOpen = true;
+    const r = record || {};
+    // Capacity is blank for a new record: the service defaults it to the owner
+    // watts the API reports now, while an edit sends the watts in force then.
+    const startMonth = record ? String(r.period_start || "").slice(0, 7) : this._nextPeriodStart(this._roiLedger()?.records);
+    const endMonth = record ? String(r.period_end || "").slice(0, 7) : "";
+    const sourceChecked = record ? r.source !== "self" : true;
+
+    slot.innerHTML = `
+      <div class="roi-form">
+        <div class="roi-form-title">${record ? "Edit period" : "Add period"}</div>
+        <label class="roi-label" for="roi-start">Period start (month)</label>
+        <input class="roi-input" id="roi-start" type="month" placeholder="YYYY-MM" value="${this._escape(startMonth)}" />
+        <label class="roi-label" for="roi-end">Period end (month)</label>
+        <input class="roi-input" id="roi-end" type="month" placeholder="YYYY-MM" value="${this._escape(endMonth)}" />
+        <label class="roi-label" for="roi-rate">Rate announced (p/W)</label>
+        <input class="roi-input" id="roi-rate" type="number" min="0.01" max="1000" step="0.1" value="${r.rate_p_per_w ?? ""}" />
+        <label class="roi-label" for="roi-watts">Watts owned (W)</label>
+        <input class="roi-input" id="roi-watts" type="number" min="0" step="1" value="${r.capacity_watts ?? ""}" placeholder="defaults to today's capacity" />
+        <label class="roi-label" for="roi-note">Note (optional)</label>
+        <input class="roi-input" id="roi-note" type="text" maxlength="200" value="${this._escape(r.note || "")}" placeholder="AGM, meeting, statement" />
+        <label class="roi-check">
+          <input type="checkbox" id="roi-source" ${sourceChecked ? "checked" : ""} />
+          <span>Board announced</span>
+        </label>
+        <div class="roi-hint">Untick to keep it as your own estimate: it is tagged with ~ and counted under the self total.</div>
+        <div class="roi-hint">Months only: a period runs from the 1st to the last day.</div>
+        <div class="roi-actions">
+          <button class="roi-btn" data-roi-action="cancel">Cancel</button>
+          <button class="roi-btn roi-btn--primary" data-roi-action="save">Save</button>
+        </div>
+        <div class="roi-hint roi-error" data-roi="error"></div>
+      </div>`;
+
+    slot.querySelector('[data-roi-action="cancel"]').addEventListener("click", () => this._roiClearForm());
+    slot.querySelector('[data-roi-action="save"]').addEventListener("click", () => this._saveRoiForm(slot, record));
+    slot.querySelectorAll("input").forEach((input) =>
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") slot.querySelector('[data-roi-action="save"]').click();
+      }));
+    const first = slot.querySelector("input");
+    if (first) first.focus();
+  }
+
+  async _saveRoiForm(slot, record) {
+    const value = (sel) => slot.querySelector(sel)?.value?.trim() || "";
+    const start = value("#roi-start");
+    const end = value("#roi-end");
+    const rate = parseFloat(value("#roi-rate"));
+    const wattsRaw = value("#roi-watts");
+    const watts = wattsRaw === "" ? null : parseFloat(wattsRaw);
+    const note = value("#roi-note");
+
+    // Validate here as well as on the backend: a rejected service call is a
+    // silent no-op from the user's side of a form unless the form says why.
+    const fail = (message, input) => {
+      const target = slot.querySelector('[data-roi="error"]');
+      if (target) target.textContent = message;
+      const el = slot.querySelector(input);
+      if (el) { el.setAttribute("data-error", "true"); el.focus(); }
+      return false;
+    };
+    if (!start || !end) return fail("Both period months are required.", start ? "#roi-end" : "#roi-start");
+    const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+    if (!MONTH_RE.test(start) || !MONTH_RE.test(end)) {
+      return fail("A period is two months, entered as YYYY-MM (e.g. 2026-07).", MONTH_RE.test(start) ? "#roi-end" : "#roi-start");
+    }
+    if (end < start) return fail("The end month must not be before the start month.", "#roi-end");
+    if (!Number.isFinite(rate) || rate <= 0) return fail("Enter the rate the board announced, in p/W.", "#roi-rate");
+    if (watts !== null && (!Number.isFinite(watts) || watts < 0)) return fail("Watts owned must be 0 or more.", "#roi-watts");
+
+    const payload = {
+      period_start: `${start}-01`,
+      period_end: this._monthLastDay(end),
+      rate_p_per_w: rate,
+      source: slot.querySelector("#roi-source")?.checked ? "board" : "self",
+    };
+    if (watts !== null) payload.capacity_watts = watts;
+    if (note) payload.note = note;
+    if (record) payload.record_id = record.id;
+
+    try {
+      await this._hass.callService(
+        "kirkhill_wind",
+        record ? "update_payment_record" : "add_payment_record",
+        payload
+      );
+    } catch (err) {
+      return fail(err?.message || "Save failed", null);
+    }
+    this._roiClearForm();
+    this._renderRoiModal();
+    this._update();
+    return true;
+  }
+
+  _showInvestedForm() {
+    const slot = this._roiSlot();
+    if (!slot) return;
+    this._roiFormOpen = true;
+    const current = this._roiLedger()?.attrs?.invested_gbp ?? null;
+    slot.innerHTML = `
+      <div class="roi-form">
+        <div class="roi-form-title">Invested amount</div>
+        <label class="roi-label" for="roi-invested">Capital invested (GBP)</label>
+        <input class="roi-input" id="roi-invested" type="number" min="0" step="0.01" value="${current ?? ""}" placeholder="e.g. 5000" />
+        <div class="roi-hint">Stored with the ledger, never in the config entry. Every ROI figure is measured against it.</div>
+        <div class="roi-actions">
+          <button class="roi-btn" data-roi-action="cancel">Cancel</button>
+          ${current === null ? "" : `<button class="roi-btn roi-btn--danger" data-roi-action="clear">Clear</button>`}
+          <button class="roi-btn roi-btn--primary" data-roi-action="save">Save</button>
+        </div>
+        <div class="roi-hint roi-error" data-roi="error"></div>
+      </div>`;
+
+    slot.querySelector('[data-roi-action="cancel"]').addEventListener("click", () => this._roiClearForm());
+    const clearBtn = slot.querySelector('[data-roi-action="clear"]');
+    if (clearBtn) {
+      clearBtn.addEventListener("click", async () => {
+        try {
+          await this._hass.callService("kirkhill_wind", "set_invested_amount", { invested_gbp: null });
+          this._roiClearForm();
+          this._renderRoiModal();
+          this._update();
+        } catch (err) {
+          this._roiFormError(err);
+        }
+      });
+    }
+    slot.querySelector('[data-roi-action="save"]').addEventListener("click", async () => {
+      const raw = slot.querySelector("#roi-invested")?.value?.trim() || "";
+      const amount = raw === "" ? null : parseFloat(raw);
+      const target = slot.querySelector('[data-roi="error"]');
+      if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
+        if (target) target.textContent = "Enter an amount of 0 or more, or clear it.";
+        return;
+      }
+      try {
+        await this._hass.callService("kirkhill_wind", "set_invested_amount", { invested_gbp: amount });
+      } catch (err) {
+        if (target) target.textContent = err?.message || "Save failed";
+        return;
+      }
+      this._roiClearForm();
+      this._renderRoiModal();
+      this._update();
+    });
+    const input = slot.querySelector("#roi-invested");
+    if (input) {
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") slot.querySelector('[data-roi-action="save"]').click();
+      });
+      input.focus();
+      input.select();
+    }
   }
 
   _openTurbineStatus() { this._showTurbineStatusModal(); }
@@ -2253,7 +2643,6 @@ _buildHeaderChips(layout) {
           <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="282" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="302">Share (‱)</text>
           <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="302" text-anchor="end">—</text>
-          <!-- Owner price chip (pence/kWh), on the title row, aligned to the Value column -->
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
@@ -2281,7 +2670,34 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="538" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="558">Power (MW)</text>
           <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="558" text-anchor="end">—</text>
-          <!-- Site/CfD price chip (GBP/MWh), on the title row, aligned to the Value column -->
+        </g>
+
+        <!-- Return on investment: the same box, columns and styling as Owner
+             and Site, because finance belongs beside them rather than on a tab
+             of its own. Clicking it opens the ledger modal -- this is the only
+             place money appears on the card. -->
+        <g class="roi-gen" data-roi-panel="group">
+          <rect x="${layout.chipSiteGenX}" y="588" width="${layout.chipSiteGenW}" height="232" rx="8"/>
+          <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="610">Return on investment</text>
+          <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="632">Measure</text>
+          <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="632" text-anchor="end">Value</text>
+
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="654">Invested</text>
+          <text class="site-gen-value" data-roi-cell="invested" x="${layout.chipSiteGenValueX}" y="654" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="674">Declared total</text>
+          <text class="site-gen-value" data-roi-cell="total" x="${layout.chipSiteGenValueX}" y="674" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="694">Board announced</text>
+          <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="694" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="714">Self estimated</text>
+          <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="714" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="734">Return</text>
+          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="734" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="754">Periods</text>
+          <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="754" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="774">Published rate</text>
+          <text class="site-gen-value" data-roi-cell="rate" x="${layout.chipSiteGenValueX}" y="774" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="794">Current period</text>
+          <text class="site-gen-value" data-roi-cell="current" x="${layout.chipSiteGenValueX}" y="794" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -2373,6 +2789,35 @@ _buildHeaderChips(layout) {
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
 
+
+    // Return on investment panel — the ledger's headline, drawn like Owner and
+    // Site. Every number is declared or explicitly estimated, and this is the
+    // only money on the card: no £ column, no £/h cells, no pills.
+    const ledgerId = config.payment_ledger_entity;
+    const setRoi = (name, value) => this._setText(root, `[data-roi-cell="${name}"]`, value);
+    const gbpOf = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? "—" : `£${this._fmt(Number(v), 2)}`);
+    const roiAttrs = ledgerId && this._hass?.states?.[ledgerId] ? this._hass.states[ledgerId].attributes || {} : null;
+    if (!roiAttrs) {
+      ["invested", "total", "board", "self", "roi", "periods", "rate", "current"].forEach((cell) => setRoi(cell, "—"));
+    } else {
+      const roiRecords = Array.isArray(roiAttrs.records) ? roiAttrs.records : [];
+      const invested = roiAttrs.invested_gbp;
+      setRoi("invested", invested === null || invested === undefined ? "Not set" : `£${this._fmt(Number(invested), 2)}`);
+      setRoi("total", gbpOf(roiAttrs.total_gbp));
+      setRoi("board", gbpOf(roiAttrs.board_total_gbp));
+      setRoi("self", gbpOf(roiAttrs.self_total_gbp));
+      const roiPct = roiAttrs.total_roi_pct;
+      setRoi("roi", roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`);
+      setRoi("periods", `${roiRecords.length}`);
+      const published = roiAttrs.latest_board_rate_p_per_w;
+      setRoi("rate", published === null || published === undefined ? "—" : `${this._fmt(Number(published), 2)} p/W`);
+      // "~" whenever the figure is not a board declaration: a period awaiting
+      // the board, or one the member estimated themselves.
+      const pending = roiAttrs.current_basis === "estimated_from_last_declared_rate" || roiAttrs.current_source === "self";
+      const current = roiAttrs.current_gbp;
+      const currentFigure = current === null || current === undefined || !Number.isFinite(Number(current)) ? null : Number(current);
+      setRoi("current", currentFigure === null ? "—" : `${pending ? "~" : ""}£${this._fmt(currentFigure, 2)}`);
+    }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
     const versionPill = root.querySelector('[data-version="indicator"]');
@@ -2476,6 +2921,10 @@ _buildHeaderChips(layout) {
     // Generation figures are re-laid against the panel edge so a long number
     // can never spill over the labels.
     this._fitValueColumns();
+
+    // An open ROI modal reads the same attributes, so it gets the same refresh
+    // -- but only while it shows the list; a half-typed form is never rebuilt.
+    this._refreshRoiModal();
   }
 
   // Size each top-row pill to the text it actually holds, then lay the row out
@@ -2592,7 +3041,7 @@ _buildHeaderChips(layout) {
       labelLeft
     );
     setX(
-      '[data-colh="gen"], [data-user-gen^="gen-"], [data-user-gen="share"], [data-user-gen="sharepct"], [data-site-gen^="gen-"], [data-site-gen="capacity"], [data-site-gen="power"]',
+      '[data-colh="gen"], [data-user-gen^="gen-"], [data-user-gen="share"], [data-user-gen="sharepct"], [data-site-gen^="gen-"], [data-site-gen="capacity"], [data-site-gen="power"], [data-roi-cell]',
       genX
     );
 
@@ -2718,6 +3167,52 @@ _buildHeaderChips(layout) {
       /* Site Generation & Capacity panel (below Owner) */
       .site-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
       .site-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
+
+      /* Return on investment panel — same box treatment as Owner and Site */
+      .roi-gen rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
+      .roi-gen rect:hover { stroke: var(--khscada-primary-color); stroke-width: 2; }
+
+      /* ...and its modal: the ledger, the capital input and both forms */
+      .roi-summary { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+      .roi-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+      .roi-stat { border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 8px 10px; background: var(--khscada-card-bg); }
+      .roi-stat span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--khscada-secondary-color); }
+      .roi-stat b { display: block; margin-top: 3px; font-weight: 600; color: var(--khscada-primary-color); }
+      .roi-capital { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; border: 1px solid var(--khscada-divider); border-radius: 16px; background: var(--khscada-card-bg); color: var(--khscada-primary-color); padding: 6px 12px; cursor: pointer; font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
+      .roi-capital:hover { border-color: var(--khscada-accent-color); }
+      .roi-capital-label { color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
+      .roi-list { display: flex; flex-direction: column; gap: 6px; }
+      .roi-empty { color: var(--khscada-secondary-color); font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); padding: 4px 2px; }
+      .roi-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--khscada-divider); border-radius: 8px; background: var(--khscada-card-bg); }
+      .roi-row--self { border-style: dashed; }
+      .roi-row-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+      .roi-row-dates { font-weight: 600; color: var(--khscada-primary-color); font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); }
+      .roi-row-rate { color: var(--khscada-secondary-color); font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); overflow-wrap: anywhere; }
+      .roi-note { font-style: italic; }
+      .roi-tag { display: inline-block; padding: 0 6px; border: 1px solid var(--khscada-warn-color, #ffb300); border-radius: 8px; color: var(--khscada-warn-color, #ffb300); font-size: 11px; font-style: normal; vertical-align: middle; }
+      .roi-row-money { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
+      .roi-row-value { font-weight: 600; color: var(--khscada-primary-color); }
+      .roi-row-roi { font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); font-weight: 600; color: var(--khscada-success-color); }
+      .roi-row-actions { display: flex; gap: 6px; }
+      .roi-caption { margin-top: 10px; font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-secondary-color); }
+      .roi-caption b { color: var(--khscada-primary-color); }
+      .roi-btn { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 6px 14px; cursor: pointer; }
+      .roi-btn:hover { color: var(--khscada-primary-color); }
+      .roi-btn--primary { background: color-mix(in srgb, var(--khscada-accent-color) 20%, transparent); color: var(--khscada-accent-color); }
+      .roi-btn--danger { background: color-mix(in srgb, var(--khscada-error-color) 15%, transparent); color: var(--khscada-error-color); }
+      .roi-icon { width: 30px; height: 28px; padding: 0; border-radius: 8px; border: 1px solid var(--khscada-divider); background: var(--khscada-card-bg); }
+      .roi-icon--danger:hover { color: var(--khscada-error-color); border-color: var(--khscada-error-color); }
+      .roi-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+      .roi-form { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--khscada-divider); padding-top: 12px; margin-top: 12px; }
+      .roi-form-title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; color: var(--khscada-secondary-color); }
+      .roi-label { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; }
+      .roi-input { font: var(--ha-font-size, 16px) var(--khscada-font-family); color: var(--khscada-primary-color); background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box; }
+      .roi-input:focus { outline: none; border-color: var(--khscada-accent-color); }
+      .roi-input[data-error="true"] { border-color: var(--khscada-error-color); }
+      .roi-check { display: flex; align-items: center; gap: 8px; font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-primary-color); cursor: pointer; }
+      .roi-check input { width: 16px; height: 16px; accent-color: var(--khscada-accent-color); cursor: pointer; }
+      .roi-hint { font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-secondary-color); }
+      .roi-error { color: var(--khscada-error-color); }
       .site-gen-title { font: 600 calc(var(--ha-font-size-xlarge, 20px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-primary-color); }
       .site-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 

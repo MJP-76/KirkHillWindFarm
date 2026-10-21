@@ -130,10 +130,10 @@ all three are disabled in the entity registry and set to `0.0`**:
 `number.<farm>_owner_rate_p_w` (Owner rate, p/W — superseded by the payment
 ledger, which holds a rate per declared period),
 `number.<farm>_owner_price_p_kwh` (Owner price, p/kWh) and
-`number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh). **No card
-reads them any more**: the `Value (£)` column and the `£/h` cells were removed
-from the SCADA card, which now shows generation only, and money lives on the
-**Return on investment** tab (see [Sensors](sensors.md)). Re-enable one with
+`number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh). **No card reads them any more**: the `Value (£)` column and the `£/h` cells
+were removed from the Owner and Site panels — generation only there — and
+money lives in the **Return on investment** panel (see [Sensors](sensors.md)).
+Re-enable one with
 `hab entity enable <entity_id>` if you want it for something else.
 
 > **Note:** v4.11.7 removed the "projected annual earnings" setup fields. Those

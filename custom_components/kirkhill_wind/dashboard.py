@@ -215,6 +215,10 @@ OBSOLETE_VIEW_PATHS: set[str] = {
     "history",
     "finances",
     "turbines",
+    # The ROI view existed for hours on 2026-10-21 before finance became the
+    # third panel on the SCADA card; without this entry installed dashboards
+    # would keep the orphaned tab forever.
+    "roi",
 }
 OBSOLETE_SECTION_KEYS: dict[str, set[str]] = {
     "overview": {
@@ -256,9 +260,7 @@ def card_match_key(card: dict) -> str | None:
         ]
         if child_keys:
             return f"container:{ctype}:{'|'.join(child_keys)}"
-    # Both bundled cards carry no title, so a title-based key would never
-    # match them and every merge would append another copy.
-    if ctype in ("custom:kirkhill-wind-scada", "custom:kirkhill-wind-roi"):
+    if ctype == "custom:kirkhill-wind-scada":
         return ctype
     if ctype == "custom:apexcharts-card" and card.get("header", {}).get("title"):
         return f"{ctype}:title:{card['header']['title']}"
@@ -519,6 +521,7 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             "owner", "farm_generation_today"
                         ),
                         "owner_share_entity": farm_scoped("owner", "farm_owner_share"),
+                        "payment_ledger_entity": farm_scoped("owner", "payment_ledger"),
                         "wind_speed_entity": farm("farm_wind_speed"),
                         "wind_forecast_entity": farm(
                             "open_meteo_next_hour_wind_speed_mps"
@@ -536,21 +539,6 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         ],
                         "turbines": scada_turbines,
                     },
-                ],
-            },
-            {
-                # Money lives here and nowhere on the SCADA card: the declared
-                # periods, the rate behind each, the capital invested and every
-                # period's return against it.
-                "title": "Return on investment",
-                "path": "roi",
-                "icon": "mdi:finance",
-                "cards": [
-                    {
-                        "type": "custom:kirkhill-wind-roi",
-                        "title": "",
-                        "payment_ledger_entity": farm_scoped("owner", "payment_ledger"),
-                    }
                 ],
             },
         ],

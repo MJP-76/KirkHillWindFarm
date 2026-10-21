@@ -28,7 +28,7 @@
 - **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry, and **no card draws a £ column any more** (removed 2026-10-21). Previously `live generation × configured price`, `£0.00` when no price was set
   - Value (2025/2024/alltime) [GBP] report `unknown` in every case — see the suppression note below
 - **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` — for example, at a declared 20p/W, 1,000 owned watts reads **£200**. Its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`. **Nothing reads it**: no card draws a member-savings line any more
-- **Payment ledger [GBP] — enabled; the source of every figure on the Return on investment card.** One line item per period the board declared a p/W rate for, stored in Home Assistant's storage (one file per config entry, never `entry.options`). State is the **declared total**, `Σ watts × rate ÷ 100`, and reads **`unknown` while no period has been declared — never `£0.00`**. Periods are whole months — `period_start` lands on the 1st and `period_end` on the last day of its month. Attributes: `records` (each `{id, period_start, period_end, rate_p_per_w, capacity_watts, announced_on, note, source, value_gbp, roi_pct}`), `record_count`, `total_gbp`, `board_total_gbp`, `self_total_gbp`, `invested_gbp`, `total_roi_pct`, `latest_rate_p_per_w`, `latest_board_rate_p_per_w`, `latest_period_start`, `latest_period_end`, `current_gbp`, `current_basis` (`declared` · `estimated_from_last_declared_rate` · `no_entries`), `current_source` (`board` · `self`), `current_year_gbp` and `year_totals_gbp`. `current_gbp` is the *current* period's figure and stays out of `total_gbp` until it is declared; `roi_pct` is `value ÷ invested × 100` and reads `None` until an invested amount is entered — never `0%`. Writable only through the `kirkhill_wind.add/update/remove_payment_record` and `set_invested_amount` services. Always available — it reads local storage, not the API
+- **Payment ledger [GBP] — enabled; the source of every figure in the Return on investment panel.** One line item per period the board declared a p/W rate for, stored in Home Assistant's storage (one file per config entry, never `entry.options`). State is the **declared total**, `Σ watts × rate ÷ 100`, and reads **`unknown` while no period has been declared — never `£0.00`**. Periods are whole months — `period_start` lands on the 1st and `period_end` on the last day of its month. Attributes: `records` (each `{id, period_start, period_end, rate_p_per_w, capacity_watts, announced_on, note, source, value_gbp, roi_pct}`), `record_count`, `total_gbp`, `board_total_gbp`, `self_total_gbp`, `invested_gbp`, `total_roi_pct`, `latest_rate_p_per_w`, `latest_board_rate_p_per_w`, `latest_period_start`, `latest_period_end`, `current_gbp`, `current_basis` (`declared` · `estimated_from_last_declared_rate` · `no_entries`), `current_source` (`board` · `self`), `current_year_gbp` and `year_totals_gbp`. `current_gbp` is the *current* period's figure and stays out of `total_gbp` until it is declared; `roi_pct` is `value ÷ invested × 100` and reads `None` until an invested amount is entered — never `0%`. Writable only through the `kirkhill_wind.add/update/remove_payment_record` and `set_invested_amount` services. Always available — it reads local storage, not the API
 - **Owner price (number) [p/kWh] — DISABLED from v4.16.1**, input `0.0`
 - **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. Superseded by the ledger's per-period rates; no card reads it
 - **Negotiated price (number) [GBP/MWh] — DISABLED from v4.16.1**, input `0.0`
@@ -56,19 +56,20 @@ Home Assistant. The generated dashboard formats those values for display with
 automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and
 rounds them to **2 decimal places**.
 
-!!! note "Financial figures: disabled, and now off the cards"
+!!! note "Financial figures: disabled, and off the Owner and Site panels"
     **2026-10-09** — the 19 value/savings sensors and the 3 price/rate `number`
     entities were **disabled** with their inputs at `0.0`, and nothing is
     calculated from them. Re-enable one with `hab entity enable <entity_id>` if
     you want it for something else.
 
-    **2026-10-21 — no card draws money any more.** The `Value (£)` column, the
-    `£/h` cells, the member-savings line and both price pills were removed from
-    the SCADA card (Owner and Site). Every financial figure now comes from the
-    **Payment ledger** sensor above, shown on the **Return on investment** tab;
-    the disabled entities stay disabled and unread.
+    **2026-10-21 — the panels carry generation only.** The `Value (£)` column,
+    the `£/h` cells, the member-savings line and both price pills were removed
+    from the Owner and Site panels. Every financial figure comes from the
+    **Payment ledger** sensor above and is drawn in the **Return on
+    investment** panel — the third panel below Site — with the ledger and both
+    forms behind a click; the disabled entities stay disabled and unread.
 
-**As sensors** — nothing on either card reads them any more — the `Value (…)`
+**As sensors** — nothing reads them any more — the `Value (…)`
 entities are **live-accurate when a price is set**. Two independent
 price entities hold the prices, both `0.0` by default:
 `number.kirk_hill_wind_farm_owner_price_p_kwh` (Owner price in p/kWh — enter `6`
