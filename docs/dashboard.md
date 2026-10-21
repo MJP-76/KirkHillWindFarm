@@ -97,10 +97,11 @@ and duration.
     `hab entity enable <entity_id>`.
 
     **2026-10-21 — three cells are back, from a new source** (see *The payment
-    ledger* below): the **Owner pill** (declared total, and the pop-out's entry
-    point), the Owner panel's **All time £** and **Member savings**. They are
-    fed by `sensor.<farm>_payment_ledger`, not by the disabled entities — those
-    stay disabled and zeroed, and every other money cell stays `—`.
+    ledger* below): the **Owner pill** (the latest published p/W rate, and the
+    pop-out's entry point), the Owner panel's **All time £** and **Member
+    savings**. They are fed by `sensor.<farm>_payment_ledger`, not by the
+    disabled entities — those stay disabled and zeroed, and every other money
+    cell stays `—`.
 
 The standalone **Finances tab was removed in v4.8.79** — its content (today's
 earnings, this month, year to date) now lives in the SCADA card itself. Every
@@ -154,9 +155,11 @@ periods**, not as a price applied to generation:
   declaration applies, never how long the money accrues for.
 - **Clicking the Owner pill pops the ledger out**: one dated row per
   declaration with its rate, watts and £ figure, plus **Add / edit / remove**.
-  The pill itself shows the **declared total** (`Total £400.00`, `Total —` when
-  nothing is declared). Payment dates are not final yet, so a period is edited
-  by changing its dates — the figures do not move with them.
+  The pill itself names the **latest published rate** (`Published 20 p/W`,
+  `Published —` while nothing has been declared) and shows **no money**: the
+  figures live on Member savings and All time, so the pill never repeats them.
+  Payment dates are not final yet, so a period is edited by changing its dates —
+  the figures do not move with them.
 - **`All time` shows the declared total.** It is a sum of what the board
   declared, which is why it can be shown where `kWh × today's price` is still
   suppressed (see below).
@@ -165,7 +168,7 @@ periods**, not as a price applied to generation:
   rate, drawn with `~`, reported as
   `current_basis=estimated_from_last_declared_rate`, and **kept out of the
   total** until the board declares. With no ledger entries at all, all three
-  cells read `—`, never `£0.00`.
+  cells read `—`, and no money cell ever claims `£0.00`.
 - **Storage and writes:** entries live in Home Assistant's storage (one file
   per config entry, never `entry.options`), and the only way to change them is
   the `kirkhill_wind.add_payment_record`, `update_payment_record` and

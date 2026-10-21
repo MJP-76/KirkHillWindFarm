@@ -337,8 +337,10 @@ decision changes.
     not reopen the "no accrual" rule of 2026-10-08 — it is its visible
     companion: derived, marked, and never presented as something announced.
     It also answers "does a period count before it is declared": **no.**
-  - **Exactly three cells return, and no more:** the Owner pill (declared
-    total; also the pop-out's entry point), the Owner panel's **All time £**
+  - **Exactly three cells return, and no more:** the Owner pill (the latest
+    published p/W rate — deliberately no money on the pill, so it does not
+    repeat the row below it — and also the pop-out's entry point), the Owner
+    panel's **All time £**
     (the ledger total in place of the suppressed `kWh × price`) and **Member
     savings** (the current period). Every other money cell — the timeframe £
     column, both £/h cells, the Site panel — stays suppressed, and all 22

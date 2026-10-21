@@ -15,8 +15,9 @@ Connects to the Kirk Hill dashboard API using your personal API key and provides
 ## Project notes
 
 Owner/site generation kWh values are **live dynamic API values**. **Financial
-figures are on hold for now (v4.16.2)** — except the **Owner pill** (declared
-total), the Owner panel's **All time** £ cell and **Member savings**, which
+figures are on hold for now (v4.16.2)** — except the **Owner pill** (latest
+published p/W rate), the Owner panel's **All time** £ cell and **Member
+savings**, which
 come from the **payment ledger**: the periods the board has declared a p/W
 rate for, with the pill popping those dated line items out to edit. Every other
 money cell stays **empty** (`—`) and the price/rate entities stay disabled.
@@ -77,7 +78,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
 - **Price and rate entities — disabled from v4.16.1** — `number.<farm>_negotiated_price_gbp_mwh`, `number.<farm>_owner_price_p_kwh` and `number.<farm>_owner_rate_p_w` still exist but are disabled in the entity registry and set to `0.0`, so the £ value column and the £/h rates render empty until the board confirms the payment model
-- **Payment ledger** — `sensor.<farm>_payment_ledger` holds one dated line item per p/W rate the board has declared (`watts × p/W ÷ 100` each) and reports the declared total, which reads `unknown` until something is declared. It feeds the Owner pill, the Owner **All time** £ cell and **Member savings**; the current period shows `~` while it is still an estimate from the last announced rate. Changed only through the `kirkhill_wind.add_payment_record` / `update_payment_record` / `remove_payment_record` services, and clicking the Owner pill opens the line items for editing
+- **Payment ledger** — `sensor.<farm>_payment_ledger` holds one dated line item per p/W rate the board has declared (`watts × p/W ÷ 100` each) and reports the declared total, which reads `unknown` until something is declared. It supplies the Owner pill's published-rate label, the Owner **All time** £ cell and **Member savings**; the current period shows `~` while it is still an estimate from the last announced rate. Changed only through the `kirkhill_wind.add_payment_record` / `update_payment_record` / `remove_payment_record` services, and clicking the Owner pill opens the line items for editing
 - **Overview tab removed** — dashboard is now the single **Kirk Hill SCADA** tab (History removed in v4.8.77, Finances removed in v4.8.79, Turbines removed in v4.8.80)
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
 - **Optimized fetch tiers** — "yesterday" moved to hourly tier (static once day ends); week/month/ytd/year/alltime also hourly; only "today" fetches every poll

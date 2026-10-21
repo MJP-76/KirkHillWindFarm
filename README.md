@@ -17,7 +17,7 @@ It pulls current data for both OpenAPI scopes:
 - `site` (whole-site values)
 
 > - **Financial figures are on hold for now (v4.16.2)** — with one exception:
->   the **Owner pill** (declared total), the Owner panel's **All time** £ cell
+>   the **Owner pill** (latest published p/W rate), the Owner panel's **All time** £ cell
 >   and **Member savings** now come from a **payment ledger** of the periods
 >   the board has declared a p/W rate for, and clicking the pill pops those
 >   dated line items out to add, edit or remove. Every other money cell still
