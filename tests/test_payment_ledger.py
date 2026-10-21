@@ -24,8 +24,8 @@ from homeassistant.exceptions import HomeAssistantError
 from custom_components.kirkhill_wind.const import DOMAIN, SCOPE_OWNER, SCOPE_SITE
 from custom_components.kirkhill_wind.payment_ledger import (
     BASIS_DECLARED,
-    BASIS_ESTIMATED,
     BASIS_NO_ENTRIES,
+    BASIS_WITHHELD,
     PaymentLedger,
     async_setup_ledger,
     async_unload_ledger,
@@ -199,11 +199,12 @@ class TestFigures:
         assert basis == BASIS_DECLARED
         assert value == 400.0
 
-    def test_time_past_the_last_declaration_is_an_estimate(self):
+    def test_time_past_the_last_declaration_withholds_the_figure(self):
+        # The capital/interest split is unknown, so nothing may be derived:
+        # the period exists, the number does not (decision, 2026-10-21).
         value, basis = current_figure([normalise_record(_record())])
-        assert basis == BASIS_ESTIMATED
-        # Derived from the last declared rate -- the same 400, marked as pending.
-        assert value == 400.0
+        assert basis == BASIS_WITHHELD
+        assert value is None
 
     def test_no_records_at_all(self):
         assert current_figure([]) == (None, BASIS_NO_ENTRIES)
@@ -348,13 +349,16 @@ class TestPaymentLedgerSensor:
         assert attrs["records"][0]["value_gbp"] == 400.0
         assert attrs["scope"] == SCOPE_OWNER
 
-    def test_past_period_is_reported_as_an_estimate(self):
+    def test_past_period_withholds_the_figure_but_not_the_records(self):
         sensor = _sensor()
         attrs = sensor.extra_state_attributes
-        # Today is past PAST_END, so the figure is pending, not declared -- and
-        # it stays out of the total either way.
-        assert attrs["current_basis"] == BASIS_ESTIMATED
-        assert attrs["current_gbp"] == 400.0
+        # Today is past PAST_END: the period exists and its £ stays in the
+        # total, but no *current* figure may be derived until the board's
+        # capital/interest split is published (decision, 2026-10-21).
+        assert attrs["current_basis"] == BASIS_WITHHELD
+        assert attrs["current_gbp"] is None
+        # The source still reports, so the card can tell a self entry apart.
+        assert attrs["current_source"] == "board"
         assert attrs["total_gbp"] == 400.0
 
     def test_available_even_when_the_coordinator_fails(self):

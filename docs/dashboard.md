@@ -94,13 +94,13 @@ and duration.
     deliberately left drawn-but-empty as a standing reminder.
 
     **2026-10-21 — the column is gone and a panel took its place.** The Owner
-    and Site panels carry generation only; money lives in a third panel,
-    **Return on investment**, drawn with the same box, columns and styling as
-    those two, below the Site panel. Click it for the full ledger and its
-    forms. The 22 earnings entities stay disabled and zeroed, and nothing else
-    on the card reads them.
+    and Site panels carry generation only; money lives in a **Return on
+    investment** panel, drawn with the same box, columns and styling as those
+    two, at the **top of the right column, above Owner and Site**. Click it for
+    the full ledger and its forms. The 22 earnings entities stay disabled and
+    zeroed, and nothing else on the card reads them.
 
-### Return on investment (third panel on the SCADA card)
+### Return on investment (top panel of the right column)
 
 Same geometry as the Owner and Site panels — the same box, right-aligned to
 the value column — carrying the headline only:
@@ -114,7 +114,7 @@ the value column — carrying the headline only:
 | Return | `21.50%`, or `—` with no capital entered |
 | Periods | `2` |
 | Published rate | `21 p/W` — board declarations only |
-| Current period | `£537.49`, drawn `~` while pending or self-estimated |
+| Current period | `£537.49` while declared; `—` once past, because the estimate is withheld until the board publishes the capital/interest split |
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 
@@ -128,9 +128,10 @@ the value column — carrying the headline only:
   `—`, never `0%`.
 - **Invested** — set or cleared in the modal; stored in the ledger's Store,
   never `entry.options`.
-- **A caption under the rows** says which of three things the current period
-  is: board-declared, your own estimate, or an estimate awaiting the board
-  (`~£537.49`, priced from the last announced rate).
+- **A caption under the rows** says which of two things the current period is:
+  **declared by the board**, or **your own estimate**. An undeclared period
+  shows neither a caption nor a figure: the estimate is withheld until the
+  board publishes the capital/interest split.
 - **Adding a period opens prefilled** with the month after the latest one ends —
   Feb 2025 → Jun 2026 offers **`2026-07`** — and the end month left blank, since
   when the board's next period closes is not ours to guess.
@@ -161,8 +162,9 @@ on the next setup.
 - **`sensor.<farm>_payment_ledger`** exposes `records` (each with `value_gbp`
   and `roi_pct`), `total_gbp`, `board_total_gbp`, `self_total_gbp`,
   `invested_gbp`, `total_roi_pct`, `latest_rate_p_per_w`,
-  `latest_board_rate_p_per_w`, `current_gbp`, `current_basis`,
-  `current_source`, `current_year_gbp` and `year_totals_gbp`.
+  `latest_board_rate_p_per_w`, `current_gbp`, `current_basis` (`declared` ·
+  `estimate_withheld_split_unknown` · `no_entries`), `current_source`,
+  `current_year_gbp` and `year_totals_gbp`.
 
 ### What the Owner and Site panels no longer show
 
