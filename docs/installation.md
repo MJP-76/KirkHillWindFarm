@@ -127,13 +127,14 @@ After setup, the **Configure** options let you change:
 
 Prices are **not** options fields — they are `number` entities. **From v4.16.1
 all three are disabled in the entity registry and set to `0.0`**:
-`number.<farm>_owner_rate_p_w` (Owner rate, p/W — superseded on the card by the
-payment ledger the Owner pill now opens), `number.<farm>_owner_price_p_kwh`
-(Owner price, p/kWh) and `number.<farm>_negotiated_price_gbp_mwh` (Site/CfD
-price, £/MWh). The £ value column and the £/h cells are still drawn but render
-**empty** (`—`) as a reminder that the model is unfinished (see
-[Sensors](sensors.md)). Re-enable with `hab entity enable <entity_id>` once the
-board confirms how member payments are calculated.
+`number.<farm>_owner_rate_p_w` (Owner rate, p/W — superseded by the payment
+ledger, which holds a rate per declared period),
+`number.<farm>_owner_price_p_kwh` (Owner price, p/kWh) and
+`number.<farm>_negotiated_price_gbp_mwh` (Site/CfD price, £/MWh). **No card
+reads them any more**: the `Value (£)` column and the `£/h` cells were removed
+from the SCADA card, which now shows generation only, and money lives on the
+**Return on investment** tab (see [Sensors](sensors.md)). Re-enable one with
+`hab entity enable <entity_id>` if you want it for something else.
 
 > **Note:** v4.11.7 removed the "projected annual earnings" setup fields. Those
 > were estimated averages feeding a projected model retired in v4.11.5 — earnings

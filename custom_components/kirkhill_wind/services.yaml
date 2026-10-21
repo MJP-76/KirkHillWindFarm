@@ -73,6 +73,18 @@ add_payment_record:
       required: false
       selector:
         text:
+    source:
+      name: Source
+      description: >-
+        "board" when the figure was announced by the board, "self" for your own
+        estimate of a period the board has not declared yet. Omitted means
+        "board".
+      required: false
+      selector:
+        select:
+          options:
+            - board
+            - self
     entry_id:
       name: Entry ID
       description: Optional config entry ID. If omitted, the first entry is used.
@@ -136,6 +148,15 @@ update_payment_record:
       required: false
       selector:
         text:
+    source:
+      name: Source
+      description: Switch between a board announcement and your own estimate.
+      required: false
+      selector:
+        select:
+          options:
+            - board
+            - self
     entry_id:
       name: Entry ID
       description: Optional config entry ID. If omitted, the first entry is used.
@@ -153,6 +174,31 @@ remove_payment_record:
       required: true
       selector:
         text:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID. If omitted, the first entry is used.
+      required: false
+      selector:
+        text:
+
+set_invested_amount:
+  name: Set invested amount
+  description: >-
+    Record what the member invested so the ROI card can quote each period's
+    return against that capital. Send null to clear it back to "not told" --
+    an unknown investment is a different statement from having invested
+    nothing.
+  fields:
+    invested_gbp:
+      name: Invested (GBP)
+      description: Capital invested in pounds; null clears the figure.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 10000000
+          step: 0.01
+          mode: box
     entry_id:
       name: Entry ID
       description: Optional config entry ID. If omitted, the first entry is used.

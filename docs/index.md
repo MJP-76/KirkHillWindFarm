@@ -12,21 +12,19 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-!!! note "Financial figures are on hold — three cells excepted"
-    **As of v4.16.2** the £ column, the £/h cells, the price pills and the
-    member-savings line are shown but **empty** — nothing is calculated and no
-    figure is asserted. **The exception:** the Owner pill, the Owner **All
-    time** £ cell and **Member savings** are fed by the **payment ledger** —
-    one dated line item per p/W rate the board has declared — and clicking the
-    pill pops those line items out to edit. They read `—` only while nothing
-    has been declared. Figures are being worked on in the background against
-    the board's last announcement and return via
-    `hab entity enable <entity_id>`; generation, power and capacity are
+!!! note "Money lives on its own card"
+    **2026-10-21** — the £ column, the £/h cells, the price pills and the
+    member-savings line are **gone from the SCADA card**, Owner and Site both.
+    All money sits on the **Return on investment** tab: the payment ledger of
+    the periods the board has declared a p/W rate for, the amount you invested,
+    and the return against it — board-announced and self-estimated figures kept
+    apart, and nothing reads `£0.00` before something is declared. The old
+    price/rate entities stay disabled; generation, power and capacity are
     unaffected.
 
-    Separately, the **All-time** and **past-year (2025, 2024)** £ values are
-    suppressed (showing `—`), because the API records energy only — never money.
-    See
+    Separately, the **All-time** and **past-year (2025, 2024)** £ *sensors* are
+    still suppressed (showing `—`), because the API records energy only — never
+    money. See
     [Development decisions](development/decisions.md#owner-share-and-earnings-figures).
 
 ## Support me

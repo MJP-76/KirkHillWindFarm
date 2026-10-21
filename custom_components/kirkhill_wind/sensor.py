@@ -30,10 +30,15 @@ from .entity import (
 )
 from .payment_ledger import (
     current_figure,
+    current_year_gbp,
     get_ledger,
+    latest_board_record,
     latest_record,
     ledger_total_gbp,
     record_value_gbp,
+    roi_pct,
+    source_totals_gbp,
+    year_totals_gbp,
 )
 
 TIMEFRAME_LABELS = {
@@ -731,6 +736,11 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
       exposed as ``current_gbp`` + ``current_basis`` and kept out of
       ``total_gbp``, so a derived figure can never be counted twice or mistaken
       for something announced.
+    * **Every record carries a ``source``** — ``board`` (announced) or ``self``
+      (the member's own estimate for a period not yet declared). The total still
+      sums both, but ``board_total_gbp`` / ``self_total_gbp`` say how much of it
+      was announced, and only board records feed
+      ``latest_board_rate_p_per_w``, which is what the pill calls "Published".
 
     Both figures change when a record is added, edited or removed: the ledger
     notifies this entity directly, because a declaration is not coordinator data
@@ -781,17 +791,41 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
         attrs = super().extra_state_attributes
         records = self._ledger.records
         latest = latest_record(records)
+        board = latest_board_record(records)
         current_gbp, current_basis = current_figure(records)
+        totals = source_totals_gbp(records)
+        invested = self._ledger.invested_gbp
+        total = ledger_total_gbp(records)
         attrs["record_count"] = len(records)
-        attrs["records"] = [
-            {**record, "value_gbp": record_value_gbp(record)} for record in records
-        ]
-        attrs["total_gbp"] = ledger_total_gbp(records)
+        # Each record carries its own value and ROI, so the card reports rather
+        # than recalculates: value ÷ invested, both already in this payload.
+        entries = []
+        for record in records:
+            value = record_value_gbp(record)
+            entries.append(
+                {**record, "value_gbp": value, "roi_pct": roi_pct(value, invested)}
+            )
+        attrs["records"] = entries
+        attrs["invested_gbp"] = invested
+        attrs["total_gbp"] = total
+        # No invested amount -> None, never 0: there is no return to quote.
+        attrs["total_roi_pct"] = roi_pct(total, invested)
+        # The total is never replaced by its parts: board and self say how much
+        # of it was announced versus estimated, so a self figure can be seen
+        # without ever passing as something published.
+        attrs["board_total_gbp"] = totals["board"]
+        attrs["self_total_gbp"] = totals["self"]
         attrs["latest_rate_p_per_w"] = latest["rate_p_per_w"] if latest else None
+        attrs["latest_board_rate_p_per_w"] = board["rate_p_per_w"] if board else None
         attrs["latest_period_start"] = latest["period_start"] if latest else None
         attrs["latest_period_end"] = latest["period_end"] if latest else None
         attrs["current_gbp"] = current_gbp
         attrs["current_basis"] = current_basis
+        attrs["current_source"] = latest["source"] if latest else None
+        # Year / YTD rows: declarations attributed whole to the year they end
+        # in -- never split across years, which would be an accrual.
+        attrs["current_year_gbp"] = current_year_gbp(records)
+        attrs["year_totals_gbp"] = year_totals_gbp(records)
         return attrs
 
 
