@@ -2625,7 +2625,7 @@ _buildHeaderChips(layout) {
           <!-- Owner price chip (pence/kWh), on the title row, aligned to the Value column -->
           <g class="price-edit" data-price-edit="owner">
             <rect x="${layout.chipUserGenFinX - 128 * layout.scaleX}" y="84" width="${128 * layout.scaleX}" height="20" rx="10"/>
-            <text class="price-edit-label" data-price-text="owner" x="${layout.chipUserGenFinX - 8 * layout.scaleX}" y="98" text-anchor="end">Rate —</text>
+            <text class="price-edit-label" data-price-text="owner" x="${layout.chipUserGenFinX - 8 * layout.scaleX}" y="98" text-anchor="end">Published —</text>
           </g>
           <!-- Member savings: owned watts × the board's declared p/W rate. Not a
                timeframe, and the table above is full, so it takes its own line in
@@ -2726,14 +2726,27 @@ _buildHeaderChips(layout) {
     // Two decimals on display so a sub-0.1 price (e.g. 0.06) is never rounded
     // up to 0.1 in the pill; the stored value is always shown exactly.
     const ownerPrice = this._num(config.owner_price_entity);
-    // The Owner pill reports the ledger's declared total and pops out the
-    // dated line items it is built from -- members are paid per watt owned,
-    // for each period the board declared. A card stored without the ledger
-    // key keeps the old single-rate text so nothing silently blanks.
+    // The Owner pill names the p/W rate the board most recently published and
+    // pops out the dated line items it comes from -- members are paid per watt
+    // owned, for each period the board declared. It deliberately carries no
+    // money: the figures live on Member savings (current period) and All time
+    // (declared total), so the pill never repeats the row below it. A card
+    // stored without the ledger key keeps the old single-rate text so nothing
+    // silently blanks.
     const ledgerId = config.payment_ledger_entity;
     if (ledgerId) {
-      const declaredTotal = this._num(ledgerId);
-      this._setText(root, '[data-price-text="owner"]', declaredTotal === null ? "Total —" : `Total £${this._fmt(declaredTotal, 2)}`);
+      const rawRate = this._attr(ledgerId, "latest_rate_p_per_w");
+      const publishedRate =
+        rawRate === null || rawRate === undefined || !Number.isFinite(Number(rawRate))
+          ? null
+          : Number(rawRate);
+      this._setText(
+        root,
+        '[data-price-text="owner"]',
+        publishedRate === null
+          ? "Published —"
+          : `Published ${this._fmt(publishedRate, 2)} p/W`
+      );
     } else {
       const ownerRate = this._num(config.owner_rate_entity);
       this._setText(root, '[data-price-text="owner"]', ownerRate === null || ownerRate === 0 ? "Rate —" : `Rate ${this._fmt(ownerRate, 2)} p/W`);
