@@ -6,8 +6,11 @@ import pytest
 
 from custom_components.kirkhill_wind.const import DOMAIN
 from custom_components.kirkhill_wind.services import (
+    SERVICE_ADD_PAYMENT_RECORD,
     SERVICE_RELOAD_INTEGRATION,
+    SERVICE_REMOVE_PAYMENT_RECORD,
     SERVICE_RESET_DASHBOARD,
+    SERVICE_UPDATE_PAYMENT_RECORD,
     SERVICES_REGISTERED,
     async_setup_services,
     async_unload_services,
@@ -20,6 +23,9 @@ BARE_KEY = "services_registered"
 EXPECTED_SERVICES = [
     (DOMAIN, SERVICE_RELOAD_INTEGRATION),
     (DOMAIN, SERVICE_RESET_DASHBOARD),
+    (DOMAIN, SERVICE_ADD_PAYMENT_RECORD),
+    (DOMAIN, SERVICE_UPDATE_PAYMENT_RECORD),
+    (DOMAIN, SERVICE_REMOVE_PAYMENT_RECORD),
 ]
 
 

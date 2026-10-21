@@ -12,13 +12,16 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-!!! note "Financial figures are on hold"
+!!! note "Financial figures are on hold — three cells excepted"
     **As of v4.16.2** the £ column, the £/h cells, the price pills and the
-    member-savings line are shown but **empty** — every money cell reads `—` and
-    the Owner pill reads `Rate —` — so nothing is calculated and no figure is
-    asserted. The Owner pill now edits the **p/W rate**. Figures are being
-    worked on in the background against the board's last announcement and return
-    via `hab entity enable <entity_id>`; generation, power and capacity are
+    member-savings line are shown but **empty** — nothing is calculated and no
+    figure is asserted. **The exception:** the Owner pill, the Owner **All
+    time** £ cell and **Member savings** are fed by the **payment ledger** —
+    one dated line item per p/W rate the board has declared — and clicking the
+    pill pops those line items out to edit. They read `—` only while nothing
+    has been declared. Figures are being worked on in the background against
+    the board's last announcement and return via
+    `hab entity enable <entity_id>`; generation, power and capacity are
     unaffected.
 
     Separately, the **All-time** and **past-year (2025, 2024)** £ values are

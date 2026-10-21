@@ -19,3 +19,143 @@ reset_dashboard:
       required: false
       selector:
         text:
+
+add_payment_record:
+  name: Add payment record
+  description: >-
+    Record one period the board has declared a per-watt rate for. The card's
+    Amount pill pop-out writes through this service; the ledger stores it and
+    the All time, member savings and pill figures follow.
+  fields:
+    period_start:
+      name: Period start
+      description: First day the declared rate covers (YYYY-MM-DD).
+      required: true
+      selector:
+        date:
+    period_end:
+      name: Period end
+      description: Last day the declared rate covers (YYYY-MM-DD).
+      required: true
+      selector:
+        date:
+    rate_p_per_w:
+      name: Rate (p/W)
+      description: Per-watt rate the board announced for this period, in pence.
+      required: true
+      selector:
+        number:
+          min: 0.01
+          max: 1000
+          step: 0.1
+          mode: box
+    capacity_watts:
+      name: Capacity (W)
+      description: >-
+        Watts owned when this period was declared. Defaults to the owner capacity
+        reported by the API; supplied explicitly for historical periods.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 1
+          mode: box
+    announced_on:
+      name: Announced on
+      description: Date the board announced the figure, if different from the period.
+      required: false
+      selector:
+        date:
+    note:
+      name: Note
+      description: Free-text context, such as the AGM or meeting that declared it.
+      required: false
+      selector:
+        text:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID. If omitted, the first entry is used.
+      required: false
+      selector:
+        text:
+
+update_payment_record:
+  name: Update payment record
+  description: >-
+    Change one stored payment record. Payment dates are not final, so a period
+    is expected to be edited after the fact.
+  fields:
+    record_id:
+      name: Record ID
+      description: ID of the record to change, from the payment ledger sensor's records attribute.
+      required: true
+      selector:
+        text:
+    period_start:
+      name: Period start
+      description: New first day the declared rate covers.
+      required: false
+      selector:
+        date:
+    period_end:
+      name: Period end
+      description: New last day the declared rate covers.
+      required: false
+      selector:
+        date:
+    rate_p_per_w:
+      name: Rate (p/W)
+      description: New per-watt rate in pence.
+      required: false
+      selector:
+        number:
+          min: 0.01
+          max: 1000
+          step: 0.1
+          mode: box
+    capacity_watts:
+      name: Capacity (W)
+      description: New watts owned for this period.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 1
+          mode: box
+    announced_on:
+      name: Announced on
+      description: New announcement date.
+      required: false
+      selector:
+        date:
+    note:
+      name: Note
+      description: New free-text context.
+      required: false
+      selector:
+        text:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID. If omitted, the first entry is used.
+      required: false
+      selector:
+        text:
+
+remove_payment_record:
+  name: Remove payment record
+  description: Delete one stored payment record from the ledger.
+  fields:
+    record_id:
+      name: Record ID
+      description: ID of the record to remove, from the payment ledger sensor's records attribute.
+      required: true
+      selector:
+        text:
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID. If omitted, the first entry is used.
+      required: false
+      selector:
+        text:

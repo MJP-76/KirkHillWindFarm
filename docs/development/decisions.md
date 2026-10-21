@@ -305,6 +305,60 @@ decision changes.
   Regression tests: `test_init.py::TestMonetaryInputsPurged` (defaults purged,
   configured price purged, marker purged, current entry untouched).
 
+- **2026-10-21 — All time is a ledger of declared periods: dated p/W line
+  items, summed.** *Answers the three open questions the 2026-10-09 hold left
+  for the board, and partially lifts that hold at the owner's instruction ("we
+  are starting to put back onto the tab").* The AGM sets a twice-a-year rhythm,
+  but the exact payment dates are not settled, so a period is a pair of
+  **editable dates** rather than a rule the code enforces: a historical span is
+  split at the half-year mark for readability and can be re-dated later without
+  changing any figure, because the rate — not the calendar — produces the
+  money (`capacity_watts × rate_p_per_w ÷ 100`). A period is never integrated
+  over time; 2,000 W at 20 p/W is GBP 400 for whatever span the board declares.
+
+  - **New `payment_ledger.py`**, a `Store`-backed list per config entry of
+    `{period_start, period_end, rate_p_per_w, capacity_watts, announced_on,
+    note}`. **Capacity is stored with the declaration** because owned watts can
+    change: valuing Feb 2025 → Jun 2026 at *today's* capacity would silently
+    misprice history — the same class of error the all-time suppression exists
+    to avoid. Storage is `kirkhill_wind_payment_ledger_<entry_id>`, a `Store`
+    and never `entry.options`, because v11 purges earnings inputs whatever they
+    hold (2026-10-12).
+  - **New `sensor.…_payment_ledger`.** State is the declared total, which
+    reads **unknown while no record exists — never GBP 0.00**: no declaration
+    is not a declaration of nothing. Attributes carry `records`, `total_gbp`,
+    `latest_rate_p_per_w`, `latest_period_*` and `current_gbp` +
+    `current_basis`. It is always available — a failed API poll must not blank
+    figures that live on disk.
+  - **The estimate is labelled, and never counted.** When today is past every
+    declared period, `current_basis=estimated_from_last_declared_rate` prices
+    the pending period at the last announced rate and the card draws it
+    `~£400.00`. It stays out of `total_gbp` until the board declares. This does
+    not reopen the "no accrual" rule of 2026-10-08 — it is its visible
+    companion: derived, marked, and never presented as something announced.
+    It also answers "does a period count before it is declared": **no.**
+  - **Exactly three cells return, and no more:** the Owner pill (declared
+    total; also the pop-out's entry point), the Owner panel's **All time £**
+    (the ledger total in place of the suppressed `kWh × price`) and **Member
+    savings** (the current period). Every other money cell — the timeframe £
+    column, both £/h cells, the Site panel — stays suppressed, and all 22
+    earnings entities stay disabled and zeroed.
+  - **Three services are the only write path** —
+    `kirkhill_wind.add/update/remove_payment_record`; the card never writes
+    storage itself. A new record defaults its capacity to the owner watts the
+    API reports, and is **refused rather than guessed** when the API is not
+    reporting any. A p/W rate of `0` is rejected by the schema: "nothing
+    declared" is expressed by having no record.
+  - Backed out by deleting the sensor's entity and the ledger file; the card
+    falls back to its old single-rate pill if `payment_ledger_entity` is absent
+    from a stored dashboard.
+
+  Regression tests: `tests/test_payment_ledger.py` (validation · Σ ·
+  empty-reads-unknown · estimate labelling · persistence and sort · listener
+  notify/unsubscribe · per-service behaviour · zero-rate schema rejection),
+  `test_services.py::TestServiceRegistrationFlag` (five services registered and
+  unloaded).
+
 ## Dashboard consolidation
 
 - **2026-09-16 — SCADA is the sole live dashboard; History, Finances and

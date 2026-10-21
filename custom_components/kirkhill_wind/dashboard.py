@@ -510,6 +510,7 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "owner_price_entity": farm("owner_price_pence_per_kwh"),
                         "owner_rate_entity": farm("owner_rate_pence_per_w"),
                         "member_savings_entity": farm_scoped("owner", "member_savings_value"),
+                        "payment_ledger_entity": farm_scoped("owner", "payment_ledger"),
                         "wind_speed_entity": farm("farm_wind_speed"),
                         "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
                         "active_entity": farm("farm_active_turbines"),
