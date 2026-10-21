@@ -50,6 +50,12 @@ class TestCardMatchKey:
         card = {"type": "custom:kirkhill-wind-scada", "title": ""}
         assert card_match_key(card) == "custom:kirkhill-wind-scada"
 
+    def test_roi_card_matched_by_type(self):
+        # The ROI card carries no title either, so it needs the same treatment:
+        # otherwise every merge would append another copy of it.
+        card = {"type": "custom:kirkhill-wind-roi", "title": ""}
+        assert card_match_key(card) == "custom:kirkhill-wind-roi"
+
     def test_apexcharts_matched_by_header_title(self):
         card = {"type": "custom:apexcharts-card", "header": {"title": "Wind"}}
         assert card_match_key(card) == "custom:apexcharts-card:title:Wind"

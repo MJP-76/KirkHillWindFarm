@@ -390,6 +390,61 @@ decision changes.
   snap · month-only shorthand · leap February · backwards period still
   rejected).
 
+- **2026-10-21 — Money leaves the SCADA card entirely; a dedicated
+  Return-on-investment card owns it.** *Supersedes the "three cells return"
+  half of the ledger entry above and the same-day "Year + YTD" refinement
+  (neither ever shipped to a user's eyes in final form).* Reviewing the live
+  card showed the result of scattering money across a generation display: seven
+  timeframe rows that could not honestly carry a figure, two panels asking two
+  different money questions, and an Owner pill that had changed meaning three
+  times. The owner's call: **all money off the Owner and Site panels**, one
+  card for finance.
+
+  - **Removed from `kirkhill-wind-scada`:** the `Value (£)` column (both
+    panels), both `£/h` cells, the Member savings line, both price pills, the
+    ledger pop-out, and every config key that fed them
+    (`owner_price_entity`, `owner_rate_entity`, `negotiated_price_entity`,
+    `member_savings_entity`, `payment_ledger_entity`, plus `value_entity` in
+    the generation lists). Generation now owns the right-hand edge of both
+    panels instead of leaving the old money column's gap. 3069 → 2878 lines.
+  - **New `custom:kirkhill-wind-roi`**, in its own `roi` view: the ledger table
+    (months · rate × watts · £ · ROI · source), the invested amount, and the
+    totals split **declared / board / self** with the return on each. The
+    add/edit form and the capital input live inline on it, so nothing
+    financial is behind a modal any more. It is matched by type in
+    `card_match_key`, like the SCADA card, or every merge would append a copy.
+  - **ROI is plain percentage of capital per period**: `value ÷ invested × 100`,
+    **deliberately unannualised** — the board pays per period regardless of how
+    long it runs (2026-10-08), so a per-year figure would be a rate of our own
+    invention. No invested amount reads **None**, never `0%`: unknown capital
+    is not a zero return.
+  - **`invested_gbp` is stored in the ledger's Store beside the records**,
+    written by the new `kirkhill_wind.set_invested_amount` service (JSON null
+    clears it back to "not told"), and saved in the same commit as the records
+    so a return can never be computed from half a save. Never
+    `entry.options` — v11 purges monetary keys there (2026-10-12).
+  - **Each record carries a `source`** — `board` (announced) or `self` (the
+    member's own estimate; the form's "Board announced" box is pre-ticked, and
+    records predating the field normalise to `board`). The total still sums
+    both, while `board_total_gbp` / `self_total_gbp` say how much of it was
+    announced, `self` rows are tagged and `~`-prefixed, and **only board
+    records feed `latest_board_rate_p_per_w`** — a self estimate is not a
+    published rate.
+  - **Timeframe rows stay empty on the SCADA card**, as decided earlier the
+    same day: Yesterday…Year are `kWh × price` sensors that remain disabled,
+    and slicing a per-watt declaration across days would be the accrual the
+    board's basis rules out. The ledger still exposes `current_year_gbp` and
+    `year_totals_gbp` (declarations attributed whole to the year they *end* in)
+    for templates.
+  - PR #113 (the All time cell write fix) was closed unfixed: the cell it
+    repaired is one of the cells being removed.
+
+  Regression tests: `test_payment_ledger.py` (source validation · board/self
+  split · board-only published rate · year attribution · invested persistence ·
+  `roi_pct` rules · null-not-zero · service round trip) — 266 → 290;
+  `test_dashboard_merge.py::test_roi_card_matched_by_type`;
+  `test_services.py` (six services).
+
 ## Dashboard consolidation
 
 - **2026-09-16 — SCADA is the sole live dashboard; History, Finances and

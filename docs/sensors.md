@@ -25,12 +25,12 @@
 - Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`. These are **sensors only** (not shown on the SCADA card). More years appear automatically as time passes.
 - Generation (alltime) [kWh] for owner and site — **calculated as the sum of all the year figures**: `2024 + 2025 + … + the current year to date`, including any future years. The `sum_of_years_kwh` attribute lists the per-year components.
 - Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
-- **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry; the card still draws the column and shows `—` in every cell. Previously `live generation × configured price`, `£0.00` when no price was set
-  - Value (2025/2024/alltime) [GBP] report `unknown` (`—`) in every case — see the suppression note below
-- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` — for example, at a declared 20p/W, 1,000 owned watts reads **£200**. Its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`. **The card line no longer reads this entity** — it reads the payment ledger below
-- **Payment ledger [GBP] — enabled; the source for the Owner pill's published rate, the Owner All time £ cell and Member savings.** One line item per period the board declared a p/W rate for, stored in Home Assistant's storage (one file per config entry, never `entry.options`). State is the **declared total**, `Σ watts × rate ÷ 100`, and reads **`unknown` while no period has been declared — never `£0.00`**. Periods are whole months — `period_start` always lands on the 1st and `period_end` on the last day of its month. Attributes: `records` (each `{id, period_start, period_end, rate_p_per_w, capacity_watts, announced_on, note, value_gbp}`), `record_count`, `total_gbp`, `latest_rate_p_per_w`, `latest_period_start`, `latest_period_end`, `current_gbp` and `current_basis` (`declared` · `estimated_from_last_declared_rate` · `no_entries`). `current_gbp` is the *current* period's figure and is deliberately excluded from `total_gbp` until it is declared. Writable only through the `kirkhill_wind.add_payment_record`, `update_payment_record` and `remove_payment_record` services. Always available — it reads local storage, not the API
+- **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry, and **no card draws a £ column any more** (removed 2026-10-21). Previously `live generation × configured price`, `£0.00` when no price was set
+  - Value (2025/2024/alltime) [GBP] report `unknown` in every case — see the suppression note below
+- **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` — for example, at a declared 20p/W, 1,000 owned watts reads **£200**. Its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`. **Nothing reads it**: no card draws a member-savings line any more
+- **Payment ledger [GBP] — enabled; the source of every figure on the Return on investment card.** One line item per period the board declared a p/W rate for, stored in Home Assistant's storage (one file per config entry, never `entry.options`). State is the **declared total**, `Σ watts × rate ÷ 100`, and reads **`unknown` while no period has been declared — never `£0.00`**. Periods are whole months — `period_start` lands on the 1st and `period_end` on the last day of its month. Attributes: `records` (each `{id, period_start, period_end, rate_p_per_w, capacity_watts, announced_on, note, source, value_gbp, roi_pct}`), `record_count`, `total_gbp`, `board_total_gbp`, `self_total_gbp`, `invested_gbp`, `total_roi_pct`, `latest_rate_p_per_w`, `latest_board_rate_p_per_w`, `latest_period_start`, `latest_period_end`, `current_gbp`, `current_basis` (`declared` · `estimated_from_last_declared_rate` · `no_entries`), `current_source` (`board` · `self`), `current_year_gbp` and `year_totals_gbp`. `current_gbp` is the *current* period's figure and stays out of `total_gbp` until it is declared; `roi_pct` is `value ÷ invested × 100` and reads `None` until an invested amount is entered — never `0%`. Writable only through the `kirkhill_wind.add/update/remove_payment_record` and `set_invested_amount` services. Always available — it reads local storage, not the API
 - **Owner price (number) [p/kWh] — DISABLED from v4.16.1**, input `0.0`
-- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. The Owner pill used to edit this; it now opens the payment ledger's dated line items
+- **Owner rate (number) [p/W] — DISABLED from v4.16.1**, input `0.0`. Superseded by the ledger's per-period rates; no card reads it
 - **Negotiated price (number) [GBP/MWh] — DISABLED from v4.16.1**, input `0.0`
 
 Re-enable any of them with `hab entity enable <entity_id>` — nothing was deleted.
@@ -56,20 +56,20 @@ Home Assistant. The generated dashboard formats those values for display with
 automatic unit scaling (**kWh**, **MWh**, **GWh**, **TWh**, **PWh**, **EWh**) and
 rounds them to **2 decimal places**.
 
-!!! note "Financial figures are on hold — three cells excepted"
+!!! note "Financial figures: disabled, and now off the cards"
     **2026-10-09** — the 19 value/savings sensors and the 3 price/rate `number`
-    entities are **disabled** with their inputs at `0.0`, so the card's money
-    cells read `—` and nothing is calculated. Figures are being worked on in
-    the background against the board's last announcement; re-enable one with
-    `hab entity enable <entity_id>` to bring it back.
+    entities were **disabled** with their inputs at `0.0`, and nothing is
+    calculated from them. Re-enable one with `hab entity enable <entity_id>` if
+    you want it for something else.
 
-    **2026-10-21 — three cells are back, from the Payment ledger sensor above:**
-    the Owner pill (latest published p/W rate), the Owner panel's **All time** £ cell and
-    **Member savings** (current period, `~` while undeclared). They calculate
-    from declared periods, not from the disabled entities — those stay
-    disabled, and every other money cell is unchanged.
+    **2026-10-21 — no card draws money any more.** The `Value (£)` column, the
+    `£/h` cells, the member-savings line and both price pills were removed from
+    the SCADA card (Owner and Site). Every financial figure now comes from the
+    **Payment ledger** sensor above, shown on the **Return on investment** tab;
+    the disabled entities stay disabled and unread.
 
-Financial £ values are **live-accurate when a price is set**. Two independent
+**As sensors** — nothing on either card reads them any more — the `Value (…)`
+entities are **live-accurate when a price is set**. Two independent
 price entities hold the prices, both `0.0` by default:
 `number.kirk_hill_wind_farm_owner_price_p_kwh` (Owner price in p/kWh — enter `6`
 for 6 pence) drives the owner figures; and
@@ -98,12 +98,12 @@ same declaration, not a daily or monthly rate to divide out. Update
 reads `—`. This figure does not depend on generation, so it is unaffected by
 wind, and it is **not** shown on the SCADA card.
 
-The **All-time** value is an exception: it reports `unknown` (the SCADA card
-shows `—`) in every case, because the API records energy only — never money —
-and applying today's price to history would silently revalue it whenever the
-price is edited. The **past-year (2025, 2024)** value sensors follow the same
-rule. All are sensors only — the past-year figures are not shown on the SCADA
-card. This stands until the CfD strike price history is confirmed (the price
+The **All-time** value is an exception: it reports `unknown` in every case,
+because the API records energy only — never money — and applying today's price
+to history would silently revalue it whenever the price is edited. The
+**past-year (2025, 2024)** value sensors follow the same rule. All are sensors
+only — no card shows a value cell at all any more. This stands until the CfD
+strike price history is confirmed (the price
 value(s), whether the CfD has ever changed, and its contract length). The kWh
 energy figures are unaffected. Once the history is known, each year gets its own
 price — the per-year sensors are the foundation for the multi-CfD price

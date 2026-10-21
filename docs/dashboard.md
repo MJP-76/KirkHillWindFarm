@@ -88,141 +88,86 @@ and duration.
 
 ## Financials (formerly the Finances tab)
 
-!!! note "Financial figures are on hold — three cells excepted"
+!!! note "Money lives on its own card"
     **2026-10-09** — the £ column, the £/h cells, the price pills and the
-    member-savings line are shown but left **empty** (`—`, and `Rate —` on the
-    Owner pill) while the model is confirmed: nothing is calculated and no
-    figure is asserted. Figures are being worked on in the background against
-    the board's last announcement, and return via
-    `hab entity enable <entity_id>`.
+    member-savings line were switched off while the model was confirmed, and
+    deliberately left drawn-but-empty as a standing reminder.
 
-    **2026-10-21 — three cells are back, from a new source** (see *The payment
-    ledger* below): the **Owner pill** (the latest published p/W rate, and the
-    pop-out's entry point), the Owner panel's **All time £** and **Member
-    savings**. They are fed by `sensor.<farm>_payment_ledger`, not by the
-    disabled entities — those stay disabled and zeroed, and every other money
-    cell stays `—`.
+    **2026-10-21 — removed outright.** All money now lives on the **Return on
+    investment** card below; the SCADA card shows generation, power, capacity
+    and wind only, on both the Owner and Site panels. The 22 earnings entities
+    stay disabled and zeroed, and nothing on the SCADA card reads them.
 
-The standalone **Finances tab was removed in v4.8.79** — its content (today's
-earnings, this month, year to date) now lives in the SCADA card itself. Every
-timeframe row (Yesterday, Today, Week, Month, YTD, Year, All time) in both the
-**Owner Capacity** and **Site Capacity** panels is built to show a **£ value
-column** alongside the kWh figure, so generation and its value sit on the same
-row. **At present that column is drawn but left empty** — every cell reads `—`,
-because the entities behind it are disabled and their inputs are `0.0` — with
-one exception: the **Owner panel's All time cell**, which shows the payment
-ledger's declared total (see *The payment ledger* below).
+### Return on investment (its own view, path `roi`)
 
-The **All time** kWh figure is **calculated as the sum of the per-year
-sensors** — `2024 + 2025 + … + the current year to date`, including any future
-years as they complete. The per-year figures themselves are sensors only
-(`Generation (2024)`, `Generation (2025)`, …) and are **not shown on the card**;
-see [Sensors](sensors.md).
+`custom:kirkhill-wind-roi` is the single place financial figures appear:
 
-### Prices (entities present, currently disabled)
+- **Header** — the **invested amount** (click to set it; stored in the ledger's
+  Store, never `entry.options`) beside four stats: **Declared total**,
+  **Board announced**, **Self estimated** and **Return**.
+- **Rows** — one per declared period, e.g.
+  `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
+  edit and remove, plus **Add period**.
+- **Return is a plain percentage of capital**: `value ÷ invested × 100` per
+  period and the same across the total. It is deliberately **not annualised** —
+  the board pays per period regardless of how long it runs, so a per-year figure
+  would be a rate of our own invention. With no capital entered the ROI reads
+  `—`, never `0%`.
+- **A caption under the rows** says which of three things the current period is:
+  board-declared, your own estimate, or an estimate awaiting the board
+  (`~£537.49`, priced from the last announced rate).
+- **Adding a period opens prefilled** with the month after the latest one ends —
+  Feb 2025 → Jun 2026 offers **`2026-07`** — and the end month left blank, since
+  when the board's next period closes is not ours to guess.
 
-Three entities drive the money figures:
+#### The ledger behind it
 
-- `number.<farm>_owner_rate_p_w` — **Owner rate in p/W** (enter `21` for 21 pence
-  per watt). It drives `sensor.<farm>_member_savings_value`. **The Owner pill no
-  longer edits this** — see the payment ledger below; the rate now lives per
-  declared period.
-- `number.<farm>_owner_price_p_kwh` — **Owner price in p/kWh**. Drives the Owner
-  panel's £ column and the owner £/h rate.
-- `number.<farm>_negotiated_price_gbp_mwh` — **Site/CfD price in £/MWh**
-  (CfD-style strike price). Drives the Site panel's £ column and the site £/h
-  rate.
+- **Each line item is a run of whole months plus the rate** —
+  `{start month, end month, rate p/W, watts owned, note, source}`. The figure
+  for a line is `watts × p/W ÷ 100`; the period only says *which* declaration
+  applies, never how long money accrues for. A period is stored as the **1st to
+  the last day** of its months, so "Feb 2025 – Jun 2026" means exactly those
+  months whatever dates were picked.
+- **`source` is `board` or `self`.** The form's *Board announced* box is
+  pre-ticked; untick it to record your own estimate for a period the board has
+  not declared. Records predating the field normalise to `board`. The total
+  still sums both, `board_total_gbp` / `self_total_gbp` say how much of it was
+  announced, self rows are dashed, tagged and `~`-prefixed, and **only board
+  records feed the published rate** — a self estimate is not a published figure.
+- **Storage and writes** — one Store file per config entry (never
+  `entry.options`: config-entry migrations purge monetary keys there). Changed
+  only through `kirkhill_wind.add_payment_record`, `update_payment_record`,
+  `remove_payment_record` and `set_invested_amount`; the card never writes
+  storage itself.
+- **`sensor.<farm>_payment_ledger`** exposes `records` (each with `value_gbp`
+  and `roi_pct`), `total_gbp`, `board_total_gbp`, `self_total_gbp`,
+  `invested_gbp`, `total_roi_pct`, `latest_rate_p_per_w`,
+  `latest_board_rate_p_per_w`, `current_gbp`, `current_basis`,
+  `current_source`, `current_year_gbp` and `year_totals_gbp`.
 
-All three default to `0.0`, in which case the sensors read `£0.00` rather than a
-projected figure. Displayed prices never round up (`0.06` shows as `0.06`), and
-the Power rows can show a live £/h rate (`ownerExportKw × price` /
-`sitePowerMw × price`) once a price is set.
+### What the SCADA card no longer shows
 
-**All of that is switched off:** every entity is disabled in the registry and
-sits at `0.0`, so the £ column and the £/h cells render **empty** (`—`) and no
-calculation runs at all. The card deliberately keeps them visible as a reminder
-to finish the model. Re-enabling an entity brings its figure back with no
-reinstall.
+- Gone from both panels: the **`Value (£)` column**, the **`£/h`** cells, the
+  **Member savings** line and both **price pills** (Owner and Site). Generation
+  now takes the right-hand edge of each panel instead of leaving the old money
+  column's gap.
+- **The timeframe rows stay moneyless on purpose.** `Yesterday … Year` are
+  `kWh × price` sensors that remain disabled, and slicing a per-watt
+  declaration across days would be the accrual the board's basis rules out —
+  see [Development decisions](development/decisions.md). The ledger still
+  exposes `current_year_gbp` / `year_totals_gbp` (declarations attributed whole
+  to the year they *end* in) for templates.
 
-### The payment ledger (Owner pill, All time £, Member savings)
+### Prices and member savings (entities present, disabled, unused by the cards)
 
-Money the board has actually announced is held as a **ledger of declared
-periods**, not as a price applied to generation:
-
-- **Each line item is a run of whole months plus the rate the board announced
-  for it** — `{start month, end month, rate p/W, watts owned, announced on,
-  note}`. The figure for a line is `watts × p/W ÷ 100`; the period only says
-  *which* declaration applies, never how long the money accrues for. Days are
-  not part of it: a period is stored as the **1st to the last day** of its
-  months, so "Feb 2025 – Jun 2026" means exactly those months whatever dates
-  were picked.
-- **Clicking the Owner pill pops the ledger out**: one row per declaration with
-  its months, rate, watts and £ figure, plus **Add / edit / remove**. The pill
-  itself names the **latest published rate** (`Published 20 p/W`,
-  `Published —` while nothing has been declared) and shows **no money**: the
-  figures live on Member savings and All time, so the pill never repeats them.
-- **A new line opens prefilled with the month after the latest period ends** —
-  Feb 2025 → Jun 2026 offers **2026-07** — with the end month left blank, since
-  when the board's next period closes is not ours to guess. Both fields are
-  months (`YYYY-MM`), never days. Payment dates are not final yet, so a period
-  is edited by changing its months — the figures do not move with them.
-- **`All time` shows the declared total.** It is a sum of what the board
-  declared, which is why it can be shown where `kWh × today's price` is still
-  suppressed (see below).
-- **Member savings shows the current period**, and reads `~£400.00` while that
-  period has no declaration yet — the estimate is taken from the last announced
-  rate, drawn with `~`, reported as
-  `current_basis=estimated_from_last_declared_rate`, and **kept out of the
-  total** until the board declares. With no ledger entries at all, all three
-  cells read `—`, and no money cell ever claims `£0.00`.
-- **Storage and writes:** entries live in Home Assistant's storage (one file
-  per config entry, never `entry.options`), and the only way to change them is
-  the `kirkhill_wind.add_payment_record`, `update_payment_record` and
-  `remove_payment_record` services — the card cannot write storage itself.
-  `sensor.<farm>_payment_ledger` exposes `records`, `total_gbp`,
-  `current_gbp`, `current_basis` and `latest_rate_p_per_w` for templates and
-  automations.
-
-Every other money cell — the timeframe `Value (£)` column, both £/h cells, the
-Site panel — is unaffected and stays empty.
-
-### Member savings (per watt) — driven by the ledger
-
-Members are paid for the watts they **own**, not for kilowatt-hours
-generated. `sensor.<farm>_member_savings_value` computes
-`owned watts × rate ÷ 100` from `number.<farm>_owner_rate_p_w` — for example,
-2,000 W at a declared 20p/W reads **£400.00**, which is what the web dashboard
-reports for that rate.
-
-**On the card the line has come from the ledger since 2026-10-21**: the figure
-for the *current* period — the last announced p/W rate against the watts in
-force for it — drawn `~£400.00` while that period is still waiting on a
-declaration, and `—` when no period has ever been declared. The
-`member_savings_value` sensor itself stays **disabled** (one global rate,
-superseded by per-period rates); it is left in place rather than re-enabled.
-
-It still has **no timeframe and does not accrue**: the board declares a payment
-when its finances allow, and any yearly figure it quotes is an equivalence for
-one declaration rather than a rate to divide over time. `All time` accumulates
-as a **ledger of Σ per declaration** — answered in
-[Development decisions](development/decisions.md).
-
-### Suppressed £ values (All time)
-
-The **Owner panel's All time £ shows the ledger's declared total** (see *The
-payment ledger* above): a sum of what the board actually announced, which is
-why it may be shown at all — it revalues nothing when a price changes.
-
-**Everywhere else the suppression stands.** The value *sensors* return unknown
-regardless of price, because the API records energy only, never money, so
-`kWh × today's price` applied retroactively to history would be misleading if
-the CfD price has ever changed. That covers the past-year value sensors and the
-**Site panel's** All time cell, which still reads `—`. The kWh figure on those
-rows stays live (as the per-year sum). This is a standing decision pending
-confirmation of the CfD strike price value(s), whether the CfD has changed, and
-its contract length (see [Development decisions](development/decisions.md)).
-Once the CfD history is known, each year gets its own price — the per-year
-sensors are the foundation for the multi-CfD price schedule.
+`number.<farm>_owner_rate_p_w`, `number.<farm>_owner_price_p_kwh`,
+`number.<farm>_negotiated_price_gbp_mwh` and
+`sensor.<farm>_member_savings_value` still exist, **disabled and set to
+`0.0`**. They feed no card any more: rates live per declared period in the
+ledger. Re-enable one with `hab entity enable <entity_id>` if you want it for
+something else — nothing on either card will change. The suppression rule for
+valuing history as `kWh × today's price` still stands for those sensors
+themselves (see [Sensors](sensors.md)).
 
 ## History tab
 

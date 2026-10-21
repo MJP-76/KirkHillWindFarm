@@ -350,11 +350,6 @@ class KirkHillWindScada extends HTMLElement {
         this._zoomReset();
         return;
       }
-      const priceEdit = ev.target.closest("[data-price-edit]");
-      if (priceEdit) {
-        this._openPriceEdit(priceEdit.getAttribute("data-price-edit"));
-        return;
-      }
       const site = ev.target.closest("[data-site-gen='panel']");
       if (site) { this._openSiteDetail(); return; }
       const owner = ev.target.closest("[data-user-gen='panel']");
@@ -990,398 +985,6 @@ class KirkHillWindScada extends HTMLElement {
   _closeApiDetailModal() {
     if (this._apiDetailModal) { this._apiDetailModal.remove(); this._apiDetailModal = null; }
     if (this._apiBoundKeydown) { window.removeEventListener("keydown", this._apiBoundKeydown); this._apiBoundKeydown = null; }
-  }
-
-  _canEdit(entityId) {
-    // A disabled entity has no state at all, and an unavailable one cannot
-    // take a write. Either way a save would only produce Home Assistant's
-    // "Referenced entities … are missing or not currently available" warning,
-    // so the pill is treated as inert instead of offering an editor that
-    // cannot work.
-    if (!entityId) return false;
-    const state = this._hass?.states?.[entityId];
-    return Boolean(state) && state.state !== "unavailable";
-  }
-
-  _openPriceEdit(scope) {
-    // scope: "owner" -> the payment ledger (dated periods the board declared
-    //                   a p/W rate for). The pill pops out the line items and
-    //                   edits them through kirkhill_wind.*_payment_record.
-    //        "site"  -> Site/CfD price (GBP/MWh)
-    const config = this.config;
-    const owner = scope === "owner";
-    if (owner && config.payment_ledger_entity) {
-      // A card stored before the ledger key has no entity here and keeps the
-      // old single-value editor below -- a missing key is a stale dashboard,
-      // not a reason for the pill to go dead.
-      if (this._canEdit(config.payment_ledger_entity)) this._openPaymentLedger();
-      return;
-    }
-    const entity = owner ? config.owner_rate_entity : config.negotiated_price_entity;
-    if (!this._canEdit(entity)) return;
-    const label = owner ? "Owner rate" : "Site price (CfD)";
-    const unit = owner ? "p/W" : "£/MWh";
-    const hint = owner
-      ? "Member savings = owned watts × this rate, applied immediately."
-      : "Site value = generation (MWh) × this price, updated on the next poll cycle.";
-    // Bounds are passed explicitly for p/W: while the rate entity is disabled
-    // its state attributes are absent, and the entity-attribute fallback would
-    // offer the site's 500 max instead of the rate's 100.
-    this._showPriceEditModal(
-      entity, label, unit,
-      owner ? 100 : undefined,
-      owner ? 0.1 : undefined,
-      hint
-    );
-  }
-
-  _showPriceEditModal(entityId, label, unit, maxOverride, stepOverride, hint) {
-    const current = this._num(entityId);
-    const max = maxOverride ?? this._attr(entityId, "max") ?? 500;
-    const step = stepOverride ?? this._attr(entityId, "step") ?? 0.1;
-    const modal = document.createElement("div");
-    modal.className = "turbine-detail-modal";
-    modal.innerHTML = `
-      <div class="modal-backdrop" data-close="backdrop"></div>
-      <div class="modal-content" style="max-width: 420px">
-        <div class="modal-header">
-          <h2>${label}</h2>
-          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
-        </div>
-        <div class="modal-body">
-          <div class="price-edit-form">
-            <label class="price-edit-label" for="price-edit-value">Price (${unit})</label>
-            <input class="price-edit-input" id="price-edit-value" type="number" min="0" max="${max}" step="${step}" value="${current ?? ""}" />
-            <div class="price-edit-actions">
-              <button class="price-edit-btn" data-action="cancel">Cancel</button>
-              <button class="price-edit-btn price-edit-save" data-action="save">Save</button>
-            </div>
-            <div class="price-edit-hint">${hint ?? ""}</div>
-          </div>
-        </div>
-      </div>`;
-    this.shadowRoot.appendChild(modal);
-    this._priceEditModal = modal;
-    modal.querySelectorAll("[data-close]").forEach(el =>
-      el.addEventListener("click", () => this._closePriceEditModal()));
-    modal.querySelector('[data-action="cancel"]').addEventListener("click", () => this._closePriceEditModal());
-    modal.querySelector('[data-action="save"]').addEventListener("click", async () => {
-      const input = modal.querySelector("#price-edit-value");
-      const value = parseFloat(input.value);
-      if (!Number.isFinite(value) || value < 0) return;
-      try {
-        await this._hass.callService("number", "set_value", { entity_id: entityId, value });
-        this._closePriceEditModal();
-        this._update();
-      } catch (err) {
-        input.setAttribute("data-error", "true");
-      }
-    });
-    const input = modal.querySelector("#price-edit-value");
-    if (input) {
-      input.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") modal.querySelector('[data-action="save"]').click();
-      });
-      input.focus();
-      input.select();
-    }
-    this._priceBoundKeydown = (e) => { if (e.key === "Escape") this._closePriceEditModal(); };
-    window.addEventListener("keydown", this._priceBoundKeydown);
-  }
-
-  _closePriceEditModal() {
-    if (this._priceEditModal) { this._priceEditModal.remove(); this._priceEditModal = null; }
-    if (this._priceBoundKeydown) { window.removeEventListener("keydown", this._priceBoundKeydown); this._priceBoundKeydown = null; }
-  }
-
-  // ---- payment ledger pop-out --------------------------------------------
-
-  _ledgerEntityId() {
-    // A card stored before the ledger key has no entity here. Everything
-    // below then reads as "not available" rather than as a broken modal, and
-    // the pill falls back to its old single-value editor.
-    const id = this.config?.payment_ledger_entity;
-    return id && this._hass?.states?.[id] ? id : null;
-  }
-
-  _ledgerRecords(id) {
-    const records = this._attr(id, "records");
-    return Array.isArray(records) ? records.filter((r) => r && r.id) : [];
-  }
-
-  _esc(value) {
-    // Notes are free text typed into a form; they are rendered back as HTML.
-    return String(value ?? "").replace(/[&<>"']/g, (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-    );
-  }
-
-  _fmtMonth(iso) {
-    // Rows read as "Feb 2025 – Jun 2026": a period is whole months, so the
-    // day of the stored 1st/last-day boundary is noise on screen.
-    if (!iso) return "—";
-    const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
-    if (Number.isNaN(d.getTime())) return String(iso);
-    return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
-  }
-
-  _monthLastDay(month) {
-    // "2026-06" -> "2026-06-30". Day 0 of the next month is the last day of
-    // this one, so February leap years come out right without a lookup table.
-    const year = Number(month.slice(0, 4));
-    const monthIndex = Number(month.slice(5, 7));
-    const last = new Date(year, monthIndex, 0).getDate();
-    return `${month}-${String(last).padStart(2, "0")}`;
-  }
-
-  _nextPeriodStart() {
-    // A new line is offered the month after the latest declared period ends:
-    // Feb 2025 -> Jun 2026 offers 2026-07. Only the start is offered -- when
-    // the board's next period ends is not ours to guess.
-    const id = this._ledgerEntityId();
-    const records = this._ledgerRecords(id);
-    if (!records.length) return "";
-    const latest = records.reduce((a, b) => ((a.period_end || "") > (b.period_end || "") ? a : b));
-    const iso = String(latest.period_end || "");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
-    let year = Number(iso.slice(0, 4));
-    let month = Number(iso.slice(5, 7)) + 1;
-    if (month > 12) { month = 1; year += 1; }
-    return `${year}-${String(month).padStart(2, "0")}`;
-  }
-
-  _recordValueGbp(record) {
-    // The sensor stamps value_gbp on each record; recompute only if a stored
-    // record predates that attribute, so a missing field never renders as NaN.
-    const stamped = Number(record.value_gbp);
-    if (Number.isFinite(stamped)) return stamped;
-    const watts = Number(record.capacity_watts);
-    const rate = Number(record.rate_p_per_w);
-    if (!Number.isFinite(watts) || !Number.isFinite(rate)) return null;
-    return Math.round((watts * rate) / 100 * 100) / 100;
-  }
-
-  _openPaymentLedger() {
-    const id = this._ledgerEntityId();
-    if (!id) return;
-    this._closePaymentLedger();
-    const modal = document.createElement("div");
-    modal.className = "turbine-detail-modal";
-    modal.innerHTML = `
-      <div class="modal-backdrop" data-close="backdrop"></div>
-      <div class="modal-content" style="max-width: 560px">
-        <div class="modal-header">
-          <h2>Payments declared by the board</h2>
-          <button class="modal-close" data-close="close" aria-label="Close">&#10005;</button>
-        </div>
-        <div class="modal-body">
-          <div class="ledger" data-ledger="root"></div>
-        </div>
-      </div>`;
-    this.shadowRoot.appendChild(modal);
-    this._ledgerModal = modal;
-    this._ledgerFormOpen = false;
-    modal.querySelectorAll("[data-close]").forEach((el) =>
-      el.addEventListener("click", () => this._closePaymentLedger()));
-    this._bindLedgerRoot();
-    this._ledgerBoundKeydown = (e) => { if (e.key === "Escape") this._closePaymentLedger(); };
-    window.addEventListener("keydown", this._ledgerBoundKeydown);
-  }
-
-  _closePaymentLedger() {
-    if (this._ledgerModal) { this._ledgerModal.remove(); this._ledgerModal = null; }
-    if (this._ledgerFormOpen) this._ledgerFormOpen = false;
-    if (this._ledgerBoundKeydown) { window.removeEventListener("keydown", this._ledgerBoundKeydown); this._ledgerBoundKeydown = null; }
-  }
-
-  _ledgerRoot() {
-    return this._ledgerModal?.querySelector('[data-ledger="root"]') || null;
-  }
-
-  _ledgerListHTML() {
-    const id = this._ledgerEntityId();
-    const records = this._ledgerRecords(id);
-    const basis = this._attr(id, "current_basis");
-    const current = this._attr(id, "current_gbp");
-    const total = this._num(id);
-
-    const rows = records.map((r) => {
-      const value = this._recordValueGbp(r);
-      return `
-        <div class="ledger-row" data-record="${this._esc(r.id)}">
-          <div class="ledger-row-main">
-            <span class="ledger-dates">${this._fmtMonth(r.period_start)} – ${this._fmtMonth(r.period_end)}</span>
-            <span class="ledger-rate">${this._fmt(Number(r.rate_p_per_w), 2)} p/W × ${this._fmt(Number(r.capacity_watts), 0)} W${r.note ? ` · <span class="ledger-note">${this._esc(r.note)}</span>` : ""}</span>
-          </div>
-          <div class="ledger-row-value">${value === null ? "—" : `£${this._fmt(value, 2)}`}</div>
-          <div class="ledger-row-actions">
-            <button class="ledger-btn" data-ledger-edit="${this._esc(r.id)}" aria-label="Edit this period">&#9998;</button>
-            <button class="ledger-btn ledger-btn--danger" data-ledger-remove="${this._esc(r.id)}" aria-label="Remove this period">&#10005;</button>
-          </div>
-        </div>`;
-    }).join("");
-
-    // The period with no declaration yet is shown as an estimate, never
-    // counted into the declared total -- visible and marked, not folded in.
-    let pending = "";
-    if (basis === "estimated_from_last_declared_rate" && Number.isFinite(Number(current))) {
-      pending = `<div class="ledger-caption">Current period not yet declared — estimated at the last rate:
-        <b>~£${this._fmt(Number(current), 2)}</b></div>`;
-    }
-
-    const empty = records.length
-      ? ""
-      : `<div class="ledger-caption">No period declared yet. Add the first figure the board announced.</div>`;
-
-    return `
-      <div class="ledger-list">
-        ${empty}
-        ${rows}
-        ${pending}
-        <div class="ledger-total">Declared total <b>${total === null ? "—" : `£${this._fmt(total, 2)}`}</b></div>
-      </div>
-      <div class="price-edit-actions">
-        <button class="price-edit-btn price-edit-save" data-ledger-action="add">Add period</button>
-      </div>`;
-  }
-
-  _bindLedgerRoot() {
-    const root = this._ledgerRoot();
-    if (!root) return;
-    root.innerHTML = this._ledgerListHTML();
-    root.querySelectorAll("[data-ledger-edit]").forEach((btn) =>
-      btn.addEventListener("click", () => {
-        const record = this._ledgerRecords(this._ledgerEntityId())
-          .find((r) => r.id === btn.getAttribute("data-ledger-edit"));
-        if (record) this._showLedgerForm(record);
-      }));
-    root.querySelectorAll("[data-ledger-remove]").forEach((btn) =>
-      btn.addEventListener("click", async () => {
-        const recordId = btn.getAttribute("data-ledger-remove");
-        if (!window.confirm("Remove this payment record?")) return;
-        try {
-          await this._hass.callService("kirkhill_wind", "remove_payment_record", { record_id: recordId });
-          this._bindLedgerRoot();
-        } catch (err) {
-          this._ledgerError(err);
-        }
-      }));
-    const add = root.querySelector('[data-ledger-action="add"]');
-    if (add) add.addEventListener("click", () => this._showLedgerForm(null));
-  }
-
-  _refreshLedgerList() {
-    // State changes arrive after the service call resolves, so a list drawn
-    // straight after a save can be one step behind. _update() calls this on
-    // every hass change, which catches the real value a moment later.
-    if (this._ledgerModal && !this._ledgerFormOpen) this._bindLedgerRoot();
-  }
-
-  _ledgerError(err) {
-    const root = this._ledgerRoot();
-    const slot = root?.querySelector('[data-ledger="error"]');
-    if (slot) slot.textContent = err?.message || "Save failed";
-  }
-
-  _showLedgerForm(record) {
-    const root = this._ledgerRoot();
-    if (!root) return;
-    this._ledgerFormOpen = true;
-    root.innerHTML = this._ledgerFormHTML(record);
-    root.querySelector('[data-ledger-action="cancel"]')
-      .addEventListener("click", () => { this._ledgerFormOpen = false; this._bindLedgerRoot(); });
-    const save = root.querySelector('[data-ledger-action="save"]');
-    save.addEventListener("click", () => this._saveLedgerForm(root, record));
-    root.querySelectorAll("input").forEach((input) =>
-      input.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") save.click();
-      }));
-    const first = root.querySelector("input");
-    if (first) first.focus();
-  }
-
-  _ledgerFormHTML(record) {
-    const r = record || {};
-    // Capacity is blank for a new record on purpose: the service defaults it
-    // to the owner watts the API reports now, so the common case needs no
-    // typing, while a historical edit sends the watts that were in force then.
-    //
-    // Periods are months, never days: a new line opens on the month after the
-    // latest declared period (Feb 2025 -> Jun 2026 offers 2026-07) and leaves
-    // the end blank, because when the board's next period closes is not ours
-    // to guess. Editing keeps the stored months.
-    const startMonth = record ? String(r.period_start || "").slice(0, 7) : this._nextPeriodStart();
-    const endMonth = record ? String(r.period_end || "").slice(0, 7) : "";
-    return `
-      <div class="price-edit-form ledger-form">
-        <label class="price-edit-label" for="ledger-start">Period start (month)</label>
-        <input class="price-edit-input" id="ledger-start" type="month" placeholder="YYYY-MM" value="${this._esc(startMonth)}" />
-        <label class="price-edit-label" for="ledger-end">Period end (month)</label>
-        <input class="price-edit-input" id="ledger-end" type="month" placeholder="YYYY-MM" value="${this._esc(endMonth)}" />
-        <label class="price-edit-label" for="ledger-rate">Rate announced (p/W)</label>
-        <input class="price-edit-input" id="ledger-rate" type="number" min="0.01" max="1000" step="0.1" value="${r.rate_p_per_w ?? ""}" />
-        <label class="price-edit-label" for="ledger-watts">Watts owned (W)</label>
-        <input class="price-edit-input" id="ledger-watts" type="number" min="0" step="1" value="${r.capacity_watts ?? ""}" placeholder="defaults to today's capacity" />
-        <label class="price-edit-label" for="ledger-note">Note (optional)</label>
-        <input class="price-edit-input" id="ledger-note" type="text" maxlength="200" value="${this._esc(r.note || "")}" placeholder="AGM, meeting, statement" />
-        <div class="price-edit-hint">Months only: a period runs from the 1st to the last day.</div>
-        <div class="price-edit-actions">
-          <button class="price-edit-btn" data-ledger-action="cancel">Cancel</button>
-          <button class="price-edit-btn price-edit-save" data-ledger-action="save">Save</button>
-        </div>
-        <div class="price-edit-hint" data-ledger="error"></div>
-      </div>`;
-  }
-
-  async _saveLedgerForm(root, record) {
-    const value = (sel) => root.querySelector(sel)?.value?.trim() || "";
-    const start = value("#ledger-start");
-    const end = value("#ledger-end");
-    const rate = parseFloat(value("#ledger-rate"));
-    const wattsRaw = value("#ledger-watts");
-    const watts = wattsRaw === "" ? null : parseFloat(wattsRaw);
-    const note = value("#ledger-note");
-
-    // Validate here as well as on the backend: a rejected service call is a
-    // silent no-op from the user's side of a modal unless the form says why.
-    // Periods are months, so both fields must be YYYY-MM; the payload expands
-    // them to the 1st and the last day, which the backend snaps to anyway.
-    const fail = (message, input) => {
-      const slot = root.querySelector('[data-ledger="error"]');
-      if (slot) slot.textContent = message;
-      const el = root.querySelector(input);
-      if (el) { el.setAttribute("data-error", "true"); el.focus(); }
-      return false;
-    };
-    if (!start || !end) return fail("Both period months are required.", start ? "#ledger-end" : "#ledger-start");
-    const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
-    if (!MONTH_RE.test(start) || !MONTH_RE.test(end)) {
-      return fail("A period is two months, entered as YYYY-MM (e.g. 2026-07).", MONTH_RE.test(start) ? "#ledger-end" : "#ledger-start");
-    }
-    if (end < start) return fail("The end month must not be before the start month.", "#ledger-end");
-    if (!Number.isFinite(rate) || rate <= 0) return fail("Enter the rate the board announced, in p/W.", "#ledger-rate");
-    if (watts !== null && (!Number.isFinite(watts) || watts < 0)) return fail("Watts owned must be 0 or more.", "#ledger-watts");
-
-    const payload = {
-      period_start: `${start}-01`,
-      period_end: this._monthLastDay(end),
-      rate_p_per_w: rate,
-    };
-    if (watts !== null) payload.capacity_watts = watts;
-    if (note) payload.note = note;
-
-    const service = record ? "update_payment_record" : "add_payment_record";
-    if (record) payload.record_id = record.id;
-    try {
-      await this._hass.callService("kirkhill_wind", service, payload);
-    } catch (err) {
-      const slot = root.querySelector('[data-ledger="error"]');
-      if (slot) slot.textContent = err?.message || "Save failed";
-      return false;
-    }
-    this._ledgerFormOpen = false;
-    this._bindLedgerRoot();
-    return true;
   }
 
   _openTurbineStatus() { this._showTurbineStatusModal(); }
@@ -2408,12 +2011,10 @@ class KirkHillWindScada extends HTMLElement {
     // edge: 1025 − 82 − 40 − 101 = 802.
     const chipUserGenValueX = gridRightX - 95 * scaleX;
     const chipUserGenTitleX = 942 * scaleX;
-    const chipUserGenFinX = gridRightX - 16 * scaleX;
     const chipSiteGenX = 930 * scaleX;
     const chipSiteGenW = gridRightX - chipSiteGenX;
     const chipSiteGenValueX = gridRightX - 95 * scaleX;
     const chipSiteGenTitleX = 942 * scaleX;
-    const chipSiteGenFinX = gridRightX - 16 * scaleX;
     const resetBtnW = 44 * scaleX;
     const resetBtnH = 48;
     // Bottom chrome row: version number, API status pill and reset button sit
@@ -2464,12 +2065,10 @@ class KirkHillWindScada extends HTMLElement {
       chipUserGenW,
       chipUserGenTitleX,
       chipUserGenValueX,
-      chipUserGenFinX,
       chipSiteGenX,
       chipSiteGenW,
       chipSiteGenTitleX,
       chipSiteGenValueX,
-      chipSiteGenFinX,
       chipWindX,
       chipWindW,
       chipWindTitleX,
@@ -2635,44 +2234,26 @@ _buildHeaderChips(layout) {
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="98">Owner</text>
           <text class="user-gen-colh" data-colh="label" x="${layout.chipUserGenTitleX}" y="120">Timeframe</text>
           <text class="user-gen-colh" data-colh="gen" x="${layout.chipUserGenValueX}" y="120" text-anchor="end">Generation</text>
-          <text class="user-gen-colh" data-colh="fin" x="${layout.chipUserGenFinX}" y="120" text-anchor="end">Value (£)</text>
           <!-- Generation timeframes -->
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="142">Yesterday</text>
           <text class="user-gen-value" data-user-gen="gen-yesterday" x="${layout.chipUserGenValueX}" y="142" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-yesterday" x="${layout.chipUserGenFinX}" y="142" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="162">Today</text>
           <text class="user-gen-value" data-user-gen="gen-today" x="${layout.chipUserGenValueX}" y="162" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-today" x="${layout.chipUserGenFinX}" y="162" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="182">Week</text>
           <text class="user-gen-value" data-user-gen="gen-week" x="${layout.chipUserGenValueX}" y="182" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-week" x="${layout.chipUserGenFinX}" y="182" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="202">Month</text>
           <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="202" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-month" x="${layout.chipUserGenFinX}" y="202" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="222">YTD</text>
           <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="222" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-ytd" x="${layout.chipUserGenFinX}" y="222" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="242">Year</text>
           <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="242" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-year" x="${layout.chipUserGenFinX}" y="242" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="262">All time</text>
           <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="262" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-alltime" x="${layout.chipUserGenFinX}" y="262" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="282">Your output (W)</text>
           <text class="user-gen-value user-gen-share" data-user-gen="share" x="${layout.chipUserGenValueX}" y="282" text-anchor="end">—</text>
-          <text class="user-gen-value user-gen-fin" data-user-gen="fin-share" x="${layout.chipUserGenFinX}" y="282" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="302">Share (‱)</text>
           <text class="user-gen-value" data-user-gen="sharepct" x="${layout.chipUserGenValueX}" y="302" text-anchor="end">—</text>
           <!-- Owner price chip (pence/kWh), on the title row, aligned to the Value column -->
-          <g class="price-edit" data-price-edit="owner">
-            <rect x="${layout.chipUserGenFinX - 128 * layout.scaleX}" y="84" width="${128 * layout.scaleX}" height="20" rx="10"/>
-            <text class="price-edit-label" data-price-text="owner" x="${layout.chipUserGenFinX - 8 * layout.scaleX}" y="98" text-anchor="end">Published —</text>
-          </g>
-          <!-- Member savings: owned watts × the board's declared p/W rate. Not a
-               timeframe, and the table above is full, so it takes its own line in
-               the empty gap between the Owner and Site panels, right-aligned to
-               the Value column. "—" while no rate is declared. -->
-          <text class="user-gen-savings" x="${layout.chipUserGenFinX}" y="322" text-anchor="end"><tspan class="user-gen-savings-label">Member savings </tspan><tspan class="user-gen-fin" data-user-gen="savings">—</tspan></text>
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
@@ -2681,39 +2262,26 @@ _buildHeaderChips(layout) {
           <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="354">Site</text>
           <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="376">Timeframe</text>
           <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="376" text-anchor="end">Generation</text>
-          <text class="site-gen-colh" data-colh="fin" x="${layout.chipSiteGenFinX}" y="376" text-anchor="end">Value (£)</text>
           <!-- Site timeframes -->
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="398">Yesterday</text>
           <text class="site-gen-value" data-site-gen="gen-yesterday" x="${layout.chipSiteGenValueX}" y="398" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-yesterday" x="${layout.chipSiteGenFinX}" y="398" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="418">Today</text>
           <text class="site-gen-value" data-site-gen="gen-today" x="${layout.chipSiteGenValueX}" y="418" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-today" x="${layout.chipSiteGenFinX}" y="418" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="438">Week</text>
           <text class="site-gen-value" data-site-gen="gen-week" x="${layout.chipSiteGenValueX}" y="438" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-week" x="${layout.chipSiteGenFinX}" y="438" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="458">Month</text>
           <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="458" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-month" x="${layout.chipSiteGenFinX}" y="458" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="478">YTD</text>
           <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="478" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-ytd" x="${layout.chipSiteGenFinX}" y="478" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="498">Year</text>
           <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="498" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-year" x="${layout.chipSiteGenFinX}" y="498" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="518">All time</text>
           <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="518" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-alltime" x="${layout.chipSiteGenFinX}" y="518" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="538">Capacity Factor</text>
           <text class="site-gen-value" data-site-gen="capacity" x="${layout.chipSiteGenValueX}" y="538" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="558">Power (MW)</text>
           <text class="site-gen-value" data-site-gen="power" x="${layout.chipSiteGenValueX}" y="558" text-anchor="end">—</text>
-          <text class="site-gen-value site-gen-fin" data-site-gen="fin-power" x="${layout.chipSiteGenFinX}" y="558" text-anchor="end">—</text>
           <!-- Site/CfD price chip (GBP/MWh), on the title row, aligned to the Value column -->
-          <g class="price-edit" data-price-edit="site">
-            <rect x="${layout.chipSiteGenFinX - 128 * layout.scaleX}" y="340" width="${128 * layout.scaleX}" height="20" rx="10"/>
-            <text class="price-edit-label" data-price-text="site" x="${layout.chipSiteGenFinX - 8 * layout.scaleX}" y="354" text-anchor="end">Price —</text>
-          </g>
         </g>
       </g>
     `;
@@ -2763,50 +2331,6 @@ _buildHeaderChips(layout) {
     const forecast = this._num(config.wind_forecast_entity);
     this._setText(root, '[data-chip="forecast"]', forecast === null ? "—" : `${this._fmt(forecast)} m/s`);
 
-    // Price chips: Owner payment ledger, and Site/CfD price (£/MWh).
-    // Two decimals on display so a sub-0.1 price (e.g. 0.06) is never rounded
-    // up to 0.1 in the pill; the stored value is always shown exactly.
-    const ownerPrice = this._num(config.owner_price_entity);
-    // The Owner pill names the p/W rate the board most recently published and
-    // pops out the dated line items it comes from -- members are paid per watt
-    // owned, for each period the board declared. It deliberately carries no
-    // money: the figures live on Member savings (current period) and All time
-    // (declared total), so the pill never repeats the row below it. A card
-    // stored without the ledger key keeps the old single-rate text so nothing
-    // silently blanks.
-    const ledgerId = config.payment_ledger_entity;
-    if (ledgerId) {
-      const rawRate = this._attr(ledgerId, "latest_rate_p_per_w");
-      const publishedRate =
-        rawRate === null || rawRate === undefined || !Number.isFinite(Number(rawRate))
-          ? null
-          : Number(rawRate);
-      this._setText(
-        root,
-        '[data-price-text="owner"]',
-        publishedRate === null
-          ? "Published —"
-          : `Published ${this._fmt(publishedRate, 2)} p/W`
-      );
-    } else {
-      const ownerRate = this._num(config.owner_rate_entity);
-      this._setText(root, '[data-price-text="owner"]', ownerRate === null || ownerRate === 0 ? "Rate —" : `Rate ${this._fmt(ownerRate, 2)} p/W`);
-    }
-    const sitePrice = this._num(config.negotiated_price_entity);
-    this._setText(root, '[data-price-text="site"]', sitePrice === null || sitePrice === 0 ? "Price —" : `Price £${this._fmt(sitePrice, 2)}/MWh`);
-
-    // A pill whose entity cannot take a write (disabled or unavailable) is
-    // dimmed and unhoverable, so it never looks like an action that would
-    // only end in a Home Assistant warning. For the Owner pill that entity is
-    // the ledger when there is one: a service-backed edit, not a number write.
-    root.querySelectorAll("[data-price-edit]").forEach((pill) => {
-      const id =
-        pill.getAttribute("data-price-edit") === "owner"
-          ? config.payment_ledger_entity || config.owner_rate_entity
-          : config.negotiated_price_entity;
-      pill.classList.toggle("price-edit--inert", !this._canEdit(id));
-    });
-
     // Generation & capacity panel (top right) — timeframe values
     (config.owner_generation_entities || []).forEach((item) => {
       const key = `gen-${item.name.toLowerCase().replace(/\s/g, "")}`;
@@ -2814,28 +2338,8 @@ _buildHeaderChips(layout) {
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-user-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
       this._setChipStale(root.querySelector(`[data-user-gen="${key}"]`), item.entity);
-      const fin = this._num(item.value_entity);
-      this._setText(root, `[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`, fin === null ? "—" : `£${this._fmt(fin, 2)}`);
-      this._setChipStale(root.querySelector(`[data-user-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`), item.value_entity);
     });
 
-    // All time Value (£): the ledger's declared total, overriding whatever the
-    // suppressed value sensor reported. Not kWh × today's price -- that reading
-    // is suppressed on purpose (decisions.md) because it revalues history every
-    // time a price changes, and the API records energy, never money. A sum of
-    // what the board actually declared has neither problem, which is what makes
-    // it the one £ figure here with a real history behind it.
-    if (ledgerId) {
-      const alltimeCell = root.querySelector('[data-user-gen="fin-alltime"]');
-      const declaredTotal = this._num(ledgerId);
-      // Written directly: _setText takes (root, selector, value), and the row
-      // element is already resolved above -- passing it as `root` swallowed
-      // the write and left the All time cell reading the suppressed "—".
-      if (alltimeCell) {
-        alltimeCell.textContent = declaredTotal === null ? "—" : `£${this._fmt(declaredTotal, 2)}`;
-      }
-      this._setChipStale(alltimeCell, ledgerId);
-    }
 
     const siteCap = this._num(config.capacity_entity);
     // Your share: owner export power is reported in kW; display in watts.
@@ -2853,30 +2357,7 @@ _buildHeaderChips(layout) {
           : null;
     this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct * 100, 2)}‱`);
 
-    // Owner live earnings rate: share of export (kW) × price (p/kWh) / 100 = £/h
-    const ownerRateLph = ownerExportKw !== null && ownerPrice > 0 ? (ownerExportKw * ownerPrice) / 100 : null;
-    this._setText(root, '[data-user-gen="fin-share"]', ownerRateLph === null ? "—" : `£${this._fmt(ownerRateLph, 2)}/h`);
 
-    // Member savings: the current period's figure -- the last p/W rate the
-    // board declared against owned watts. While today sits past every declared
-    // period it is an *estimate*, so it carries "~" and the sensor reports
-    // current_basis=estimated_from_last_declared_rate: shown, never presented
-    // as something the board announced. With no records at all it reads "—".
-    // A card stored without the ledger key falls back to the savings sensor.
-    if (ledgerId) {
-      const rawCurrent = this._attr(ledgerId, "current_gbp");
-      const estimated = this._attr(ledgerId, "current_basis") === "estimated_from_last_declared_rate";
-      const current =
-        rawCurrent === null || rawCurrent === undefined || !Number.isFinite(Number(rawCurrent))
-          ? null
-          : Number(rawCurrent);
-      this._setText(root, '[data-user-gen="savings"]', current === null ? "—" : `${estimated ? "~" : ""}£${this._fmt(current, 2)}`);
-      this._setChipStale(root.querySelector('[data-user-gen="savings"]'), ledgerId);
-    } else {
-      const savings = this._num(config.member_savings_entity);
-      this._setText(root, '[data-user-gen="savings"]', savings === null ? "—" : `£${this._fmt(savings, 2)}`);
-      this._setChipStale(root.querySelector('[data-user-gen="savings"]'), config.member_savings_entity);
-    }
 
     // Site Capacity panel — timeframe values
     (config.site_generation_entities || []).forEach((item) => {
@@ -2885,9 +2366,6 @@ _buildHeaderChips(layout) {
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-site-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
       this._setChipStale(root.querySelector(`[data-site-gen="${key}"]`), item.entity);
-      const fin = this._num(item.value_entity);
-      this._setText(root, `[data-site-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`, fin === null ? "—" : `£${this._fmt(fin, 2)}`);
-      this._setChipStale(root.querySelector(`[data-site-gen="fin-${item.name.toLowerCase().replace(/\s/g, "")}"]`), item.value_entity);
     });
 
     this._setText(root, '[data-site-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
@@ -2895,9 +2373,6 @@ _buildHeaderChips(layout) {
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
 
-    // Site live earnings rate: export power (MW) × CfD price (£/MWh) = £/h
-    const siteRateLph = sitePowerMw !== null && sitePrice > 0 ? sitePowerMw * sitePrice : null;
-    this._setText(root, '[data-site-gen="fin-power"]', siteRateLph === null ? "—" : `£${this._fmt(siteRateLph, 2)}/h`);
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
     const versionPill = root.querySelector('[data-version="indicator"]');
@@ -2998,14 +2473,9 @@ _buildHeaderChips(layout) {
     // that every label has been written.
     this._fitChips();
 
-    // Generation / Value (£) columns slide to fit the widest figure shown, so a
-    // large site value can never overlap the generation numbers.
+    // Generation figures are re-laid against the panel edge so a long number
+    // can never spill over the labels.
     this._fitValueColumns();
-
-    // An open ledger pop-out reads entity attributes too, so it gets the same
-    // refresh the cells just did -- but only while it shows the list; a
-    // half-typed form must never be rebuilt under the user's cursor.
-    this._refreshLedgerList();
   }
 
   // Size each top-row pill to the text it actually holds, then lay the row out
@@ -3070,13 +2540,14 @@ _buildHeaderChips(layout) {
     }
   }
 
-  // The Generation and Value (£) columns are drawn at fixed positions, but the
-  // widest value figure (site earnings can run to "£2,716,820.82") is far wider
-  // than the design gap and spills left over the generation numbers. Every
-  // update re-lays the columns out from the widest text measured across BOTH
-  // panels, so the Owner and Site boxes always share the same geometry, and the
-  // boxes widen leftward together (stopping clear of the bus) when the labels
-  // need more room than the design panel allows.
+  // The columns are drawn at fixed positions, but a long generation figure is
+  // wider than the design gap and would spill over the labels. Every update
+  // re-lays them from the widest text measured across BOTH panels, so the
+  // Owner and Site boxes always share the same geometry, and the boxes widen
+  // leftward together (stopping clear of the bus) when the labels need more
+  // room than the design panel allows. Money appears nowhere here any more --
+  // the Value column belongs to the ROI card -- so generation owns the
+  // right-hand edge of both panels.
   _fitValueColumns() {
     const root = this.shadowRoot;
     if (!root) return;
@@ -3093,19 +2564,18 @@ _buildHeaderChips(layout) {
       return w;
     };
 
-    // Widest text in each column, measured across both panels. The Value (£)
-    // column includes the live per-hour rates; the section heading is a
-    // full-width title, so it is excluded from the label measurement.
+    // Widest text in each column, measured across both panels; the section
+    // heading is a full-width title, so it is excluded from label measurement.
     const widestLabel = widest('[data-colh="label"], .user-gen-label, .site-gen-label, .user-gen-title, .site-gen-title');
     const widestGen = widest('[data-colh="gen"], [data-user-gen^="gen-"], [data-user-gen="share"], [data-user-gen="sharepct"], [data-site-gen^="gen-"], [data-site-gen="capacity"], [data-site-gen="power"]');
-    const widestFin = widest('[data-colh="fin"], [data-user-gen^="fin-"], [data-site-gen^="fin-"]');
 
     const gap = 16 * scaleX;
     const gridRightX = layout.gridRectX + layout.gridRectW;
-    const finX = gridRightX - 16 * scaleX; // value column right edge (fixed)
-    const designGenX = gridRightX - 95 * scaleX;
-    // Generation column slides left only as far as the widest value requires.
-    const genX = Math.min(designGenX, finX - widestFin - gap);
+    const rightX = gridRightX - 16 * scaleX;
+    // The Value (£) column is gone -- all money lives on the ROI card -- so
+    // generation takes the right-hand edge it used to own instead of leaving a
+    // dead gap where the pounds column was.
+    const genX = rightX;
     // Label column keeps its design anchor unless the shifted generation column
     // would collide with it; the panel then widens leftward to make room. The
     // box may slide left only until it meets the bus (700→760): never paint
@@ -3125,7 +2595,6 @@ _buildHeaderChips(layout) {
       '[data-colh="gen"], [data-user-gen^="gen-"], [data-user-gen="share"], [data-user-gen="sharepct"], [data-site-gen^="gen-"], [data-site-gen="capacity"], [data-site-gen="power"]',
       genX
     );
-    // Value figures stay right-aligned at finX — their position never changes.
 
     root.querySelectorAll("[data-user-gen='panel'], [data-site-gen='panel']").forEach((panel) => {
       const rect = panel.querySelector("rect");
@@ -3243,10 +2712,7 @@ _buildHeaderChips(layout) {
       .user-gen-label { fill: var(--khscada-secondary-color); font: calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .user-gen-colh, .site-gen-colh { fill: var(--khscada-primary-color); font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); letter-spacing: 0.6px; }
       .user-gen-value { font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-power-color); }
-      .user-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .user-gen-savings-label { fill: var(--khscada-secondary-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .site-gen-value { fill: var(--khscada-power-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
-      .site-gen-fin { fill: var(--khscada-success-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .user-gen-share { fill: var(--khscada-power-color); font: 600 calc(var(--ha-font-size, 16px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
 
       /* Site Generation & Capacity panel (below Owner) */
@@ -3290,45 +2756,11 @@ _buildHeaderChips(layout) {
       .version-pill.update-available .version-text { fill: var(--khscada-warn-color, #ffb300); }
 
       /* Price edit chips (Owner p/kWh, Site £/MWh) */
-      .price-edit rect { fill: var(--khscada-card-bg); stroke: var(--khscada-divider); stroke-width: 1.5; cursor: pointer; }
-      .price-edit:hover rect { stroke: var(--khscada-accent-color); }
-      .price-edit text { fill: var(--khscada-secondary-color); font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); cursor: pointer; }
-      .price-edit:hover text { fill: var(--khscada-primary-color); }
-      .price-edit--inert, .price-edit--inert:hover rect, .price-edit--inert:hover text { cursor: default; }
-      .price-edit--inert rect, .price-edit--inert text { opacity: 0.5; }
-      .price-edit--inert:hover rect { stroke: var(--khscada-divider); }
-      .price-edit--inert:hover text { fill: var(--khscada-secondary-color); }
 
-      /* Price edit modal form */
-      .price-edit-form { display: flex; flex-direction: column; gap: 12px; }
-      .price-edit-label { font: 600 var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; }
-      .price-edit-input { font: var(--ha-font-size, 16px) var(--khscada-font-family); color: var(--khscada-primary-color); background: var(--khscada-card-bg); border: 1px solid var(--khscada-divider); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box; }
-      .price-edit-input:focus { outline: none; border-color: var(--khscada-accent-color); }
-      .price-edit-input[data-error="true"] { border-color: var(--khscada-error-color); }
-      .price-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
-      .price-edit-btn { font: 600 var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 6px 14px; cursor: pointer; }
-      .price-edit-btn:hover { color: var(--khscada-primary-color); }
-      .price-edit-save { background: color-mix(in srgb, var(--khscada-accent-color) 20%, transparent); color: var(--khscada-accent-color); }
-      .price-edit-hint { font: var(--ha-font-size-small, 14px) var(--khscada-font-family); color: var(--khscada-secondary-color); }
-
-      /* Payment ledger pop-out: one row per period the board declared */
-      .ledger { display: flex; flex-direction: column; gap: 10px; }
-      .ledger-list { display: flex; flex-direction: column; gap: 6px; }
-      .ledger-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--khscada-divider); border-radius: 8px; background: var(--khscada-card-bg); }
-      .ledger-row-main { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-      .ledger-dates { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-primary-color); }
-      .ledger-rate { font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); overflow-wrap: anywhere; }
-      .ledger-note { font-style: italic; }
-      .ledger-row-value { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-primary-color); white-space: nowrap; }
-      .ledger-row-actions { display: flex; gap: 6px; }
-      .ledger-btn { width: 28px; height: 28px; border: 1px solid var(--khscada-divider); border-radius: 6px; background: var(--khscada-card-bg); color: var(--khscada-secondary-color); cursor: pointer; font-size: 14px; line-height: 1; }
-      .ledger-btn:hover { color: var(--khscada-primary-color); border-color: var(--khscada-accent-color); }
-      .ledger-btn--danger:hover { color: var(--khscada-error-color); border-color: var(--khscada-error-color); }
-      .ledger-caption { font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); }
-      .ledger-caption b { color: var(--khscada-primary-color); }
-      .ledger-total { display: flex; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid var(--khscada-divider); font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); }
-      .ledger-total b { color: var(--khscada-primary-color); }
-      .ledger-form { gap: 8px; }
+      .ledger-row--self { border-style: dashed; }
+      .ledger-check { display: flex; align-items: center; gap: 8px; font: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-primary-color); cursor: pointer; }
+      .ledger-check input { width: 16px; height: 16px; accent-color: var(--khscada-accent-color); cursor: pointer; }
+      .ledger-src { display: inline-block; padding: 0 6px; border: 1px solid var(--khscada-warn-color, #ffb300); border-radius: 8px; color: var(--khscada-warn-color, #ffb300); font-size: 11px; font-style: normal; vertical-align: middle; }
 
       .empty { padding: 24px 16px; color: var(--khscada-secondary-color); }
 

@@ -8,7 +8,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, SCOPE_OWNER
-from .payment_ledger import MAX_NOTE_LENGTH, MAX_RATE_P_PER_W, get_ledger
+from .payment_ledger import MAX_NOTE_LENGTH, MAX_RATE_P_PER_W, SOURCES, get_ledger
 
 SERVICE_RELOAD_INTEGRATION = "reload_integration"
 SERVICE_RESET_DASHBOARD = "reset_dashboard"
@@ -19,6 +19,9 @@ SERVICE_RESET_DASHBOARD = "reset_dashboard"
 SERVICE_ADD_PAYMENT_RECORD = "add_payment_record"
 SERVICE_UPDATE_PAYMENT_RECORD = "update_payment_record"
 SERVICE_REMOVE_PAYMENT_RECORD = "remove_payment_record"
+# The ROI card's capital input. Kept as its own service rather than a field on
+# a record: the invested amount describes the member's holding, not one period.
+SERVICE_SET_INVESTED_AMOUNT = "set_invested_amount"
 ATTR_ENTRY_ID = "entry_id"
 ATTR_RECORD_ID = "record_id"
 ATTR_PERIOD_START = "period_start"
@@ -27,6 +30,8 @@ ATTR_RATE_P_PER_W = "rate_p_per_w"
 ATTR_CAPACITY_WATTS = "capacity_watts"
 ATTR_ANNOUNCED_ON = "announced_on"
 ATTR_NOTE = "note"
+ATTR_SOURCE = "source"
+ATTR_INVESTED_GBP = "invested_gbp"
 SERVICE_SCHEMA_RELOAD = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
 SERVICE_SCHEMA_RESET = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
 
@@ -45,6 +50,9 @@ _PERIOD_FIELDS = {
     vol.Optional(ATTR_CAPACITY_WATTS): vol.All(vol.Coerce(float), vol.Range(min=0)),
     vol.Optional(ATTR_ANNOUNCED_ON): cv.date,
     vol.Optional(ATTR_NOTE): vol.All(str, vol.Length(max=MAX_NOTE_LENGTH)),
+    # Optional, and "board" when absent, so a call written before the tick
+    # existed keeps announcing instead of silently becoming a self estimate.
+    vol.Optional(ATTR_SOURCE): vol.In(SOURCES),
 }
 
 SERVICE_SCHEMA_ADD_PAYMENT = vol.Schema(
@@ -55,6 +63,7 @@ SERVICE_SCHEMA_ADD_PAYMENT = vol.Schema(
         vol.Optional(ATTR_CAPACITY_WATTS): _PERIOD_FIELDS[ATTR_CAPACITY_WATTS],
         vol.Optional(ATTR_ANNOUNCED_ON): cv.date,
         vol.Optional(ATTR_NOTE): _PERIOD_FIELDS[ATTR_NOTE],
+        vol.Optional(ATTR_SOURCE): _PERIOD_FIELDS[ATTR_SOURCE],
         vol.Optional(ATTR_ENTRY_ID): str,
     }
 )
@@ -67,6 +76,16 @@ SERVICE_SCHEMA_UPDATE_PAYMENT = vol.Schema(
 )
 SERVICE_SCHEMA_REMOVE_PAYMENT = vol.Schema(
     {vol.Required(ATTR_RECORD_ID): str, vol.Optional(ATTR_ENTRY_ID): str}
+)
+SERVICE_SCHEMA_SET_INVESTED = vol.Schema(
+    {
+        # JSON null clears it back to "not told": an unknown investment is a
+        # different statement from having invested nothing.
+        vol.Required(ATTR_INVESTED_GBP): vol.Any(
+            None, vol.All(vol.Coerce(float), vol.Range(min=0))
+        ),
+        vol.Optional(ATTR_ENTRY_ID): str,
+    }
 )
 # hass.data is a global namespace shared with every other integration, so the
 # flag must be domain-scoped (same convention as _FRONTEND_REGISTERED in
@@ -171,6 +190,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 f"No payment record with id '{call.data[ATTR_RECORD_ID]}'"
             )
 
+    async def _async_set_invested_amount(call) -> None:
+        _, ledger = _target_and_ledger(call)
+        try:
+            await ledger.async_set_invested(call.data[ATTR_INVESTED_GBP])
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_RELOAD_INTEGRATION,
@@ -201,6 +227,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         _async_remove_payment_record,
         schema=SERVICE_SCHEMA_REMOVE_PAYMENT,
     )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_INVESTED_AMOUNT,
+        _async_set_invested_amount,
+        schema=SERVICE_SCHEMA_SET_INVESTED,
+    )
     hass.data[SERVICES_REGISTERED] = True
 
 
@@ -214,4 +246,5 @@ async def async_unload_services(hass: HomeAssistant) -> None:
     hass.services.async_remove(DOMAIN, SERVICE_ADD_PAYMENT_RECORD)
     hass.services.async_remove(DOMAIN, SERVICE_UPDATE_PAYMENT_RECORD)
     hass.services.async_remove(DOMAIN, SERVICE_REMOVE_PAYMENT_RECORD)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_INVESTED_AMOUNT)
     hass.data[SERVICES_REGISTERED] = False

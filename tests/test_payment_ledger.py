@@ -30,18 +30,25 @@ from custom_components.kirkhill_wind.payment_ledger import (
     async_setup_ledger,
     async_unload_ledger,
     current_figure,
+    current_year_gbp,
     get_ledger,
+    latest_board_record,
     latest_record,
     ledger_store,
     ledger_total_gbp,
     normalise_record,
     record_value_gbp,
+    roi_pct,
+    source_totals_gbp,
+    year_totals_gbp,
 )
 from custom_components.kirkhill_wind.sensor import PaymentLedgerSensor
 from custom_components.kirkhill_wind.services import (
     SERVICE_ADD_PAYMENT_RECORD,
     SERVICE_REMOVE_PAYMENT_RECORD,
     SERVICE_SCHEMA_ADD_PAYMENT,
+    SERVICE_SCHEMA_SET_INVESTED,
+    SERVICE_SET_INVESTED_AMOUNT,
     SERVICE_UPDATE_PAYMENT_RECORD,
     async_setup_services,
 )
@@ -425,12 +432,15 @@ class TestPaymentRecordServices:
                     "rate_p_per_w": 18.5,
                     "capacity_watts": 1500,
                     "note": "AGM",
+                    "source": "self",
                 }
             )
         )
 
         assert ledger.records[0]["capacity_watts"] == 1500.0
         assert ledger.records[0]["note"] == "AGM"
+        # The tick travels through the schema and the validator unchanged.
+        assert ledger.records[0]["source"] == "self"
 
     @pytest.mark.asyncio
     async def test_add_without_capacity_and_without_api_reading_is_refused(self, hass, fake_store):
@@ -503,3 +513,224 @@ class TestPaymentRecordServices:
                     "rate_p_per_w": 0,
                 }
             )
+
+    @pytest.mark.asyncio
+    async def test_set_invested_amount_round_trip(self, hass, fake_store):
+        ledger = await self._setup(hass, fake_store)
+        handler = self._handler(hass, SERVICE_SET_INVESTED_AMOUNT)
+
+        await handler(SimpleNamespace(data={"invested_gbp": 5000}))
+        assert ledger.invested_gbp == 5000.0
+
+        # JSON null clears it: unknown capital, not zero capital.
+        await handler(SimpleNamespace(data={"invested_gbp": None}))
+        assert ledger.invested_gbp is None
+
+    def test_invested_schema_accepts_null_and_rejects_negative(self):
+        assert SERVICE_SCHEMA_SET_INVESTED({"invested_gbp": None})["invested_gbp"] is None
+        assert SERVICE_SCHEMA_SET_INVESTED({"invested_gbp": "1250.5"})["invested_gbp"] == 1250.5
+        with pytest.raises(vol.Invalid):
+            SERVICE_SCHEMA_SET_INVESTED({"invested_gbp": -1})
+
+
+class TestSource:
+    """board = announced by the board; self = the member's own estimate."""
+
+    def test_missing_source_is_board(self):
+        # Records written before the tick existed came from board announcements,
+        # so absence must not silently turn them into unlabelled estimates.
+        assert normalise_record(_record())["source"] == "board"
+
+    @pytest.mark.parametrize("source", ["board", "self"])
+    def test_explicit_source_is_kept(self, source):
+        assert normalise_record(_record(source=source))["source"] == source
+
+    def test_unknown_source_is_rejected(self):
+        with pytest.raises(ValueError):
+            normalise_record(_record(source="committee"))
+
+    def test_totals_split_without_changing_the_total(self):
+        records = [
+            normalise_record(_record()),
+            normalise_record(_record(period_start="2026-07", period_end="2026-12", source="self")),
+        ]
+        totals = source_totals_gbp(records)
+        assert totals["board"] == 400.0
+        assert totals["self"] == 400.0
+        # The state stays the sum of everything; the split is extra detail.
+        assert ledger_total_gbp(records) == 800.0
+
+    def test_absent_source_reads_none_not_zero(self):
+        assert source_totals_gbp([normalise_record(_record())])["self"] is None
+        assert source_totals_gbp([]) == {"board": None, "self": None}
+
+    def test_pill_rate_follows_board_records_only(self):
+        records = [
+            normalise_record(_record()),  # board: 20 p/W, ends Jun 2026
+            normalise_record(
+                _record(
+                    period_start="2026-07",
+                    period_end="2026-12",
+                    rate_p_per_w=33.5,
+                    source="self",
+                )
+            ),
+        ]
+        # The self line is the later one, but nobody has published it.
+        assert latest_board_record(records)["rate_p_per_w"] == 20.0
+        assert latest_board_record([normalise_record(_record(source="self"))]) is None
+
+
+class TestYearAttribution:
+    """A declaration is counted whole in the year it ends in, never split."""
+
+    def test_spanning_declaration_counts_once_in_its_end_year(self):
+        records = [normalise_record(_record())]  # Feb 2025 -> Jun 2026
+        assert year_totals_gbp(records) == {"2026": 400.0}
+        assert current_year_gbp(records, today=date(2026, 10, 21)) == 400.0
+        # It does not also claim 2025 -- that would double count.
+        assert current_year_gbp(records, today=date(2025, 10, 21)) is None
+
+    def test_years_with_no_declaration_are_absent(self):
+        records = [normalise_record(_record(period_start="2024-01", period_end="2024-12"))]
+        assert year_totals_gbp(records) == {"2024": 400.0}
+        assert current_year_gbp(records, today=date(2026, 10, 21)) is None
+
+    def test_declarations_in_one_year_add_up(self):
+        records = [
+            normalise_record(_record()),
+            normalise_record(_record(period_start="2026-07", period_end="2026-12")),
+        ]
+        assert year_totals_gbp(records) == {"2026": 800.0}
+
+
+class TestSourceAttributesOnTheSensor:
+    """Board/self split, published rate and the year map as the card reads them."""
+
+    @staticmethod
+    def _sensor_with(records):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        ledger._records = [normalise_record(r) for r in records]
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {}
+        entry = MagicMock()
+        entry.entry_id = "test-entry"
+        return PaymentLedgerSensor(coordinator, entry, ledger)
+
+    def test_split_published_rate_and_year_map(self):
+        sensor = self._sensor_with(
+            [
+                _record(),  # board, ends Jun 2026
+                _record(
+                    period_start="2026-07",
+                    period_end="2026-12",
+                    rate_p_per_w=33.5,
+                    source="self",
+                ),
+            ]
+        )
+        attrs = sensor.extra_state_attributes
+
+        # board: 2,000 W x 20 p/W = 400.00 · self: 2,000 W x 33.5 p/W = 670.00
+        assert attrs["total_gbp"] == 1070.0
+        assert attrs["board_total_gbp"] == 400.0
+        assert attrs["self_total_gbp"] == 670.0
+        # Latest overall is the self line; the published one is not.
+        assert attrs["latest_rate_p_per_w"] == 33.5
+        assert attrs["latest_board_rate_p_per_w"] == 20.0
+        # Today sits inside Jul-Dec 2026, whose record is self-estimated --
+        # that is what makes Member savings draw with "~".
+        assert attrs["current_source"] == "self"
+        assert attrs["current_basis"] == BASIS_DECLARED
+        assert attrs["current_year_gbp"] == 1070.0
+        assert attrs["year_totals_gbp"] == {"2026": 1070.0}
+
+
+class TestRoiAndInvested:
+    """Return is value ÷ capital, and capital persists beside the records."""
+
+    def test_roi_is_value_over_capital(self):
+        assert roi_pct(537.49, 5000.0) == 10.75
+        assert roi_pct(0.0, 5000.0) == 0.0
+
+    @pytest.mark.parametrize(
+        ("value", "invested"),
+        [
+            (537.49, None),  # never told what was invested
+            (None, 5000.0),  # nothing declared yet
+            (537.49, 0.0),  # zero capital has no rate of return
+        ],
+    )
+    def test_missing_input_reads_none_not_zero(self, value, invested):
+        assert roi_pct(value, invested) is None
+
+    @pytest.mark.asyncio
+    async def test_capital_persists_with_the_records(self, hass, fake_store):
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_add(_record())
+        await ledger.async_set_invested(5000)
+
+        assert ledger.invested_gbp == 5000.0
+        assert fake_store.data["invested_gbp"] == 5000.0
+        assert len(fake_store.data["records"]) == 1
+
+        reloaded = PaymentLedger(hass, "test-entry")
+        await reloaded.async_load()
+        assert reloaded.invested_gbp == 5000.0
+        assert len(reloaded.records) == 1
+
+    @pytest.mark.asyncio
+    async def test_clearing_capital_reads_unknown(self, hass, fake_store):
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_set_invested(5000)
+        await ledger.async_set_invested(None)
+        assert ledger.invested_gbp is None
+        assert fake_store.data["invested_gbp"] is None
+
+    @pytest.mark.asyncio
+    async def test_negative_capital_is_refused(self, hass, fake_store):
+        ledger = PaymentLedger(hass, "test-entry")
+        with pytest.raises(ValueError):
+            await ledger.async_set_invested(-1)
+        assert ledger.invested_gbp is None
+
+    @pytest.mark.asyncio
+    async def test_capital_without_records_is_kept(self, hass):
+        store = FakeStore({"records": [], "invested_gbp": 1500.0})
+        with patch(
+            "custom_components.kirkhill_wind.payment_ledger.ledger_store",
+            return_value=store,
+        ):
+            ledger = PaymentLedger(hass, "test-entry")
+            await ledger.async_load()
+        assert ledger.records == []
+        assert ledger.invested_gbp == 1500.0
+
+    @staticmethod
+    def _sensor(ledger: PaymentLedger) -> PaymentLedgerSensor:
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {}
+        entry = MagicMock()
+        entry.entry_id = "test-entry"
+        return PaymentLedgerSensor(coordinator, entry, ledger)
+
+    def test_sensor_reports_capital_and_roi(self):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        ledger._records = [normalise_record(_record())]  # GBP 400.00
+        ledger._invested_gbp = 5000.0
+
+        attrs = self._sensor(ledger).extra_state_attributes
+        assert attrs["invested_gbp"] == 5000.0
+        assert attrs["total_roi_pct"] == 8.0
+        assert attrs["records"][0]["roi_pct"] == 8.0
+
+    def test_roi_is_unknown_until_capital_is_known(self):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        ledger._records = [normalise_record(_record())]
+
+        attrs = self._sensor(ledger).extra_state_attributes
+        assert attrs["invested_gbp"] is None
+        assert attrs["total_roi_pct"] is None
+        assert attrs["records"][0]["roi_pct"] is None

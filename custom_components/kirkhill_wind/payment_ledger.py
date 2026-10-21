@@ -52,6 +52,14 @@ _LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
 
+# Where a declaration came from. "board" is what the board announced; "self" is
+# the member's own estimate for a period the board has not declared yet. They
+# are stored alike but never presented alike: a self figure must never read as
+# something published, which is why the pill's rate follows board records only.
+SOURCE_BOARD = "board"
+SOURCE_SELF = "self"
+SOURCES = (SOURCE_BOARD, SOURCE_SELF)
+
 # attribute values, so the card and the sensors agree on the wording
 BASIS_NO_ENTRIES = "no_entries"
 BASIS_DECLARED = "declared"
@@ -144,6 +152,14 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any]:
     if note is not None:
         note = str(note).strip()[:MAX_NOTE_LENGTH] or None
 
+    source = record.get("source")
+    if source is None:
+        # Records written before the tick existed were entered from a board
+        # announcement, so absence means board rather than an unknown.
+        source = SOURCE_BOARD
+    if source not in SOURCES:
+        raise ValueError(f"source must be one of {' or '.join(SOURCES)}")
+
     record_id = record.get("id")
     if not isinstance(record_id, str) or not record_id.strip():
         record_id = uuid.uuid4().hex
@@ -156,6 +172,7 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any]:
         "capacity_watts": capacity,
         "announced_on": announced_on.isoformat() if announced_on else None,
         "note": note,
+        "source": source,
     }
 
 
@@ -231,6 +248,65 @@ def current_figure(
     return value, BASIS_ESTIMATED
 
 
+def source_totals_gbp(records: list[dict[str, Any]]) -> dict[str, float | None]:
+    """Return ``{"board": Σ, "self": Σ}``, each None when that source is absent.
+
+    The buckets do not replace the total: ``total_gbp`` stays the sum of
+    everything declared or estimated, and these say how much of it the board
+    actually announced versus how much is the member's own estimate.
+    """
+    board = [r for r in records if r.get("source") == SOURCE_BOARD]
+    own = [r for r in records if r.get("source") == SOURCE_SELF]
+    return {SOURCE_BOARD: ledger_total_gbp(board), SOURCE_SELF: ledger_total_gbp(own)}
+
+
+def latest_board_record(records: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Latest board declaration, or None.
+
+    This -- and only this -- is what the card's `Published …` pill reports: a
+    self-estimated rate has not been published by anyone.
+    """
+    return latest_record([r for r in records if r.get("source") == SOURCE_BOARD])
+
+
+def year_totals_gbp(records: list[dict[str, Any]]) -> dict[str, float]:
+    """Σ of declarations keyed by the calendar year each one **ends** in.
+
+    A declaration is attributed whole, never split: Feb 2025 → Jun 2026 counts
+    as 2026, because dividing it across the years it touches would be exactly
+    the accrual the no-accrual decision rules out. Years with no declaration
+    are absent from the map, so the card draws "—" rather than 0.
+    """
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        buckets.setdefault(record["period_end"][:4], []).append(record)
+    return {year: ledger_total_gbp(group) for year, group in sorted(buckets.items())}
+
+
+def current_year_gbp(
+    records: list[dict[str, Any]], today: date | None = None
+) -> float | None:
+    """Σ of declarations ending in today's calendar year, or None when there are none."""
+    if today is None:
+        today = dt_util.now().date()
+    return year_totals_gbp(records).get(str(today.year))
+
+
+def roi_pct(value_gbp: float | None, invested_gbp: float | None) -> float | None:
+    """Return ``value ÷ invested × 100``, or None when no return can be computed.
+
+    None -- not 0 -- is the empty answer: with no invested amount recorded there
+    is no return to quote, and "0.00%" would claim the money earned nothing
+    rather than admitting we were never told what was put in. Plain percentage
+    of capital per period, deliberately unannualised: the board pays per period
+    regardless of how long it runs, so a per-year figure would be a rate of our
+    own invention.
+    """
+    if value_gbp is None or invested_gbp is None or invested_gbp <= 0:
+        return None
+    return round(value_gbp / invested_gbp * 100, 2)
+
+
 class PaymentLedger:
     """One config entry's payment declarations, persisted to a Store.
 
@@ -242,11 +318,17 @@ class PaymentLedger:
         self._hass = hass
         self._entry_id = entry_id
         self._records: list[dict[str, Any]] = []
+        self._invested_gbp: float | None = None
         self._listeners: list[Callable[[], None]] = []
 
     @property
     def entry_id(self) -> str:
         return self._entry_id
+
+    @property
+    def invested_gbp(self) -> float | None:
+        """What the member put in — one number for the whole ledger, None if untold."""
+        return self._invested_gbp
 
     @property
     def records(self) -> list[dict[str, Any]]:
@@ -256,17 +338,34 @@ class PaymentLedger:
     async def async_load(self) -> None:
         """Load the stored ledger. An unreadable entry is dropped, not fatal."""
         data = await ledger_store(self._hass, self._entry_id).async_load()
-        raw = data.get("records") if isinstance(data, dict) else None
-        if not isinstance(raw, list):
+        is_dict = isinstance(data, dict)
+        raw = data.get("records") if is_dict else None
+        if isinstance(raw, list):
+            loaded: list[dict[str, Any]] = []
+            for candidate in raw:
+                try:
+                    loaded.append(normalise_record(candidate))
+                except ValueError as err:
+                    _LOGGER.warning("Dropping unreadable payment record: %s", err)
+            self._records = _sorted(loaded)
+        else:
             self._records = []
-            return
-        loaded: list[dict[str, Any]] = []
-        for candidate in raw:
-            try:
-                loaded.append(normalise_record(candidate))
-            except ValueError as err:
-                _LOGGER.warning("Dropping unreadable payment record: %s", err)
-        self._records = _sorted(loaded)
+        # Read even when the records are absent: an invested amount with no
+        # declarations yet is a legitimate thing to have stored.
+        invested = _as_float(data.get("invested_gbp")) if is_dict else None
+        self._invested_gbp = (
+            invested if invested is not None and invested >= 0 else None
+        )
+
+    async def async_set_invested(self, amount: float | None) -> None:
+        """Record what the member invested; None clears it back to untold."""
+        if amount is not None:
+            value = _as_float(amount)
+            if value is None or value < 0:
+                raise ValueError("invested_gbp must be 0 or greater")
+            amount = round(value, 2)
+        self._invested_gbp = amount
+        await self._async_commit()
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
@@ -285,8 +384,11 @@ class PaymentLedger:
             listener()
 
     async def _async_commit(self) -> None:
+        # Both halves of the ledger persist together -- the records and the
+        # capital they are measured against -- so an ROI can never be computed
+        # from one half of a save.
         await ledger_store(self._hass, self._entry_id).async_save(
-            {"records": self._records}
+            {"records": self._records, "invested_gbp": self._invested_gbp}
         )
         self._notify()
 

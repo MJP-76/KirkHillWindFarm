@@ -3,6 +3,7 @@
 Handles creation, merging, and resetting of the Lovelace dashboard.
 Separated from __init__.py to keep the entry-point file manageable.
 """
+
 from __future__ import annotations
 
 import copy
@@ -76,7 +77,9 @@ async def async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> Non
             )
         except (HomeAssistantError, vol.Invalid) as err:
             if getattr(err, "translation_key", None) == "url_already_exists":
-                _LOGGER.debug("Dashboard URL already exists (race), fetching existing item")
+                _LOGGER.debug(
+                    "Dashboard URL already exists (race), fetching existing item"
+                )
                 await dashboards_collection.async_load()
                 item = next(
                     (
@@ -102,7 +105,9 @@ async def async_ensure_dashboard(hass: HomeAssistant, entry: ConfigEntry) -> Non
     try:
         existing_config = await lovelace_store.async_load(False)
     except Exception as err:  # noqa: BLE001
-        _LOGGER.warning("Failed to load existing dashboard config: %s; creating new default", err)
+        _LOGGER.warning(
+            "Failed to load existing dashboard config: %s; creating new default", err
+        )
         existing_config = None
 
     if existing_config and "views" in existing_config:
@@ -251,7 +256,9 @@ def card_match_key(card: dict) -> str | None:
         ]
         if child_keys:
             return f"container:{ctype}:{'|'.join(child_keys)}"
-    if ctype == "custom:kirkhill-wind-scada":
+    # Both bundled cards carry no title, so a title-based key would never
+    # match them and every merge would append another copy.
+    if ctype in ("custom:kirkhill-wind-scada", "custom:kirkhill-wind-roi"):
         return ctype
     if ctype == "custom:apexcharts-card" and card.get("header", {}).get("title"):
         return f"{ctype}:title:{card['header']['title']}"
@@ -419,8 +426,7 @@ def merge_dashboard_config(existing: dict, new_default: dict) -> dict:
             merged_views.append(copy.deepcopy(new_view))
 
     merged_views.extend(
-        v for v in remaining_existing_views
-        if v.get("path") not in OBSOLETE_VIEW_PATHS
+        v for v in remaining_existing_views if v.get("path") not in OBSOLETE_VIEW_PATHS
     )
     merged["views"] = merged_views
     return merged
@@ -442,7 +448,7 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
     turbine_prefix = f"{entry.entry_id}_turbine_"
     present_turbine_ids = sorted(
         {
-            uid[len(turbine_prefix):].split("_")[0]
+            uid[len(turbine_prefix) :].split("_")[0]
             for uid in entity_ids
             if uid.startswith(turbine_prefix)
         }
@@ -462,14 +468,15 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         ("All time", "alltime"),
     )
 
-    def generation_entities(scope: str) -> list[tuple[str, str | None, str | None]]:
-        """Return (label, energy entity, value entity) triples for a generation scope."""
+    def generation_entities(scope: str) -> list[tuple[str, str | None]]:
+        """Return (label, energy entity) pairs for a generation scope.
+
+        No value entity: money left the SCADA card for the ROI card, so the
+        £ column and the suppressed value sensors behind it are no longer
+        referenced here at all.
+        """
         return [
-            (
-                label,
-                farm_scoped(scope, f"farm_generation_{suffix}"),
-                farm_scoped(scope, f"farm_generation_value_{suffix}"),
-            )
+            (label, farm_scoped(scope, f"farm_generation_{suffix}"))
             for label, suffix in generation_periods
         ]
 
@@ -501,31 +508,49 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "type": "custom:kirkhill-wind-scada",
                         "title": "",
                         "farm_power_entity": farm_scoped("site", "farm_power"),
-                        "grid_energy_entity": farm_scoped("site", "farm_generation_today"),
+                        "grid_energy_entity": farm_scoped(
+                            "site", "farm_generation_today"
+                        ),
                         "owner_power_entity": farm_scoped("owner", "farm_power"),
-                        "owner_grid_energy_entity": farm_scoped("owner", "farm_generation_today"),
-                        "owner_generation_today_entity": farm_scoped("owner", "farm_generation_today"),
+                        "owner_grid_energy_entity": farm_scoped(
+                            "owner", "farm_generation_today"
+                        ),
+                        "owner_generation_today_entity": farm_scoped(
+                            "owner", "farm_generation_today"
+                        ),
                         "owner_share_entity": farm_scoped("owner", "farm_owner_share"),
-                        "negotiated_price_entity": farm("negotiated_price_gbp_per_mwh"),
-                        "owner_price_entity": farm("owner_price_pence_per_kwh"),
-                        "owner_rate_entity": farm("owner_rate_pence_per_w"),
-                        "member_savings_entity": farm_scoped("owner", "member_savings_value"),
-                        "payment_ledger_entity": farm_scoped("owner", "payment_ledger"),
                         "wind_speed_entity": farm("farm_wind_speed"),
-                        "wind_forecast_entity": farm("open_meteo_next_hour_wind_speed_mps"),
+                        "wind_forecast_entity": farm(
+                            "open_meteo_next_hour_wind_speed_mps"
+                        ),
                         "active_entity": farm("farm_active_turbines"),
                         "api_status_entity": farm("api_status"),
                         "capacity_entity": farm_scoped("site", "farm_capacity_factor"),
                         "owner_generation_entities": [
-                            {"name": name, "entity": entity, "value_entity": value_entity}
-                            for name, entity, value_entity in owner_generation_entities
+                            {"name": name, "entity": entity}
+                            for name, entity in owner_generation_entities
                         ],
                         "site_generation_entities": [
-                            {"name": name, "entity": entity, "value_entity": value_entity}
-                            for name, entity, value_entity in site_generation_entities
+                            {"name": name, "entity": entity}
+                            for name, entity in site_generation_entities
                         ],
                         "turbines": scada_turbines,
                     },
+                ],
+            },
+            {
+                # Money lives here and nowhere on the SCADA card: the declared
+                # periods, the rate behind each, the capital invested and every
+                # period's return against it.
+                "title": "Return on investment",
+                "path": "roi",
+                "icon": "mdi:finance",
+                "cards": [
+                    {
+                        "type": "custom:kirkhill-wind-roi",
+                        "title": "",
+                        "payment_ledger_entity": farm_scoped("owner", "payment_ledger"),
+                    }
                 ],
             },
         ],

@@ -16,14 +16,14 @@ It pulls current data for both OpenAPI scopes:
 - `owner` (your ownership share)
 - `site` (whole-site values)
 
-> - **Financial figures are on hold for now (v4.16.2)** — with one exception:
->   the **Owner pill** (latest published p/W rate), the Owner panel's **All time** £ cell
->   and **Member savings** now come from a **payment ledger** of the periods
->   the board has declared a p/W rate for, and clicking the pill pops those
->   dated line items out to add, edit or remove. Every other money cell still
->   reads `—` and the price/rate entities stay disabled while the model is
->   confirmed. Figures are being worked on in the background against the
->   board's last announcement. Generation, power and capacity are unaffected.
+> - **Money lives on its own card.** The SCADA card shows generation, power,
+>   capacity and wind only — the `Value (£)` column, the `£/h` cells, the
+>   Member savings line and both price pills are gone from the Owner and Site
+>   panels. A separate **Return on investment** tab holds the payment ledger:
+>   every period the board declared a p/W rate for, its £ figure, the amount you
+>   invested and your return against it, with board-announced and self-estimated
+>   figures kept apart. The old price/rate entities stay disabled and zeroed
+>   while the model is confirmed. Generation, power and capacity are unaffected.
 > - **Kirk Hill API remains the authoritative source for actual farm generation.**
 
 ## Support me
@@ -41,40 +41,42 @@ and an animated dashboard.
 
 - **Owner & Site scopes** — pulls data for both your ownership share (`owner`)
   and the whole farm (`site`), covering power, capacity factor, and generation
-  for yesterday, today, week, month, YTD, year, and all time. **Most financial
-  figures are shown but empty** (see the note above): the GBP value sensors
-  still exist but are disabled, so every £ cell on the card reads `—` — except
-  the Owner **All time** £ cell and **Member savings**, which show the payment
-  ledger's declared figures.
+  for yesterday, today, week, month, YTD, year, and all time. **No money on this
+  card**: the GBP value sensors still exist but are disabled, and both panels
+  carry generation, capacity and wind only.
 - **Prices are dormant** — `number.<farm>_owner_price_p_kwh`,
   `number.<farm>_owner_rate_p_w` and `number.<farm>_negotiated_price_gbp_mwh`
-  remain in the codebase but are disabled and set to `0.0` until the board
-  confirms how member payments are calculated. The card's Owner pill now opens
-  the **payment ledger** — one dated line item per p/W rate the board has
-  declared — instead of editing a single rate.
+  remain in the codebase but are disabled and set to `0.0`; neither card reads
+  them. Rates now live per declared period in the ledger.
+- **Return on investment card** — a dedicated `custom:kirkhill-wind-roi` view:
+  one row per declared period (months, rate × watts, £, ROI %, board or self),
+  the invested amount you enter once, and totals split into declared / board /
+  self with the return against your capital. ROI is `value ÷ invested × 100`,
+  deliberately not annualised, and reads `—` until you say what you invested.
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
   actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
   something is declared, and marks the current period `~` while it is still an
-  estimate from the last announced rate. Entries are changed only through the
+  estimate from the last announced rate. Entries change only through the
   `kirkhill_wind.add_payment_record` / `update_payment_record` /
-  `remove_payment_record` services.
-- **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
-  **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
+  `remove_payment_record` / `set_invested_amount` services.
+- **Live SCADA dashboard** — auto-creates a Lovelace dashboard with two tabs:
+  **Kirk Hill SCADA**, a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up
-  transformer, into the national grid. It shows
-  **Owner and Site** generation details, live wind speed, active-turbine count,
-  next-hour forecast, an API-status pill, and an alarm indicator for any turbine
-  in a fault state. Click Owner, Site, Wind, National Grid, or a turbine for
-  ApexCharts history (6H–1Y), detail modals, and a labelled turbine activity
-  swimlane. The dashboard uses a consistent colour scheme: amber for power/energy,
-  cyan for wind speed, green for financial values.
+  transformer, into the national grid — and **Return on investment**, where the
+  money lives. The diagram shows **Owner and Site** generation details, live
+  wind speed, active-turbine count, next-hour forecast, an API-status pill, and
+  an alarm indicator for any turbine in a fault state. Click Owner, Site, Wind,
+  National Grid, or a turbine for ApexCharts history (6H–1Y), detail modals, and
+  a labelled turbine activity swimlane. Its colour scheme is amber for
+  power/energy and cyan for wind speed — financial green belongs to the ROI
+  card.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
 - **Interactive turbine map** — OpenStreetMap tiles were previously a separate
   Turbines tab; that standalone view was retired in v4.8.80 (the History tab
-  was removed in v4.8.77, and the Finances tab in v4.8.79 with its earnings
-  shown per timeframe in the SCADA card). Turbine status, power, and generation
+  was removed in v4.8.77 and the Finances tab in v4.8.79 — money now lives on
+  the Return on investment tab). Turbine status, power, and generation
   today all live in the SCADA card. The standalone `kirkhill-wind-turbine-map`
   card is now **deprecated** (it shows a warning banner and will be removed in
   a future release).
