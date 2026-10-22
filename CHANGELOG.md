@@ -2,6 +2,39 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.18.0
+
+**Testing pre-release.** Builds on the payment ledger from 4.17.0: each payment
+can be split into capital and interest, a labelled projection quotes the
+board's own annual equivalent, and the ROI panel is trimmed to its essentials.
+
+- **Capital and interest, entered by hand** — each period carries the split as
+  an Ethex statement or a board announcement reports it: enter either half (the
+  other is completed from the period's figure) or both (they must sum to it **to
+  the penny**, or the save is refused — checked again on a later edit of that
+  period's rate or watts). Rows show `Capital £400.00 · Interest £137.49`, and a
+  line under the totals sums them across every period. New attributes:
+  `capital_gbp` / `interest_gbp` per record, `capital_total_gbp` /
+  `interest_total_gbp` at the ledger.
+- **A projection over the farm's lifespan** — the board's Feb 2025 → Jun 2026
+  announcement published its own annual equivalence (21 p/W over 17 months ≈
+  **15 p/W over a year**), so the modal can say: *"Projection only — 15.00 p/W
+  per year on your watts is about £383.92/year and £9,598.00 over 25 years, if
+  that rate held. Not a board figure."* Set through the new
+  `kirkhill_wind.set_projection` service; it fills no period, feeds no total
+  and changes no ROI. New attributes: `annual_rate_p_per_w`, `lifespan_years`,
+  `annual_gbp`, `lifespan_gbp`.
+- **ROI panel trimmed to six rows** — `Invested · Payments from Co-op · Your
+  estimates · All Payments · Return · Periods`. *Published rate* and *Current
+  period* moved into the modal, where the rate sits on every row and the
+  caption can say who declared the current period; the panel box shrinks to 192
+  units and Owner/Site lift to 292 and 548.
+- **Documentation gains screenshots** — the SCADA tab, the ROI panel, the
+  ledger modal (populated and empty), the Add period form, the projection line
+  and the three detail modals.
+- **Tests 310** (from 289): capital/interest validation and totals, the
+  projection's arithmetic and persistence, and the seven services.
+
 ## Version 4.17.0
 
 **The financial model, rebuilt around what the board actually declares.** Money

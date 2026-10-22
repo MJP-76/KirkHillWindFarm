@@ -75,11 +75,11 @@ the stable release yet.
 
 ## What's in the latest release
 
-**v4.17.0** — see the
+**v4.18.0** is the latest **pre-release**, published for testing: the
+capital/interest split, the labelled lifespan projection and a trimmed ROI
+panel. **v4.17.0** remains the latest **stable** release. See the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
-for what's included: the payment ledger and the **Return on investment** panel.
-It is the latest **stable** release; v4.16.7 remains available for anyone who
-wants the earlier cut.
+for both; to be offered a pre-release, enable pre-releases in HACS (above).
 
 ## Reporting a pre-release problem
 
