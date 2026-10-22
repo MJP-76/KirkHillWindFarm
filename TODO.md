@@ -339,6 +339,22 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.18.0 (pre-release, 2026-10-22)
+
+- **Capital/interest split per period**, entered by hand from an Ethex
+  statement or a board announcement: one half completes the other, both must
+  sum to the period to the penny (`capital_gbp` / `interest_gbp` per record,
+  `capital_total_gbp` / `interest_total_gbp` at the ledger)
+- **Labelled lifespan projection** quoting the board's own annual equivalence
+  (21 p/W over 17 months ≈ 15 p/W/year): new `set_projection` service plus
+  `annual_rate_p_per_w`, `lifespan_years`, `annual_gbp` and `lifespan_gbp`;
+  counts for nothing, fills no period
+- **ROI panel trimmed to six rows** — *Published rate* and *Current period*
+  moved to the modal; box 232 → 192 units, Owner/Site lift to 292 and 548
+- **Docs gain screenshots** — SCADA tab, ROI panel, ledger modal (populated and
+  empty), Add period form, projection line, three detail modals
+- Tests 289 → 310; card 3,500 lines; frontend 732 KB
+
 ### v4.17.0 (stable, 2026-10-22)
 
 - **Payment ledger + Return on investment panel**: money is a ledger of dated
