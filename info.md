@@ -57,7 +57,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Open-Meteo forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative), using automatic farm-location lookup
 - **Optional experimental Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, active binary sensor, generation today (site), generation all-time (site), and rotor speed for each of the 8 turbines
-- **Kirk Hill SCADA tab** — the single tab on the auto-generated dashboard (titled **Kirk Hill SCADA**), a full-bleed animated single-line diagram (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; national grid block shows Owner and Site export and to-grid-today, with wind/forecast chips and a flashing alarm indicator; **top-right "Your Generation" panel shows your generation (auto-scaled), last updated timestamp, and your share in watts**; panel view so it fills the entire tab; **pinch to zoom (up to 6x), drag to pan, and double-tap to reset on mobile**; National Grid box and Your Generation panel text enlarged for readability on small screens; owner export auto-derived from site export × owner generation share when the API reports no owner power; **consistent colour scheme**: amber=power/energy, cyan=wind speed, green=financial values (the ROI panel), primary=titles/labels
+- **Kirk Hill SCADA tab** — the single tab on the auto-generated dashboard (titled **Kirk Hill SCADA**), a full-bleed animated single-line diagram (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; national grid block shows Owner and Site export and to-grid-today, with wind/forecast chips and a flashing alarm indicator; **top-right "Owner" panel shows your generation timeframes (auto-scaled), your output in watts and your share in ‱**; panel view so it fills the entire tab; **pinch to zoom (up to 6x), drag to pan, and double-tap to reset on mobile**; National Grid box and panel text enlarged for readability on small screens; owner export auto-derived from site export × owner generation share when the API reports no owner power; **consistent colour scheme**: amber=power/energy, cyan=wind speed, green=financial values (the ROI panel), primary=titles/labels
 - **Auto-generated Lovelace dashboard** — created automatically during setup with a single **Kirk Hill SCADA** tab:
   - **Return on investment panel (2026-10-21)** — the top panel of the right column, above Owner and Site, in the same box and columns: invested, payments from Co-op, your estimates, all payments, return and period count. Click it for the ledger modal — the rows (months, rate × watts, £, ROI %, the capital/interest split, board/your-estimate tag), the invested and projection inputs, and the add & edit forms
   - Active/inactive turbine count and alarm status (alarm = actual thermal/electrical turbine fault)
@@ -65,7 +65,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   - **History tab removed** (v4.8.77) — its 25h owner/site/wind charts are covered by the SCADA card's Owner/Site pop-out modals with selectable 6H–1Y timeframes
   - **Finances tab removed** (v4.8.79) — earnings moved into the SCADA card, then out of it again: since 2026-10-21 money lives in the **Return on investment** panel (an `roi` tab existed briefly the same day and is pruned as obsolete)
   - **Turbines tab removed** (v4.8.80) — the standalone turbine map and status view retired; all data now on the SCADA diagram
-  - **Turbine map card deprecated** (v4.8.81) — the standalone `kirkhill-wind-turbine-map` card shows a deprecation banner and will be removed in a future release
+  - **Turbine map card removed** — the standalone `kirkhill-wind-turbine-map` card was deprecated in v4.8.81 and its JavaScript has since been deleted; obsolete dashboard entries are pruned on the next setup
   - **Wind Speed detail modal** (v4.8.81) — click the Wind panel for current speed, the one-hour forecast and the live difference
   - **National Grid detail modal** (v4.10.0) — click the National Grid box for current export power (MW), today-to-grid energy (kWh), and historical charts with selectable 6H–1Y timeframes; energy charts filter out daily counter resets
   - **Turbine activity swimlane** (v4.8.81) — turbine pop-outs organise activity into one labelled row per state, with hover start/stop time and duration
@@ -73,7 +73,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Dual-axis Power chart** — site power (MW) and owner power (kW) on separate Y-axes
 - **Power & Wind (25h) time-series (Plotly)** — owner power (kW), site power (kW), and wind speed (m/s)
 - **Combined Power and Wind history graph** — owner power, site power, and wind speed on a single chart
-- **SCADA version badge** — bottom-left of the SCADA card shows the running card version (e.g. `v4.18.2`), so a stale browser cache is easy to spot
+- **SCADA version badge** — top chip row of the SCADA card, second from the left (⟲ · version · API), shows the running card version (e.g. `v4.18.2`), so a stale browser cache is easy to spot
 - **Dashboard customisation preserved** — user-added cards, sections, and views retained across reloads/updates
 - **Factory reset** — wipe customisations deliberately only: untick "Create dashboard automatically" in Options and rebuild the tab, or call `kirkhill_wind.reset_dashboard`
 - **Reset dashboard service** — `kirkhill_wind.reset_dashboard` restores defaults
@@ -84,7 +84,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
 - **Generation state restoration** — farm and turbine generation sensors restore last known values on HA restart (avoids gaps while waiting for slow-tier API fetches)
 - **Optimized fetch tiers** — "yesterday" moved to hourly tier (static once day ends); week/month/ytd/year/alltime also hourly; only "today" fetches every poll
 - **Owner power fallback** — calculates from site power × owner share % when API returns 0/None
-- **SCADA "Your Generation" panel** — shows your generation, last updated, and your share in watts
+- **SCADA Owner panel** — shows your generation timeframes (auto-scaled), your output in watts and your share (‱)
 
 ## Requirements
 

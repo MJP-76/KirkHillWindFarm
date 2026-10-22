@@ -66,8 +66,8 @@ and an animated dashboard.
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
   actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
   something is declared, and **withholds any figure for an undeclared period**
-  until the board publishes the capital/interest split — no estimate is
-  derived. Entries change only through the
+  — the modal caption says *awaiting the board's next declaration* — rather
+  than deriving an estimate. Entries change only through the
   `kirkhill_wind.add_payment_record` / `update_payment_record` /
   `remove_payment_record` / `set_invested_amount` / `set_projection` services —
   or by editing the shipped `board_announcements.yaml` in a PR, whose entries
@@ -78,8 +78,9 @@ and an animated dashboard.
   farm — 8 turbines feeding the site collection bus, through the step-up
   transformer, into the national grid. It shows **Owner**, **Site** and
   **Return on investment** panels, live wind speed, active-turbine count,
-  next-hour forecast, an API-status pill, and an alarm indicator for any
-  turbine in a fault state. Click Owner, Site, Wind, National Grid or a
+  next-hour forecast, an API-status pill, and a turbine status chip showing
+  the active-turbine count (faults are tracked by the Alarm binary sensor).
+  Click Owner, Site, Wind, National Grid or a
   turbine for ApexCharts history (6H–1Y) and detail modals, a labelled
   turbine activity swimlane — or click **Return on investment** for the money
   and its forms. Its colour scheme is amber for power/energy, cyan for wind
@@ -92,8 +93,8 @@ and an animated dashboard.
   was removed in v4.8.77 and the Finances tab in v4.8.79 — money now lives in
   the Return on investment panel). Turbine status, power, and generation
   today all live in the SCADA card. The standalone `kirkhill-wind-turbine-map`
-  card is now **deprecated** (it shows a warning banner and will be removed in
-  a future release).
+  card has since been **removed** (obsolete dashboard entries are pruned on
+  the next setup).
 - **Notifiable** — entities support a WhatsApp alert guide for turbine
   down/recovery.
 - **Config flow & options** — masked API key entry, optional

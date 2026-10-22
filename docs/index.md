@@ -47,7 +47,7 @@ development, you can do so here:
   - power
   - capacity factor
   - generation by timeframe: yesterday, today, week, month, ytd, year, alltime
-  - owner and site value by timeframe (GBP) — **empty from v4.16.1**: the entities exist but are disabled, so the column is drawn with `—` in every cell (previously `live generation × configured price`)
+  - owner and site value by timeframe (GBP) — **disabled from v4.16.1**: the entities exist but are disabled in the entity registry, and no card draws them any more (previously a `Value (£)` column of `live generation × configured price`)
 - Farm-level physical sensors (scope-independent):
   - wind speed
   - active turbines
@@ -63,7 +63,7 @@ development, you can do so here:
 - Open-Meteo forecast integration (forecast only; not authoritative actual generation)
 - Optional experimental Ethex payment-tracking onboarding toggle
 - Configurable polling interval via Options
-- Auto-generated Lovelace dashboard: SCADA (single-line diagram, API status pill, Owner/Site Capacity panels with per-timeframe generation plus an **empty £ value column** — earnings entities disabled from v4.16.1, so no figure is calculated — Wind Speed detail modal, pop-out charts including a labelled turbine activity swimlane). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80 (its standalone map card deprecated in v4.8.81).
+- Auto-generated Lovelace dashboard: SCADA (single-line diagram, top chip row with API status, Owner/Site panels with per-timeframe generation, the **Return on investment** panel leading the right column, Wind Speed detail modal, pop-out charts including a labelled turbine activity swimlane). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80 (its standalone map card since removed).
 - Dashboard customisations are preserved across reloads and updates; `kirkhill_wind.reset_dashboard` restores defaults
 
 ## Where to go next
