@@ -407,6 +407,81 @@ def projection_gbp(
     return annual, round(annual * lifespan_years, 2)
 
 
+def share_value_per_watt(
+    invested_gbp: float | None, capacity_watts: float | None
+) -> float | None:
+    """Return the member's share value in GBP per watt, derived.
+
+    ``invested ÷ watts`` -- what one watt of the stake cost them -- recomputed
+    from whatever the two inputs currently are, so it is a quotation of the
+    ledger rather than a figure of its own: it changes the moment either input
+    changes, and it writes nothing back. None while either input is missing or
+    not positive, because a share value with a hole in it is a fiction.
+    """
+    if invested_gbp is None or capacity_watts is None:
+        return None
+    if invested_gbp <= 0 or capacity_watts <= 0:
+        return None
+    return round(invested_gbp / capacity_watts, 4)
+
+
+def lifetime_estimate(
+    records: list[dict[str, Any]],
+    annual_rate_p_per_w: float | None,
+    capacity_watts: float | None,
+    lifespan_years: float | None,
+    invested_gbp: float | None,
+    today: date | None = None,
+) -> dict[str, float | None] | None:
+    """Return the labelled lifetime estimate, or None when an input is missing.
+
+    **Known plus time-left, never an accrual.** The known half is what the
+    board actually declared (``board_total_gbp`` -- self estimates stay out of
+    it, they are guesses about periods that may never be announced), and the
+    unknown half is the years the lifespan has left times the member's annual
+    projection: ``(lifespan − elapsed since the first board period) ×
+    watts × rate ÷ 100``. Elapsed runs fractionally (days ÷ 365.25) from the
+    earliest board declaration -- with no periods there is no anchor, so
+    elapsed is zero and the whole lifespan is estimate.
+
+    The annual rate is whatever ``set_projection`` last stored -- normally the
+    board's own published annual equivalent, whose Feb 2025 → Jun 2026
+    announcement equated 21 p/W over 17 months to 15 p/W over 12 -- never a
+    constant in this code, because the board can requote.
+
+    **It counts for nothing.** This figure feeds no total, fills no period and
+    replaces no actual: callers must label it as an estimate. A projection
+    with a hole in it is worse than no projection, so any missing input means
+    None; an elapsed lifespan simply leaves remainder zero.
+    """
+    if annual_rate_p_per_w is None or capacity_watts is None or lifespan_years is None:
+        return None
+    if annual_rate_p_per_w <= 0 or capacity_watts <= 0 or lifespan_years <= 0:
+        return None
+    known = source_totals_gbp(records)[SOURCE_BOARD]
+    anchor = next(
+        (r["period_start"] for r in records if r.get("source") == SOURCE_BOARD),
+        None,
+    )
+    if today is None:
+        today = dt_util.now().date()
+    elapsed = 0.0
+    if anchor is not None:
+        elapsed = max((today - date.fromisoformat(anchor)).days / 365.25, 0.0)
+    remaining = max(lifespan_years - elapsed, 0.0)
+    annual = round(capacity_watts * annual_rate_p_per_w / 100, 2)
+    remainder = round(annual * remaining, 2)
+    lifetime = round((known if known is not None else 0.0) + remainder, 2)
+    return {
+        "known_gbp": known,
+        "remainder_gbp": remainder,
+        "lifetime_gbp": lifetime,
+        "elapsed_years": round(elapsed, 2),
+        "remaining_years": round(remaining, 2),
+        "roi_pct": roi_pct(lifetime, invested_gbp),
+    }
+
+
 class PaymentLedger:
     """One config entry's payment declarations, persisted to a Store.
 
