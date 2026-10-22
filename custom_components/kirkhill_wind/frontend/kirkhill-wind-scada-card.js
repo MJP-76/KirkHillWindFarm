@@ -1193,7 +1193,7 @@ class KirkHillWindScada extends HTMLElement {
       ? ""
       : `<span class="roi-row-split">Capital ${this._gbp(capital)} · Interest ${this._gbp(interest)}</span>`;
     return `
-      <div class="roi-row${self ? " roi-row--self" : ""}" data-record="${this._escape(record.id)}">
+      <div class="roi-row${self ? " roi-row--self" : " roi-row--board"}" data-record="${this._escape(record.id)}">
         <div class="roi-row-main">
           <span class="roi-row-dates">${this._fmtMonth(record.period_start)} – ${this._fmtMonth(record.period_end)}${self ? ` <span class="roi-tag">your estimate</span>` : ""}</span>
           <span class="roi-row-rate">${this._fmt(Number(record.rate_p_per_w), 2)} p/W × ${this._fmt(Number(record.capacity_watts), 0)} W${record.note ? ` · <span class="roi-note">${this._escape(record.note)}</span>` : ""}</span>
@@ -3389,6 +3389,14 @@ _buildHeaderChips(layout) {
       .roi-stat .roi-derived { color: var(--khscada-warn-color, #ffb300); }
       .roi-derived-note { color: var(--khscada-warn-color, #ffb300); }
       .roi-tick { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: normal; font-weight: 500; color: var(--khscada-primary-color); }
+      /* Board-confirmed, the strongest confirmation there is: the period
+         form's "Announced by the board" tick goes green while ticked (it
+         follows the live checkbox, untick and the colour leaves), and a
+         board record's money figure shows green in the list. Your own
+         estimates keep the ~ and their tag, uncoloured. */
+      .roi-check input:checked { accent-color: var(--success-color, #4caf50); }
+      .roi-check input:checked + span { color: var(--success-color, #4caf50); }
+      .roi-row--board .roi-row-value { color: var(--success-color, #4caf50); }
       .roi-capital-row { display: flex; gap: 8px; flex-wrap: wrap; }
       .roi-capital-label { color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
       .roi-list { display: flex; flex-direction: column; gap: 6px; }

@@ -87,7 +87,8 @@ and an animated dashboard.
   turbine activity swimlane — or click **Return on investment** for the money
   and its forms. Its colour scheme is amber for values and power/energy, cyan
   for wind speed — and green for confirmed money: invested and Return read
-  green once you confirm the capital, amber while it is only the auto-fill.
+  green once you confirm the capital, a board period shows its figure green,
+  amber is only ever the auto-fill.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
