@@ -34,8 +34,11 @@ All release versions are tracked from a single source-of-truth file:
    Verify the numbers instead of carrying them forward: `wc -l` for line counts,
    `grep` for symbol names, `stat -c %s` for file sizes. Symbols get renamed
    silently, so confirm each one still exists before leaving it in a doc.
-5. Commit and push to `main`.
-6. Tag and create a GitHub release:
+5. Push a branch and open a pull request. `main` is protected: all three
+   status checks (`validate` / `test` / `min-ha`) must pass before it can
+   merge, and a direct push is rejected (`GH006`). Merge the PR once the
+   checks are green.
+6. Tag and create a GitHub release (from the merged `main`):
 
    ```bash
    git tag vX.Y.Z && git push origin vX.Y.Z
