@@ -128,6 +128,13 @@ the value column — carrying the headline only:
   `—`, never `0%`.
 - **Invested** — set or cleared in the modal; stored in the ledger's Store,
   never `entry.options`.
+- **Capital and interest** — each period can carry the split as an Ethex
+  statement or a board announcement reports it: enter either half (the other is
+  worked out from the period's figure) or both (they must sum to it **to the
+  penny**, or the save is refused). Rows show
+  `Capital £400.00 · Interest £137.49`, and a line under the totals sums them
+  across every period. Nothing derives a split — it is entered by hand, and a
+  period with no split shows none.
 - **A caption under the rows** says which of two things the current period is:
   **announced by the board**, or **your own estimate**. An undeclared period
   shows neither a caption nor a figure: the estimate is withheld until the
@@ -143,7 +150,8 @@ on the next setup.
 #### The ledger behind it
 
 - **Each line item is a run of whole months plus the rate** —
-  `{start month, end month, rate p/W, watts owned, note, source}`. The figure
+  `{start month, end month, rate p/W, watts owned, note, source, capital,
+  interest}`. The figure
   for a line is `watts × p/W ÷ 100`; the period only says *which* declaration
   applies, never how long money accrues for. A period is stored as the **1st to
   the last day** of its months, so "Feb 2025 – Jun 2026" means exactly those
@@ -160,12 +168,13 @@ on the next setup.
   only through `kirkhill_wind.add_payment_record`, `update_payment_record`,
   `remove_payment_record` and `set_invested_amount`; the card never writes
   storage itself.
-- **`sensor.<farm>_payment_ledger`** exposes `records` (each with `value_gbp`
-  and `roi_pct`), `total_gbp`, `board_total_gbp`, `self_total_gbp`,
-  `invested_gbp`, `total_roi_pct`, `latest_rate_p_per_w`,
-  `latest_board_rate_p_per_w`, `current_gbp`, `current_basis` (`declared` ·
-  `estimate_withheld_split_unknown` · `no_entries`), `current_source`,
-  `current_year_gbp` and `year_totals_gbp`.
+- **`sensor.<farm>_payment_ledger`** exposes `records` (each with `value_gbp`,
+  `roi_pct`, `capital_gbp` and `interest_gbp`), `total_gbp`,
+  `board_total_gbp`, `self_total_gbp`, `capital_total_gbp`,
+  `interest_total_gbp`, `invested_gbp`, `total_roi_pct`,
+  `latest_rate_p_per_w`, `latest_board_rate_p_per_w`, `current_gbp`,
+  `current_basis` (`declared` · `estimate_withheld_split_unknown` ·
+  `no_entries`), `current_source`, `current_year_gbp` and `year_totals_gbp`.
 
 ### What the Owner and Site panels no longer show
 

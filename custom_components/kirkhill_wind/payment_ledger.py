@@ -164,6 +164,31 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any]:
     if source not in SOURCES:
         raise ValueError(f"source must be one of {' or '.join(SOURCES)}")
 
+    # A payment splits into capital and interest. Both are optional: while the
+    # split is unknown the pair stays None. If only one is given the other is
+    # the remainder of the period's figure, so a stored pair is always complete
+    # and always sums correctly. Both given and not summing to the penny is a
+    # rejected entry, not a silent fix -- these figures come from an Ethex
+    # statement or a board announcement and must agree with the period they sit
+    # in (and with a later edit to that period's rate or watts).
+    value = round(capacity * rate / 100, 2)
+    capital = _as_float(record.get("capital_gbp"))
+    interest = _as_float(record.get("interest_gbp"))
+    if capital is not None and capital < 0:
+        raise ValueError("capital_gbp must be 0 or greater")
+    if interest is not None and interest < 0:
+        raise ValueError("interest_gbp must be 0 or greater")
+    if capital is not None and interest is not None:
+        if abs(round(capital + interest, 2) - value) > 0.01:
+            raise ValueError(
+                f"capital + interest ({capital + interest:.2f}) must equal the period's"
+                f" figure ({value:.2f})"
+            )
+    elif capital is not None:
+        interest = round(value - capital, 2)
+    elif interest is not None:
+        capital = round(value - interest, 2)
+
     record_id = record.get("id")
     if not isinstance(record_id, str) or not record_id.strip():
         record_id = uuid.uuid4().hex
@@ -177,6 +202,8 @@ def normalise_record(record: dict[str, Any]) -> dict[str, Any]:
         "announced_on": announced_on.isoformat() if announced_on else None,
         "note": note,
         "source": source,
+        "capital_gbp": capital,
+        "interest_gbp": interest,
     }
 
 
@@ -262,6 +289,26 @@ def source_totals_gbp(records: list[dict[str, Any]]) -> dict[str, float | None]:
     board = [r for r in records if r.get("source") == SOURCE_BOARD]
     own = [r for r in records if r.get("source") == SOURCE_SELF]
     return {SOURCE_BOARD: ledger_total_gbp(board), SOURCE_SELF: ledger_total_gbp(own)}
+
+
+def split_totals_gbp(records: list[dict[str, Any]]) -> dict[str, float | None]:
+    """Return ``{"capital": Σ, "interest": Σ}`` across records carrying a split.
+
+    None, not 0, when no record carries that half: a split nobody has entered
+    is an absence of information, not a payment of nothing. Both halves of a
+    record always sum to its figure -- ``normalise_record`` enforces it -- so
+    these two numbers cannot disagree with ``total_gbp`` for the records they
+    cover. Splits are entered by hand from an Ethex statement or a board
+    announcement; nothing here derives one.
+    """
+    capitals = [r["capital_gbp"] for r in records if r.get("capital_gbp") is not None]
+    interests = [
+        r["interest_gbp"] for r in records if r.get("interest_gbp") is not None
+    ]
+    return {
+        "capital": round(sum(capitals), 2) if capitals else None,
+        "interest": round(sum(interests), 2) if interests else None,
+    }
 
 
 def latest_board_record(records: list[dict[str, Any]]) -> dict[str, Any] | None:

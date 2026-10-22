@@ -32,6 +32,8 @@ ATTR_ANNOUNCED_ON = "announced_on"
 ATTR_NOTE = "note"
 ATTR_SOURCE = "source"
 ATTR_INVESTED_GBP = "invested_gbp"
+ATTR_CAPITAL_GBP = "capital_gbp"
+ATTR_INTEREST_GBP = "interest_gbp"
 SERVICE_SCHEMA_RELOAD = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
 SERVICE_SCHEMA_RESET = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
 
@@ -53,6 +55,12 @@ _PERIOD_FIELDS = {
     # Optional, and "board" when absent, so a call written before the tick
     # existed keeps announcing instead of silently becoming a self estimate.
     vol.Optional(ATTR_SOURCE): vol.In(SOURCES),
+    # The capital/interest halves of a period's payment, entered by hand from
+    # an Ethex statement or a board announcement. Either may be omitted; when
+    # both arrive they are checked against the period's figure in
+    # normalise_record and the save is rejected if they disagree.
+    vol.Optional(ATTR_CAPITAL_GBP): vol.All(vol.Coerce(float), vol.Range(min=0)),
+    vol.Optional(ATTR_INTEREST_GBP): vol.All(vol.Coerce(float), vol.Range(min=0)),
 }
 
 SERVICE_SCHEMA_ADD_PAYMENT = vol.Schema(
@@ -64,6 +72,8 @@ SERVICE_SCHEMA_ADD_PAYMENT = vol.Schema(
         vol.Optional(ATTR_ANNOUNCED_ON): cv.date,
         vol.Optional(ATTR_NOTE): _PERIOD_FIELDS[ATTR_NOTE],
         vol.Optional(ATTR_SOURCE): _PERIOD_FIELDS[ATTR_SOURCE],
+        vol.Optional(ATTR_CAPITAL_GBP): _PERIOD_FIELDS[ATTR_CAPITAL_GBP],
+        vol.Optional(ATTR_INTEREST_GBP): _PERIOD_FIELDS[ATTR_INTEREST_GBP],
         vol.Optional(ATTR_ENTRY_ID): str,
     }
 )

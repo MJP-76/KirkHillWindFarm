@@ -489,6 +489,36 @@ decision changes.
   Regression tests: `test_payment_ledger.py` (withheld basis · figure is None ·
   source still reported · total unchanged) — 289 passing.
 
+- **2026-10-22 — The capital/interest split is entered by hand, now.**
+  *Supersedes "no code until the board publishes the split".* The owner's call
+  after v4.17.0 shipped: the split comes from an **Ethex statement or a board
+  announcement**, so waiting for the board's rule was waiting for nothing — and
+  manual entry may simply stay the easier route once the rule exists.
+
+  - **Two optional fields per record**, `capital_gbp` and `interest_gbp`.
+    Enter **either half** and the other is completed from the period's figure;
+    enter **both** and they must sum to it **to the penny** — a mismatch is
+    rejected (`capital + interest (£400.50) must equal the period's figure
+    (£400.00)`), and the same check fires on a later edit to that period's rate
+    or watts, so a stored pair can never drift from its record. Nothing else
+    ever derives a split: absent both halves, a record simply has none.
+  - **Modal only**, by the owner's choice: rows gain
+    `Capital £400.00 · Interest £137.49`, a line under the totals sums them
+    (`Of £1,074.98 recorded: £800.00 capital · £274.98 interest`), and the form
+    gains both fields with the penny rule spelled out. The panel keeps its
+    eight rows; nothing about Owner or Site moves.
+  - **Attributes**: `capital_gbp` / `interest_gbp` per record, and
+    `capital_total_gbp` / `interest_total_gbp` at the ledger — each `None`
+    while no record carries that half: absence of information, not zero.
+  - **The withholding rule is untouched**: an undeclared period still reports
+    no figure at all. A split describes money already paid; it is not an
+    estimate.
+
+  Regression tests: `test_payment_ledger.py::TestCapitalInterestSplit` (both
+  halves · penny mismatch rejected · one half completes the other · negatives
+  · None-not-zero totals · sensor split and total) plus the service round trip
+  — 289 → 298.
+
 ## Dashboard consolidation
 
 - **2026-09-16 — SCADA is the sole live dashboard; History, Finances and

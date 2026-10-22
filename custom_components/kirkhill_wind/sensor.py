@@ -38,6 +38,7 @@ from .payment_ledger import (
     record_value_gbp,
     roi_pct,
     source_totals_gbp,
+    split_totals_gbp,
     year_totals_gbp,
 )
 
@@ -808,6 +809,11 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
         attrs["records"] = entries
         attrs["invested_gbp"] = invested
         attrs["total_gbp"] = total
+        # Capital/interest halves, entered by hand from an Ethex statement or a
+        # board announcement: None while no record carries that half.
+        splits = split_totals_gbp(records)
+        attrs["capital_total_gbp"] = splits["capital"]
+        attrs["interest_total_gbp"] = splits["interest"]
         # No invested amount -> None, never 0: there is no return to quote.
         attrs["total_roi_pct"] = roi_pct(total, invested)
         # The total is never replaced by its parts: board and self say how much
