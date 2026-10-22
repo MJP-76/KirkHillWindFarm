@@ -43,13 +43,15 @@ import logging
 import uuid
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
+import yaml
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, SCOPE_OWNER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +75,11 @@ BASIS_WITHHELD = "estimate_withheld_split_unknown"
 # silent one would show a plausible-looking figure the board never declared.
 MAX_RATE_P_PER_W = 1000.0
 MAX_NOTE_LENGTH = 200
+
+# Board announcements shipped with the integration and upserted into the ledger
+# on setup. Edited in a pull request, so git records who entered which figure
+# and when — and the install picks it up on reload, with no code deploy.
+BOARD_ANNOUNCEMENTS_FILE = Path(__file__).parent / "board_announcements.yaml"
 
 
 def ledger_store(hass: HomeAssistant, entry_id: str) -> Store:
@@ -447,6 +454,126 @@ class PaymentLedger:
         years = _as_float(data.get("lifespan_years")) if is_dict else None
         self._lifespan_years = years if years is not None and years > 0 else None
 
+    async def async_apply_board_announcements(
+        self, default_capacity: float | None = None
+    ) -> int:
+        """Upsert the shipped ``board_announcements.yaml`` into the ledger.
+
+        The file owns the periods it names: the same period in means the same
+        record out — rate, dates, announced_on and note updated, while the
+        watts and any capital/interest split the user entered against that
+        period are preserved. Periods the file does not name — everything
+        added in the card — are never touched. A new period with no capacity
+        available is skipped rather than guessed: a rate without watts cannot
+        produce a figure.
+
+        Returns how many records were created or changed.
+        """
+        if not BOARD_ANNOUNCEMENTS_FILE.is_file():
+            return 0
+        try:
+            data = (
+                yaml.safe_load(BOARD_ANNOUNCEMENTS_FILE.read_text(encoding="utf-8"))
+                or {}
+            )
+        except (OSError, yaml.YAMLError) as err:
+            _LOGGER.warning("Cannot read board announcements: %s", err)
+            return 0
+        entries = data.get("records") if isinstance(data, dict) else data
+        if not isinstance(entries, list):
+            _LOGGER.warning(
+                "%s: expected a 'records' list", BOARD_ANNOUNCEMENTS_FILE.name
+            )
+            return 0
+
+        index_by_period = {
+            (r["period_start"], r["period_end"]): i for i, r in enumerate(self._records)
+        }
+        applied = 0
+        for position, entry in enumerate(entries, start=1):
+            if not isinstance(entry, dict):
+                _LOGGER.warning(
+                    "%s: entry %s is not a mapping",
+                    BOARD_ANNOUNCEMENTS_FILE.name,
+                    position,
+                )
+                continue
+            period_start = _parse_date(entry.get("period_start"))
+            period_end = _parse_date(entry.get("period_end"))
+            if period_start is None or period_end is None:
+                _LOGGER.warning(
+                    "%s: entry %s has no usable period",
+                    BOARD_ANNOUNCEMENTS_FILE.name,
+                    position,
+                )
+                continue
+            # Match on the snapped period, which is how records are stored.
+            key = (
+                month_start(period_start).isoformat(),
+                month_end(period_end).isoformat(),
+            )
+            index = index_by_period.get(key)
+            existing = self._records[index] if index is not None else None
+            capacity = existing.get("capacity_watts") if existing else default_capacity
+            if capacity is None:
+                _LOGGER.warning(
+                    "%s: skipping %s — no owner capacity for a new record",
+                    BOARD_ANNOUNCEMENTS_FILE.name,
+                    key,
+                )
+                continue
+
+            candidate = {
+                **(existing or {}),
+                "id": f"board-{key[0]}-{key[1]}"
+                if existing is None
+                else existing["id"],
+                "period_start": key[0],
+                "period_end": key[1],
+                "capacity_watts": capacity,
+                "rate_p_per_w": entry.get("rate_p_per_w"),
+                "announced_on": entry.get("announced_on"),
+                "note": entry.get("note"),
+                "source": SOURCE_BOARD,
+            }
+            try:
+                stored = normalise_record(candidate)
+            except ValueError:
+                # A re-announced rate can invalidate an entered capital/
+                # interest split. The board's figure wins, but the split must
+                # not be silently wrong: drop it, and say so.
+                candidate.pop("capital_gbp", None)
+                candidate.pop("interest_gbp", None)
+                try:
+                    stored = normalise_record(candidate)
+                except ValueError as err:
+                    _LOGGER.warning(
+                        "%s: entry %s rejected: %s",
+                        BOARD_ANNOUNCEMENTS_FILE.name,
+                        position,
+                        err,
+                    )
+                    continue
+                _LOGGER.warning(
+                    "%s: entry %s changed the rate, so its capital/interest split was cleared",
+                    BOARD_ANNOUNCEMENTS_FILE.name,
+                    position,
+                )
+
+            if existing is not None:
+                if stored == existing:
+                    continue
+                self._records[index] = stored
+            else:
+                self._records.append(stored)
+                index_by_period[key] = len(self._records) - 1
+            applied += 1
+
+        if applied:
+            self._records = _sorted(self._records)
+            await self._async_commit()
+        return applied
+
     async def async_set_invested(self, amount: float | None) -> None:
         """Record what the member invested; None clears it back to untold."""
         if amount is not None:
@@ -560,11 +687,35 @@ def _ledgers(hass: HomeAssistant) -> dict[str, PaymentLedger]:
     return hass.data.setdefault(DOMAIN, {})
 
 
+def _owner_capacity(entry) -> float | None:
+    """Current owner capacity from the coordinator; None when the API has none.
+
+    The board announces a rate, not the member's watts, so a new board record
+    needs the API's capacity to be worth anything -- and gets skipped if the
+    API has none rather than being given a guess.
+    """
+    data = getattr(getattr(entry, "runtime_data", None), "data", None)
+    if not isinstance(data, dict):
+        return None
+    scope = data.get(SCOPE_OWNER)
+    summary = scope.get("summary") if isinstance(scope, dict) else None
+    value = (
+        _as_float(summary.get("capacity_watts")) if isinstance(summary, dict) else None
+    )
+    return value if value is not None and value > 0 else None
+
+
 async def async_setup_ledger(hass: HomeAssistant, entry) -> PaymentLedger:
     """Create and load the ledger for one config entry, before platforms set up."""
     ledger = PaymentLedger(hass, entry.entry_id)
     await ledger.async_load()
     _ledgers(hass)[entry.entry_id] = ledger
+    # Board announcements shipped inside the integration are applied after the
+    # stored state loads, so an edit to that file lands on setup or a reload --
+    # no code deploy, and never at the expense of records added in the card.
+    await ledger.async_apply_board_announcements(
+        default_capacity=_owner_capacity(entry)
+    )
     return ledger
 
 

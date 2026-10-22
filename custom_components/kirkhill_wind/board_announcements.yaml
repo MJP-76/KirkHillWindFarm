@@ -1,0 +1,30 @@
+# Board announcements for the payment ledger.
+#
+# Edit this file in a pull request: the git history then records who entered
+# which figure and when, and the install picks it up on the next setup or a
+# `kirkhill_wind.reload_integration` call — no code deploy needed.
+#
+# Each entry is upserted into the ledger as `source: board` on setup:
+#   - matching is by `period_start` + `period_end`, so re-announcing the same
+#     period with a new rate updates the existing record in place (and keeps
+#     the watts, capital and interest already entered against it)
+#   - a period the ledger has never seen is created; `capacity_watts` is taken
+#     from the API's current owner capacity, because the board announces a
+#     rate, not your watts
+#   - records the user added in the card are never touched: the file owns only
+#     the periods it names
+#
+# Fields: period_start / period_end (YYYY-MM-DD, whole months), rate_p_per_w,
+# optional announced_on (when the board published it), optional note.
+#
+# Example — the board's £1.6m announcement:
+#
+# - period_start: 2025-02-01
+#   period_end: 2026-06-30
+#   rate_p_per_w: 21
+#   announced_on: 2025-07-15
+#   note: "£1.6m member payment approved — 21 p/W for the 17-month period"
+#
+# The active list follows. Keep it as YAML lists of mappings, one per period.
+
+records: []

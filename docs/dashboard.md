@@ -207,6 +207,35 @@ on the next setup.
   `current_basis` (`declared` · `estimate_withheld_split_unknown` ·
   `no_entries`), `current_source`, `current_year_gbp` and `year_totals_gbp`.
 
+#### Board announcements shipped in the repo
+
+Board figures can be entered without touching the UI: the integration ships
+`custom_components/kirkhill_wind/board_announcements.yaml`, and every entry in
+it is **upserted into the ledger as a board record on setup**.
+
+```yaml
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+    announced_on: 2025-07-15
+    note: "£1.6m member payment approved — 21 p/W for the 17-month period"
+```
+
+- **Edit it in a pull request** — `git log` then records who entered which
+  figure and when, and the install picks the change up on the next setup or a
+  `kirkhill_wind.reload_integration` call: no code deploy.
+- **Matching is by period**, so re-announcing a period with a new rate updates
+  that record in place (keeping the watts and any capital/interest split
+  already entered against it) and creates nothing new. Periods the file does
+  not name — anything you added in the card — are never touched.
+- **A new period takes the API's current owner capacity**, because the board
+  announces a rate, not your watts; with no capacity available the record is
+  skipped with a warning rather than guessed.
+- **The board's figure wins on a re-announcement**: if the new rate makes an
+  entered capital/interest split impossible, the split is cleared and the log
+  says so — a wrong split is never kept silently.
+
 ### What the Owner and Site panels no longer show
 
 - Gone from both panels: the **`Value (£)` column**, the **`£/h`** cells, the
