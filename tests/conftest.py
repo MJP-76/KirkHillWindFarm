@@ -40,6 +40,14 @@ def hass():
     # AttributeError. tests/test_services.py needs a service registry.
     mock_hass.services = MagicMock()
 
+    # async_add_executor_job must actually run its callback: the payment
+    # ledger reads the shipped announcements YAML through the executor, and
+    # awaiting the raw MagicMock would raise TypeError.
+    async def _run_in_executor(func, *args):
+        return func(*args)
+
+    mock_hass.async_add_executor_job = _run_in_executor
+
     # DataUpdateCoordinator.__init__ calls frame.report_usage() whenever
     # config_entry is not passed explicitly, because it then has to fall back
     # to the current_entry ContextVar. The coordinator does pass it, so this is
@@ -108,11 +116,7 @@ def _current_turbines(scope: str) -> list[dict]:
         {
             "id": f"T{i}",
             "status": "active" if i <= 7 else "inactive",
-            "state_text": (
-                "Turbine in operation"
-                if i <= 7
-                else "Lack of wind: Wind speed too low"
-            ),
+            "state_text": ("Turbine in operation" if i <= 7 else "Lack of wind: Wind speed too low"),
             "power_kw": (0.134 if i <= 7 else 0.0) if owner else (987.0 if i <= 7 else 0.0),
             "capacity_factor_percent": 42.0 if i <= 7 else 0.0,
             "capacity_watts": 319.933125 if owner else 2350000,
@@ -253,9 +257,7 @@ def mock_summary_payload():
 def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payload):
     """Return a mock KirkHillApiClient with endpoint-shaped responses."""
     client = AsyncMock()
-    client.get_current = AsyncMock(
-        side_effect=lambda session, scope: _current_payload(scope)
-    )
+    client.get_current = AsyncMock(side_effect=lambda session, scope: _current_payload(scope))
     client.get_turbines = AsyncMock(return_value=mock_turbine_rows)
     client.get_summary = AsyncMock(return_value=mock_summary_payload)
     client.test = AsyncMock()
