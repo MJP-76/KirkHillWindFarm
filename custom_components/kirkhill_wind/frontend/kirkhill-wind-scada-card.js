@@ -1087,6 +1087,9 @@ class KirkHillWindScada extends HTMLElement {
     const investedCls = investedSrc === "user"
       ? " roi-capital-user"
       : investedSrc === "derived" ? " roi-capital-derived" : "";
+    // Any own estimate in the ledger keeps the ROI provisional: the return
+    // then rests on guesses, and provisional is amber wherever ROI shows.
+    const selfMoney = attrs.self_total_gbp !== null && attrs.self_total_gbp !== undefined;
     const roiPct = attrs.total_roi_pct;
     // The capital/interest halves, entered by hand: shown only once at least
     // one record carries a split, and never derived when it does not.
@@ -1139,7 +1142,7 @@ class KirkHillWindScada extends HTMLElement {
         <div class="roi-stat"><span>Payments from Co-op</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
         <div class="roi-stat"><span>Your estimates</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
         <div class="roi-stat"><span>All Payments</span><b>${this._gbp(attrs.total_gbp)}</b></div>
-        <div class="roi-stat"><span>Return</span><b${investedSrc === "derived" ? ' class="roi-derived"' : ""}>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
+        <div class="roi-stat"><span>Return</span><b${investedSrc === "derived" || selfMoney ? ' class="roi-derived"' : ""}>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
       </div>${splitLine}${projectionLine}`;
 
     list.innerHTML =
@@ -2996,6 +2999,25 @@ _buildHeaderChips(layout) {
       setRoi("roi", roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`);
       setRoi("periods", `${roiRecords.length}`);
     }
+    // All Payments: green only while the total is pure board money; any own
+    // estimate in it makes the sum provisional, and provisional is amber.
+    // (Your estimates itself never goes green -- an estimate becomes board
+    // money only by editing the period and ticking the board box, which moves
+    // it into the Co-op line.)
+    const totalCell = root.querySelector('[data-roi-cell="total"]');
+    if (totalCell) {
+      const totalVal = roiAttrs ? roiAttrs.total_gbp : null;
+      const selfMoney = roiAttrs
+        && roiAttrs.self_total_gbp !== null
+        && roiAttrs.self_total_gbp !== undefined;
+      if (totalVal === null || totalVal === undefined) {
+        totalCell.style.fill = "";
+      } else {
+        totalCell.style.fill = selfMoney
+          ? "var(--khscada-warn-color, #ffb300)"
+          : "var(--success-color, #4caf50)";
+      }
+    }
     // Green is the member's own figure; amber the derived auto-fill, still
     // provisional until they enter their own or tick that it matches; no fill
     // means "Not set". Return reads amber for the same reason while it
@@ -3015,15 +3037,21 @@ _buildHeaderChips(layout) {
     }
     const roiCell = root.querySelector('[data-roi-cell="roi"]');
     if (roiCell) {
-      // Confirmed capital -> green; derived -> amber; nothing set -> the
-      // panel's default value colour for its "—". Without this the fallback
-      // is .site-gen-value, whose fill IS the warn amber -- confirmed ROI
-      // would wear the provisional colour for ever.
+      // ROI goes green only for confirmed capital over pure board money: any
+      // own estimate in the ledger -- or capital still derived -- keeps it
+      // amber, because the return then rests on guesses or an unconfirmed
+      // figure. Provisional on two counts still reads amber once.
+      const roiValue = roiAttrs ? roiAttrs.total_roi_pct : null;
+      const selfMoney = roiAttrs
+        && roiAttrs.self_total_gbp !== null
+        && roiAttrs.self_total_gbp !== undefined;
       const roiSrc = roiAttrs ? (roiAttrs.invested_source ?? null) : null;
-      if (roiSrc === "user") {
-        roiCell.style.fill = "var(--success-color, #4caf50)";
-      } else if (roiSrc === "derived") {
+      if (roiValue === null || roiValue === undefined) {
+        roiCell.style.fill = "";
+      } else if (selfMoney || roiSrc === "derived") {
         roiCell.style.fill = "var(--khscada-warn-color, #ffb300)";
+      } else if (roiSrc === "user") {
+        roiCell.style.fill = "var(--success-color, #4caf50)";
       } else {
         roiCell.style.fill = "";
       }

@@ -129,9 +129,9 @@ the value column — carrying the headline only:
 | --- | --- |
 | Invested | `£5,000` in **green** (you entered or ticked it), **amber** while it is only the derived auto-fill, or `Not set` until a share price or your entry exists |
 | Payments from Co-op | `£1,074.98` in **green** — board-confirmed money |
-| Your estimates | `—` until one exists |
-| All Payments | `£1,074.98` |
-| Return | `21.50%` in **green once you confirm the capital**, **amber while it measures against derived capital**; `—` with neither an entry nor a derived figure |
+| Your estimates | `—` until one exists; **never green** — an estimate becomes board money only by editing the period and ticking the board box, which moves it into Payments from Co-op |
+| All Payments | `£1,074.98` in **green while the ledger holds no own estimates**, **amber the moment it contains any** |
+| Return | `21.50%` in **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
 | Periods | `2` |
 
 Two rows were dropped from the panel in favour of the modal: **Published
