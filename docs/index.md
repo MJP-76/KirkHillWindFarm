@@ -7,6 +7,8 @@
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
+![The Kirk Hill SCADA tab: eight turbines feeding the transformer and national grid, with the Return on investment, Owner and Site panels down the right-hand column](assets/scada-overview.png)
+
 It pulls current data for both OpenAPI scopes:
 
 - `owner` (your ownership share)
