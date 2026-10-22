@@ -1085,9 +1085,9 @@ class KirkHillWindScada extends HTMLElement {
         <span class="roi-capital-value">${invested === null || invested === undefined ? "Set amount" : this._gbp(invested)}</span>
       </button>
       <div class="roi-stats">
-        <div class="roi-stat"><span>All periods</span><b>${this._gbp(attrs.total_gbp)}</b></div>
-        <div class="roi-stat"><span>From the board</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
+        <div class="roi-stat"><span>Payments from Co-op</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
         <div class="roi-stat"><span>Your estimates</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
+        <div class="roi-stat"><span>All Payments</span><b>${this._gbp(attrs.total_gbp)}</b></div>
         <div class="roi-stat"><span>Return</span><b>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
       </div>`;
 
@@ -2685,12 +2685,12 @@ _buildHeaderChips(layout) {
 
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="142">Invested</text>
           <text class="site-gen-value" data-roi-cell="invested" x="${layout.chipSiteGenValueX}" y="142" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="162">All periods</text>
-          <text class="site-gen-value" data-roi-cell="total" x="${layout.chipSiteGenValueX}" y="162" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">From the board</text>
-          <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Your estimates</text>
-          <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="162">Payments from Co-op</text>
+          <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="162" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">Your estimates</text>
+          <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">All Payments</text>
+          <text class="site-gen-value" data-roi-cell="total" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Return</text>
           <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="242">Periods</text>
