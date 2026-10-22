@@ -53,7 +53,8 @@ and an animated dashboard.
   Owner and Site, in the same box and columns: invested amount, payments from
   Co-op, your estimates, all payments, return, period count, published rate
   and the current period. Click it for the ledger modal — one row per period (months,
-  rate × watts, £, ROI %, board or yours), the capital input and the add/edit
+  rate × watts, £, ROI %, the capital/interest split as reported by Ethex or
+  the board, board or yours), the invested input and the add/edit
   forms. ROI is `value ÷ invested × 100`, deliberately not annualised, and
   reads `—` until you say what you invested.
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has

@@ -1079,6 +1079,15 @@ class KirkHillWindScada extends HTMLElement {
     const { attrs, records } = ledger;
     const invested = attrs.invested_gbp;
     const roiPct = attrs.total_roi_pct;
+    // The capital/interest halves, entered by hand: shown only once at least
+    // one record carries a split, and never derived when it does not.
+    const capitalTotal = attrs.capital_total_gbp;
+    const interestTotal = attrs.interest_total_gbp;
+    const splitKnown = capitalTotal !== null && capitalTotal !== undefined
+      || interestTotal !== null && interestTotal !== undefined;
+    const splitLine = splitKnown
+      ? `<div class="roi-split">Of ${this._gbp(attrs.total_gbp)} recorded: <b>${this._gbp(capitalTotal)} capital</b> · <b>${this._gbp(interestTotal)} interest</b></div>`
+      : "";
     summary.innerHTML = `
       <button class="roi-capital" data-roi-action="edit-invested" title="Set what you invested">
         <span class="roi-capital-label">Invested</span>
@@ -1089,7 +1098,7 @@ class KirkHillWindScada extends HTMLElement {
         <div class="roi-stat"><span>Your estimates</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
         <div class="roi-stat"><span>All Payments</span><b>${this._gbp(attrs.total_gbp)}</b></div>
         <div class="roi-stat"><span>Return</span><b>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
-      </div>`;
+      </div>${splitLine}`;
 
     list.innerHTML =
       (records.length
@@ -1124,11 +1133,22 @@ class KirkHillWindScada extends HTMLElement {
     const roiRaw = record.roi_pct;
     const roi = roiRaw === null || roiRaw === undefined || !Number.isFinite(Number(roiRaw)) ? null : Number(roiRaw);
     const self = record.source === "self";
+    // The capital/interest halves as the user entered them (or as the backend
+    // completed them from one half): a sub-line only when a split exists, and
+    // never derived here.
+    const capRaw = record.capital_gbp;
+    const intRaw = record.interest_gbp;
+    const capital = capRaw === null || capRaw === undefined || !Number.isFinite(Number(capRaw)) ? null : Number(capRaw);
+    const interest = intRaw === null || intRaw === undefined || !Number.isFinite(Number(intRaw)) ? null : Number(intRaw);
+    const split = capital === null && interest === null
+      ? ""
+      : `<span class="roi-row-split">Capital ${this._gbp(capital)} · Interest ${this._gbp(interest)}</span>`;
     return `
       <div class="roi-row${self ? " roi-row--self" : ""}" data-record="${this._escape(record.id)}">
         <div class="roi-row-main">
           <span class="roi-row-dates">${this._fmtMonth(record.period_start)} – ${this._fmtMonth(record.period_end)}${self ? ` <span class="roi-tag">your estimate</span>` : ""}</span>
           <span class="roi-row-rate">${this._fmt(Number(record.rate_p_per_w), 2)} p/W × ${this._fmt(Number(record.capacity_watts), 0)} W${record.note ? ` · <span class="roi-note">${this._escape(record.note)}</span>` : ""}</span>
+          ${split}
         </div>
         <div class="roi-row-money">
           <span class="roi-row-value">${value === null ? "—" : `${self ? "~" : ""}£${this._fmt(value, 2)}`}</span>
@@ -1242,6 +1262,11 @@ class KirkHillWindScada extends HTMLElement {
         <input class="roi-input" id="roi-watts" type="number" min="0" step="1" value="${r.capacity_watts ?? ""}" placeholder="defaults to today's capacity" />
         <label class="roi-label" for="roi-note">Note (optional)</label>
         <input class="roi-input" id="roi-note" type="text" maxlength="200" value="${this._escape(r.note || "")}" placeholder="AGM, meeting, statement" />
+        <label class="roi-label" for="roi-capital">Capital (GBP)</label>
+        <input class="roi-input" id="roi-capital" type="number" min="0" step="0.01" value="${r.capital_gbp ?? ""}" placeholder="as reported by Ethex or the board" />
+        <label class="roi-label" for="roi-interest">Interest (GBP)</label>
+        <input class="roi-input" id="roi-interest" type="number" min="0" step="0.01" value="${r.interest_gbp ?? ""}" placeholder="worked out if left blank" />
+        <div class="roi-hint">Split this payment as reported by Ethex or the board. Either half may be left blank — the other is worked out from it; if both are given they must add up to this period's figure.</div>
         <label class="roi-check">
           <input type="checkbox" id="roi-source" ${sourceChecked ? "checked" : ""} />
           <span>Announced by the board</span>
@@ -1273,6 +1298,10 @@ class KirkHillWindScada extends HTMLElement {
     const wattsRaw = value("#roi-watts");
     const watts = wattsRaw === "" ? null : parseFloat(wattsRaw);
     const note = value("#roi-note");
+    const capitalRaw = value("#roi-capital");
+    const capital = capitalRaw === "" ? null : parseFloat(capitalRaw);
+    const interestRaw = value("#roi-interest");
+    const interest = interestRaw === "" ? null : parseFloat(interestRaw);
 
     // Validate here as well as on the backend: a rejected service call is a
     // silent no-op from the user's side of a form unless the form says why.
@@ -1291,6 +1320,20 @@ class KirkHillWindScada extends HTMLElement {
     if (end < start) return fail("The end month must not be before the start month.", "#roi-end");
     if (!Number.isFinite(rate) || rate <= 0) return fail("Enter the rate the board announced, in p/W.", "#roi-rate");
     if (watts !== null && (!Number.isFinite(watts) || watts < 0)) return fail("Watts owned must be 0 or more.", "#roi-watts");
+    if (capital !== null && (!Number.isFinite(capital) || capital < 0)) return fail("Capital must be 0 or more, or left blank.", "#roi-capital");
+    if (interest !== null && (!Number.isFinite(interest) || interest < 0)) return fail("Interest must be 0 or more, or left blank.", "#roi-interest");
+    // Both halves given must agree with the period to the penny -- the same
+    // rule the backend enforces, checked here so the form can say why. With
+    // watts blank on a new record the backend defaults it, so the sum is
+    // checked there instead and its message is shown.
+    const effectiveWatts = watts !== null ? watts : Number(record?.capacity_watts) || null;
+    if (capital !== null && interest !== null && effectiveWatts !== null) {
+      const periodFigure = Math.round(rate * effectiveWatts) / 100;
+      const sum = Math.round((capital + interest) * 100) / 100;
+      if (Math.abs(sum - periodFigure) > 0.01) {
+        return fail(`Capital + interest (${this._fmt(sum, 2)}) must equal this period's figure (${this._fmt(periodFigure, 2)}).`, "#roi-capital");
+      }
+    }
 
     const payload = {
       period_start: `${start}-01`,
@@ -1299,6 +1342,8 @@ class KirkHillWindScada extends HTMLElement {
       source: slot.querySelector("#roi-source")?.checked ? "board" : "self",
     };
     if (watts !== null) payload.capacity_watts = watts;
+    if (capital !== null) payload.capital_gbp = capital;
+    if (interest !== null) payload.interest_gbp = interest;
     if (note) payload.note = note;
     if (record) payload.record_id = record.id;
 
@@ -3199,6 +3244,9 @@ _buildHeaderChips(layout) {
       .roi-row-actions { display: flex; gap: 6px; }
       .roi-caption { margin-top: 10px; font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-secondary-color); }
       .roi-caption b { color: var(--khscada-primary-color); }
+      .roi-split { margin-top: 8px; font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-secondary-color); }
+      .roi-split b { color: var(--khscada-primary-color); }
+      .roi-row-split { font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-secondary-color); }
       .roi-btn { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 6px 14px; cursor: pointer; }
       .roi-btn:hover { color: var(--khscada-primary-color); }
       .roi-btn--primary { background: color-mix(in srgb, var(--khscada-accent-color) 20%, transparent); color: var(--khscada-accent-color); }

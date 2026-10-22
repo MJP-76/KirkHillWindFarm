@@ -40,6 +40,7 @@ from custom_components.kirkhill_wind.payment_ledger import (
     record_value_gbp,
     roi_pct,
     source_totals_gbp,
+    split_totals_gbp,
     year_totals_gbp,
 )
 from custom_components.kirkhill_wind.sensor import PaymentLedgerSensor
@@ -536,6 +537,27 @@ class TestPaymentRecordServices:
         with pytest.raises(vol.Invalid):
             SERVICE_SCHEMA_SET_INVESTED({"invested_gbp": -1})
 
+    @pytest.mark.asyncio
+    async def test_split_enters_through_the_service(self, hass, fake_store):
+        ledger = await self._setup(hass, fake_store)
+        add = self._handler(hass, SERVICE_ADD_PAYMENT_RECORD)
+        data = {
+            "period_start": PAST_START,
+            "period_end": PAST_END,
+            "rate_p_per_w": 20,
+            "capacity_watts": 2000,
+            "capital_gbp": 300,
+            "interest_gbp": 100,
+        }
+        await add(SimpleNamespace(data=data))
+        assert ledger.records[0]["capital_gbp"] == 300.0
+        assert ledger.records[0]["interest_gbp"] == 100.0
+
+        # A pair that does not sum to the period's figure is refused, not fixed.
+        with pytest.raises(HomeAssistantError):
+            await add(SimpleNamespace(data={**data, "interest_gbp": 100.5}))
+        assert len(ledger.records) == 1
+
 
 class TestSource:
     """board = announced by the board; self = the member's own estimate."""
@@ -738,3 +760,74 @@ class TestRoiAndInvested:
         assert attrs["invested_gbp"] is None
         assert attrs["total_roi_pct"] is None
         assert attrs["records"][0]["roi_pct"] is None
+
+
+class TestCapitalInterestSplit:
+    """A payment splits into capital and interest, entered by hand.
+
+    The split comes from an Ethex statement or a board announcement; the ledger
+    stores it, never derives it from anything else, and both halves always sum
+    to the period's figure.
+    """
+
+    def test_both_halves_summing_to_the_figure_are_kept(self):
+        stored = normalise_record(_record(capital_gbp=300.0, interest_gbp=100.0))
+        assert stored["capital_gbp"] == 300.0
+        assert stored["interest_gbp"] == 100.0
+
+    def test_a_penny_out_is_rejected(self):
+        # The period is worth £400.00, so the halves must agree to the penny.
+        with pytest.raises(ValueError):
+            normalise_record(_record(capital_gbp=300.0, interest_gbp=100.5))
+
+    def test_one_half_completes_the_other(self):
+        capital_only = normalise_record(_record(capital_gbp=350.0))
+        assert capital_only["capital_gbp"] == 350.0
+        assert capital_only["interest_gbp"] == 50.0
+
+        interest_only = normalise_record(_record(interest_gbp=25.0))
+        assert interest_only["interest_gbp"] == 25.0
+        assert interest_only["capital_gbp"] == 375.0
+
+    def test_no_split_stays_unknown(self):
+        stored = normalise_record(_record())
+        assert stored["capital_gbp"] is None
+        assert stored["interest_gbp"] is None
+
+    def test_negative_half_is_rejected(self):
+        with pytest.raises(ValueError):
+            normalise_record(_record(capital_gbp=-1))
+
+    def test_totals_are_none_until_a_split_exists(self):
+        assert split_totals_gbp([]) == {"capital": None, "interest": None}
+        assert split_totals_gbp([normalise_record(_record())]) == {
+            "capital": None,
+            "interest": None,
+        }
+        records = [normalise_record(_record(capital_gbp=300.0, interest_gbp=100.0))]
+        assert split_totals_gbp(records) == {"capital": 300.0, "interest": 100.0}
+
+    @staticmethod
+    def _sensor(records):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        ledger._records = [normalise_record(r) for r in records]
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {}
+        entry = MagicMock()
+        entry.entry_id = "test-entry"
+        return PaymentLedgerSensor(coordinator, entry, ledger)
+
+    def test_sensor_reports_the_split_and_keeps_the_total(self):
+        attrs = self._sensor([_record(capital_gbp=300.0, interest_gbp=100.0)]).extra_state_attributes
+        assert attrs["capital_total_gbp"] == 300.0
+        assert attrs["interest_total_gbp"] == 100.0
+        assert attrs["records"][0]["capital_gbp"] == 300.0
+        assert attrs["records"][0]["interest_gbp"] == 100.0
+        # The split is a breakdown of the total, never a second figure.
+        assert attrs["total_gbp"] == 400.0
+
+    def test_sensor_split_totals_stay_none_for_unsplit_records(self):
+        attrs = self._sensor([_record()]).extra_state_attributes
+        assert attrs["capital_total_gbp"] is None
+        assert attrs["interest_total_gbp"] is None
