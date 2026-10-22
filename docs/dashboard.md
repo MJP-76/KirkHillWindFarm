@@ -130,16 +130,18 @@ the value column — carrying the headline only:
 | Invested | `£5,000` in **green** (you entered or ticked it), **amber** while it is only the derived auto-fill, or `Not set` until a share price or your entry exists |
 | Payments from Co-op | `£1,074.98` in **green** — board-confirmed money |
 | Your estimates | `—` until one exists; **never green** — an estimate becomes board money only by editing the period and ticking the board box, which moves it into Payments from Co-op |
-| All Payments | `£1,074.98` in **green while the ledger holds no own estimates**, **amber the moment it contains any** |
 | Return | `21.50%` in **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
 | Periods | `2` |
 
-Two rows were dropped from the panel in favour of the modal: **Published
-rate** — it sits on every row there, and only board records ever set it — and
+Three rows were dropped from the panel in favour of the modal: **Published
+rate** — it sits on every row there, and only board records ever set it —
 **Current period**, which is blank whenever a period is undeclared while the
-modal's caption can also say *who* declared it (board or you).
+modal's caption can also say *who* declared it (board or you), and **All
+Payments** — with own estimates barred from money sums, it was Co-op plus
+guesses: redundant when clean, contaminated when not. The combined total
+still shows in the modal's stats and split line.
 
-![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, all payments, return and period count](assets/roi-panel.png)
+![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, return and period count](assets/roi-panel.png)
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 
@@ -176,8 +178,13 @@ modal's caption can also say *who* declared it (board or you).
   worked out from the period's figure) or both (they must sum to it **to the
   penny**, or the save is refused). Rows show
   `Capital £400.00 · Interest £137.49`, and a line under the totals sums them
-  across every period. Nothing derives a split — it is entered by hand, and a
-  period with no split shows none.
+  across every period. With capital in force, that same line carries the two
+  returns: **capital returned X % of your investment** (payback —
+  `capital_total ÷ invested`) and **interest +Y % ROI** (`interest_total ÷
+  invested`, growing with every payment) — the two **always sum to the
+  Return**, and they wear amber under exactly the Return's amber conditions.
+  Nothing derives a split — it is entered by hand, and a period with no split
+  shows none.
 - **Projection** — a labelled one-liner, never a figure. Enter an annual p/W
   rate — normally the board's own published equivalent, whose Feb 2025 → Jun
   2026 announcement equated 21 p/W over 17 months to **15 p/W over a year** —

@@ -23,7 +23,7 @@ It pulls current data for both OpenAPI scopes:
 >   `£/h` cells, the Member savings line and both price pills are gone. A
 >   **Return on investment** panel leads the right column above them, in the
 >   same box, showing the headline: invested amount, payments from Co-op,
->   your estimates, all payments and your return — click it for the full ledger
+>   your estimates and your return — click it for the full ledger
 >   (every period the board declared a p/W rate for, its £ figure and ROI) and
 >   the add/edit forms. The old price/rate entities stay disabled and zeroed
 >   while the model is confirmed. Generation, power and capacity are unaffected.
@@ -53,7 +53,7 @@ and an animated dashboard.
   Rates now live per declared period in the ledger.
 - **Return on investment panel** — the top panel of the right column, above
   Owner and Site, in the same box and columns: invested amount, payments from
-  Co-op, your estimates, all payments, return and period count. Click it for
+  Co-op, your estimates, return and period count. Click it for
   the ledger modal — one row per period (months,
   rate × watts, £, ROI %, the capital/interest split as reported by Ethex or
   the board, board or yours), the invested input, a labelled projection over
@@ -63,7 +63,7 @@ and an animated dashboard.
   derived auto-fill (share price × your watts) while that is all there is —
   deliberately not annualised, and reads `—` when neither exists.
 
-  ![Return on investment panel: invested, payments from Co-op, your estimates, all payments, return and period count](docs/assets/roi-panel.png)
+  ![Return on investment panel: invested, payments from Co-op, your estimates, return and period count](docs/assets/roi-panel.png)
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
   actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
   something is declared, and **withholds any figure for an undeclared period**
@@ -88,8 +88,8 @@ and an animated dashboard.
   and its forms. Its colour scheme is amber for values and power/energy, cyan
   for wind speed — and green for confirmed money: invested and Return read
   green once you confirm the capital, a board period shows its figure green,
-  All Payments and Return go green only with no own estimates in the ledger —
-  amber while any remain. Amber is only ever provisional.
+  Return goes green only with no own estimates in the ledger — amber while
+  any remain or while capital is derived. Amber is only ever provisional.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
