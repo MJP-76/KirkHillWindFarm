@@ -147,7 +147,7 @@ restatement will silently serve stale earnings.
       summary backoff) and expose `rate_limited` on the API status entity instead of folding
       it into `KirkHillConnectionError`. The API does return 429 — `tests/test_api.py:319`
       pins `HTTP 429 … Too many requests` — and the SCADA card already reads the attribute
-      (`kirkhill-wind-scada-card.js:903`, `:3025`), so its amber "LIMITED" pill is dead code
+      (`kirkhill-wind-scada-card.js:903`, `:2986`), so its amber "LIMITED" pill is dead code
       until this lands.
 - [x] ~~Remove the deprecated turbine map card~~ — JS file already deleted; OBSOLETE_CARD_KEYS entry stays to prune old dashboards.
 - [ ] 423 password-change-required → actionable reauth ("change your dashboard password, then
