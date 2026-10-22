@@ -2,6 +2,34 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.18.1
+
+**Testing pre-release.** Continues the 4.18 line: the repository itself
+becomes a source of board figures, with a switch to opt out.
+
+- **A shipped `board_announcements.yaml`** — board announcements arrive as a
+  file inside the integration, upserted into the ledger as `source: board` on
+  every setup: matching is by period, a new period takes the API's current
+  owner capacity, records added in the card are never touched, and a changed
+  rate clears a split that can no longer sum to the new figure (with a log
+  line). Ships with the board's **Feb 2025 → Jun 2026** line (21 p/W,
+  announced 2025-07-15) as an active record — every install gains it on
+  upgrade, with that member's own watts. Editing it in a PR is the audit
+  trail; a reload applies it, no code deploy.
+- **Board figures source option** — Configure → *Board figures source*:
+  **Repo file — board_announcements.yaml** (default) or **Manual entry only**,
+  where the file is ignored and the card becomes the only writer. Going
+  manual removes nothing the file already brought in; coming back re-applies
+  it.
+- **Fixed**: the file is now read through an executor — 4.18.0 read it on the
+  event loop, and Home Assistant logged a blocking-call warning at every
+  setup.
+- **Clearer wording**: `current_basis` now reports `awaiting_next_declaration`
+  instead of `estimate_withheld_split_unknown` — what is missing is the
+  board's next declaration, not a split the member may already have entered —
+  and the ROI panel's *Current period* line reads *awaiting the board's next
+  declaration* instead of staying blank. Still no invented number.
+
 ## Version 4.18.0
 
 **Testing pre-release.** Builds on the payment ledger from 4.17.0: each payment
