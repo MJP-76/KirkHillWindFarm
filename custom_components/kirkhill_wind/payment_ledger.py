@@ -83,6 +83,23 @@ MAX_NOTE_LENGTH = 200
 BOARD_ANNOUNCEMENTS_FILE = Path(__file__).parent / "board_announcements.yaml"
 
 
+def _read_announcements_file() -> str | None:
+    """Read the shipped announcements file, for an executor job.
+
+    ``Path.read_text`` is a blocking open, and Home Assistant flags it when
+    that happens on the event loop — v4.18.0 did exactly that and logged a
+    warning on every setup. File I/O belongs in an executor; parsing the text
+    that comes back is cheap enough to stay in the loop.
+    """
+    if not BOARD_ANNOUNCEMENTS_FILE.is_file():
+        return None
+    try:
+        return BOARD_ANNOUNCEMENTS_FILE.read_text(encoding="utf-8")
+    except OSError as err:
+        _LOGGER.warning("Cannot read board announcements: %s", err)
+        return None
+
+
 def ledger_store(hass: HomeAssistant, entry_id: str) -> Store:
     """Return the Store holding one config entry's payment ledger."""
     return Store(hass, STORAGE_VERSION, f"{DOMAIN}_payment_ledger_{entry_id}")
@@ -470,15 +487,13 @@ class PaymentLedger:
 
         Returns how many records were created or changed.
         """
-        if not BOARD_ANNOUNCEMENTS_FILE.is_file():
+        text = await self._hass.async_add_executor_job(_read_announcements_file)
+        if text is None:
             return 0
         try:
-            data = (
-                yaml.safe_load(BOARD_ANNOUNCEMENTS_FILE.read_text(encoding="utf-8"))
-                or {}
-            )
-        except (OSError, yaml.YAMLError) as err:
-            _LOGGER.warning("Cannot read board announcements: %s", err)
+            data = yaml.safe_load(text) or {}
+        except yaml.YAMLError as err:
+            _LOGGER.warning("Cannot parse board announcements: %s", err)
             return 0
         entries = data.get("records") if isinstance(data, dict) else data
         if not isinstance(entries, list):
