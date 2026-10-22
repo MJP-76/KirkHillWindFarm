@@ -131,7 +131,7 @@ the value column — carrying the headline only:
 | Payments from Co-op | `£1,074.98` |
 | Your estimates | `—` until one exists |
 | All Payments | `£1,074.98` |
-| Return | `21.50%`, **amber while it measures against derived capital**; `—` with neither an entry nor a derived figure |
+| Return | `21.50%` in **green once you confirm the capital**, **amber while it measures against derived capital**; `—` with neither an entry nor a derived figure |
 | Periods | `2` |
 
 Two rows were dropped from the panel in favour of the modal: **Published
