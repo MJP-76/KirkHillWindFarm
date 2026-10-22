@@ -506,13 +506,15 @@ decision changes.
 
 ## Deployment state
 
-- **2026-10-21 — The repository and production are both at `4.16.7`, published
+- **2026-10-22 — The repository and production both run `4.17.0`, published
   stable.** Nothing is deployed by releasing: the changed files under
   `custom_components/kirkhill_wind/` reach this host only when `origin/main` is
-  mirrored into `/homeassistant/custom_components/kirkhill_wind/` and Home
-  Assistant is fully restarted — which needs the owner's explicit go-ahead.
-  `CHANGELOG.md` is the authoritative version history. GitHub Releases/HACS are
-  for other users; this host deploys from `origin/main` commits mirrored into
-  `/homeassistant/custom_components/kirkhill_wind/`.
+  mirrored into `/homeassistant/custom_components/kirkhill_wind/`, and Python
+  changes need Home Assistant fully restarted — which needs the owner's
+  explicit go-ahead. Frontend-only changes are a copy plus a browser refresh.
+  Production mirrors `4.17.0` as a copy; its manifest reads 4.17.0 at the next
+  restart. `CHANGELOG.md` is the authoritative version history. GitHub
+  Releases/HACS are for other users; this host deploys from `origin/main`
+  commits mirrored into `/homeassistant/custom_components/kirkhill_wind/`.
 
 [changelog]: https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md

@@ -339,6 +339,29 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.17.0 (stable, 2026-10-22)
+
+- **Payment ledger + Return on investment panel**: money is a ledger of dated
+  periods the board declared a p/W rate for (whole months, `watts × rate ÷
+  100`), drawn in a new top panel on the SCADA card — Invested · Payments from
+  Co-op · Your estimates · All Payments · Return · Periods · Published rate ·
+  Current period — with the full table, the capital input and both forms in the
+  click-through modal
+- New `sensor.<farm>_payment_ledger`: `records` (with `value_gbp` and
+  `roi_pct`), `board_total_gbp`, `self_total_gbp`, `invested_gbp`,
+  `total_roi_pct`; `source: board | self` per record; ROI is
+  `value ÷ invested × 100`, never annualised, and `—` until capital is entered
+- Undeclared periods report **nothing**
+  (`estimate_withheld_split_unknown`) until the board publishes the
+  capital/interest split
+- Money removed from the Owner and Site panels — `Value (£)` column, `£/h`
+  cells, member-savings line and both price pills; generation takes the edge
+- New services `add/update/remove_payment_record` and `set_invested_amount`;
+  periods entered as months, stored 1st → last day, next period prefilled from
+  the latest end
+- All 22 earnings entities stay disabled and zeroed; nothing deleted
+- Tests 222 → 289; card 3,376 lines / ~163 KB; shipped frontend 724 KB
+
 ### v4.16.7 (pre-release, 2026-10-20)
 
 - Removed the two vendored third-party cards (`apexcharts-card.js`,
