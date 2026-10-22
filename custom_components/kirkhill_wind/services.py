@@ -12,10 +12,10 @@ from .payment_ledger import MAX_NOTE_LENGTH, MAX_RATE_P_PER_W, SOURCES, get_ledg
 
 SERVICE_RELOAD_INTEGRATION = "reload_integration"
 SERVICE_RESET_DASHBOARD = "reset_dashboard"
-# The ledger's write path. The card's Amount pill opens a pop-out of dated
-# line items, and this is how an edit there becomes stored state -- the card
-# never writes storage itself, and never touches entry.options (config v11
-# purges earnings inputs; see payment_ledger).
+# The ledger's write path. The Return on investment panel's modal holds the
+# dated line items and their add & edit forms, and this is how an edit there
+# becomes stored state -- the card never writes storage itself, and never
+# touches entry.options (config v11 purges earnings inputs; see payment_ledger).
 SERVICE_ADD_PAYMENT_RECORD = "add_payment_record"
 SERVICE_UPDATE_PAYMENT_RECORD = "update_payment_record"
 SERVICE_REMOVE_PAYMENT_RECORD = "remove_payment_record"

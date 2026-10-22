@@ -16,8 +16,6 @@
           "api_key": "API key",
           "create_dashboard": "Create dashboard automatically",
           "enable_payment_tracking": "Enable payment tracking onboarding (Ethex, experimental)",
-          "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
-          "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
           "site_name": "Site name"
         }
       },
@@ -83,8 +81,6 @@
           "create_dashboard": "Create dashboard automatically",
           "enable_payment_tracking": "Enable payment tracking onboarding (Ethex, experimental)",
           "board_figures_source": "Board figures source (repo file or manual entry)",
-          "owner_projected_annual_earnings_gbp": "Owner projected annual earnings (GBP)",
-          "site_projected_annual_earnings_gbp": "Site projected annual earnings (GBP)",
           "scan_interval": "Poll interval (seconds)"
         }
       }
