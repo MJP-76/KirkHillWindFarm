@@ -69,7 +69,9 @@ and an animated dashboard.
   until the board publishes the capital/interest split — no estimate is
   derived. Entries change only through the
   `kirkhill_wind.add_payment_record` / `update_payment_record` /
-  `remove_payment_record` / `set_invested_amount` / `set_projection` services.
+  `remove_payment_record` / `set_invested_amount` / `set_projection` services —
+  or by editing the shipped `board_announcements.yaml` in a PR, whose entries
+  are upserted into the ledger as board records on setup.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
   **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up

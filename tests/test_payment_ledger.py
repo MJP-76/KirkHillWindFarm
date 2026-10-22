@@ -941,3 +941,202 @@ class TestProjection:
         assert attrs["annual_rate_p_per_w"] is None
         # ...and it never leaks into the totals.
         assert attrs["total_gbp"] == 400.0
+
+
+class TestBoardAnnouncements:
+    """The shipped board_announcements.yaml upserts into the ledger on setup."""
+
+    @pytest.fixture
+    def announcements(self, tmp_path):
+        path = tmp_path / "board_announcements.yaml"
+        with patch(
+            "custom_components.kirkhill_wind.payment_ledger.BOARD_ANNOUNCEMENTS_FILE",
+            path,
+        ):
+            yield path
+
+    @staticmethod
+    def _write(path, text):
+        path.write_text(text, encoding="utf-8")
+
+    @pytest.mark.asyncio
+    async def test_creates_a_board_record(self, hass, fake_store, announcements):
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+    announced_on: 2025-07-15
+    note: "GBP 1.6m member payment approved"
+""",
+        )
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_load()
+        applied = await ledger.async_apply_board_announcements(default_capacity=2559.465)
+
+        assert applied == 1
+        record = ledger.records[0]
+        assert record["source"] == "board"
+        assert record["rate_p_per_w"] == 21.0
+        assert record["announced_on"] == "2025-07-15"
+        assert record["capacity_watts"] == 2559.465
+        assert record["id"].startswith("board-")  # stable and derived from the period
+        assert fake_store.saves >= 1
+
+    @pytest.mark.asyncio
+    async def test_user_records_are_untouched(self, hass, fake_store, announcements):
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2026-07-01
+    period_end: 2026-12-31
+    rate_p_per_w: 15
+""",
+        )
+        ledger = PaymentLedger(hass, "test-entry")
+        # A period added in the card, with its own watts and split.
+        await ledger.async_add(
+            _record(
+                period_start="2025-02-01",
+                period_end="2026-06-30",
+                capacity_watts=3000.0,
+                capital_gbp=100.0,
+            )
+        )
+        applied = await ledger.async_apply_board_announcements(default_capacity=2559.465)
+
+        assert applied == 1
+        user = ledger.records[0]
+        # Untouched: not renamed, not re-rated, split and watts intact.
+        assert user["period_start"] == "2025-02-01"
+        assert user["rate_p_per_w"] == 20.0
+        assert user["capacity_watts"] == 3000.0
+        assert user["capital_gbp"] == 100.0
+        assert user["interest_gbp"] == 500.0  # 3,000 W at 20 p/W = 600.00
+        assert not user["id"].startswith("board-")
+        assert ledger.records[1]["id"].startswith("board-")
+
+    @pytest.mark.asyncio
+    async def test_same_period_updates_in_place(self, hass, fake_store, announcements):
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_add(_record())  # rate 20, capacity 2000, no split
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+    announced_on: 2025-07-15
+""",
+        )
+        applied = await ledger.async_apply_board_announcements(default_capacity=9999.0)
+
+        assert applied == 1
+        assert len(ledger.records) == 1
+        record = ledger.records[0]
+        assert record["rate_p_per_w"] == 21.0
+        assert record["announced_on"] == "2025-07-15"
+        assert record["capacity_watts"] == 2000.0  # the existing watts, not the default
+
+    @pytest.mark.asyncio
+    async def test_rate_change_clears_an_incompatible_split(self, hass, fake_store, announcements):
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_add(
+            _record(capacity_watts=2000.0, capital_gbp=100.0, interest_gbp=300.0)
+        )  # split sums to the old 400.00
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+""",
+        )
+        applied = await ledger.async_apply_board_announcements(default_capacity=2559.465)
+
+        assert applied == 1
+        record = ledger.records[0]
+        assert record["rate_p_per_w"] == 21.0
+        # The board's figure wins, and the split that no longer sums to it is
+        # dropped rather than left silently wrong.
+        assert record["capital_gbp"] is None
+        assert record["interest_gbp"] is None
+
+    @pytest.mark.asyncio
+    async def test_empty_list_is_a_noop(self, hass, fake_store, announcements):
+        self._write(announcements, "records: []\n")
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_load()
+        applied = await ledger.async_apply_board_announcements(default_capacity=2559.465)
+
+        assert applied == 0
+        assert ledger.records == []
+        assert fake_store.saves == 0  # nothing written when nothing changed
+
+    @pytest.mark.asyncio
+    async def test_new_period_without_capacity_is_skipped(self, hass, fake_store, announcements):
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2026-07-01
+    period_end: 2026-12-31
+    rate_p_per_w: 15
+""",
+        )
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_load()
+        applied = await ledger.async_apply_board_announcements(default_capacity=None)
+
+        # A rate without watts cannot produce a figure, so it is not guessed.
+        assert applied == 0
+        assert ledger.records == []
+
+    @pytest.mark.asyncio
+    async def test_malformed_entries_are_skipped_others_applied(self, hass, fake_store, announcements):
+        self._write(
+            announcements,
+            """
+records:
+  - rate_p_per_w: 15
+  - notamapping
+  - period_start: 2026-07-01
+    period_end: 2026-12-31
+    rate_p_per_w: 15
+""",
+        )
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_load()
+        applied = await ledger.async_apply_board_announcements(default_capacity=2559.465)
+
+        assert applied == 1
+        assert len(ledger.records) == 1
+
+    @pytest.mark.asyncio
+    async def test_setup_applies_the_shipped_file(self, hass, fake_store, announcements):
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+""",
+        )
+        entry = MagicMock()
+        entry.entry_id = "test-entry"
+        entry.runtime_data = MagicMock()
+        entry.runtime_data.data = {
+            SCOPE_OWNER: {"summary": {"capacity_watts": 2559.465}},
+            SCOPE_SITE: {"summary": {}},
+        }
+
+        ledger = await async_setup_ledger(hass, entry)
+
+        assert len(ledger.records) == 1
+        assert ledger.records[0]["capacity_watts"] == 2559.465

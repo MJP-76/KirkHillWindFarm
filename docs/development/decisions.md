@@ -553,6 +553,37 @@ decision changes.
   latest capacity · never leaks into totals) plus the service round trip —
   298 → 310.
 
+- **2026-10-22 (later) — board figures arrive through a shipped YAML file.**
+  The API has no payment endpoints today (the request for *financial figures
+  owned by the API* is already queued — see `docs/api.md`), Ethex exposes
+  portfolio values rather than dated payments, and board announcements are
+  published as prose. So the repository itself becomes the source: a shipped
+  `board_announcements.yaml` inside the integration, upserted into the ledger
+  as `source: board` on every setup.
+
+  - **Edit it in a PR → git is the audit trail** of who entered which figure
+    and when, and `kirkhill_wind.reload_integration` (or a restart) applies it
+    — no code deploy, unlike every other change to this component.
+  - **Matched by period**: same period in, same record out — rate, dates,
+    `announced_on` and note updated while the watts and any capital/interest
+    split already entered against it are kept. Periods the file does not name
+    are never touched, so card-entered records cannot be overwritten.
+  - **Capacity comes from the API** for a new period (the board announces a
+    rate, not your watts); with no capacity available the record is skipped
+    with a warning rather than guessed — a rate without watts cannot produce a
+    figure.
+  - **The board's figure wins, never silently over a split**: a re-announced
+    rate that cannot coexist with an entered capital/interest pair clears the
+    pair and logs it.
+  - Ships **empty, with a commented example**: a shipped announcement must not
+    overwrite figures already entered in the card until the maintainer adds
+    entries.
+
+  Regression tests: `TestBoardAnnouncements` (creates · user records untouched
+  · same period updates in place and keeps its watts · rate change clears an
+  incompatible split · empty is a no-op with no write · missing capacity
+  skipped · malformed entries skipped · applied during setup) — 310 → 318.
+
 ## Dashboard consolidation
 
 - **2026-09-16 — SCADA is the sole live dashboard; History, Finances and
