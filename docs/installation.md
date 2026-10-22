@@ -75,11 +75,13 @@ the stable release yet.
 
 ## What's in the latest release
 
-**v4.18.1** is the latest **stable** release: board announcements shipped as
-a repo file with a Repo/Manual source switch, plus 4.18.0's capital/interest
-split, labelled lifespan projection and trimmed ROI panel. See the
-[changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md);
-to be offered future pre-releases, enable pre-releases in HACS (above).
+**v4.18.2** is the current **pre-release**: the lifetime estimate over known
+board periods, the derived share value and a green Invested figure.
+**v4.18.1** remains the latest **stable** release — it carries the shipped
+board-announcements file, the Repo/Manual switch, the capital/interest split
+and the labelled lifespan projection. See the
+[changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
+for both; to be offered a pre-release, enable pre-releases in HACS (above).
 
 ## Reporting a pre-release problem
 

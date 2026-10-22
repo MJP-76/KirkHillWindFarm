@@ -339,6 +339,18 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.18.2 (pre-release, 2026-10-22)
+
+- **Lifetime estimate** — projection modal: board actuals + time-left at the
+  stored annual rate (fractional elapsed from the first board period, no
+  constants, `self` excluded), labelled and counted by nothing; attrs
+  `lifetime_estimate_gbp` / `lifetime_roi_pct` / `lifetime_remaining_years`.
+- **Share value** — `invested ÷ watts` as `share_value_gbp_per_w`, quoted in
+  the invested form; derived, display-only.
+- **Green Invested** — panel cell, modal value and input go green whenever
+  invested has a value (every path is a user path); unset says *Not set*.
+- PR #132, green CI. 334 tests.
+
 ### v4.18.1 (stable, 2026-10-22)
 
 - **Board announcements ship in the repo** — a `board_announcements.yaml`

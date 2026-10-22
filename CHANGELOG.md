@@ -2,6 +2,27 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.18.2
+
+**Testing pre-release.** A lifetime view over the ledger, a derived share
+value, and a colour for the figure you typed yourself.
+
+- **Lifetime estimate** — the projection line in the ledger modal now ends
+  with *known board payments + the years left at your annual rate ≈ lifetime,
+  ≈ % of what you invested*: the board's actuals plus **time-left**, elapsed
+  counted fractionally from the first board period, `self` estimates excluded
+  from both. The rate is whatever you last set in the projection form — never
+  a constant in the code, because the board can requote. Labelled and counted
+  by nothing: no total, no period, and **Return** stays the factual
+  percentage. New attributes: `lifetime_estimate_gbp`, `lifetime_roi_pct`,
+  `lifetime_remaining_years`.
+- **Share value** — `invested ÷ watts` exposed as `share_value_gbp_per_w` and
+  quoted in the invested form (*≈ £1.7300/W × 2,559.465 W*): derived,
+  display-only — nothing stores it and it writes nothing back.
+- **Green Invested** — the panel cell, the modal's Invested value and its
+  input turn green whenever the figure has a value, because every path that
+  can set it is yours; unset keeps the normal colour and says *Not set*.
+
 ## Version 4.18.1
 
 **Stable release** — promoted from pre-release the same day, after the owner
