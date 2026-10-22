@@ -28,9 +28,10 @@ Treat them as closed; flag only if you find a new, concrete problem:
 - **Energy Dashboard compatibility (state_class `total_increasing`)** — a
   recorded decision: the farm's energy is sold to the grid/co-op, not
   self-consumed, so the generation sensors are deliberately NOT wired to the
-  native HA Energy dashboard. Window-total sensors (today/week/month/YTD) stay
-  `state_class=total`; only `alltime` is `total_increasing`. Do not suggest
-  reclassifying them.
+  native HA Energy dashboard. Window-total sensors (today/week/month/YTD)
+  stay `state_class=total`; the farm-level all-time sensor is `total` too,
+  and only the per-turbine all-time sensor is `total_increasing`. Do not
+  suggest reclassifying them.
 - **OptionsFlow / editing options post-setup** — already implemented: the
   integration exposes a full options flow (`KirkHillWindOptionsFlow` in
   `config_flow.py`) covering polling interval, the dashboard toggle, and the
