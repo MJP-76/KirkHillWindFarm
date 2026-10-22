@@ -222,6 +222,11 @@ records:
     note: "£1.6m member payment approved — 21 p/W for the 17-month period"
 ```
 
+- **Switchable to manual.** Options → **Board figures source** chooses between
+  **Repo file — board_announcements.yaml** (default) and **Manual entry
+  only**; manual ignores the file entirely and makes the card the only writer.
+  Going manual does not remove figures the file already brought in, and coming
+  back re-applies it.
 - **Edit it in a pull request** — `git log` then records who entered which
   figure and when, and the install picks the change up on the next setup or a
   `kirkhill_wind.reload_integration` call: no code deploy.

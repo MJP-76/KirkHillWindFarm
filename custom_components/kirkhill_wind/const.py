@@ -13,6 +13,17 @@ CONF_CFD_PRICE_GBP_PER_MWH = "cfd_price_gbp_per_mwh"
 CONF_OWNER_PRICE_PENCE_PER_KWH = "owner_price_pence_per_kwh"
 CONF_OWNER_RATE_PENCE_PER_W = "owner_rate_pence_per_w"
 
+# Where board payment figures come from. "repo" upserts the shipped
+# board_announcements.yaml into the ledger on setup — the file wins for the
+# periods it names. "manual" ignores the file entirely and leaves the card as
+# the only writer. This is a mode, not a monetary value: unlike the three price
+# keys it is safe to keep in entry.options (config v11 purges monetary inputs,
+# not modes).
+CONF_BOARD_FIGURES_SOURCE = "board_figures_source"
+BOARD_FIGURES_REPO = "repo"
+BOARD_FIGURES_MANUAL = "manual"
+BOARD_FIGURES_SOURCES = (BOARD_FIGURES_REPO, BOARD_FIGURES_MANUAL)
+
 # One-shot marker, not a user setting. See AGENTS.md rule 3.
 #
 # Until v4.13.0 the number entities persisted nowhere, so a price a user set
@@ -35,6 +46,9 @@ CONF_PRICE_RESTORE_PENDING = "price_restore_pending"
 DEFAULT_BASE_URL = "https://dashboard.kirkhillcoop.org"
 DEFAULT_CREATE_DASHBOARD = True
 DEFAULT_ENABLE_PAYMENT_TRACKING = False
+# Board figures default to the repo file, which ships empty: "repo" changes
+# nothing until an announcement is actually added to it.
+DEFAULT_BOARD_FIGURES_SOURCE = BOARD_FIGURES_REPO
 DEFAULT_SITE_NAME = "Kirk Hill Wind Farm"
 DEFAULT_SCAN_INTERVAL = 60  # seconds between API polls
 DEFAULT_CFD_PRICE_GBP_PER_MWH = 0.0

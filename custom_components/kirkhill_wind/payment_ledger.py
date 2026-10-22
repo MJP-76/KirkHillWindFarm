@@ -51,7 +51,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, SCOPE_OWNER
+from .const import BOARD_FIGURES_MANUAL, DOMAIN, SCOPE_OWNER
+from .settings import board_figures_source
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -710,12 +711,15 @@ async def async_setup_ledger(hass: HomeAssistant, entry) -> PaymentLedger:
     ledger = PaymentLedger(hass, entry.entry_id)
     await ledger.async_load()
     _ledgers(hass)[entry.entry_id] = ledger
-    # Board announcements shipped inside the integration are applied after the
+    # Board announcements ship inside the integration and are applied after the
     # stored state loads, so an edit to that file lands on setup or a reload --
     # no code deploy, and never at the expense of records added in the card.
-    await ledger.async_apply_board_announcements(
-        default_capacity=_owner_capacity(entry)
-    )
+    # "manual" switches the file off entirely and leaves the card the only
+    # writer; anything else (including the "repo" default) applies it.
+    if board_figures_source(entry) != BOARD_FIGURES_MANUAL:
+        await ledger.async_apply_board_announcements(
+            default_capacity=_owner_capacity(entry)
+        )
     return ledger
 
 

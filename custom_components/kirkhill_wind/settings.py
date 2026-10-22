@@ -23,6 +23,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 
 from .const import (
+    CONF_BOARD_FIGURES_SOURCE,
     CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
@@ -30,6 +31,7 @@ from .const import (
     CONF_OWNER_RATE_PENCE_PER_W,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
+    DEFAULT_BOARD_FIGURES_SOURCE,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
@@ -45,6 +47,7 @@ SETTING_DEFAULTS: dict[str, Any] = {
     CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
     CONF_CREATE_DASHBOARD: DEFAULT_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING: DEFAULT_ENABLE_PAYMENT_TRACKING,
+    CONF_BOARD_FIGURES_SOURCE: DEFAULT_BOARD_FIGURES_SOURCE,
     CONF_CFD_PRICE_GBP_PER_MWH: DEFAULT_CFD_PRICE_GBP_PER_MWH,
     CONF_OWNER_PRICE_PENCE_PER_KWH: DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
     CONF_OWNER_RATE_PENCE_PER_W: DEFAULT_OWNER_RATE_PENCE_PER_W,
@@ -60,6 +63,7 @@ OPTIONS_FORM_KEYS: tuple[str, ...] = (
     CONF_SCAN_INTERVAL,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
+    CONF_BOARD_FIGURES_SOURCE,
 )
 
 
@@ -90,6 +94,16 @@ def dashboard_enabled(entry: ConfigEntry) -> bool:
 def payment_tracking_enabled(entry: ConfigEntry) -> bool:
     """Return whether Ethex payment tracking should be set up."""
     return bool(get_setting(entry, CONF_ENABLE_PAYMENT_TRACKING))
+
+
+def board_figures_source(entry: ConfigEntry) -> str:
+    """Return where board payment figures come from: "repo" or "manual".
+
+    "repo" upserts the shipped board_announcements.yaml on setup — the file
+    wins for the periods it names. "manual" ignores the file entirely and
+    leaves the card as the only writer.
+    """
+    return str(get_setting(entry, CONF_BOARD_FIGURES_SOURCE))
 
 
 def get_negotiated_price(entry: ConfigEntry) -> float:

@@ -1,4 +1,5 @@
 """Tests for the config entry options flow."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -7,6 +8,9 @@ import pytest
 
 from custom_components.kirkhill_wind.config_flow import KirkHillWindOptionsFlow
 from custom_components.kirkhill_wind.const import (
+    BOARD_FIGURES_MANUAL,
+    BOARD_FIGURES_SOURCES,
+    CONF_BOARD_FIGURES_SOURCE,
     CONF_CFD_PRICE_GBP_PER_MWH,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
@@ -15,6 +19,7 @@ from custom_components.kirkhill_wind.const import (
     CONF_SITE_NAME,
     DEFAULT_BASE_URL,
 )
+from custom_components.kirkhill_wind.settings import board_figures_source, form_defaults
 
 
 def _make_entry(data: dict | None = None, options: dict | None = None) -> MagicMock:
@@ -121,3 +126,57 @@ class TestOptionsFlowPreservesUnrelatedOptions:
         )
 
         assert original == {CONF_CFD_PRICE_GBP_PER_MWH: 85.0}
+
+
+class TestBoardFiguresSourceOption:
+    """Where board payment figures come from: the shipped file or the card."""
+
+    def test_defaults_to_repo(self):
+        # On by default, and the file ships empty, so nothing changes until an
+        # announcement is actually added to it.
+        assert form_defaults(_make_entry())["board_figures_source"] == "repo"
+        assert board_figures_source(_make_entry()) == "repo"
+        assert set(BOARD_FIGURES_SOURCES) == {"repo", "manual"}
+
+    @pytest.mark.asyncio
+    async def test_form_offers_both_modes(self):
+        flow = KirkHillWindOptionsFlow(_make_entry())
+        flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+        result = await flow.async_step_init()
+
+        assert result["type"] == "form"
+        assert CONF_BOARD_FIGURES_SOURCE in result["data_schema"].schema
+
+    @pytest.mark.asyncio
+    async def test_manual_choice_survives_a_save(self):
+        entry = _make_entry(
+            options={
+                CONF_SCAN_INTERVAL: 60,
+                CONF_CREATE_DASHBOARD: True,
+                CONF_ENABLE_PAYMENT_TRACKING: False,
+                CONF_BOARD_FIGURES_SOURCE: BOARD_FIGURES_MANUAL,
+            }
+        )
+        result = await _submit(
+            entry,
+            {
+                CONF_SCAN_INTERVAL: 60,
+                CONF_CREATE_DASHBOARD: True,
+                CONF_ENABLE_PAYMENT_TRACKING: False,
+                CONF_BOARD_FIGURES_SOURCE: BOARD_FIGURES_MANUAL,
+            },
+        )
+        assert result[CONF_BOARD_FIGURES_SOURCE] == BOARD_FIGURES_MANUAL
+
+        # Saving unrelated fields must not silently reset the choice: the flow
+        # merges rather than replaces entry.options.
+        entry2 = _make_entry(options=dict(result))
+        result2 = await _submit(
+            entry2,
+            {
+                CONF_SCAN_INTERVAL: 120,
+                CONF_CREATE_DASHBOARD: True,
+                CONF_ENABLE_PAYMENT_TRACKING: False,
+            },
+        )
+        assert result2[CONF_BOARD_FIGURES_SOURCE] == BOARD_FIGURES_MANUAL
