@@ -425,6 +425,40 @@ def share_value_per_watt(
     return round(invested_gbp / capacity_watts, 4)
 
 
+def derived_invested_gbp(
+    share_price_p_per_w: float | None, capacity_watts: float | None
+) -> float | None:
+    """Return the unconfirmed capital: share price × watts ÷ 100.
+
+    Amber until the member enters their own figure or ticks that it matches:
+    an auto-fill is a suggestion, never their statement, so nothing here
+    writes ``invested_gbp``. None while either input is missing or not
+    positive — a derived capital with a hole in it is a fiction.
+    """
+    if share_price_p_per_w is None or capacity_watts is None:
+        return None
+    if share_price_p_per_w <= 0 or capacity_watts <= 0:
+        return None
+    return round(share_price_p_per_w * capacity_watts / 100, 2)
+
+
+def effective_invested(
+    invested_gbp: float | None, derived_gbp: float | None
+) -> tuple[float | None, str | None]:
+    """Return ``(amount, source)`` for ROI: the member's own figure wins.
+
+    ``("user", ...)`` when they entered it — green. ``("derived", ...)`` when
+    only the price-times-watts auto-fill exists — amber, and every ROI quoting
+    it is provisional until confirmed. ``(None, None)`` when neither exists:
+    there is no return to quote, never zero.
+    """
+    if invested_gbp is not None:
+        return invested_gbp, "user"
+    if derived_gbp is not None:
+        return derived_gbp, "derived"
+    return None, None
+
+
 def lifetime_estimate(
     records: list[dict[str, Any]],
     annual_rate_p_per_w: float | None,
@@ -494,6 +528,7 @@ class PaymentLedger:
         self._entry_id = entry_id
         self._records: list[dict[str, Any]] = []
         self._invested_gbp: float | None = None
+        self._share_price_p_per_w: float | None = None
         self._annual_rate_p_per_w: float | None = None
         self._lifespan_years: float | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -506,6 +541,11 @@ class PaymentLedger:
     def invested_gbp(self) -> float | None:
         """What the member put in — one number for the whole ledger, None if untold."""
         return self._invested_gbp
+
+    @property
+    def share_price_p_per_w(self) -> float | None:
+        """Pence per watt paid — the input the amber derived capital uses."""
+        return self._share_price_p_per_w
 
     @property
     def annual_rate_p_per_w(self) -> float | None:
@@ -543,6 +583,11 @@ class PaymentLedger:
         self._invested_gbp = (
             invested if invested is not None and invested >= 0 else None
         )
+        # The share price is a per-watt input (p/W): the amber derived capital
+        # is this times the member's watts -- nothing else derives capital,
+        # and nothing writes invested_gbp from it.
+        price = _as_float(data.get("share_price_p_per_w")) if is_dict else None
+        self._share_price_p_per_w = price if price is not None and price > 0 else None
         rate = _as_float(data.get("annual_rate_p_per_w")) if is_dict else None
         self._annual_rate_p_per_w = rate if rate is not None and rate > 0 else None
         years = _as_float(data.get("lifespan_years")) if is_dict else None
@@ -676,6 +721,22 @@ class PaymentLedger:
         self._invested_gbp = amount
         await self._async_commit()
 
+    async def async_set_share_price(self, price_p_per_w: float | None) -> None:
+        """Record the share price in p/W; None clears the auto-fill basis.
+
+        Storing the price never writes ``invested_gbp``: the derived capital is
+        computed from this and the member's watts at read time, shown amber
+        until they enter their own figure or tick that it matches — their
+        statement stays theirs alone.
+        """
+        if price_p_per_w is not None:
+            value = _as_float(price_p_per_w)
+            if value is None or value <= 0:
+                raise ValueError("share_price_p_per_w must be greater than 0")
+            price_p_per_w = round(value, 4)
+        self._share_price_p_per_w = price_p_per_w
+        await self._async_commit()
+
     async def async_set_projection(
         self, annual_rate_p_per_w: float | None, lifespan_years: float | None
     ) -> None:
@@ -723,6 +784,7 @@ class PaymentLedger:
             {
                 "records": self._records,
                 "invested_gbp": self._invested_gbp,
+                "share_price_p_per_w": self._share_price_p_per_w,
                 "annual_rate_p_per_w": self._annual_rate_p_per_w,
                 "lifespan_years": self._lifespan_years,
             }

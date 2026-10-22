@@ -127,11 +127,11 @@ the value column — carrying the headline only:
 
 | Measure | Value |
 | --- | --- |
-| Invested | `£5,000` in **green** — the colour for a figure you typed yourself — or `Not set` until you enter it |
+| Invested | `£5,000` in **green** (you entered or ticked it), **amber** while it is only the derived auto-fill, or `Not set` until a share price or your entry exists |
 | Payments from Co-op | `£1,074.98` |
 | Your estimates | `—` until one exists |
 | All Payments | `£1,074.98` |
-| Return | `21.50%`, or `—` with no capital entered |
+| Return | `21.50%`, **amber while it measures against derived capital**; `—` with neither an entry nor a derived figure |
 | Periods | `2` |
 
 Two rows were dropped from the panel in favour of the modal: **Published
@@ -148,19 +148,25 @@ modal's caption can also say *who* declared it (board or you).
 - **Rows** — one per declared period, e.g.
   `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
   edit and remove, plus **Add period**.
-- **Return is a plain percentage of capital**: `value ÷ invested × 100` per
-  period and across the total. It is deliberately **not annualised** — the
+- **Return is a plain percentage of capital**: `value ÷ capital × 100` per
+  period and across the total, measured against **the capital in force** —
+  your entry when you have one, the derived auto-fill while that is all there
+  is (and then Return reads **amber**, provisional until you confirm it). It
+  is deliberately **not annualised** — the
   board pays per period regardless of how long it runs, so a per-year figure
-  would be a rate of our own invention. With no capital entered the ROI reads
-  `—`, never `0%`.
+  would be a rate of our own invention. With neither an entry nor a derived
+  figure the ROI reads `—`, never `0%`.
 - **Invested** — set or cleared in the modal; stored in the ledger's Store,
-  never `entry.options`. It and its modal input show **green whenever you have
-  entered it** — every path that can set it is yours, so "has a value" and
-  "inputted by the user" are the same statement — while an unset figure keeps
-  the normal colour and says `Not set`. The form also quotes the **derived
-  share value** beside the input once both halves exist: *≈ £1.7300/W ×
-  2,559.465 W* (`invested ÷ watts`, recomputed live, and it writes nothing
-  back).
+  never `entry.options`, and **nothing derives it into storage**: the modal's
+  *Share price (p/W)* field powers an auto-fill of *price × your watts* (the
+  API's owner capacity) shown **amber — derived and provisional**, while no
+  capital at all keeps the normal colour and says `Not set`. **Green means
+  you confirmed it** — you typed your own amount (matching the auto-fill or
+  not) or ticked *This matches my investment — keep it*; entering `0` is your
+  statement too, not "unknown". The form carries its caveat in italics: *"Your
+  initial investment through Ripple Energy will not match the figure the co-op
+  holds or the one Ethex shows — Ripple's arrangement fee sits between
+  them."*
 - **Capital and interest** — each period can carry the split as an Ethex
   statement or a board announcement reports it: enter either half (the other is
   worked out from the period's figure) or both (they must sum to it **to the

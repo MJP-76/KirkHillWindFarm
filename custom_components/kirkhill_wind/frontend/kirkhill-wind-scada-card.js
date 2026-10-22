@@ -1078,6 +1078,15 @@ class KirkHillWindScada extends HTMLElement {
 
     const { attrs, records } = ledger;
     const invested = attrs.invested_gbp;
+    // Provenance drives colour: green is their entry, amber the auto-fill,
+    // grey nothing at all -- and what shows is the capital in force.
+    const investedSrc = attrs.invested_source ?? null;
+    const shownInvested = investedSrc === "user"
+      ? invested
+      : investedSrc === "derived" ? attrs.invested_derived_gbp : null;
+    const investedCls = investedSrc === "user"
+      ? " roi-capital-user"
+      : investedSrc === "derived" ? " roi-capital-derived" : "";
     const roiPct = attrs.total_roi_pct;
     // The capital/interest halves, entered by hand: shown only once at least
     // one record carries a split, and never derived when it does not.
@@ -1117,9 +1126,9 @@ class KirkHillWindScada extends HTMLElement {
     }
     summary.innerHTML = `
       <div class="roi-capital-row">
-        <button class="roi-capital${invested === null || invested === undefined ? "" : " roi-capital-user"}" data-roi-action="edit-invested" title="Set what you invested">
+        <button class="roi-capital${investedCls}" data-roi-action="edit-invested" title="Set what you invested">
           <span class="roi-capital-label">Invested</span>
-          <span class="roi-capital-value">${invested === null || invested === undefined ? "Set amount" : this._gbp(invested)}</span>
+          <span class="roi-capital-value">${shownInvested === null || shownInvested === undefined ? "Set amount" : this._gbp(shownInvested)}</span>
         </button>
         <button class="roi-capital" data-roi-action="edit-projection" title="Set the projection line">
           <span class="roi-capital-label">Projection</span>
@@ -1130,7 +1139,7 @@ class KirkHillWindScada extends HTMLElement {
         <div class="roi-stat"><span>Payments from Co-op</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
         <div class="roi-stat"><span>Your estimates</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
         <div class="roi-stat"><span>All Payments</span><b>${this._gbp(attrs.total_gbp)}</b></div>
-        <div class="roi-stat"><span>Return</span><b>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
+        <div class="roi-stat"><span>Return</span><b${investedSrc === "derived" ? ' class="roi-derived"' : ""}>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
       </div>${splitLine}${projectionLine}`;
 
     list.innerHTML =
@@ -1407,28 +1416,41 @@ class KirkHillWindScada extends HTMLElement {
     if (!slot) return;
     this._roiFormOpen = true;
     const lAttrs = this._roiLedger()?.attrs ?? {};
-    const current = lAttrs.invested_gbp ?? null;
-    // Derived share line: invested ÷ watts, a quotation of the two figures
-    // beside it. It lives here rather than on the panel because the panel
-    // keeps its six rows -- and it never writes anything back.
-    const shareRecs = Array.isArray(lAttrs.records) ? lAttrs.records : [];
-    const shareWatts = shareRecs.length
-      ? Number(shareRecs[shareRecs.length - 1].capacity_watts)
-      : null;
-    const sharePerW = lAttrs.share_value_gbp_per_w;
-    const shareLine =
-      sharePerW === null || sharePerW === undefined || shareWatts === null || !Number.isFinite(shareWatts)
-        ? ""
-        : ` Share value: <b>≈ £${this._fmt(Number(sharePerW), 4)}/W</b> × ${this._fmt(shareWatts, 3)} W — derived from this figure; it never writes anything.`;
+    const userInvested = lAttrs.invested_gbp ?? null;
+    const derived = lAttrs.invested_derived_gbp ?? null;
+    const source = lAttrs.invested_source ?? null;
+    const price = lAttrs.share_price_p_per_w ?? null;
+    const watts = lAttrs.capacity_watts ?? null;
+    // Prefill: their own figure when they have one, the auto-fill when it is
+    // all there is (amber), empty otherwise -- and the input only turns green
+    // behind a value they entered or confirmed themselves.
+    const prefill = userInvested !== null
+      ? String(userInvested)
+      : derived !== null ? String(derived) : "";
+    const sharePreview = price !== null && watts !== null && derived !== null
+      ? `<div class="roi-hint roi-derived-note">Derived: <b>£${this._fmt(Number(derived), 2)}</b> from <b>${this._fmt(Number(price), 2)} p/W</b> × ${this._fmt(Number(watts), 3)} W${source === "derived" ? " — amber until you confirm it" : ""}.</div>`
+      : "";
+    const tickRow = source === "derived"
+      ? `<label class="roi-label roi-tick"><input type="checkbox" id="roi-confirm-derived" /> This matches my investment — keep it</label>`
+      : "";
+    const inputCls = source === "user"
+      ? " roi-input-user"
+      : source === "derived" ? " roi-input-derived" : "";
     slot.innerHTML = `
       <div class="roi-form">
         <div class="roi-form-title">Invested amount</div>
+        <label class="roi-label" for="roi-share-price">Share price (p/W)</label>
+        <input class="roi-input" id="roi-share-price" type="number" min="0.01" step="0.01" value="${price ?? ""}" placeholder="e.g. 173" />
+        <div class="roi-hint">Pence per watt you paid — the derived capital is this × your watts, taken from the API's capacity.</div>
         <label class="roi-label" for="roi-invested">Capital invested (GBP)</label>
-        <input class="roi-input${current === null ? "" : " roi-input-user"}" id="roi-invested" type="number" min="0" step="0.01" value="${current ?? ""}" placeholder="e.g. 5000" />
-        <div class="roi-hint">Stored with the ledger, never in the config entry. Every ROI figure is measured against it.${shareLine}</div>
+        <input class="roi-input${inputCls}" id="roi-invested" type="number" min="0" step="0.01" value="${prefill}" placeholder="e.g. 5000" />
+        ${sharePreview}
+        ${tickRow}
+        <div class="roi-hint"><i>Your initial investment through Ripple Energy will not match the figure the co-op holds or the one Ethex shows — Ripple's arrangement fee sits between them.</i></div>
+        <div class="roi-hint">Stored with the ledger, never in the config entry. Every ROI figure is measured against it.</div>
         <div class="roi-actions">
           <button class="roi-btn" data-roi-action="cancel">Cancel</button>
-          ${current === null ? "" : `<button class="roi-btn roi-btn--danger" data-roi-action="clear">Clear</button>`}
+          ${userInvested === null ? "" : `<button class="roi-btn roi-btn--danger" data-roi-action="clear">Clear</button>`}
           <button class="roi-btn roi-btn--primary" data-roi-action="save">Save</button>
         </div>
         <div class="roi-hint roi-error" data-roi="error"></div>
@@ -1449,15 +1471,36 @@ class KirkHillWindScada extends HTMLElement {
       });
     }
     slot.querySelector('[data-roi-action="save"]').addEventListener("click", async () => {
+      const target = slot.querySelector('[data-roi="error"]');
+      const priceRaw = slot.querySelector("#roi-share-price")?.value?.trim() || "";
+      const priceVal = priceRaw === "" ? null : parseFloat(priceRaw);
+      if (priceVal !== null && (!Number.isFinite(priceVal) || priceVal <= 0)) {
+        if (target) target.textContent = "Share price must be greater than 0, or leave it empty to clear it.";
+        return;
+      }
       const raw = slot.querySelector("#roi-invested")?.value?.trim() || "";
       const amount = raw === "" ? null : parseFloat(raw);
-      const target = slot.querySelector('[data-roi="error"]');
       if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
         if (target) target.textContent = "Enter an amount of 0 or more, or clear it.";
         return;
       }
+      const confirmed = Boolean(slot.querySelector("#roi-confirm-derived")?.checked);
+      const dirty = raw !== prefill;
       try {
-        await this._hass.callService("kirkhill_wind", "set_invested_amount", { invested_gbp: amount });
+        if (priceVal !== price) {
+          await this._hass.callService("kirkhill_wind", "set_share_price", { share_price_p_per_w: priceVal });
+        }
+        if (amount === null) {
+          // An emptied field only clears their own figure -- the auto-fill
+          // reappears underneath whenever a share price still derives one.
+          if (userInvested !== null && dirty) {
+            await this._hass.callService("kirkhill_wind", "set_invested_amount", { invested_gbp: null });
+          }
+        } else if (dirty || confirmed) {
+          // Their entry, or their tick that the auto-fill is right: green.
+          await this._hass.callService("kirkhill_wind", "set_invested_amount", { invested_gbp: amount });
+        }
+        // Untouched auto-fill with no tick: nothing written -- it stays amber.
       } catch (err) {
         if (target) target.textContent = err?.message || "Save failed";
         return;
@@ -2929,8 +2972,11 @@ _buildHeaderChips(layout) {
       ["invested", "board", "self", "total", "roi", "periods"].forEach((cell) => setRoi(cell, "—"));
     } else {
       const roiRecords = Array.isArray(roiAttrs.records) ? roiAttrs.records : [];
-      const invested = roiAttrs.invested_gbp;
-      setRoi("invested", invested === null || invested === undefined ? "Not set" : `£${this._fmt(Number(invested), 2)}`);
+      const investedSrc = roiAttrs.invested_source ?? null;
+      const investedGbp = investedSrc === "user"
+        ? roiAttrs.invested_gbp
+        : investedSrc === "derived" ? roiAttrs.invested_derived_gbp : null;
+      setRoi("invested", investedGbp === null || investedGbp === undefined ? "Not set" : `£${this._fmt(Number(investedGbp), 2)}`);
       setRoi("total", gbpOf(roiAttrs.total_gbp));
       setRoi("board", gbpOf(roiAttrs.board_total_gbp));
       setRoi("self", gbpOf(roiAttrs.self_total_gbp));
@@ -2938,19 +2984,27 @@ _buildHeaderChips(layout) {
       setRoi("roi", roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`);
       setRoi("periods", `${roiRecords.length}`);
     }
-    // Green marks a figure the member typed themselves. Every path that can
-    // set invested -- the modal and the set_invested_amount service -- is a
-    // user path, so "has a value" and "inputted by the user" are the same
-    // statement; not set keeps the normal colour and its "Not set" text.
+    // Green is the member's own figure; amber the derived auto-fill, still
+    // provisional until they enter their own or tick that it matches; no fill
+    // means "Not set". Return reads amber for the same reason while it
+    // measures against derived capital.
     const investedCell = root.querySelector('[data-roi-cell="invested"]');
     if (investedCell) {
-      const hasInvested = roiAttrs
-        && roiAttrs.invested_gbp !== null
-        && roiAttrs.invested_gbp !== undefined;
-      if (hasInvested) {
+      const fillSrc = roiAttrs ? (roiAttrs.invested_source ?? null) : null;
+      if (fillSrc === "user") {
         investedCell.setAttribute("fill", "var(--success-color, #4caf50)");
+      } else if (fillSrc === "derived") {
+        investedCell.setAttribute("fill", "var(--khscada-warn-color, #ffb300)");
       } else {
         investedCell.removeAttribute("fill");
+      }
+    }
+    const roiCell = root.querySelector('[data-roi-cell="roi"]');
+    if (roiCell) {
+      if (roiAttrs && (roiAttrs.invested_source ?? null) === "derived") {
+        roiCell.setAttribute("fill", "var(--khscada-warn-color, #ffb300)");
+      } else {
+        roiCell.removeAttribute("fill");
       }
     }
 
@@ -3315,10 +3369,17 @@ _buildHeaderChips(layout) {
       .roi-stat b { display: block; margin-top: 3px; font-weight: 600; color: var(--khscada-primary-color); }
       .roi-capital { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; border: 1px solid var(--khscada-divider); border-radius: 16px; background: var(--khscada-card-bg); color: var(--khscada-primary-color); padding: 6px 12px; cursor: pointer; font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .roi-capital:hover { border-color: var(--khscada-accent-color); }
-      /* Green = a figure the member typed themselves (every invested path is a
-         user path); an unset figure keeps the normal colour and says so. */
+      /* Provenance in colour: green = their entry, amber = the derived
+         auto-fill awaiting confirmation, none = the normal colour and
+         "Not set". Return reads amber while it measures against derived
+         capital -- provisional, and said so. */
       .roi-capital-user .roi-capital-value { color: var(--success-color, #4caf50); }
       .roi-input-user { color: var(--success-color, #4caf50); border-color: var(--success-color, #4caf50); }
+      .roi-capital-derived .roi-capital-value { color: var(--khscada-warn-color, #ffb300); }
+      .roi-input-derived { color: var(--khscada-warn-color, #ffb300); border-color: var(--khscada-warn-color, #ffb300); }
+      .roi-stat .roi-derived { color: var(--khscada-warn-color, #ffb300); }
+      .roi-derived-note { color: var(--khscada-warn-color, #ffb300); }
+      .roi-tick { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: normal; font-weight: 500; color: var(--khscada-primary-color); }
       .roi-capital-row { display: flex; gap: 8px; flex-wrap: wrap; }
       .roi-capital-label { color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
       .roi-list { display: flex; flex-direction: column; gap: 6px; }
