@@ -24,7 +24,7 @@
 - Generation (year) [kWh] for owner and site
 - Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`. These are **sensors only** (not shown on the SCADA card). More years appear automatically as time passes.
 - Generation (alltime) [kWh] for owner and site — **calculated as the sum of all the year figures**: `2024 + 2025 + … + the current year to date`, including any future years. The `sum_of_years_kwh` attribute lists the per-year components.
-- Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity)
+- Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity when every year frame is present; `api_alltime_missing_years` plus `missing_year_frames` when one is missing; `stale` when showing last-known data; `restored` after a restart, before the first successful fetch)
 - **Value (yesterday/today/week/month/ytd/year) [GBP] — DISABLED from v4.16.1.** The entities exist but are disabled in the entity registry, and **no card draws a £ column any more** (removed 2026-10-21). Previously `live generation × configured price`, `£0.00` when no price was set
   - Value (2025/2024/alltime) [GBP] report `unknown` in every case — see the suppression note below
 - **Member savings value [GBP] — DISABLED from v4.16.1.** The board's capacity-based payment: `owned watts × rate (p/W) ÷ 100` — for example, at a declared 20p/W, 1,000 owned watts reads **£200**. Its attributes are `owned_watts`, `rate_pence_per_watt`, `projection_basis` and `data_stale`. **Nothing reads it**: no card draws a member-savings line any more

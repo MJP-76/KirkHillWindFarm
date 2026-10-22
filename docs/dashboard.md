@@ -19,15 +19,20 @@ fills the entire tab.
 
 ![The SCADA tab: eight turbines feeding the transformer and national grid, with the Return on investment, Owner and Site panels down the right](assets/scada-overview.png)
 
-### Alarm indicator
+### Turbine status chip
 
-The **alarm indicator** (top-left of the SCADA card) shows one of two states:
+The **turbine status chip** (fourth in the top chip row) shows how many
+turbines are currently active — for example `8 Turbines Active` — in
+three-tier colours driven by the active-turbine count:
 
-- **OK** — no turbines are in a fault state. This includes normal operational
-  states such as curtailment, no-wind stops, maintenance, and scheduled stops.
-  These are not faults.
-- **N FAULTS** (flashing red) — one or more turbines have a thermal or
-  electrical fault (`status_category` of `fault_thermal` or `fault_electrical`).
+- **Green** — every turbine is active.
+- **Amber** — some turbines are offline.
+- **Red, flashing** — every turbine is offline.
+
+Clicking the chip opens a per-turbine status pop-out. Faults are a separate
+matter: the **Alarm** binary sensor (`binary_sensor.<farm>_alarm`) turns on
+only when a turbine reports a thermal or electrical fault (`status_category`
+of `fault_thermal` or `fault_electrical`) — see [Sensors](sensors.md).
 
 ### Turbine status pills
 
@@ -37,18 +42,25 @@ STOPPED, MAINTENANCE, UNAVAILABLE, or a fault label. The pill background is a
 pastel tint of the status colour; the text is the saturated status colour.
 
 A turbine can be **curtailed** (bird/bat protection, grid constraint, etc.)
-while the alarm indicator still reads **OK** — curtailment is not a fault.
+while the **Alarm** binary sensor still reads off — curtailment is not a
+fault.
 
 ### API status pill
 
-Bottom of the SCADA card, next to the version number (above the legend, on the
-same line as the reload button). Reflects the coordinator's last fetch directly,
-so an API outage is obvious rather than a page full of unknown values:
+In the top chip row of the SCADA card, third from the left
+(⟲ · version · API · turbines active · wind). Reflects the coordinator's last
+fetch directly, so an API outage is obvious rather than a page full of unknown
+values:
 
 - **API OK** (green) — the Kirk Hill API last responded normally.
-- **API DOWN** (red) — the coordinator's last fetch failed (timeout,
+- **API DOWN** (red, flashing) — the coordinator's last fetch failed (timeout,
   rate-limit, or outage).
 - **API —** — the status entity is unavailable or not configured.
+
+The card also has a fourth state, **API LIMITED** (amber), which activates
+once the API status entity exposes a `rate_limited` attribute — the frontend
+is wired for it, but the backend does not report it yet. Clicking the pill
+opens an API status pop-out with the recent history.
 
 ### Restored generation values
 
@@ -175,8 +187,9 @@ modal's caption can also say *who* declared it (board or you).
   ![The projection line naming an annual figure and a 25-year total, ending with Not a board figure](assets/projection-line.png)
 - **A caption under the rows** says which of two things the current period is:
   **announced by the board**, or **your own estimate**. An undeclared period
-  shows neither a caption nor a figure: the estimate is withheld until the
-  board publishes the capital/interest split.
+  shows no figure — the estimate is withheld, never invented — but the caption
+  still states the situation: *awaiting the board's next declaration* (a
+  declaration brings the rate and the capital/interest split together).
 - **Adding a period opens prefilled** with the month after the latest one ends —
   Feb 2025 → Jun 2026 offers **`2026-07`** — and the end month left blank, since
   when the board's next period closes is not ours to guess.
@@ -295,10 +308,10 @@ today are shown on the SCADA diagram, and per-turbine history is available throu
 each turbine's pop-out modal. Dashboards with the old `turbines` view are pruned
 automatically on merge.
 
-The standalone **turbine map card** (`kirkhill-wind-turbine-map`) is still
-bundled so any manual placements keep rendering, but it is **deprecated** as of
-v4.8.81: it shows a warning banner at the top of the card and will be removed in
-a future release. Use the **Kirk Hill SCADA** card instead.
+The standalone **turbine map card** (`kirkhill-wind-turbine-map`) was
+**deprecated** as of v4.8.81 and its JavaScript has since been removed: it no
+longer renders, and installed dashboards carrying it are pruned as obsolete on
+the next setup. Use the **Kirk Hill SCADA** card instead.
 
 The turbine map card previously provided:
 - T1–T8 labels above each turbine marker
