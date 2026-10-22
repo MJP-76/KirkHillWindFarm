@@ -2980,6 +2980,18 @@ _buildHeaderChips(layout) {
       setRoi("total", gbpOf(roiAttrs.total_gbp));
       setRoi("board", gbpOf(roiAttrs.board_total_gbp));
       setRoi("self", gbpOf(roiAttrs.self_total_gbp));
+      // Board-confirmed money on the panel: Payments from Co-op goes green
+      // the moment a board total exists -- the same green as a board period's
+      // figure in the modal list. Inline style again: .site-gen-value would
+      // otherwise paint it the value amber.
+      const boardCell = root.querySelector('[data-roi-cell="board"]');
+      if (boardCell) {
+        const boardTotal = roiAttrs.board_total_gbp;
+        boardCell.style.fill =
+          boardTotal !== null && boardTotal !== undefined && Number.isFinite(Number(boardTotal))
+            ? "var(--success-color, #4caf50)"
+            : "";
+      }
       const roiPct = roiAttrs.total_roi_pct;
       setRoi("roi", roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`);
       setRoi("periods", `${roiRecords.length}`);

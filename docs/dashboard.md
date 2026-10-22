@@ -128,7 +128,7 @@ the value column — carrying the headline only:
 | Measure | Value |
 | --- | --- |
 | Invested | `£5,000` in **green** (you entered or ticked it), **amber** while it is only the derived auto-fill, or `Not set` until a share price or your entry exists |
-| Payments from Co-op | `£1,074.98` |
+| Payments from Co-op | `£1,074.98` in **green** — board-confirmed money |
 | Your estimates | `—` until one exists |
 | All Payments | `£1,074.98` |
 | Return | `21.50%` in **green once you confirm the capital**, **amber while it measures against derived capital**; `—` with neither an entry nor a derived figure |
