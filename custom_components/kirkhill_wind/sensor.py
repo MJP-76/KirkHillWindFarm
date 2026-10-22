@@ -35,6 +35,7 @@ from .payment_ledger import (
     latest_board_record,
     latest_record,
     ledger_total_gbp,
+    projection_gbp,
     record_value_gbp,
     roi_pct,
     source_totals_gbp,
@@ -816,6 +817,19 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
         attrs["interest_total_gbp"] = splits["interest"]
         # No invested amount -> None, never 0: there is no return to quote.
         attrs["total_roi_pct"] = roi_pct(total, invested)
+        # A projection over the farm's lifespan, from an annual rate the member
+        # chose -- normally the board's own published annual equivalent (its
+        # Feb 2025 -> Jun 2026 announcement equated 21 p/W over 17 months to
+        # 15 p/W over 12). Labelled, and counted by nothing: no total, no
+        # period, no estimate of what is owed.
+        capacity = latest["capacity_watts"] if latest else None
+        annual, lifespan = projection_gbp(
+            self._ledger.annual_rate_p_per_w, capacity, self._ledger.lifespan_years
+        )
+        attrs["annual_rate_p_per_w"] = self._ledger.annual_rate_p_per_w
+        attrs["lifespan_years"] = self._ledger.lifespan_years
+        attrs["annual_gbp"] = annual
+        attrs["lifespan_gbp"] = lifespan
         # The total is never replaced by its parts: board and self say how much
         # of it was announced versus estimated, so a self figure can be seen
         # without ever passing as something published.

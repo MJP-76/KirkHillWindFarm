@@ -252,3 +252,39 @@ set_invested_amount:
       required: false
       selector:
         text:
+
+set_projection:
+  name: Set projection
+  description: >-
+    Record the annual rate and lifespan behind the projection line on the ROI
+    card. Normally the board's own published annual equivalent — its February
+    2025 to June 2026 announcement equated 21 p/W over 17 months to 15 p/W
+    over 12. It is a labelled projection only: it changes no total and fills
+    no period. Send null for either input to clear it.
+  fields:
+    annual_rate_p_per_w:
+      name: Annual rate (p/W per year)
+      description: The p/W figure the projection assumes each year.
+      required: true
+      selector:
+        number:
+          min: 0.01
+          max: 1000
+          step: 0.1
+          mode: box
+    lifespan_years:
+      name: Lifespan (years)
+      description: How many years to run the projection over, e.g. 25.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 200
+          step: 1
+          mode: box
+    entry_id:
+      name: Entry ID
+      description: Optional config entry ID. If omitted, the first entry is used.
+      required: false
+      selector:
+        text:

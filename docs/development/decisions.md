@@ -519,6 +519,31 @@ decision changes.
   · None-not-zero totals · sensor split and total) plus the service round trip
   — 289 → 298.
 
+- **2026-10-22 (later) — a projection line, quoted from the board's own
+  equivalence.** *Qualifies the withholding rule rather than reversing it.*
+  The board's Feb 2025 → Jun 2026 announcement published its own annual
+  equivalent in words: *"…21 pence per-watt for the 17 month period. This is
+  equivalent to a 12 month savings payment of …15p per watt."* A per-year
+  projection at **that** rate is therefore a quotation, not the accrual the
+  no-accrual rule (2026-10-08) forbids — the difference is whose number it is.
+
+  - **Inputs**: `annual_rate_p_per_w` and `lifespan_years` (1–200), stored with
+    the ledger and set through the new `kirkhill_wind.set_projection` service
+    (JSON null clears either). Nothing is defaulted into existence: the member
+    types the board's rate (15) and the lifespan (25).
+  - **The line** reads *"Projection only — 15.00 p/W per year on your watts is
+    about £383.92/year and £9,598.00 over 25 years, if that rate held. Not a
+    board figure."* — italic, caveated, and **counted by nothing**: it fills no
+    period, adds to no total and changes no ROI. Withheld periods stay
+    withheld; a projection is not an estimate of what is owed.
+  - **Capacity** comes from the latest record, so the projection tracks the
+    watts the member actually holds.
+
+  Regression tests: `TestProjection` (arithmetic · any missing input reads
+  None · stored and cleared · bad inputs refused · sensor projection from
+  latest capacity · never leaks into totals) plus the service round trip —
+  298 → 310.
+
 ## Dashboard consolidation
 
 - **2026-09-16 — SCADA is the sole live dashboard; History, Finances and

@@ -1088,17 +1088,31 @@ class KirkHillWindScada extends HTMLElement {
     const splitLine = splitKnown
       ? `<div class="roi-split">Of ${this._gbp(attrs.total_gbp)} recorded: <b>${this._gbp(capitalTotal)} capital</b> · <b>${this._gbp(interestTotal)} interest</b></div>`
       : "";
+    // The projection: an annual rate the member chose to assume -- normally
+    // the board's own published annual equivalent (21 p/W over 17 months ≈
+    // 15 p/W over a year) -- run over the farm's lifespan. A labelled line
+    // only: it fills no period and feeds no total.
+    const lifespanGbp = attrs.lifespan_gbp;
+    const projectionLine = lifespanGbp === null || lifespanGbp === undefined
+      ? ""
+      : `<div class="roi-split roi-projection">Projection only — ${this._fmt(Number(attrs.annual_rate_p_per_w), 2)} p/W per year on your watts is about <b>£${this._fmt(Number(attrs.annual_gbp), 2)}/year</b> and <b>£${this._gbp(lifespanGbp)}</b> over ${this._fmt(Number(attrs.lifespan_years), 0)} years, if that rate held. Not a board figure.</div>`;
     summary.innerHTML = `
-      <button class="roi-capital" data-roi-action="edit-invested" title="Set what you invested">
-        <span class="roi-capital-label">Invested</span>
-        <span class="roi-capital-value">${invested === null || invested === undefined ? "Set amount" : this._gbp(invested)}</span>
-      </button>
+      <div class="roi-capital-row">
+        <button class="roi-capital" data-roi-action="edit-invested" title="Set what you invested">
+          <span class="roi-capital-label">Invested</span>
+          <span class="roi-capital-value">${invested === null || invested === undefined ? "Set amount" : this._gbp(invested)}</span>
+        </button>
+        <button class="roi-capital" data-roi-action="edit-projection" title="Set the projection line">
+          <span class="roi-capital-label">Projection</span>
+          <span class="roi-capital-value">${lifespanGbp === null || lifespanGbp === undefined ? "Set" : this._gbp(lifespanGbp)}</span>
+        </button>
+      </div>
       <div class="roi-stats">
         <div class="roi-stat"><span>Payments from Co-op</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
         <div class="roi-stat"><span>Your estimates</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
         <div class="roi-stat"><span>All Payments</span><b>${this._gbp(attrs.total_gbp)}</b></div>
         <div class="roi-stat"><span>Return</span><b>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
-      </div>${splitLine}`;
+      </div>${splitLine}${projectionLine}`;
 
     list.innerHTML =
       (records.length
@@ -1125,6 +1139,8 @@ class KirkHillWindScada extends HTMLElement {
 
     summary.querySelectorAll('[data-roi-action="edit-invested"]').forEach((btn) =>
       btn.addEventListener("click", () => this._showInvestedForm()));
+    summary.querySelectorAll('[data-roi-action="edit-projection"]').forEach((btn) =>
+      btn.addEventListener("click", () => this._showProjectionForm()));
     this._bindRoiList();
   }
 
@@ -1420,6 +1436,77 @@ class KirkHillWindScada extends HTMLElement {
       });
       input.focus();
       input.select();
+    }
+  }
+
+  _showProjectionForm() {
+    const slot = this._roiSlot();
+    if (!slot) return;
+    this._roiFormOpen = true;
+    const attrs = this._roiLedger()?.attrs || {};
+    const rate = attrs.annual_rate_p_per_w ?? null;
+    const years = attrs.lifespan_years ?? null;
+    slot.innerHTML = `
+      <div class="roi-form">
+        <div class="roi-form-title">Projection</div>
+        <label class="roi-label" for="roi-annual">Annual rate (p/W per year)</label>
+        <input class="roi-input" id="roi-annual" type="number" min="0.01" max="1000" step="0.1" value="${rate ?? ""}" placeholder="e.g. 15" />
+        <label class="roi-label" for="roi-years">Lifespan (years)</label>
+        <input class="roi-input" id="roi-years" type="number" min="1" max="200" step="1" value="${years ?? 25}" placeholder="25" />
+        <div class="roi-hint">A projection only. Use the board's own published annual equivalent where it has given one — its Feb 2025 → Jun 2026 announcement equated 21 p/W over 17 months to <b>15 p/W over a year</b>. It never counts towards a total and fills no period.</div>
+        <div class="roi-actions">
+          <button class="roi-btn" data-roi-action="cancel">Cancel</button>
+          <button class="roi-btn roi-btn--danger" data-roi-action="clear">Clear</button>
+          <button class="roi-btn roi-btn--primary" data-roi-action="save">Save</button>
+        </div>
+        <div class="roi-hint roi-error" data-roi="error"></div>
+      </div>`;
+
+    slot.querySelector('[data-roi-action="cancel"]').addEventListener("click", () => this._roiClearForm());
+    slot.querySelector('[data-roi-action="clear"]').addEventListener("click", async () => {
+      try {
+        await this._hass.callService("kirkhill_wind", "set_projection", {
+          annual_rate_p_per_w: null,
+          lifespan_years: null,
+        });
+        this._roiClearForm();
+        this._renderRoiModal();
+        this._update();
+      } catch (err) {
+        this._roiFormError(err);
+      }
+    });
+    slot.querySelector('[data-roi-action="save"]').addEventListener("click", async () => {
+      const rawRate = slot.querySelector("#roi-annual")?.value?.trim() || "";
+      const rawYears = slot.querySelector("#roi-years")?.value?.trim() || "";
+      const rateValue = rawRate === "" ? null : parseFloat(rawRate);
+      const yearsValue = rawYears === "" ? null : parseFloat(rawYears);
+      const target = slot.querySelector('[data-roi="error"]');
+      if (rateValue !== null && (!Number.isFinite(rateValue) || rateValue <= 0)) {
+        if (target) target.textContent = "Enter the annual p/W rate, or clear the projection.";
+        return;
+      }
+      if (yearsValue !== null && (!Number.isFinite(yearsValue) || yearsValue < 1 || yearsValue > 200)) {
+        if (target) target.textContent = "Enter the lifespan in years (1–200), or clear it.";
+        return;
+      }
+      try {
+        await this._hass.callService("kirkhill_wind", "set_projection", {
+          annual_rate_p_per_w: rateValue,
+          lifespan_years: yearsValue,
+        });
+      } catch (err) {
+        if (target) target.textContent = err?.message || "Save failed";
+        return;
+      }
+      this._roiClearForm();
+      this._renderRoiModal();
+      this._update();
+    });
+    const first = slot.querySelector("#roi-annual");
+    if (first) {
+      first.focus();
+      first.select();
     }
   }
 
@@ -3228,6 +3315,7 @@ _buildHeaderChips(layout) {
       .roi-stat b { display: block; margin-top: 3px; font-weight: 600; color: var(--khscada-primary-color); }
       .roi-capital { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; border: 1px solid var(--khscada-divider); border-radius: 16px; background: var(--khscada-card-bg); color: var(--khscada-primary-color); padding: 6px 12px; cursor: pointer; font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .roi-capital:hover { border-color: var(--khscada-accent-color); }
+      .roi-capital-row { display: flex; gap: 8px; flex-wrap: wrap; }
       .roi-capital-label { color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
       .roi-list { display: flex; flex-direction: column; gap: 6px; }
       .roi-empty { color: var(--khscada-secondary-color); font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); padding: 4px 2px; }
@@ -3246,6 +3334,7 @@ _buildHeaderChips(layout) {
       .roi-caption b { color: var(--khscada-primary-color); }
       .roi-split { margin-top: 8px; font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-secondary-color); }
       .roi-split b { color: var(--khscada-primary-color); }
+      .roi-projection { font-style: italic; }
       .roi-row-split { font-size: calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)); color: var(--khscada-secondary-color); }
       .roi-btn { font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); color: var(--khscada-secondary-color); background: var(--khscada-divider); border: none; border-radius: 14px; padding: 6px 14px; cursor: pointer; }
       .roi-btn:hover { color: var(--khscada-primary-color); }
