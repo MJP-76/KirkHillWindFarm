@@ -113,8 +113,11 @@ the value column — carrying the headline only:
 | All Payments | `£1,074.98` |
 | Return | `21.50%`, or `—` with no capital entered |
 | Periods | `2` |
-| Published rate | `21 p/W` — board declarations only |
-| Current period | `£537.49` while declared; `—` once past, because the estimate is withheld until the board publishes the capital/interest split |
+
+Two rows were dropped from the panel in favour of the modal: **Published
+rate** — it sits on every row there, and only board records ever set it — and
+**Current period**, which is blank whenever a period is undeclared while the
+modal's caption can also say *who* declared it (board or you).
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 

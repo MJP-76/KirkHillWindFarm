@@ -51,8 +51,8 @@ and an animated dashboard.
   Rates now live per declared period in the ledger.
 - **Return on investment panel** — the top panel of the right column, above
   Owner and Site, in the same box and columns: invested amount, payments from
-  Co-op, your estimates, all payments, return, period count, published rate
-  and the current period. Click it for the ledger modal — one row per period (months,
+  Co-op, your estimates, all payments, return and period count. Click it for
+  the ledger modal — one row per period (months,
   rate × watts, £, ROI %, the capital/interest split as reported by Ethex or
   the board, board or yours), the invested input, a labelled projection over
   the farm's lifespan (an annual p/W rate — the board's published equivalent

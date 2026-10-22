@@ -469,10 +469,19 @@ decision changes.
     are untouched, and `current_source` still reports so a self entry remains
     distinguishable. Backing it out means restoring the derivation and the
     literal basis string `estimated_from_last_declared_rate`.
-  - **The panel sits at the top of the right column:** order is now
-    Return on investment (y=76) → Owner (332) → Site (588), each still 232
-    units tall and clear of the National Grid box (914) — finance first, in the
-    same box and columns as the panels it leads.
+  - **The panel sits at the top of the right column:** order is
+    Return on investment (y=76, 192 units for six rows) → Owner (292) → Site
+    (548), each with a 24-unit gap and clear of the National Grid box (914) —
+    finance first, in the same box and columns as the panels it leads.
+  - **Two rows dropped from it the next day**, on the owner's call: **Published
+    rate** and **Current period**. Both only summarised what the modal already
+    carries per period — the rate sits on every row there (and only board
+    records ever set it), while the current period is blank whenever a period
+    is undeclared and the modal's caption can also say *who* declared it. Six
+    rows remain: Invested · Payments from Co-op · Your estimates · All Payments
+    · Return · Periods. Both figures are still exposed as attributes
+    (`latest_board_rate_p_per_w`, `current_gbp`, `current_basis`,
+    `current_source`).
 
   - **On-screen wording and order, the same day.** The three figures read
     **Payments from Co-op · Your estimates · All Payments**, in that order —
