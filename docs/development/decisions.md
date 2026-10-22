@@ -582,6 +582,26 @@ decision changes.
 
   Regression tests: `TestDerivedInvestment` (11) — 345 passing.
 
+- **2026-10-22 (later) — All Payments dropped; the split line carries the two
+  returns.** Two owner calls, same session:
+
+  - **The panel is five rows:** Invested · Payments from Co-op · Your
+    estimates · Return · Periods — explicitly superseding the six-row list of
+    the 2026-10-21 (later) bullet. With own estimates barred from money sums,
+    *All Payments* was Co-op plus guesses: redundant when clean,
+    contaminated when not. `total_gbp` survives as an attribute (the modal's
+    stats, the split line and templates still read it); only the row is gone,
+    and the rows below it shifted up to keep the box packed.
+  - **The split line shows both returns:** *capital returned X % of your
+    investment* (`capital_total ÷ capital in force` — payback) and *interest
+    +Y % ROI* (`interest_total ÷ capital in force` — the yield each payment
+    grows). They always sum to the Return, need a declared split and capital
+    in force, and wear the Return's amber conditions (derived capital or own
+    estimates). On the owner's figures: **0.00 % back, +12.14 % interest
+    ROI**.
+
+  Regression tests: unchanged — 345 passing (presentation only).
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

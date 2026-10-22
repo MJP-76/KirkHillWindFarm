@@ -1097,8 +1097,23 @@ class KirkHillWindScada extends HTMLElement {
     const interestTotal = attrs.interest_total_gbp;
     const splitKnown = capitalTotal !== null && capitalTotal !== undefined
       || interestTotal !== null && interestTotal !== undefined;
+    // Capital returned is payback of the investment; interest is the ROI each
+    // payment grows -- the two percentages always sum to the Return, measured
+    // against the capital in force (so derived capital flags the line amber,
+    // and own estimates flag it for the same reason the Return does).
+    const capitalInForce = investedSrc === "user"
+      ? invested
+      : investedSrc === "derived" ? attrs.invested_derived_gbp : null;
+    const canPct = splitKnown
+      && capitalInForce !== null && capitalInForce !== undefined && Number(capitalInForce) > 0;
+    const capitalPct = canPct && capitalTotal !== null && capitalTotal !== undefined
+      ? ` — capital returned <b>${this._fmt(Number(capitalTotal) / Number(capitalInForce) * 100, 2)}%</b> of ${this._gbp(capitalInForce)}`
+      : "";
+    const interestPct = canPct && interestTotal !== null && interestTotal !== undefined
+      ? ` · interest <b>+${this._fmt(Number(interestTotal) / Number(capitalInForce) * 100, 2)}%</b> ROI`
+      : "";
     const splitLine = splitKnown
-      ? `<div class="roi-split">Of ${this._gbp(attrs.total_gbp)} recorded: <b>${this._gbp(capitalTotal)} capital</b> · <b>${this._gbp(interestTotal)} interest</b></div>`
+      ? `<div class="roi-split${investedSrc === "derived" || selfMoney ? " roi-derived" : ""}">Of ${this._gbp(attrs.total_gbp)} recorded: <b>${this._gbp(capitalTotal)} capital</b> · <b>${this._gbp(interestTotal)} interest</b>${capitalPct}${interestPct}</div>`
       : "";
     // The projection: an annual rate the member chose to assume -- normally
     // the board's own published annual equivalent (21 p/W over 17 months ≈
@@ -2865,12 +2880,10 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="162" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">Your estimates</text>
           <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">All Payments</text>
-          <text class="site-gen-value" data-roi-cell="total" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Return</text>
-          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="242">Periods</text>
-          <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="242" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Return</text>
+          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Periods</text>
+          <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -2972,7 +2985,7 @@ _buildHeaderChips(layout) {
     const gbpOf = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? "—" : `£${this._fmt(Number(v), 2)}`);
     const roiAttrs = ledgerId && this._hass?.states?.[ledgerId] ? this._hass.states[ledgerId].attributes || {} : null;
     if (!roiAttrs) {
-      ["invested", "board", "self", "total", "roi", "periods"].forEach((cell) => setRoi(cell, "—"));
+      ["invested", "board", "self", "roi", "periods"].forEach((cell) => setRoi(cell, "—"));
     } else {
       const roiRecords = Array.isArray(roiAttrs.records) ? roiAttrs.records : [];
       const investedSrc = roiAttrs.invested_source ?? null;
@@ -2980,7 +2993,6 @@ _buildHeaderChips(layout) {
         ? roiAttrs.invested_gbp
         : investedSrc === "derived" ? roiAttrs.invested_derived_gbp : null;
       setRoi("invested", investedGbp === null || investedGbp === undefined ? "Not set" : `£${this._fmt(Number(investedGbp), 2)}`);
-      setRoi("total", gbpOf(roiAttrs.total_gbp));
       setRoi("board", gbpOf(roiAttrs.board_total_gbp));
       setRoi("self", gbpOf(roiAttrs.self_total_gbp));
       // Board-confirmed money on the panel: Payments from Co-op goes green
@@ -2999,25 +3011,10 @@ _buildHeaderChips(layout) {
       setRoi("roi", roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`);
       setRoi("periods", `${roiRecords.length}`);
     }
-    // All Payments: green only while the total is pure board money; any own
-    // estimate in it makes the sum provisional, and provisional is amber.
-    // (Your estimates itself never goes green -- an estimate becomes board
-    // money only by editing the period and ticking the board box, which moves
-    // it into the Co-op line.)
-    const totalCell = root.querySelector('[data-roi-cell="total"]');
-    if (totalCell) {
-      const totalVal = roiAttrs ? roiAttrs.total_gbp : null;
-      const selfMoney = roiAttrs
-        && roiAttrs.self_total_gbp !== null
-        && roiAttrs.self_total_gbp !== undefined;
-      if (totalVal === null || totalVal === undefined) {
-        totalCell.style.fill = "";
-      } else {
-        totalCell.style.fill = selfMoney
-          ? "var(--khscada-warn-color, #ffb300)"
-          : "var(--success-color, #4caf50)";
-      }
-    }
+    // (The panel's All Payments row was dropped: with own estimates excluded
+    // from money by rule, it was Co-op plus guesses -- redundant when clean,
+    // contaminated when not. The sum still lives in attrs.total_gbp and in
+    // the modal's stats and split line.)
     // Green is the member's own figure; amber the derived auto-fill, still
     // provisional until they enter their own or tick that it matches; no fill
     // means "Not set". Return reads amber for the same reason while it
@@ -3426,7 +3423,7 @@ _buildHeaderChips(layout) {
       .roi-input-user { color: var(--success-color, #4caf50); border-color: var(--success-color, #4caf50); }
       .roi-capital-derived .roi-capital-value { color: var(--khscada-warn-color, #ffb300); }
       .roi-input-derived { color: var(--khscada-warn-color, #ffb300); border-color: var(--khscada-warn-color, #ffb300); }
-      .roi-stat .roi-derived { color: var(--khscada-warn-color, #ffb300); }
+      .roi-derived { color: var(--khscada-warn-color, #ffb300); }
       .roi-derived-note { color: var(--khscada-warn-color, #ffb300); }
       .roi-tick { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: normal; font-weight: 500; color: var(--khscada-primary-color); }
       /* Board-confirmed, the strongest confirmation there is: the period
