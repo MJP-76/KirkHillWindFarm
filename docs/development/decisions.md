@@ -561,6 +561,11 @@ decision changes.
   `board_announcements.yaml` inside the integration, upserted into the ledger
   as `source: board` on every setup.
 
+  - **On by default, switchable.** Options → *Board figures source* offers
+    `Repo file — board_announcements.yaml` (default) and `Manual entry only`;
+    manual skips the file completely and leaves the card the only writer.
+    Moving to manual does not remove figures the file already brought in, and
+    moving back re-applies it.
   - **Edit it in a PR → git is the audit trail** of who entered which figure
     and when, and `kirkhill_wind.reload_integration` (or a restart) applies it
     — no code deploy, unlike every other change to this component.

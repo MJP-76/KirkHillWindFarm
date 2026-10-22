@@ -20,8 +20,10 @@ import pytest
 
 from custom_components.kirkhill_wind import config_flow, oauth
 from custom_components.kirkhill_wind.const import (
+    BOARD_FIGURES_REPO,
     CONF_API_KEY,
     CONF_BASE_URL,
+    CONF_BOARD_FIGURES_SOURCE,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_SCAN_INTERVAL,
@@ -47,6 +49,7 @@ SETTINGS_KEYS = {
     CONF_SCAN_INTERVAL,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
+    CONF_BOARD_FIGURES_SOURCE,
 }
 
 
@@ -70,16 +73,15 @@ class FakeResponse:
 class FakeSession:
     """Answers discovery and registration; never leaves the process."""
 
-    def __init__(self, *, metadata_status: int = 200, registration_status: int = 201,
-                 registration_body: dict | None = None) -> None:
+    def __init__(
+        self, *, metadata_status: int = 200, registration_status: int = 201, registration_body: dict | None = None
+    ) -> None:
         self.get_calls: list[str] = []
         self.post_calls: list[tuple[str, dict]] = []
         self.metadata_status = metadata_status
         self.registration_status = registration_status
         self.registration_body = (
-            registration_body
-            if registration_body is not None
-            else {"client_id": "mcp_client_from_server"}
+            registration_body if registration_body is not None else {"client_id": "mcp_client_from_server"}
         )
 
     def get(self, url: str, **kwargs) -> FakeResponse:
@@ -145,9 +147,7 @@ class TestMenu:
 
         assert not config_flow.SIGN_IN_ENABLED, "parked on purpose, not by accident"
         assert result["type"] == "form"
-        assert result["step_id"] == "manual", (
-            "Setup must land on the working API-key form while sign-in is parked"
-        )
+        assert result["step_id"] == "manual", "Setup must land on the working API-key form while sign-in is parked"
 
     @pytest.mark.asyncio
     async def test_enabling_signin_restores_the_menu(self, hass, monkeypatch):
@@ -200,6 +200,7 @@ class TestManualPath:
         assert result["options"][CONF_SCAN_INTERVAL] == DEFAULT_SCAN_INTERVAL
         assert result["options"][CONF_SITE_NAME] == "My Farm"
         assert result["options"][CONF_CREATE_DASHBOARD] is False
+        assert result["options"][CONF_BOARD_FIGURES_SOURCE] == BOARD_FIGURES_REPO
         assert CONF_API_KEY not in result["options"]
 
     @pytest.mark.asyncio
@@ -252,9 +253,7 @@ class TestRegistration:
 
     @pytest.mark.asyncio
     async def test_registration_rejection_is_reported(self, hass, my_component, store):
-        session = FakeSession(
-            registration_status=400, registration_body={"error": "invalid_client_name"}
-        )
+        session = FakeSession(registration_status=400, registration_body={"error": "invalid_client_name"})
 
         with pytest.raises(oauth.KirkHillOAuthError):
             await oauth.async_get_implementation(hass, session)
@@ -277,9 +276,7 @@ class TestAuthorizeUrl:
 
     @pytest.mark.asyncio
     async def test_url_carries_scope_pkce_and_the_registered_redirect(self, hass, my_component):
-        implementation = oauth.KirkHillOAuthImplementation(
-            hass, REDIRECT_URI, ENDPOINTS, "mcp_client_test"
-        )
+        implementation = oauth.KirkHillOAuthImplementation(hass, REDIRECT_URI, ENDPOINTS, "mcp_client_test")
 
         url = await implementation.async_generate_authorize_url("flow-1")
 
@@ -292,9 +289,7 @@ class TestAuthorizeUrl:
 
     @pytest.mark.asyncio
     async def test_each_attempt_gets_a_fresh_pkce_verifier(self, hass, my_component):
-        implementation = oauth.KirkHillOAuthImplementation(
-            hass, REDIRECT_URI, ENDPOINTS, "mcp_client_test"
-        )
+        implementation = oauth.KirkHillOAuthImplementation(hass, REDIRECT_URI, ENDPOINTS, "mcp_client_test")
 
         first = await implementation.async_generate_authorize_url("flow-1")
         second = await implementation.async_generate_authorize_url("flow-2")
@@ -353,9 +348,7 @@ class TestOAuthEntry:
         flow = _make_flow(hass)
         flow._validate_api_key = AsyncMock(return_value={"base": "auth_failed"})
 
-        result = await flow.async_oauth_create_entry(
-            {"token": {"access_token": "kh_live_dead"}}
-        )
+        result = await flow.async_oauth_create_entry({"token": {"access_token": "kh_live_dead"}})
 
         assert result["type"] == "abort"
         assert result["reason"] == "oauth_key_invalid", (
@@ -372,13 +365,9 @@ class TestOAuthEntry:
         assert result["reason"] == "oauth_error"
 
     @pytest.mark.asyncio
-    async def test_registration_failure_points_at_the_manual_path(
-        self, hass, monkeypatch
-    ):
+    async def test_registration_failure_points_at_the_manual_path(self, hass, monkeypatch):
         flow = _make_flow(hass)
-        monkeypatch.setattr(
-            config_flow, "async_get_clientsession", MagicMock(return_value=object())
-        )
+        monkeypatch.setattr(config_flow, "async_get_clientsession", MagicMock(return_value=object()))
         monkeypatch.setattr(
             config_flow,
             "async_get_implementation",
@@ -404,9 +393,7 @@ class TestAbortDiagnostics:
         flow._validate_api_key = AsyncMock(return_value={"base": "auth_failed"})
         flow._validation_detail = "Invalid or missing API key: The API key is not valid."
 
-        result = await flow.async_oauth_create_entry(
-            {"token": {"access_token": "kh_live_doomed"}}
-        )
+        result = await flow.async_oauth_create_entry({"token": {"access_token": "kh_live_doomed"}})
 
         assert result["type"] == "abort"
         assert result["reason"] == "oauth_key_invalid"
@@ -421,9 +408,7 @@ class TestAbortDiagnostics:
         flow._validate_api_key = AsyncMock(return_value={"base": "cannot_connect"})
         flow._validation_detail = ""
 
-        result = await flow.async_oauth_create_entry(
-            {"token": {"access_token": "kh_live_doomed"}}
-        )
+        result = await flow.async_oauth_create_entry({"token": {"access_token": "kh_live_doomed"}})
 
         assert result["type"] == "abort"
         assert result["description_placeholders"]["detail"]
@@ -432,13 +417,9 @@ class TestAbortDiagnostics:
     async def test_abort_reports_the_key_shape_but_not_the_key(self, hass):
         flow = _make_flow(hass)
         flow._validate_api_key = AsyncMock(return_value={"base": "auth_failed"})
-        flow._validation_detail = (
-            "Invalid or missing API key: The API key is not valid."
-        )
+        flow._validation_detail = "Invalid or missing API key: The API key is not valid."
 
-        result = await flow.async_oauth_create_entry(
-            {"token": {"access_token": "kh_live_supersecret9999"}}
-        )
+        result = await flow.async_oauth_create_entry({"token": {"access_token": "kh_live_supersecret9999"}})
 
         detail = result["description_placeholders"]["detail"]
         assert "The API key is not valid." in detail, "the API's own words must stay"

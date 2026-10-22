@@ -1130,6 +1130,7 @@ records:
         )
         entry = MagicMock()
         entry.entry_id = "test-entry"
+        entry.options = {}  # no overrides: the "repo" default applies the file
         entry.runtime_data = MagicMock()
         entry.runtime_data.data = {
             SCOPE_OWNER: {"summary": {"capacity_watts": 2559.465}},
@@ -1140,3 +1141,53 @@ records:
 
         assert len(ledger.records) == 1
         assert ledger.records[0]["capacity_watts"] == 2559.465
+
+    @pytest.mark.asyncio
+    async def test_manual_mode_ignores_the_file(self, hass, fake_store, announcements):
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+""",
+        )
+        entry = MagicMock()
+        entry.entry_id = "test-entry"
+        entry.options = {"board_figures_source": "manual"}
+        entry.runtime_data = MagicMock()
+        entry.runtime_data.data = {
+            SCOPE_OWNER: {"summary": {"capacity_watts": 2559.465}},
+            SCOPE_SITE: {"summary": {}},
+        }
+
+        ledger = await async_setup_ledger(hass, entry)
+
+        # The card becomes the only writer: the file is not read at all.
+        assert ledger.records == []
+
+    @pytest.mark.asyncio
+    async def test_repo_mode_is_the_default(self, hass, fake_store, announcements):
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+""",
+        )
+        entry = MagicMock()
+        entry.entry_id = "test-entry"
+        entry.options = {}  # default: repo
+        entry.runtime_data = MagicMock()
+        entry.runtime_data.data = {
+            SCOPE_OWNER: {"summary": {"capacity_watts": 2559.465}},
+            SCOPE_SITE: {"summary": {}},
+        }
+
+        ledger = await async_setup_ledger(hass, entry)
+
+        assert len(ledger.records) == 1
+        assert ledger.records[0]["source"] == "board"

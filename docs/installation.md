@@ -125,6 +125,7 @@ After setup, the **Configure** options let you change:
 - Polling interval
 - Create dashboard automatically
 - Enable payment tracking onboarding (Ethex, experimental)
+- **Board figures source** — **`Repo file — board_announcements.yaml`** (default): entries in the shipped YAML are upserted into the ledger as board records on every setup. Or **`Manual entry only`**: the file is ignored and the card becomes the only writer
 
 Prices are **not** options fields — they are `number` entities. **From v4.16.1
 all three are disabled in the entity registry and set to `0.0`**:

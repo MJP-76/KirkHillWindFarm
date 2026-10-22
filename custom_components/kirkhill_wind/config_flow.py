@@ -1,4 +1,5 @@
 """Config flow for the Kirk Hill Wind Farm integration."""
+
 from __future__ import annotations
 
 import logging
@@ -11,6 +12,9 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -18,13 +22,17 @@ from homeassistant.helpers.selector import (
 
 from .api import KirkHillApiClient, describe_key
 from .const import (
+    BOARD_FIGURES_MANUAL,
+    BOARD_FIGURES_REPO,
     CONF_API_KEY,
     CONF_BASE_URL,
+    CONF_BOARD_FIGURES_SOURCE,
     CONF_CREATE_DASHBOARD,
     CONF_ENABLE_PAYMENT_TRACKING,
     CONF_SCAN_INTERVAL,
     CONF_SITE_NAME,
     DEFAULT_BASE_URL,
+    DEFAULT_BOARD_FIGURES_SOURCE,
     DEFAULT_CREATE_DASHBOARD,
     DEFAULT_ENABLE_PAYMENT_TRACKING,
     DEFAULT_SCAN_INTERVAL,
@@ -245,12 +253,11 @@ class KirkHillWindConfigFlow(
                 CONF_ENABLE_PAYMENT_TRACKING: settings.get(
                     CONF_ENABLE_PAYMENT_TRACKING, DEFAULT_ENABLE_PAYMENT_TRACKING
                 ),
+                CONF_BOARD_FIGURES_SOURCE: DEFAULT_BOARD_FIGURES_SOURCE,
             },
         )
 
-    async def _validate_api_key(
-        self, api_key: str, base_url: str
-    ) -> dict[str, str]:
+    async def _validate_api_key(self, api_key: str, base_url: str) -> dict[str, str]:
         """Return an errors dict, or empty dict on success."""
         self._validation_detail = ""
         client = KirkHillApiClient(api_key=api_key, base_url=base_url)
@@ -359,6 +366,26 @@ class KirkHillWindOptionsFlow(config_entries.OptionsFlow):
                         CONF_ENABLE_PAYMENT_TRACKING,
                         default=current[CONF_ENABLE_PAYMENT_TRACKING],
                     ): bool,
+                    # Where board figures come from: the shipped
+                    # board_announcements.yaml (default) or manual entry only.
+                    vol.Required(
+                        CONF_BOARD_FIGURES_SOURCE,
+                        default=current[CONF_BOARD_FIGURES_SOURCE],
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                {
+                                    "value": BOARD_FIGURES_MANUAL,
+                                    "label": "Manual entry only (the file is ignored)",
+                                },
+                                {
+                                    "value": BOARD_FIGURES_REPO,
+                                    "label": "Repo file — board_announcements.yaml (default)",
+                                },
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                 }
             ),
         )
