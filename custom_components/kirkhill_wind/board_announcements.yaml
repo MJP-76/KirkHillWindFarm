@@ -27,4 +27,9 @@
 #
 # The active list follows. Keep it as YAML lists of mappings, one per period.
 
-records: []
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 21
+    announced_on: 2025-07-15
+    note: "£1.6m member payment approved — 21 p/W for the 17-month period"
