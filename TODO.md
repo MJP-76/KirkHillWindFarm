@@ -339,7 +339,7 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
-### v4.18.1 (pre-release, 2026-10-22)
+### v4.18.1 (stable, 2026-10-22)
 
 - **Board announcements ship in the repo** — a `board_announcements.yaml`
   inside the integration, upserted into the ledger as `source: board` on setup

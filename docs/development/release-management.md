@@ -24,7 +24,7 @@ All release versions are tracked from a single source-of-truth file:
    | Where | What it holds |
    |---|---|
    | `CHANGELOG.md` | a `## Version X.Y.Z` section, newest first |
-   | `docs/installation.md` | "What's in the latest pre-release" names the latest stable |
+   | `docs/installation.md` | "What's in the latest release" names the latest stable (and the current pre-release, while one is open) |
    | `docs/development/review-brief.md` | version in the `Repo:` line, plus quoted line counts and symbol names |
    | `docs/development/decisions.md` | "Deployment state" version; the coordinator-split blocker |
    | `info.md` | example version in the SCADA version-badge bullet |
