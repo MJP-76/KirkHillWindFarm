@@ -23,9 +23,9 @@ reset_dashboard:
 add_payment_record:
   name: Add payment record
   description: >-
-    Record one period the board has declared a per-watt rate for. The card's
-    Amount pill pop-out writes through this service; the ledger stores it and
-    the All time, member savings and pill figures follow.
+    Record one period the board has declared a per-watt rate for. The Return on
+    investment panel's add & edit forms write through this service; the ledger
+    stores it and the panel and modal figures follow.
   fields:
     period_start:
       name: Period start
