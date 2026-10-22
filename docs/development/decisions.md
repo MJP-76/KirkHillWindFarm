@@ -511,6 +511,31 @@ decision changes.
   `payment_ledger.py`, the card caption, `dashboard.md`, `sensors.md` and the
   test that pins it.
 
+- **2026-10-22 (later) — lifetime estimate, derived share value, green
+  invested.** Three additions on the owner's call, for the 4.18.2 line:
+
+  - **Lifetime = known + time-left, never an accrual:** the board's actuals
+    plus `(lifespan − elapsed since the first board period) × watts × stored
+    annual rate ÷ 100`, elapsed fractional (days ÷ 365.25; no periods means
+    no anchor and elapsed zero). The annual rate is the member's projection
+    input — normally the board's 15 p/W equivalent — read from the Store
+    where it has always lived, never a constant in this code, because the
+    board can requote (2026-10-22's projection rule is unchanged: labelled,
+    counts for nothing, `total_roi_pct` stays the factual return). Shown in
+    the **projection modal only** — the panel keeps its six rows
+    (2026-10-21 (later)).
+  - **Share value is derived:** `invested_gbp ÷ capacity_watts`, exposed as
+    `share_value_gbp_per_w` and quoted in the invested form (*≈ £1.7300/W ×
+    2,559.465 W*). Nothing stores it and it writes nothing back — a quotation
+    of the two figures beside it, not a figure of its own.
+  - **Green = you typed it.** The panel's Invested cell, the modal's Invested
+    value and its input take `--success-color` whenever `invested_gbp` has a
+    value, because every path that can set it is a user path; unset keeps the
+    normal colour and says `Not set`. If a derived invested source ever
+    appears, provenance needs its own flag then.
+
+  Regression tests: `TestLifetimeEstimateAndShareValue` (10) — 334 passing.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

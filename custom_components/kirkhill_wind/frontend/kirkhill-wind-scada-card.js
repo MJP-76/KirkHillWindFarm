@@ -1091,14 +1091,33 @@ class KirkHillWindScada extends HTMLElement {
     // The projection: an annual rate the member chose to assume -- normally
     // the board's own published annual equivalent (21 p/W over 17 months ≈
     // 15 p/W over a year) -- run over the farm's lifespan. A labelled line
-    // only: it fills no period and feeds no total.
+    // only: it fills no period and feeds no total. The lifetime estimate
+    // follows it in the same breath: the board's actuals plus the years the
+    // lifespan has left at that same stored rate, an estimate too.
     const lifespanGbp = attrs.lifespan_gbp;
-    const projectionLine = lifespanGbp === null || lifespanGbp === undefined
-      ? ""
-      : `<div class="roi-split roi-projection">Projection only — ${this._fmt(Number(attrs.annual_rate_p_per_w), 2)} p/W per year on your watts is about <b>£${this._fmt(Number(attrs.annual_gbp), 2)}/year</b> and <b>£${this._gbp(lifespanGbp)}</b> over ${this._fmt(Number(attrs.lifespan_years), 0)} years, if that rate held. Not a board figure.</div>`;
+    let projectionLine = "";
+    if (lifespanGbp !== null && lifespanGbp !== undefined) {
+      const lifetimeGbp = attrs.lifetime_estimate_gbp;
+      let lifetimeTxt = "";
+      if (lifetimeGbp !== null && lifetimeGbp !== undefined && Number.isFinite(Number(lifetimeGbp))) {
+        const known = attrs.board_total_gbp;
+        const knownNum = known === null || known === undefined ? 0 : Number(known);
+        const remainder = Number(lifetimeGbp) - knownNum;
+        const lifeRoi = attrs.lifetime_roi_pct;
+        const yearsLeft = attrs.lifetime_remaining_years;
+        const yearsTxt = yearsLeft === null || yearsLeft === undefined
+          ? ""
+          : ` over the ${this._fmt(Number(yearsLeft), 1)} years left`;
+        const roiTxt = lifeRoi === null || lifeRoi === undefined
+          ? ""
+          : `, <b>${this._fmt(Number(lifeRoi), 2)}%</b> of what you invested`;
+        lifetimeTxt = ` Lifetime estimate: known board payments <b>${known === null || known === undefined ? "none yet" : this._gbp(known)}</b> + <b>£${this._fmt(remainder, 2)}</b>${yearsTxt} at that rate ≈ <b>${this._gbp(Number(lifetimeGbp))}</b>${roiTxt} — an estimate too; totals and Return above stay actuals.`;
+      }
+      projectionLine = `<div class="roi-split roi-projection">Projection only — ${this._fmt(Number(attrs.annual_rate_p_per_w), 2)} p/W per year on your watts is about <b>£${this._fmt(Number(attrs.annual_gbp), 2)}/year</b> and <b>£${this._gbp(lifespanGbp)}</b> over ${this._fmt(Number(attrs.lifespan_years), 0)} years, if that rate held. Not a board figure.${lifetimeTxt}</div>`;
+    }
     summary.innerHTML = `
       <div class="roi-capital-row">
-        <button class="roi-capital" data-roi-action="edit-invested" title="Set what you invested">
+        <button class="roi-capital${invested === null || invested === undefined ? "" : " roi-capital-user"}" data-roi-action="edit-invested" title="Set what you invested">
           <span class="roi-capital-label">Invested</span>
           <span class="roi-capital-value">${invested === null || invested === undefined ? "Set amount" : this._gbp(invested)}</span>
         </button>
@@ -1387,13 +1406,26 @@ class KirkHillWindScada extends HTMLElement {
     const slot = this._roiSlot();
     if (!slot) return;
     this._roiFormOpen = true;
-    const current = this._roiLedger()?.attrs?.invested_gbp ?? null;
+    const lAttrs = this._roiLedger()?.attrs ?? {};
+    const current = lAttrs.invested_gbp ?? null;
+    // Derived share line: invested ÷ watts, a quotation of the two figures
+    // beside it. It lives here rather than on the panel because the panel
+    // keeps its six rows -- and it never writes anything back.
+    const shareRecs = Array.isArray(lAttrs.records) ? lAttrs.records : [];
+    const shareWatts = shareRecs.length
+      ? Number(shareRecs[shareRecs.length - 1].capacity_watts)
+      : null;
+    const sharePerW = lAttrs.share_value_gbp_per_w;
+    const shareLine =
+      sharePerW === null || sharePerW === undefined || shareWatts === null || !Number.isFinite(shareWatts)
+        ? ""
+        : ` Share value: <b>≈ £${this._fmt(Number(sharePerW), 4)}/W</b> × ${this._fmt(shareWatts, 3)} W — derived from this figure; it never writes anything.`;
     slot.innerHTML = `
       <div class="roi-form">
         <div class="roi-form-title">Invested amount</div>
         <label class="roi-label" for="roi-invested">Capital invested (GBP)</label>
-        <input class="roi-input" id="roi-invested" type="number" min="0" step="0.01" value="${current ?? ""}" placeholder="e.g. 5000" />
-        <div class="roi-hint">Stored with the ledger, never in the config entry. Every ROI figure is measured against it.</div>
+        <input class="roi-input${current === null ? "" : " roi-input-user"}" id="roi-invested" type="number" min="0" step="0.01" value="${current ?? ""}" placeholder="e.g. 5000" />
+        <div class="roi-hint">Stored with the ledger, never in the config entry. Every ROI figure is measured against it.${shareLine}</div>
         <div class="roi-actions">
           <button class="roi-btn" data-roi-action="cancel">Cancel</button>
           ${current === null ? "" : `<button class="roi-btn roi-btn--danger" data-roi-action="clear">Clear</button>`}
@@ -2945,6 +2977,21 @@ _buildHeaderChips(layout) {
       setRoi("roi", roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`);
       setRoi("periods", `${roiRecords.length}`);
     }
+    // Green marks a figure the member typed themselves. Every path that can
+    // set invested -- the modal and the set_invested_amount service -- is a
+    // user path, so "has a value" and "inputted by the user" are the same
+    // statement; not set keeps the normal colour and its "Not set" text.
+    const investedCell = root.querySelector('[data-roi-cell="invested"]');
+    if (investedCell) {
+      const hasInvested = roiAttrs
+        && roiAttrs.invested_gbp !== null
+        && roiAttrs.invested_gbp !== undefined;
+      if (hasInvested) {
+        investedCell.setAttribute("fill", "var(--success-color, #4caf50)");
+      } else {
+        investedCell.removeAttribute("fill");
+      }
+    }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
     const versionPill = root.querySelector('[data-version="indicator"]');
@@ -3307,6 +3354,10 @@ _buildHeaderChips(layout) {
       .roi-stat b { display: block; margin-top: 3px; font-weight: 600; color: var(--khscada-primary-color); }
       .roi-capital { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; border: 1px solid var(--khscada-divider); border-radius: 16px; background: var(--khscada-card-bg); color: var(--khscada-primary-color); padding: 6px 12px; cursor: pointer; font: 600 calc(var(--ha-font-size-small, 14px) * var(--khscada-fs, 1)) var(--khscada-font-family); }
       .roi-capital:hover { border-color: var(--khscada-accent-color); }
+      /* Green = a figure the member typed themselves (every invested path is a
+         user path); an unset figure keeps the normal colour and says so. */
+      .roi-capital-user .roi-capital-value { color: var(--success-color, #4caf50); }
+      .roi-input-user { color: var(--success-color, #4caf50); border-color: var(--success-color, #4caf50); }
       .roi-capital-row { display: flex; gap: 8px; flex-wrap: wrap; }
       .roi-capital-label { color: var(--khscada-secondary-color); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
       .roi-list { display: flex; flex-direction: column; gap: 6px; }

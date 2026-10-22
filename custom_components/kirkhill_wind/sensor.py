@@ -35,9 +35,11 @@ from .payment_ledger import (
     latest_board_record,
     latest_record,
     ledger_total_gbp,
+    lifetime_estimate,
     projection_gbp,
     record_value_gbp,
     roi_pct,
+    share_value_per_watt,
     source_totals_gbp,
     split_totals_gbp,
     year_totals_gbp,
@@ -830,6 +832,24 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
         attrs["lifespan_years"] = self._ledger.lifespan_years
         attrs["annual_gbp"] = annual
         attrs["lifespan_gbp"] = lifespan
+        # Lifetime estimate: the board's actuals plus the years the lifespan
+        # has left at the stored annual rate -- an estimate only, labelled and
+        # counted by nothing (no total, no period, and the ROI above stays the
+        # factual one). Share value is the derived invested ÷ watts quotation;
+        # both recompute from inputs already reported and write nothing back.
+        lifetime = lifetime_estimate(
+            records,
+            self._ledger.annual_rate_p_per_w,
+            capacity,
+            self._ledger.lifespan_years,
+            invested,
+        )
+        attrs["share_value_gbp_per_w"] = share_value_per_watt(invested, capacity)
+        attrs["lifetime_estimate_gbp"] = lifetime["lifetime_gbp"] if lifetime else None
+        attrs["lifetime_roi_pct"] = lifetime["roi_pct"] if lifetime else None
+        attrs["lifetime_remaining_years"] = (
+            lifetime["remaining_years"] if lifetime else None
+        )
         # The total is never replaced by its parts: board and self say how much
         # of it was announced versus estimated, so a self figure can be seen
         # without ever passing as something published.

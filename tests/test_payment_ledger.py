@@ -36,10 +36,12 @@ from custom_components.kirkhill_wind.payment_ledger import (
     latest_record,
     ledger_store,
     ledger_total_gbp,
+    lifetime_estimate,
     normalise_record,
     projection_gbp,
     record_value_gbp,
     roi_pct,
+    share_value_per_watt,
     source_totals_gbp,
     split_totals_gbp,
     year_totals_gbp,
@@ -1199,3 +1201,105 @@ records:
 
         assert len(ledger.records) == 1
         assert ledger.records[0]["source"] == "board"
+
+
+class TestLifetimeEstimateAndShareValue:
+    """Known actuals plus time-left, and the derived per-watt share quotation."""
+
+    def test_share_value_is_invested_divided_by_watts(self):
+        # GBP 4,427.87 over 2,559.465 W is GBP 1.73 per watt, to four places.
+        assert share_value_per_watt(4427.87, 2559.465) == 1.73
+
+    def test_share_value_needs_two_positive_inputs(self):
+        assert share_value_per_watt(None, 2559.465) is None
+        assert share_value_per_watt(4427.87, None) is None
+        assert share_value_per_watt(0, 2559.465) is None
+        assert share_value_per_watt(4427.87, 0) is None
+
+    def test_lifetime_is_known_actuals_plus_the_years_left(self):
+        records = [
+            normalise_record(_record(rate_p_per_w=21, capacity_watts=2559.465))
+        ]
+        today = date(2026, 10, 22)
+        result = lifetime_estimate(records, 15, 2559.465, 25, 4427.87, today=today)
+
+        assert result is not None
+        assert result["known_gbp"] == 537.49  # the board's actual figure
+        elapsed = (today - date(2025, 2, 1)).days / 365.25
+        assert result["elapsed_years"] == round(elapsed, 2)
+        assert 23.27 <= result["remaining_years"] <= 23.29
+        # 15 p/W on 2,559.465 W is GBP 383.92/year, for the years left.
+        expected_remainder = round(383.92 * (25 - elapsed), 2)
+        assert result["remainder_gbp"] == expected_remainder
+        assert result["lifetime_gbp"] == round(537.49 + expected_remainder, 2)
+        assert result["roi_pct"] == round(result["lifetime_gbp"] / 4427.87 * 100, 2)
+
+    def test_the_rate_comes_from_the_input_not_a_constant(self):
+        # The board may requote its annual equivalent: the same records under a
+        # different stored rate must produce a different remainder.
+        records = [normalise_record(_record())]
+        at_fifteen = lifetime_estimate(
+            records, 15, 2000.0, 25, None, today=date(2026, 10, 22)
+        )
+        at_seventeen = lifetime_estimate(
+            records, 17, 2000.0, 25, None, today=date(2026, 10, 22)
+        )
+        assert at_fifteen["remainder_gbp"] != at_seventeen["remainder_gbp"]
+
+    def test_missing_projection_inputs_withhold_the_whole_estimate(self):
+        records = [normalise_record(_record())]
+        assert lifetime_estimate(records, None, 2000.0, 25, None) is None
+        assert lifetime_estimate(records, 15, None, 25, None) is None
+        assert lifetime_estimate(records, 15, 2000.0, None, None) is None
+        assert lifetime_estimate(records, 0, 2000.0, 25, None) is None
+
+    def test_no_board_periods_means_a_pure_full_lifespan_estimate(self):
+        result = lifetime_estimate(
+            [], 15, 2000.0, 25, None, today=date(2026, 10, 22)
+        )
+        assert result["known_gbp"] is None
+        assert result["elapsed_years"] == 0.0  # nothing declared, no anchor
+        assert result["lifetime_gbp"] == 7500.0  # 300/year x 25, none known yet
+        assert result["roi_pct"] is None
+
+    def test_self_estimates_never_count_as_known(self):
+        records = [normalise_record(_record(source="self"))]
+        result = lifetime_estimate(
+            records, 15, 2000.0, 25, None, today=date(2026, 10, 22)
+        )
+        assert result["known_gbp"] is None
+        # ...and a self record does not anchor the elapsed clock either.
+        assert result["elapsed_years"] == 0.0
+
+    def test_a_finished_lifespan_leaves_only_the_known(self):
+        records = [
+            normalise_record(_record(period_start="1990-01-01", period_end="1990-12-31"))
+        ]
+        result = lifetime_estimate(
+            records, 15, 2000.0, 25, 1000.0, today=date(2026, 10, 22)
+        )
+        assert result["remaining_years"] == 0.0
+        assert result["remainder_gbp"] == 0.0
+        assert result["lifetime_gbp"] == 400.0  # only the declared actuals
+        assert result["roi_pct"] == 40.0
+
+    def test_sensor_exposes_share_and_lifetime_attrs(self):
+        ledger = _loaded_ledger()
+        ledger._annual_rate_p_per_w = 15.0
+        ledger._lifespan_years = 25.0
+        ledger._invested_gbp = 4427.87
+        attrs = _sensor(ledger=ledger).extra_state_attributes
+
+        assert attrs["share_value_gbp_per_w"] == 2.2139  # 4427.87 / 2000 W
+        assert attrs["lifetime_estimate_gbp"] is not None
+        assert attrs["lifetime_roi_pct"] is not None
+        assert attrs["lifetime_remaining_years"] is not None
+        # The declared total is untouched by any of it.
+        assert attrs["total_gbp"] == 400.0
+
+    def test_sensor_reads_the_estimate_as_unknown_when_inputs_are_missing(self):
+        attrs = _sensor(ledger=_loaded_ledger()).extra_state_attributes
+        assert attrs["share_value_gbp_per_w"] is None
+        assert attrs["lifetime_estimate_gbp"] is None
+        assert attrs["lifetime_roi_pct"] is None
+        assert attrs["lifetime_remaining_years"] is None

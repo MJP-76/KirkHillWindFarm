@@ -115,7 +115,7 @@ the value column — carrying the headline only:
 
 | Measure | Value |
 | --- | --- |
-| Invested | `£5,000`, or `Not set` until you enter it |
+| Invested | `£5,000` in **green** — the colour for a figure you typed yourself — or `Not set` until you enter it |
 | Payments from Co-op | `£1,074.98` |
 | Your estimates | `—` until one exists |
 | All Payments | `£1,074.98` |
@@ -142,7 +142,13 @@ modal's caption can also say *who* declared it (board or you).
   would be a rate of our own invention. With no capital entered the ROI reads
   `—`, never `0%`.
 - **Invested** — set or cleared in the modal; stored in the ledger's Store,
-  never `entry.options`.
+  never `entry.options`. It and its modal input show **green whenever you have
+  entered it** — every path that can set it is yours, so "has a value" and
+  "inputted by the user" are the same statement — while an unset figure keeps
+  the normal colour and says `Not set`. The form also quotes the **derived
+  share value** beside the input once both halves exist: *≈ £1.7300/W ×
+  2,559.465 W* (`invested ÷ watts`, recomputed live, and it writes nothing
+  back).
 - **Capital and interest** — each period can carry the split as an Ethex
   statement or a board announcement reports it: enter either half (the other is
   worked out from the period's figure) or both (they must sum to it **to the
@@ -156,7 +162,15 @@ modal's caption can also say *who* declared it (board or you).
   and a lifespan, and the modal shows *"Projection only — 15.00 p/W per year
   on your watts is about £383.92/year and £9,598.00 over 25 years, if that rate
   held. Not a board figure."* It fills no period, feeds no total and changes no
-  ROI; clear it from the same form.
+  ROI; clear it from the same form. The same line ends with the **lifetime
+  estimate** — *known board payments £537.49 + £8,937.90 over the 23.3 years
+  left at that rate ≈ £9,475.39, ≈ 213.99% of what you invested — an estimate
+  too; totals and Return above stay actuals.* That is the board's actuals plus
+  **time-left**: elapsed runs fractionally from the first board period, and
+  the rate is whatever you last set in the form — never a constant in the
+  code, because the board can requote. Exposed as `lifetime_estimate_gbp`,
+  `lifetime_roi_pct` and `lifetime_remaining_years`; it fills no period, feeds
+  no total and changes no ROI, exactly like the projection it rides on.
 
   ![The projection line naming an annual figure and a 25-year total, ending with Not a board figure](assets/projection-line.png)
 - **A caption under the rows** says which of two things the current period is:
@@ -203,6 +217,8 @@ on the next setup.
   `board_total_gbp`, `self_total_gbp`, `capital_total_gbp`,
   `interest_total_gbp`, `invested_gbp`, `total_roi_pct`,
   `annual_rate_p_per_w`, `lifespan_years`, `annual_gbp`, `lifespan_gbp`,
+  `share_value_gbp_per_w`, `lifetime_estimate_gbp`, `lifetime_roi_pct`,
+  `lifetime_remaining_years`,
   `latest_rate_p_per_w`, `latest_board_rate_p_per_w`, `current_gbp`,
   `current_basis` (`declared` · `awaiting_next_declaration` ·
   `no_entries`), `current_source`, `current_year_gbp` and `year_totals_gbp`.
