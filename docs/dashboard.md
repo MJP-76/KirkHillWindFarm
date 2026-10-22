@@ -135,6 +135,13 @@ the value column — carrying the headline only:
   `Capital £400.00 · Interest £137.49`, and a line under the totals sums them
   across every period. Nothing derives a split — it is entered by hand, and a
   period with no split shows none.
+- **Projection** — a labelled one-liner, never a figure. Enter an annual p/W
+  rate — normally the board's own published equivalent, whose Feb 2025 → Jun
+  2026 announcement equated 21 p/W over 17 months to **15 p/W over a year** —
+  and a lifespan, and the modal shows *"Projection only — 15.00 p/W per year
+  on your watts is about £383.92/year and £9,598.00 over 25 years, if that rate
+  held. Not a board figure."* It fills no period, feeds no total and changes no
+  ROI; clear it from the same form.
 - **A caption under the rows** says which of two things the current period is:
   **announced by the board**, or **your own estimate**. An undeclared period
   shows neither a caption nor a figure: the estimate is withheld until the
@@ -166,12 +173,13 @@ on the next setup.
 - **Storage and writes** — one Store file per config entry (never
   `entry.options`: config-entry migrations purge monetary keys there). Changed
   only through `kirkhill_wind.add_payment_record`, `update_payment_record`,
-  `remove_payment_record` and `set_invested_amount`; the card never writes
-  storage itself.
+  `remove_payment_record`, `set_invested_amount` and `set_projection`; the card
+  never writes storage itself.
 - **`sensor.<farm>_payment_ledger`** exposes `records` (each with `value_gbp`,
   `roi_pct`, `capital_gbp` and `interest_gbp`), `total_gbp`,
   `board_total_gbp`, `self_total_gbp`, `capital_total_gbp`,
   `interest_total_gbp`, `invested_gbp`, `total_roi_pct`,
+  `annual_rate_p_per_w`, `lifespan_years`, `annual_gbp`, `lifespan_gbp`,
   `latest_rate_p_per_w`, `latest_board_rate_p_per_w`, `current_gbp`,
   `current_basis` (`declared` · `estimate_withheld_split_unknown` ·
   `no_entries`), `current_source`, `current_year_gbp` and `year_totals_gbp`.

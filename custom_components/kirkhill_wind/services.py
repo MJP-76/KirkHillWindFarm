@@ -22,6 +22,9 @@ SERVICE_REMOVE_PAYMENT_RECORD = "remove_payment_record"
 # The ROI card's capital input. Kept as its own service rather than a field on
 # a record: the invested amount describes the member's holding, not one period.
 SERVICE_SET_INVESTED_AMOUNT = "set_invested_amount"
+# The projection line: an annual p/W rate the member assumes (normally the
+# board's own published annual equivalent) and a lifespan to run it over.
+SERVICE_SET_PROJECTION = "set_projection"
 ATTR_ENTRY_ID = "entry_id"
 ATTR_RECORD_ID = "record_id"
 ATTR_PERIOD_START = "period_start"
@@ -34,6 +37,8 @@ ATTR_SOURCE = "source"
 ATTR_INVESTED_GBP = "invested_gbp"
 ATTR_CAPITAL_GBP = "capital_gbp"
 ATTR_INTEREST_GBP = "interest_gbp"
+ATTR_ANNUAL_RATE_P_PER_W = "annual_rate_p_per_w"
+ATTR_LIFESPAN_YEARS = "lifespan_years"
 SERVICE_SCHEMA_RELOAD = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
 SERVICE_SCHEMA_RESET = vol.Schema({vol.Optional(ATTR_ENTRY_ID): str})
 
@@ -93,6 +98,23 @@ SERVICE_SCHEMA_SET_INVESTED = vol.Schema(
         # different statement from having invested nothing.
         vol.Required(ATTR_INVESTED_GBP): vol.Any(
             None, vol.All(vol.Coerce(float), vol.Range(min=0))
+        ),
+        vol.Optional(ATTR_ENTRY_ID): str,
+    }
+)
+SERVICE_SCHEMA_SET_PROJECTION = vol.Schema(
+    {
+        # The projection is a labelled assumption, optional like everything
+        # else here; JSON null clears either input back to "not assumed".
+        vol.Required(ATTR_ANNUAL_RATE_P_PER_W): vol.Any(
+            None,
+            vol.All(
+                vol.Coerce(float),
+                vol.Range(min=0, min_included=False, max=MAX_RATE_P_PER_W),
+            ),
+        ),
+        vol.Required(ATTR_LIFESPAN_YEARS): vol.Any(
+            None, vol.All(vol.Coerce(float), vol.Range(min=1, max=200))
         ),
         vol.Optional(ATTR_ENTRY_ID): str,
     }
@@ -207,6 +229,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except ValueError as err:
             raise HomeAssistantError(str(err)) from err
 
+    async def _async_set_projection(call) -> None:
+        _, ledger = _target_and_ledger(call)
+        try:
+            await ledger.async_set_projection(
+                call.data[ATTR_ANNUAL_RATE_P_PER_W], call.data[ATTR_LIFESPAN_YEARS]
+            )
+        except ValueError as err:
+            raise HomeAssistantError(str(err)) from err
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_RELOAD_INTEGRATION,
@@ -243,6 +274,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         _async_set_invested_amount,
         schema=SERVICE_SCHEMA_SET_INVESTED,
     )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_PROJECTION,
+        _async_set_projection,
+        schema=SERVICE_SCHEMA_SET_PROJECTION,
+    )
     hass.data[SERVICES_REGISTERED] = True
 
 
@@ -257,4 +294,5 @@ async def async_unload_services(hass: HomeAssistant) -> None:
     hass.services.async_remove(DOMAIN, SERVICE_UPDATE_PAYMENT_RECORD)
     hass.services.async_remove(DOMAIN, SERVICE_REMOVE_PAYMENT_RECORD)
     hass.services.async_remove(DOMAIN, SERVICE_SET_INVESTED_AMOUNT)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_PROJECTION)
     hass.data[SERVICES_REGISTERED] = False

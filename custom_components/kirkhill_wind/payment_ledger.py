@@ -358,6 +358,29 @@ def roi_pct(value_gbp: float | None, invested_gbp: float | None) -> float | None
     return round(value_gbp / invested_gbp * 100, 2)
 
 
+def projection_gbp(
+    annual_rate_p_per_w: float | None,
+    capacity_watts: float | None,
+    lifespan_years: float | None,
+) -> tuple[float | None, float | None]:
+    """Return (annual_gbp, lifespan_gbp) for the member's capacity.
+
+    A projection, never a figure: the annual rate is whatever the member chose
+    to assume -- normally the board's own published annual equivalent, whose
+    Feb 2025 → Jun 2026 announcement equated 21 p/W over 17 months to 15 p/W
+    over 12 -- and the total assumes that rate holds for the whole lifespan.
+    None when any input is missing, because a projection with a hole in it is
+    worse than no projection. It feeds no total and fills no period; callers
+    must label it as what it is.
+    """
+    if annual_rate_p_per_w is None or capacity_watts is None or lifespan_years is None:
+        return None, None
+    if annual_rate_p_per_w <= 0 or capacity_watts <= 0 or lifespan_years <= 0:
+        return None, None
+    annual = round(capacity_watts * annual_rate_p_per_w / 100, 2)
+    return annual, round(annual * lifespan_years, 2)
+
+
 class PaymentLedger:
     """One config entry's payment declarations, persisted to a Store.
 
@@ -370,6 +393,8 @@ class PaymentLedger:
         self._entry_id = entry_id
         self._records: list[dict[str, Any]] = []
         self._invested_gbp: float | None = None
+        self._annual_rate_p_per_w: float | None = None
+        self._lifespan_years: float | None = None
         self._listeners: list[Callable[[], None]] = []
 
     @property
@@ -380,6 +405,16 @@ class PaymentLedger:
     def invested_gbp(self) -> float | None:
         """What the member put in — one number for the whole ledger, None if untold."""
         return self._invested_gbp
+
+    @property
+    def annual_rate_p_per_w(self) -> float | None:
+        """p/W per year the member assumes — normally the board's published equivalent."""
+        return self._annual_rate_p_per_w
+
+    @property
+    def lifespan_years(self) -> float | None:
+        """Years the projection runs over, None if untold."""
+        return self._lifespan_years
 
     @property
     def records(self) -> list[dict[str, Any]]:
@@ -407,6 +442,10 @@ class PaymentLedger:
         self._invested_gbp = (
             invested if invested is not None and invested >= 0 else None
         )
+        rate = _as_float(data.get("annual_rate_p_per_w")) if is_dict else None
+        self._annual_rate_p_per_w = rate if rate is not None and rate > 0 else None
+        years = _as_float(data.get("lifespan_years")) if is_dict else None
+        self._lifespan_years = years if years is not None and years > 0 else None
 
     async def async_set_invested(self, amount: float | None) -> None:
         """Record what the member invested; None clears it back to untold."""
@@ -416,6 +455,29 @@ class PaymentLedger:
                 raise ValueError("invested_gbp must be 0 or greater")
             amount = round(value, 2)
         self._invested_gbp = amount
+        await self._async_commit()
+
+    async def async_set_projection(
+        self, annual_rate_p_per_w: float | None, lifespan_years: float | None
+    ) -> None:
+        """Record the projection inputs; either may be None to clear it.
+
+        The annual rate is the member's assumption, normally the board's own
+        published annual equivalent. Storing it changes no total: a projection
+        is a labelled line, never a figure the ledger counts.
+        """
+        if annual_rate_p_per_w is not None:
+            rate = _as_float(annual_rate_p_per_w)
+            if rate is None or rate <= 0:
+                raise ValueError("annual_rate_p_per_w must be greater than 0")
+            annual_rate_p_per_w = round(rate, 4)
+        if lifespan_years is not None:
+            years = _as_float(lifespan_years)
+            if years is None or years <= 0 or years > 200:
+                raise ValueError("lifespan_years must be between 1 and 200")
+            lifespan_years = years
+        self._annual_rate_p_per_w = annual_rate_p_per_w
+        self._lifespan_years = lifespan_years
         await self._async_commit()
 
     @callback
@@ -435,11 +497,16 @@ class PaymentLedger:
             listener()
 
     async def _async_commit(self) -> None:
-        # Both halves of the ledger persist together -- the records and the
-        # capital they are measured against -- so an ROI can never be computed
-        # from one half of a save.
+        # Everything the ledger holds persists together -- the records, the
+        # capital they are measured against, and the projection inputs -- so a
+        # figure can never be computed from one half of a save.
         await ledger_store(self._hass, self._entry_id).async_save(
-            {"records": self._records, "invested_gbp": self._invested_gbp}
+            {
+                "records": self._records,
+                "invested_gbp": self._invested_gbp,
+                "annual_rate_p_per_w": self._annual_rate_p_per_w,
+                "lifespan_years": self._lifespan_years,
+            }
         )
         self._notify()
 

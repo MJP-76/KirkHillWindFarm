@@ -37,6 +37,7 @@ from custom_components.kirkhill_wind.payment_ledger import (
     ledger_store,
     ledger_total_gbp,
     normalise_record,
+    projection_gbp,
     record_value_gbp,
     roi_pct,
     source_totals_gbp,
@@ -49,7 +50,9 @@ from custom_components.kirkhill_wind.services import (
     SERVICE_REMOVE_PAYMENT_RECORD,
     SERVICE_SCHEMA_ADD_PAYMENT,
     SERVICE_SCHEMA_SET_INVESTED,
+    SERVICE_SCHEMA_SET_PROJECTION,
     SERVICE_SET_INVESTED_AMOUNT,
+    SERVICE_SET_PROJECTION,
     SERVICE_UPDATE_PAYMENT_RECORD,
     async_setup_services,
 )
@@ -558,6 +561,23 @@ class TestPaymentRecordServices:
             await add(SimpleNamespace(data={**data, "interest_gbp": 100.5}))
         assert len(ledger.records) == 1
 
+    @pytest.mark.asyncio
+    async def test_projection_sets_and_clears_through_the_service(self, hass, fake_store):
+        ledger = await self._setup(hass, fake_store)
+        handler = self._handler(hass, SERVICE_SET_PROJECTION)
+
+        # The board's own annual equivalent for Feb 2025 -> Jun 2026: 15 p/W.
+        await handler(SimpleNamespace(data={"annual_rate_p_per_w": 15, "lifespan_years": 25}))
+        assert ledger.annual_rate_p_per_w == 15.0
+        assert ledger.lifespan_years == 25.0
+
+        await handler(SimpleNamespace(data={"annual_rate_p_per_w": None, "lifespan_years": None}))
+        assert ledger.annual_rate_p_per_w is None
+        assert ledger.lifespan_years is None
+
+        with pytest.raises(vol.Invalid):
+            SERVICE_SCHEMA_SET_PROJECTION({"annual_rate_p_per_w": 0, "lifespan_years": 25})
+
 
 class TestSource:
     """board = announced by the board; self = the member's own estimate."""
@@ -831,3 +851,93 @@ class TestCapitalInterestSplit:
         attrs = self._sensor([_record()]).extra_state_attributes
         assert attrs["capital_total_gbp"] is None
         assert attrs["interest_total_gbp"] is None
+
+
+class TestProjection:
+    """A projection over the farm's lifespan: an assumed annual rate, labelled.
+
+    The rate is the member's assumption -- normally the board's own published
+    annual equivalent (21 p/W over 17 months ≈ 15 p/W over a year). It feeds no
+    total and fills no period.
+    """
+
+    def test_annual_and_lifespan_from_rate_and_watts(self):
+        # 2,559.465 W at 15 p/W is £383.92 a year; over 25 years £9,598.00.
+        annual, lifespan = projection_gbp(15.0, 2559.465, 25)
+        assert annual == 383.92
+        assert lifespan == 9598.0
+
+    @pytest.mark.parametrize(
+        ("rate", "watts", "years"),
+        [
+            (None, 2000.0, 25),
+            (15.0, None, 25),
+            (15.0, 2000.0, None),
+            (0, 2000.0, 25),
+            (15.0, 0, 25),
+            (15.0, 2000.0, 0),
+        ],
+    )
+    def test_any_missing_input_reads_none(self, rate, watts, years):
+        # A projection with a hole in it is worse than no projection.
+        assert projection_gbp(rate, watts, years) == (None, None)
+
+    @pytest.mark.asyncio
+    async def test_projection_is_stored_and_cleared(self, hass, fake_store):
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_add(_record())
+        await ledger.async_set_projection(15.0, 25)
+
+        assert ledger.annual_rate_p_per_w == 15.0
+        assert ledger.lifespan_years == 25.0
+        assert fake_store.data["annual_rate_p_per_w"] == 15.0
+        assert fake_store.data["lifespan_years"] == 25.0
+
+        reloaded = PaymentLedger(hass, "test-entry")
+        await reloaded.async_load()
+        assert reloaded.annual_rate_p_per_w == 15.0
+
+        await ledger.async_set_projection(None, None)
+        assert ledger.annual_rate_p_per_w is None
+        assert ledger.lifespan_years is None
+        assert fake_store.data["annual_rate_p_per_w"] is None
+
+    @pytest.mark.asyncio
+    async def test_bad_projection_inputs_are_refused(self, hass, fake_store):
+        ledger = PaymentLedger(hass, "test-entry")
+        with pytest.raises(ValueError):
+            await ledger.async_set_projection(0, 25)
+        with pytest.raises(ValueError):
+            await ledger.async_set_projection(15.0, 0)
+        with pytest.raises(ValueError):
+            await ledger.async_set_projection(15.0, 500)
+        assert ledger.annual_rate_p_per_w is None
+
+    @staticmethod
+    def _sensor(records, ledger_kwargs=None):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        ledger._records = [normalise_record(r) for r in records]
+        if ledger_kwargs:
+            ledger._annual_rate_p_per_w = ledger_kwargs.get("rate")
+            ledger._lifespan_years = ledger_kwargs.get("years")
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {}
+        entry = MagicMock()
+        entry.entry_id = "test-entry"
+        return PaymentLedgerSensor(coordinator, entry, ledger)
+
+    def test_sensor_projects_from_the_latest_capacity(self):
+        attrs = self._sensor([_record(capacity_watts=2000.0)], {"rate": 15.0, "years": 25}).extra_state_attributes
+        assert attrs["annual_rate_p_per_w"] == 15.0
+        assert attrs["lifespan_years"] == 25.0
+        assert attrs["annual_gbp"] == 300.0
+        assert attrs["lifespan_gbp"] == 7500.0
+
+    def test_sensor_projection_is_none_until_assumed(self):
+        attrs = self._sensor([_record()]).extra_state_attributes
+        assert attrs["annual_gbp"] is None
+        assert attrs["lifespan_gbp"] is None
+        assert attrs["annual_rate_p_per_w"] is None
+        # ...and it never leaks into the totals.
+        assert attrs["total_gbp"] == 400.0
