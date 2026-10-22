@@ -1121,15 +1121,20 @@ class KirkHillWindScada extends HTMLElement {
       `<div class="roi-actions"><button class="roi-btn roi-btn--primary" data-roi-action="add">Add period</button></div>`;
 
     if (caption) {
-      // An undeclared period reports no figure at all -- the estimate is
-      // withheld until the board's capital/interest split exists -- so the
-      // caption stays empty rather than inventing a number. A self-entered
-      // record does have a figure, but it is the member's, not the board's.
+      // A period the board has not declared reports no figure at all -- the
+      // estimate is withheld rather than invented -- but the situation is
+      // worth stating: what we are waiting for is the board's next
+      // declaration, not a capital/interest split the member already
+      // entered. A self-entered record does have a figure, but it is the
+      // member's, not the board's.
       const selfNow = attrs.current_source === "self";
       const figure = attrs.current_gbp === null || attrs.current_gbp === undefined || !Number.isFinite(Number(attrs.current_gbp))
         ? null : Number(attrs.current_gbp);
       if (figure === null) {
-        caption.innerHTML = "";
+        caption.innerHTML =
+          attrs.current_basis === "awaiting_next_declaration"
+            ? `Current period — <b>awaiting the board's next declaration</b>`
+            : "";
       } else if (selfNow) {
         caption.innerHTML = `Current period — <b>your own estimate</b>: <b>£${this._fmt(figure, 2)}</b>`;
       } else {

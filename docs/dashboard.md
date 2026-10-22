@@ -204,7 +204,7 @@ on the next setup.
   `interest_total_gbp`, `invested_gbp`, `total_roi_pct`,
   `annual_rate_p_per_w`, `lifespan_years`, `annual_gbp`, `lifespan_gbp`,
   `latest_rate_p_per_w`, `latest_board_rate_p_per_w`, `current_gbp`,
-  `current_basis` (`declared` · `estimate_withheld_split_unknown` ·
+  `current_basis` (`declared` · `awaiting_next_declaration` ·
   `no_entries`), `current_source`, `current_year_gbp` and `year_totals_gbp`.
 
 #### Board announcements shipped in the repo
