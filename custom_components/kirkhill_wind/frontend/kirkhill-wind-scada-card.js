@@ -2987,25 +2987,26 @@ _buildHeaderChips(layout) {
     // Green is the member's own figure; amber the derived auto-fill, still
     // provisional until they enter their own or tick that it matches; no fill
     // means "Not set". Return reads amber for the same reason while it
-    // measures against derived capital.
+    // measures against derived capital. Inline style, not a fill attribute:
+    // the stylesheet's `text { fill: ... }` outranks a presentation
+    // attribute, which is exactly why the panel refused to colour in.
     const investedCell = root.querySelector('[data-roi-cell="invested"]');
     if (investedCell) {
       const fillSrc = roiAttrs ? (roiAttrs.invested_source ?? null) : null;
       if (fillSrc === "user") {
-        investedCell.setAttribute("fill", "var(--success-color, #4caf50)");
+        investedCell.style.fill = "var(--success-color, #4caf50)";
       } else if (fillSrc === "derived") {
-        investedCell.setAttribute("fill", "var(--khscada-warn-color, #ffb300)");
+        investedCell.style.fill = "var(--khscada-warn-color, #ffb300)";
       } else {
-        investedCell.removeAttribute("fill");
+        investedCell.style.fill = "";
       }
     }
     const roiCell = root.querySelector('[data-roi-cell="roi"]');
     if (roiCell) {
-      if (roiAttrs && (roiAttrs.invested_source ?? null) === "derived") {
-        roiCell.setAttribute("fill", "var(--khscada-warn-color, #ffb300)");
-      } else {
-        roiCell.removeAttribute("fill");
-      }
+      roiCell.style.fill =
+        roiAttrs && (roiAttrs.invested_source ?? null) === "derived"
+          ? "var(--khscada-warn-color, #ffb300)"
+          : "";
     }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
