@@ -17,6 +17,8 @@ next-hour forecast chips. Your **share of bought watts** is shown in per-myriad
 generation ratio if that entity is unavailable. Rendered as a panel view so it
 fills the entire tab.
 
+![The SCADA tab: eight turbines feeding the transformer and national grid, with the Return on investment, Owner and Site panels down the right](assets/scada-overview.png)
+
 ### Alarm indicator
 
 The **alarm indicator** (top-left of the SCADA card) shows one of two states:
@@ -76,6 +78,10 @@ each with its own ApexCharts series for the selected timeframe. Clicking the
 one-hour forecast, and the live difference. All clickable panels have a
 cursor/hover affordance to signal they are clickable.
 
+![Owner Generation and Capacity modal with its power and generation charts](assets/owner-modal.png)
+
+![Site Generation and Capacity modal with power, capacity factor and generation charts](assets/site-modal.png)
+
 ### Turbine detail modal
 
 Clicking a turbine node opens its pop-out. Besides power, wind, rotor, capacity
@@ -85,6 +91,8 @@ during the window (running, curtailed, in maintenance, stopped, in a fault
 state, etc.) with a coloured block for each continuous stretch, so state changes
 and their durations read at a glance. Hovering a block shows its start/stop time
 and duration.
+
+![Turbine detail modal with specifications, the timeframe selector and a 24-hour power chart](assets/turbine-modal.png)
 
 ## Financials (formerly the Finances tab)
 
@@ -119,7 +127,11 @@ rate** — it sits on every row there, and only board records ever set it — an
 **Current period**, which is blank whenever a period is undeclared while the
 modal's caption can also say *who* declared it (board or you).
 
+![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, all payments, return and period count](assets/roi-panel.png)
+
 **Clicking the panel opens the ledger modal**, which holds everything else:
+
+![The ledger modal showing invested and projection controls, the four totals, the capital and interest summary, the projection line and a period row with its rate, figure and ROI](assets/roi-modal-populated.png)
 
 - **Rows** — one per declared period, e.g.
   `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
@@ -145,6 +157,8 @@ modal's caption can also say *who* declared it (board or you).
   on your watts is about £383.92/year and £9,598.00 over 25 years, if that rate
   held. Not a board figure."* It fills no period, feeds no total and changes no
   ROI; clear it from the same form.
+
+  ![The projection line naming an annual figure and a 25-year total, ending with Not a board figure](assets/projection-line.png)
 - **A caption under the rows** says which of two things the current period is:
   **announced by the board**, or **your own estimate**. An undeclared period
   shows neither a caption nor a figure: the estimate is withheld until the
@@ -152,6 +166,12 @@ modal's caption can also say *who* declared it (board or you).
 - **Adding a period opens prefilled** with the month after the latest one ends —
   Feb 2025 → Jun 2026 offers **`2026-07`** — and the end month left blank, since
   when the board's next period closes is not ours to guess.
+
+  ![The Add period form: month fields, rate, watts, note, capital and interest, and the Announced by the board tick](assets/ledger-form.png)
+
+With no periods yet the modal says so instead of showing numbers:
+
+![The ledger modal before anything is declared: set amount, set projection, four empty totals and No periods yet](assets/roi-modal-empty.png)
 
 An `roi` **tab** existed for part of 2026-10-21; it was replaced by this panel
 and is listed in `OBSOLETE_VIEW_PATHS`, so installed dashboards have it pruned

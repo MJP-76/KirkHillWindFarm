@@ -11,6 +11,8 @@
 
 A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
 
+![The Kirk Hill SCADA tab: eight turbines feeding the transformer and national grid, with the Return on investment, Owner and Site panels down the right-hand column](docs/assets/scada-overview.png)
+
 It pulls current data for both OpenAPI scopes:
 
 - `owner` (your ownership share)
@@ -59,6 +61,8 @@ and an animated dashboard.
   where it gives one — × years, counting towards nothing), and the add/edit
   forms. ROI is `value ÷ invested × 100`, deliberately not annualised, and
   reads `—` until you say what you invested.
+
+  ![Return on investment panel: invested, payments from Co-op, your estimates, all payments, return and period count](docs/assets/roi-panel.png)
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
   actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
   something is declared, and **withholds any figure for an undeclared period**
