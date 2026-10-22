@@ -4,8 +4,9 @@ All notable changes to the Kirk Hill Wind Farm integration.
 
 ## Version 4.18.1
 
-**Testing pre-release.** Continues the 4.18 line: the repository itself
-becomes a source of board figures, with a switch to opt out.
+**Stable release** — promoted from pre-release the same day, after the owner
+tested it live. Continues the 4.18 line: the repository itself becomes a
+source of board figures, with a switch to opt out.
 
 - **A shipped `board_announcements.yaml`** — board announcements arrive as a
   file inside the integration, upserted into the ledger as `source: board` on
