@@ -2534,7 +2534,6 @@ class KirkHillWindScada extends HTMLElement {
     const W = this._vbW;
     const scaleX = W / KirkHillWindScada.DESIGN_W;
     const collapse = 0;
-    const legendY = H;
     const gridY = tBottom;
     // Scale horizontal positions from design width (1240) to current viewBox width.
     // The two columns start with a small gap (40) that shrinks to nothing, then the
@@ -2551,17 +2550,10 @@ class KirkHillWindScada extends HTMLElement {
     const transformerLineEndY = gridY - 135;
     const gridRectW = 270 * scaleX;
     const gridRightX = gridRectX + gridRectW;
-    const ownerCx = 1015 * scaleX;
-    const siteCx = 1205 * scaleX;
     const gridTitleX = (gridRectX + gridRightX) / 2;
     const gridDividerX1 = gridRectX + 10 * scaleX;
     const gridDividerX2 = gridRightX - 10 * scaleX;
     const chipLeftColX = 30 * scaleX;
-    const chipRightColX = 152 * scaleX;
-    const chipWindX = 500 * scaleX;
-    const chipWindW = busX - chipWindX - 8;
-    const chipWindTitleX = 512 * scaleX;
-    const chipWindValueX = chipWindX + chipWindW - 12;
     const chipUserGenX = 930 * scaleX;
     const chipUserGenW = gridRightX - chipUserGenX;
     // Three-column table inside the 450-px panel (750→1200):
@@ -2575,18 +2567,6 @@ class KirkHillWindScada extends HTMLElement {
     const chipSiteGenW = gridRightX - chipSiteGenX;
     const chipSiteGenValueX = gridRightX - 95 * scaleX;
     const chipSiteGenTitleX = 942 * scaleX;
-    const resetBtnW = 44 * scaleX;
-    const resetBtnH = 48;
-    // Bottom chrome row: version number, API status pill and reset button sit
-    // together on one line above the legend strip; the button follows the pill.
-    const chromeRowY = legendY - 20;
-    const resetBtnY = chromeRowY - resetBtnH / 2;
-    const versionX = 30 * scaleX;
-    const apiPillX = versionX + 82 * scaleX;
-    const apiPillW = 78 * scaleX;
-    const resetBtnX = apiPillX + apiPillW + 12 * scaleX;
-    const legendX = 86 * scaleX;
-    const legendW = 500 * scaleX;
     const xfmrTitleX = 730 * scaleX;
     const xfmrRotateX = 730 * scaleX;
 
@@ -2598,9 +2578,6 @@ class KirkHillWindScada extends HTMLElement {
       bh,
       pitch,
       gridY,
-      busY2: gridY,
-      busSummaryY: legendY - 24,
-      legendY,
       busX,
       leftColX,
       rightColX,
@@ -2610,17 +2587,10 @@ class KirkHillWindScada extends HTMLElement {
       transformerLineEndY,
       gridRectX,
       gridRectW,
-      ownerCx,
-      siteCx,
       gridTitleX,
       gridDividerX1,
       gridDividerX2,
       chipLeftColX,
-      chipRightColX,
-      chromeRowY,
-      versionX,
-      apiPillX,
-      apiPillW,
       chipUserGenX,
       chipUserGenW,
       chipUserGenTitleX,
@@ -2629,17 +2599,8 @@ class KirkHillWindScada extends HTMLElement {
       chipSiteGenW,
       chipSiteGenTitleX,
       chipSiteGenValueX,
-      chipWindX,
-      chipWindW,
-      chipWindTitleX,
-      chipWindValueX,
-      resetBtnX,
-      resetBtnY,
-      legendX,
-      legendW,
       xfmrTitleX,
       xfmrRotateX,
-      tCount,
       tBottom: tTop + tCount * pitch,
     };
   }
