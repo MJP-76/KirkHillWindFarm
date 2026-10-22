@@ -75,10 +75,11 @@ the stable release yet.
 
 ## What's in the latest release
 
-**v4.16.7** — see the
+**v4.17.0** — see the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
-for what's included. It is the latest **stable** release; v4.16.6
-remains available for anyone who wants the earlier cut.
+for what's included: the payment ledger and the **Return on investment** panel.
+It is the latest **stable** release; v4.16.7 remains available for anyone who
+wants the earlier cut.
 
 ## Reporting a pre-release problem
 

@@ -2,6 +2,57 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.17.0
+
+**The financial model, rebuilt around what the board actually declares.** Money
+is a ledger of dated periods the board announced — never a price applied to
+generation — and it lives in its own panel on the SCADA card.
+
+- **New `Return on investment` panel** — the top panel of the right column, in
+  the same box and columns as Owner and Site: **Invested · Payments from Co-op
+  · Your estimates · All Payments · Return · Periods · Published rate · Current
+  period**. Click it for the ledger modal: every period with its months,
+  rate × watts, £ and ROI, the capital input, and the add & edit forms.
+- **New payment-ledger sensor** `sensor.<farm>_payment_ledger` — one line item
+  per period the board declared a p/W rate for, stored as **whole months**
+  (1st → last day) and valued `watts × rate ÷ 100`. State is the all-periods
+  total and reads `unknown` while nothing has been declared — never `£0.00`.
+  Attributes carry `records` (each with `value_gbp` and `roi_pct`),
+  `board_total_gbp`, `self_total_gbp`, `invested_gbp`, `total_roi_pct`,
+  `latest_board_rate_p_per_w` and `current_basis`.
+- **Board announcements and your estimates stay apart** — every record carries
+  `source: board | self`; the *Announced by the board* tick is pre-ticked, and
+  unticking it records your own estimate for a period the board has not
+  covered. Your rows are dashed, tagged `your estimate` and `~`-prefixed, and
+  only board records feed the published rate.
+- **Return on your capital** — enter what you invested once and every period
+  (plus the total) shows `value ÷ invested × 100`. Deliberately **not
+  annualised** — the board pays per period regardless of how long it runs — and
+  it reads `—`, never `0%`, until capital is known. Capital is stored in the
+  ledger's Store beside the records, never in `entry.options`.
+- **No estimate until the board publishes the capital/interest split** — an
+  undeclared period reports no figure at all
+  (`current_basis=estimate_withheld_split_unknown`) instead of pricing itself
+  at the last announced rate; your own entries and declared periods are
+  unaffected.
+- **Money removed from the Owner and Site panels** — the `Value (£)` column,
+  both `£/h` cells, the Member savings line and both price pills are gone, and
+  generation now takes the right-hand edge of each panel. The timeframe rows
+  stay moneyless on purpose: slicing a per-watt declaration across days would
+  be the accrual the board's basis rules out.
+- **Four new services** — `kirkhill_wind.add_payment_record`,
+  `update_payment_record`, `remove_payment_record` and `set_invested_amount`.
+  The card never writes storage itself; periods are entered as months
+  (`YYYY-MM`) and stored as the 1st → last day, and a new period opens
+  prefilled with the month after the latest one ends.
+- **Superseded entities stay put**: all 22 earnings entities remain disabled
+  and zeroed, and neither panel reads them. Nothing was deleted — bringing one
+  back is still `hab entity enable <entity_id>`.
+- Frontend: card 3,376 lines / ~163 KB, shipped frontend 724 KB.
+- **Tests 289** (from 222): ledger validation and Σ totals, board/self split,
+  whole-month attribution, invested persistence, ROI null-not-zero, withheld
+  estimates, and the six services.
+
 ## Version 4.16.7
 - **Removed two vendored third-party cards that nothing used, and that collided with HACS installs.** `frontend/apexcharts-card.js` (1.6 MB) and `frontend/plotly-graph-card.js` (3.1 MB) were registered on **every** Home Assistant page via `add_extra_js_url`, but the dashboard this integration generates uses only `custom:kirkhill-wind-scada`, which loads `apexcharts.js` — the *library*, still shipped — on demand from our own static path. Both bundles call `customElements.define` with no `customElements.get` guard, so anyone who also installed those cards from HACS hit *"name has already been used"*, the second copy to load broke, or their dashboards silently rendered our bundled build instead of the one they chose. Both files, their two `_FRONTEND_CARDS` entries and four matching `THIRD_PARTY_NOTICES` entries are gone; the standalone `apexcharts.js` notice stays. **If your own dashboard used `custom:apexcharts-card` or `custom:plotly-graph` from our bundle, install those cards from HACS** — the merge logic still recognises those names when pruning old dashboards. (HACS review note from frenck on PR #11379.)
 - **Setup no longer stats files on the event loop.** The cache-busting mtime read in `_async_register_frontend` now runs through `hass.async_add_executor_job`.
