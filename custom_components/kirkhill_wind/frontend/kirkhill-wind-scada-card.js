@@ -3003,10 +3003,18 @@ _buildHeaderChips(layout) {
     }
     const roiCell = root.querySelector('[data-roi-cell="roi"]');
     if (roiCell) {
-      roiCell.style.fill =
-        roiAttrs && (roiAttrs.invested_source ?? null) === "derived"
-          ? "var(--khscada-warn-color, #ffb300)"
-          : "";
+      // Confirmed capital -> green; derived -> amber; nothing set -> the
+      // panel's default value colour for its "—". Without this the fallback
+      // is .site-gen-value, whose fill IS the warn amber -- confirmed ROI
+      // would wear the provisional colour for ever.
+      const roiSrc = roiAttrs ? (roiAttrs.invested_source ?? null) : null;
+      if (roiSrc === "user") {
+        roiCell.style.fill = "var(--success-color, #4caf50)";
+      } else if (roiSrc === "derived") {
+        roiCell.style.fill = "var(--khscada-warn-color, #ffb300)";
+      } else {
+        roiCell.style.fill = "";
+      }
     }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available

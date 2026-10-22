@@ -85,9 +85,9 @@ and an animated dashboard.
   Click Owner, Site, Wind, National Grid or a
   turbine for ApexCharts history (6H–1Y) and detail modals, a labelled
   turbine activity swimlane — or click **Return on investment** for the money
-  and its forms. Its colour scheme is amber for power/energy and **derived**
-  figures, cyan for wind speed, green for financial values — invested reads
-  green once you confirm it and amber while it is only the auto-fill.
+  and its forms. Its colour scheme is amber for values and power/energy, cyan
+  for wind speed — and green for confirmed money: invested and Return read
+  green once you confirm the capital, amber while it is only the auto-fill.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
