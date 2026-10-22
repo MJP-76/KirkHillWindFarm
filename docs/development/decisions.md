@@ -551,7 +551,11 @@ decision changes.
     (`user` · `derived` · `None`) is the provenance flag the green-invested
     bullet of earlier today said would be needed the moment a derived source
     appeared; it is here, and the panel cell, modal input and Return all
-    read it.
+    read it. The same green extends to **board-confirmed periods** (the
+    owner's follow-up call): the *Announced by the board* tick colours
+    green while ticked — CSS on `:checked`, so unticking takes the colour
+    with it — and a board record's £ figure shows green in the list, while
+    self estimates keep their `~` and tag, uncoloured.
   - **ROI quotes derived capital now, flagged** — the owner's explicit
     choice: provisional amber beats a dash. `total_roi_pct` and each
     record's `roi_pct` measure against the capital in force, and the card

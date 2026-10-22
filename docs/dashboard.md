@@ -147,7 +147,11 @@ modal's caption can also say *who* declared it (board or you).
 
 - **Rows** — one per declared period, e.g.
   `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
-  edit and remove, plus **Add period**.
+  edit and remove, plus **Add period**. A **board record's £ figure reads
+  green** — announced by the board, the strongest confirmation there is, and
+  the period form's *Announced by the board* tick shows the same green while
+  ticked (untick and it leaves). Your own estimates keep their `~` and
+  *your estimate* tag, uncoloured.
 - **Return is a plain percentage of capital**: `value ÷ capital × 100` per
   period and across the total, measured against **the capital in force** —
   your entry when you have one, the derived auto-fill while that is all there
