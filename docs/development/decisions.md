@@ -558,6 +558,14 @@ decision changes.
     self estimates keep their `~` and tag, uncoloured. The panel joins in:
     **Payments from Co-op** reads green whenever a board total exists, so the
     board's money wears its confirmation on the dashboard itself.
+  - **Totals and ROI weigh own estimates against green** (the owner's rule,
+    same day): *Your estimates* never goes green — an estimate becomes board
+    money only by editing the period and ticking the board box, which moves it
+    into the Co-op line. **All Payments** is green while the ledger holds no
+    own estimates and **amber the moment it contains any**, and the **ROI**
+    follows identically: green only for confirmed capital over pure board
+    money, amber under derived capital *or* any own estimate (the modal's
+    Return stat reads the same rule).
   - **ROI quotes derived capital now, flagged** — the owner's explicit
     choice: provisional amber beats a dash. `total_roi_pct` and each
     record's `roi_pct` measure against the capital in force, and the card

@@ -88,7 +88,8 @@ and an animated dashboard.
   and its forms. Its colour scheme is amber for values and power/energy, cyan
   for wind speed — and green for confirmed money: invested and Return read
   green once you confirm the capital, a board period shows its figure green,
-  amber is only ever the auto-fill.
+  All Payments and Return go green only with no own estimates in the ledger —
+  amber while any remain. Amber is only ever provisional.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
