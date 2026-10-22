@@ -339,6 +339,21 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.18.1 (pre-release, 2026-10-22)
+
+- **Board announcements ship in the repo** — a `board_announcements.yaml`
+  inside the integration, upserted into the ledger as `source: board` on setup
+  (period-matched, capacity from the API, card records untouched, split
+  cleared + logged only on a rate change), seeded with the board's
+  Feb 2025 → Jun 2026 line (21 p/W, announced 2025-07-15).
+- **Board figures source option** — Repo file (default) / Manual entry only.
+- **Fix**: the announcements file is read through an executor — 4.18.0 read
+  it on the event loop and HA logged a blocking-call warning every setup.
+- **Wording**: `current_basis=awaiting_next_declaration` (was
+  `estimate_withheld_split_unknown`); the panel's *Current period* caption
+  states the wait instead of going blank.
+- PRs #125–#129, all merged with green CI. 324 tests.
+
 ### v4.18.0 (pre-release, 2026-10-22)
 
 - **Capital/interest split per period**, entered by hand from an Ethex

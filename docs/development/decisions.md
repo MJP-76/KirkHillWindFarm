@@ -619,8 +619,8 @@ decision changes.
 
 ## Deployment state
 
-- **2026-10-22 (later) — `main` is at `4.18.0`, pending publication as a
-  pre-release; `4.17.0` remains the latest stable.** Nothing is deployed by
+- **2026-10-22 (later) — `main` is at `4.18.1`, published as a pre-release;
+  `4.17.0` remains the latest stable.** Nothing is deployed by
   releasing: files reach this host only when `origin/main` is mirrored into
   `/homeassistant/custom_components/kirkhill_wind/`, and Python changes need
   Home Assistant fully restarted — the owner's explicit go-ahead. Frontend-only
