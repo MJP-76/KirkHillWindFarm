@@ -536,6 +536,38 @@ decision changes.
 
   Regression tests: `TestLifetimeEstimateAndShareValue` (10) — 334 passing.
 
+- **2026-10-22 (later) — derived investment: amber auto-fill, green
+  confirmation.** Three additions on the owner's call:
+
+  - **A stored share price, not a stored guess.** `set_share_price` (new
+    service) records pence per watt — their own Ripple figure; the live
+    install is seeded **173.0 p/W**, which reproduces the historic
+    GBP 4,427.87 from 2,559.465 W **to the penny**. `invested_derived_gbp` =
+    price × watts ÷ 100, computed at read time and stored nowhere;
+    `invested_gbp` stays theirs alone — the auto-fill never writes it.
+  - **Three states, three colours:** unset grey `Not set`, derived **amber**,
+    confirmed **green** — by typing their own amount (matching or differing)
+    or ticking *This matches my investment — keep it*. `invested_source`
+    (`user` · `derived` · `None`) is the provenance flag the green-invested
+    bullet of earlier today said would be needed the moment a derived source
+    appeared; it is here, and the panel cell, modal input and Return all
+    read it.
+  - **ROI quotes derived capital now, flagged** — the owner's explicit
+    choice: provisional amber beats a dash. `total_roi_pct` and each
+    record's `roi_pct` measure against the capital in force, and the card
+    colours Return amber while `invested_source=derived`.
+  - **Watts come from the API** for every derived and projected figure:
+    owner `capacity_watts` first, the latest record's declared watts as
+    fallback — declared periods keep their own stored watts, so the
+    2026-10-08 capacity decision stands untouched. Side effect worth having:
+    projection figures no longer vanish when records are cleared.
+  - **The Ripple fee is stated where the number is trusted:** the invested
+    form carries, in italics, that the initial Ripple investment will not
+    match the co-op's or Ethex's figure — Ripple's arrangement fee sits
+    between them.
+
+  Regression tests: `TestDerivedInvestment` (11) — 345 passing.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

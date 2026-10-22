@@ -31,6 +31,8 @@ from custom_components.kirkhill_wind.payment_ledger import (
     async_unload_ledger,
     current_figure,
     current_year_gbp,
+    derived_invested_gbp,
+    effective_invested,
     get_ledger,
     latest_board_record,
     latest_record,
@@ -1217,9 +1219,7 @@ class TestLifetimeEstimateAndShareValue:
         assert share_value_per_watt(4427.87, 0) is None
 
     def test_lifetime_is_known_actuals_plus_the_years_left(self):
-        records = [
-            normalise_record(_record(rate_p_per_w=21, capacity_watts=2559.465))
-        ]
+        records = [normalise_record(_record(rate_p_per_w=21, capacity_watts=2559.465))]
         today = date(2026, 10, 22)
         result = lifetime_estimate(records, 15, 2559.465, 25, 4427.87, today=today)
 
@@ -1238,12 +1238,8 @@ class TestLifetimeEstimateAndShareValue:
         # The board may requote its annual equivalent: the same records under a
         # different stored rate must produce a different remainder.
         records = [normalise_record(_record())]
-        at_fifteen = lifetime_estimate(
-            records, 15, 2000.0, 25, None, today=date(2026, 10, 22)
-        )
-        at_seventeen = lifetime_estimate(
-            records, 17, 2000.0, 25, None, today=date(2026, 10, 22)
-        )
+        at_fifteen = lifetime_estimate(records, 15, 2000.0, 25, None, today=date(2026, 10, 22))
+        at_seventeen = lifetime_estimate(records, 17, 2000.0, 25, None, today=date(2026, 10, 22))
         assert at_fifteen["remainder_gbp"] != at_seventeen["remainder_gbp"]
 
     def test_missing_projection_inputs_withhold_the_whole_estimate(self):
@@ -1254,9 +1250,7 @@ class TestLifetimeEstimateAndShareValue:
         assert lifetime_estimate(records, 0, 2000.0, 25, None) is None
 
     def test_no_board_periods_means_a_pure_full_lifespan_estimate(self):
-        result = lifetime_estimate(
-            [], 15, 2000.0, 25, None, today=date(2026, 10, 22)
-        )
+        result = lifetime_estimate([], 15, 2000.0, 25, None, today=date(2026, 10, 22))
         assert result["known_gbp"] is None
         assert result["elapsed_years"] == 0.0  # nothing declared, no anchor
         assert result["lifetime_gbp"] == 7500.0  # 300/year x 25, none known yet
@@ -1264,20 +1258,14 @@ class TestLifetimeEstimateAndShareValue:
 
     def test_self_estimates_never_count_as_known(self):
         records = [normalise_record(_record(source="self"))]
-        result = lifetime_estimate(
-            records, 15, 2000.0, 25, None, today=date(2026, 10, 22)
-        )
+        result = lifetime_estimate(records, 15, 2000.0, 25, None, today=date(2026, 10, 22))
         assert result["known_gbp"] is None
         # ...and a self record does not anchor the elapsed clock either.
         assert result["elapsed_years"] == 0.0
 
     def test_a_finished_lifespan_leaves_only_the_known(self):
-        records = [
-            normalise_record(_record(period_start="1990-01-01", period_end="1990-12-31"))
-        ]
-        result = lifetime_estimate(
-            records, 15, 2000.0, 25, 1000.0, today=date(2026, 10, 22)
-        )
+        records = [normalise_record(_record(period_start="1990-01-01", period_end="1990-12-31"))]
+        result = lifetime_estimate(records, 15, 2000.0, 25, 1000.0, today=date(2026, 10, 22))
         assert result["remaining_years"] == 0.0
         assert result["remainder_gbp"] == 0.0
         assert result["lifetime_gbp"] == 400.0  # only the declared actuals
@@ -1303,3 +1291,113 @@ class TestLifetimeEstimateAndShareValue:
         assert attrs["lifetime_estimate_gbp"] is None
         assert attrs["lifetime_roi_pct"] is None
         assert attrs["lifetime_remaining_years"] is None
+
+
+class TestDerivedInvestment:
+    """Share price × watts: the amber capital, its provenance, its ROI."""
+
+    def test_derived_capital_is_price_times_watts(self):
+        # 173.0 p/W on 2,559.465 W is the member's historic GBP 4,427.87.
+        assert derived_invested_gbp(173.0, 2559.465) == 4427.87
+
+    def test_derived_capital_needs_two_positive_inputs(self):
+        assert derived_invested_gbp(None, 2559.465) is None
+        assert derived_invested_gbp(173.0, None) is None
+        assert derived_invested_gbp(0, 2559.465) is None
+        assert derived_invested_gbp(173.0, 0) is None
+
+    def test_the_members_own_figure_always_wins(self):
+        assert effective_invested(5000.0, 4427.87) == (5000.0, "user")
+        assert effective_invested(None, 4427.87) == (4427.87, "derived")
+        assert effective_invested(None, None) == (None, None)
+        # Investing nothing is a statement too: 0.0 is theirs, not the
+        # auto-fill's, and never collapses into "unknown".
+        assert effective_invested(0.0, 4427.87) == (0.0, "user")
+
+    @pytest.mark.asyncio
+    async def test_share_price_round_trips_through_the_store(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_set_share_price(173.0)
+        assert ledger.share_price_p_per_w == 173.0
+
+        reloaded = PaymentLedger(MagicMock(), "test-entry")
+        await reloaded.async_load()
+        assert reloaded.share_price_p_per_w == 173.0
+
+    @pytest.mark.asyncio
+    async def test_share_price_validates_and_clears(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        with pytest.raises(ValueError):
+            await ledger.async_set_share_price(0)
+        with pytest.raises(ValueError):
+            await ledger.async_set_share_price(-1)
+
+        await ledger.async_set_share_price(173.0)
+        await ledger.async_set_share_price(None)
+        assert ledger.share_price_p_per_w is None
+
+    @pytest.mark.asyncio
+    async def test_a_price_never_writes_invested(self, hass, fake_store):
+        # The whole invariant: the auto-fill computes, their entry stores.
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_set_share_price(173.0)
+        assert ledger.invested_gbp is None
+
+    def test_sensor_derives_from_api_capacity_even_without_records(self):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        ledger._share_price_p_per_w = 173.0
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {
+            SCOPE_OWNER: {"summary": {"capacity_watts": 2559.465}},
+            SCOPE_SITE: {"summary": {}},
+        }
+        attrs = _sensor(coordinator=coordinator, ledger=ledger).extra_state_attributes
+
+        assert attrs["capacity_watts"] == 2559.465
+        assert attrs["invested_derived_gbp"] == 4427.87
+        assert attrs["invested_source"] == "derived"
+        assert attrs["invested_gbp"] is None
+        assert attrs["total_gbp"] is None  # an empty ledger stays unknown
+
+    def test_api_capacity_beats_the_records(self):
+        ledger = _loaded_ledger()  # the record carries 2,000 W
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {
+            SCOPE_OWNER: {"summary": {"capacity_watts": 2500.0}},
+            SCOPE_SITE: {"summary": {}},
+        }
+        attrs = _sensor(coordinator=coordinator, ledger=ledger).extra_state_attributes
+        assert attrs["capacity_watts"] == 2500.0
+
+    def test_record_capacity_stands_in_without_the_api(self):
+        ledger = _loaded_ledger()
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {SCOPE_OWNER: {}, SCOPE_SITE: {}}
+        attrs = _sensor(coordinator=coordinator, ledger=ledger).extra_state_attributes
+        assert attrs["capacity_watts"] == 2000.0
+
+    def test_roi_quotes_derived_capital_and_the_source_says_so(self):
+        ledger = _loaded_ledger()  # GBP 400 declared
+        ledger._share_price_p_per_w = 173.0  # x2,000 W = GBP 3,460 derived
+        attrs = _sensor(ledger=ledger).extra_state_attributes
+
+        assert attrs["invested_gbp"] is None
+        assert attrs["invested_derived_gbp"] == 3460.0
+        assert attrs["invested_source"] == "derived"
+        # Provisional, but present: ROI now, flagged by the source.
+        assert attrs["total_roi_pct"] == round(400 / 3460 * 100, 2)
+        assert attrs["records"][0]["roi_pct"] == round(400 / 3460 * 100, 2)
+
+    def test_a_user_entry_switches_the_source_and_wins_the_roi(self):
+        ledger = _loaded_ledger()
+        ledger._share_price_p_per_w = 173.0
+        ledger._invested_gbp = 5000.0
+        attrs = _sensor(ledger=ledger).extra_state_attributes
+
+        assert attrs["invested_source"] == "user"
+        assert attrs["invested_derived_gbp"] == 3460.0  # still shown, amber-free
+        assert attrs["total_roi_pct"] == 8.0  # 400 / 5000 -- theirs, not the
+        # auto-fill's 11.56

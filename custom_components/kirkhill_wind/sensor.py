@@ -31,6 +31,8 @@ from .entity import (
 from .payment_ledger import (
     current_figure,
     current_year_gbp,
+    derived_invested_gbp,
+    effective_invested,
     get_ledger,
     latest_board_record,
     latest_record,
@@ -790,6 +792,29 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
         """Declared total, or unknown while nothing has been declared."""
         return ledger_total_gbp(self._ledger.records)
 
+    def _capacity_watts(self) -> float | None:
+        """Watts for derived and projected figures: API first, record fallback.
+
+        The API's owner capacity is the member's standing holding -- it exists
+        whether or not any period is declared, which is what lets the amber
+        auto-fill work on an empty ledger. A record's stored watts are
+        declared history and are never rewritten, but they stand in while the
+        poll has not landed.
+        """
+        data = getattr(self.coordinator, "data", None)
+        summary = data.get(SCOPE_OWNER) if isinstance(data, dict) else None
+        inner = summary.get("summary") if isinstance(summary, dict) else None
+        if isinstance(inner, dict):
+            api = _as_float(inner.get("capacity_watts"))
+            if api is not None and api > 0:
+                return api
+        latest = latest_record(self._ledger.records)
+        if latest:
+            record_w = _as_float(latest.get("capacity_watts"))
+            if record_w is not None and record_w > 0:
+                return record_w
+        return None
+
     @property
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
@@ -800,31 +825,46 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
         totals = source_totals_gbp(records)
         invested = self._ledger.invested_gbp
         total = ledger_total_gbp(records)
+        # Capacity for derived and projected figures: the API's owner capacity
+        # first (the member's watts exist whether or not any period is
+        # declared), the latest record's declared watts as the fallback.
+        capacity = self._capacity_watts()
+        # The amber auto-fill and what ROI is measured against: share price ×
+        # watts, computed here and stored nowhere -- invested_gbp stays the
+        # member's own entry, and invested_source says which of the two is in
+        # force ("user" green, "derived" amber, None nothing at all).
+        derived = derived_invested_gbp(self._ledger.share_price_p_per_w, capacity)
+        capital, capital_source = effective_invested(invested, derived)
         attrs["record_count"] = len(records)
         # Each record carries its own value and ROI, so the card reports rather
-        # than recalculates: value ÷ invested, both already in this payload.
+        # than recalculates: value ÷ capital, both already in this payload.
         entries = []
         for record in records:
             value = record_value_gbp(record)
             entries.append(
-                {**record, "value_gbp": value, "roi_pct": roi_pct(value, invested)}
+                {**record, "value_gbp": value, "roi_pct": roi_pct(value, capital)}
             )
         attrs["records"] = entries
         attrs["invested_gbp"] = invested
+        attrs["share_price_p_per_w"] = self._ledger.share_price_p_per_w
+        attrs["invested_derived_gbp"] = derived
+        attrs["invested_source"] = capital_source
+        attrs["capacity_watts"] = capacity
         attrs["total_gbp"] = total
         # Capital/interest halves, entered by hand from an Ethex statement or a
         # board announcement: None while no record carries that half.
         splits = split_totals_gbp(records)
         attrs["capital_total_gbp"] = splits["capital"]
         attrs["interest_total_gbp"] = splits["interest"]
-        # No invested amount -> None, never 0: there is no return to quote.
-        attrs["total_roi_pct"] = roi_pct(total, invested)
+        # No capital at all -> None, never 0: there is no return to quote.
+        # Measured against derived capital the ROI is provisional, and
+        # invested_source says so -- the card colours it amber.
+        attrs["total_roi_pct"] = roi_pct(total, capital)
         # A projection over the farm's lifespan, from an annual rate the member
         # chose -- normally the board's own published annual equivalent (its
         # Feb 2025 -> Jun 2026 announcement equated 21 p/W over 17 months to
         # 15 p/W over 12). Labelled, and counted by nothing: no total, no
         # period, no estimate of what is owed.
-        capacity = latest["capacity_watts"] if latest else None
         annual, lifespan = projection_gbp(
             self._ledger.annual_rate_p_per_w, capacity, self._ledger.lifespan_years
         )
@@ -842,7 +882,7 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
             self._ledger.annual_rate_p_per_w,
             capacity,
             self._ledger.lifespan_years,
-            invested,
+            capital,
         )
         attrs["share_value_gbp_per_w"] = share_value_per_watt(invested, capacity)
         attrs["lifetime_estimate_gbp"] = lifetime["lifetime_gbp"] if lifetime else None

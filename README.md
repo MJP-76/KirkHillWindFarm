@@ -59,8 +59,9 @@ and an animated dashboard.
   the board, board or yours), the invested input, a labelled projection over
   the farm's lifespan (an annual p/W rate — the board's published equivalent
   where it gives one — × years, counting towards nothing), and the add/edit
-  forms. ROI is `value ÷ invested × 100`, deliberately not annualised, and
-  reads `—` until you say what you invested.
+  forms. ROI is `value ÷ capital × 100` — against your entry, or the amber
+  derived auto-fill (share price × your watts) while that is all there is —
+  deliberately not annualised, and reads `—` when neither exists.
 
   ![Return on investment panel: invested, payments from Co-op, your estimates, all payments, return and period count](docs/assets/roi-panel.png)
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
@@ -69,7 +70,8 @@ and an animated dashboard.
   — the modal caption says *awaiting the board's next declaration* — rather
   than deriving an estimate. Entries change only through the
   `kirkhill_wind.add_payment_record` / `update_payment_record` /
-  `remove_payment_record` / `set_invested_amount` / `set_projection` services —
+  `remove_payment_record` / `set_invested_amount` / `set_share_price` /
+  `set_projection` services —
   or by editing the shipped `board_announcements.yaml` in a PR, whose entries
   are upserted into the ledger as board records on setup (switchable to
   *Manual entry only* in Options → Board figures source).
@@ -83,8 +85,9 @@ and an animated dashboard.
   Click Owner, Site, Wind, National Grid or a
   turbine for ApexCharts history (6H–1Y) and detail modals, a labelled
   turbine activity swimlane — or click **Return on investment** for the money
-  and its forms. Its colour scheme is amber for power/energy, cyan for wind
-  speed, green for financial values.
+  and its forms. Its colour scheme is amber for power/energy and **derived**
+  figures, cyan for wind speed, green for financial values — invested reads
+  green once you confirm it and amber while it is only the auto-fill.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.
