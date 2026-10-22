@@ -498,6 +498,19 @@ decision changes.
   Regression tests: `test_payment_ledger.py` (withheld basis · figure is None ·
   source still reported · total unchanged) — 289 passing.
 
+- **2026-10-22 (later) — the withheld basis says what it is waiting for.**
+  The Feb 2025–Jun 2026 record gained a hand-entered split (0 / £537.49) and
+  the attribute still read `estimate_withheld_split_unknown` — claiming the
+  split was the missing piece when `current_figure` was in fact withholding
+  because **today sits past every declared period**. The value is now
+  `awaiting_next_declaration`: a declaration brings the rate *and* the split
+  together, so that is what is being awaited. The panel's *Current period*
+  caption, previously blank in that state, now reads *awaiting the board's
+  next declaration* — still no invented number. Tests pin the literal through
+  `BASIS_WITHHELD`; backing it out means restoring the old string in
+  `payment_ledger.py`, the card caption, `dashboard.md`, `sensors.md` and the
+  test that pins it.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

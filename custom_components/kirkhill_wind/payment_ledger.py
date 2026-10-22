@@ -23,12 +23,12 @@ a period. Four facts shape this module:
   next upgrade (decisions.md, 2026-10-12). The ledger lives in HA's ``Store``,
   the way ``oauth.py`` keeps its registration, and outlives migrations.
 
-* **No estimate until the board's split exists.** While today falls outside
-  every declared period the current figure is **withheld, not derived**:
-  ``current_basis=estimate_withheld_split_unknown`` with ``current_gbp`` None.
-  Every payment is going to split into capital and interest, and until that
-  split is published a figure of unknown composition cannot be estimated
-  honestly -- a derived number would be neither what the board pays nor safely
+* **No figure for a period the board has not declared.** While today falls
+  outside every declared period the current figure is **withheld, not
+  derived**: ``current_basis=awaiting_next_declaration`` with ``current_gbp``
+  None. A declaration brings the rate *and* the capital/interest split
+  together, and a number of unknown composition cannot be estimated honestly
+  -- a derived figure would be neither what the board pays nor safely
   ignorable (decision, 2026-10-21). The moment the board declares the period,
   it becomes an entry.
 
@@ -70,7 +70,7 @@ SOURCES = (SOURCE_BOARD, SOURCE_SELF)
 BASIS_NO_ENTRIES = "no_entries"
 BASIS_DECLARED = "declared"
 # An undeclared period produces no figure at all: capital/interest split unknown.
-BASIS_WITHHELD = "estimate_withheld_split_unknown"
+BASIS_WITHHELD = "awaiting_next_declaration"
 
 # A p/W rate is a small number of pence; anything past this is a typo, and a
 # silent one would show a plausible-looking figure the board never declared.
@@ -288,11 +288,12 @@ def current_figure(
     """Return (figure, basis) for the period that is current now.
 
     ``declared`` when today falls inside the latest declared period -- the board
-    has spoken about it. ``estimate_withheld_split_unknown`` when today is past
-    every declared period: the figure is **withheld rather than derived**,
-    because a payment still splits into capital and interest, and a number of
-    unknown composition is a guess rather than an estimate. ``no_entries`` when
-    the ledger is empty: nothing has ever been declared.
+    has spoken about it. ``awaiting_next_declaration`` when today is past every
+    declared period: the figure is **withheld rather than derived**, because
+    the period covering today carries no rate and no published capital/interest
+    split -- a payment splits into two halves, and a number of unknown
+    composition is a guess rather than an estimate. ``no_entries`` when the
+    ledger is empty: nothing has ever been declared.
     """
     latest = latest_record(records)
     if latest is None:

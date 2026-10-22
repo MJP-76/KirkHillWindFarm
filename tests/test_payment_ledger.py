@@ -204,11 +204,19 @@ class TestFigures:
         assert value == 400.0
 
     def test_time_past_the_last_declaration_withholds_the_figure(self):
-        # The capital/interest split is unknown, so nothing may be derived:
-        # the period exists, the number does not (decision, 2026-10-21).
+        # Today is past every declared period: the declaration that would
+        # bring the rate and the capital/interest split has not happened, so
+        # nothing may be derived -- the period exists, the number does not
+        # (decision, 2026-10-21).
         value, basis = current_figure([normalise_record(_record())])
         assert basis == BASIS_WITHHELD
         assert value is None
+
+    def test_withheld_basis_string_matches_the_documented_one(self):
+        # The value is part of the documented attribute surface (sensors.md
+        # and dashboard.md enumerate it), so renaming it has to be a
+        # deliberate, visible change rather than a silent refactor.
+        assert BASIS_WITHHELD == "awaiting_next_declaration"
 
     def test_no_records_at_all(self):
         assert current_figure([]) == (None, BASIS_NO_ENTRIES)
