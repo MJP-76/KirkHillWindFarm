@@ -809,9 +809,45 @@ class PaymentLedger:
         )
         self._notify()
 
+    def _assert_period_free(
+        self,
+        period_start: str,
+        period_end: str,
+        exclude_id: str | None = None,
+    ) -> None:
+        """Refuse a period already declared, or overlapping one.
+
+        The board declares whole, non-overlapping periods, so a collision is
+        always an entry error — and a silent double add would double-count
+        money in every total the ledger reports. Matching is on the snapped
+        month window; adjacent periods (…Jun 2026 / Jul 2026…) never collide.
+        ``exclude_id`` lets an edit keep its own window.
+        """
+        for existing in self._records:
+            if existing["id"] == exclude_id:
+                continue
+            if (
+                existing["period_start"],
+                existing["period_end"],
+            ) == (period_start, period_end):
+                raise ValueError(
+                    f"period {period_start} to {period_end} is already declared"
+                    f" (record {existing['id']}) -- edit that record instead"
+                )
+            if (
+                period_start <= existing["period_end"]
+                and period_end >= existing["period_start"]
+            ):
+                raise ValueError(
+                    f"period {period_start} to {period_end} overlaps the"
+                    f" declared period {existing['period_start']} to"
+                    f" {existing['period_end']} (record {existing['id']})"
+                )
+
     async def async_add(self, record: dict[str, Any]) -> dict[str, Any]:
         """Validate, store and announce a new declaration."""
         stored = normalise_record(record)
+        self._assert_period_free(stored["period_start"], stored["period_end"])
         if any(existing["id"] == stored["id"] for existing in self._records):
             stored["id"] = uuid.uuid4().hex
         self._records = _sorted([*self._records, stored])
@@ -834,6 +870,11 @@ class PaymentLedger:
             raise KeyError(f"No payment record with id '{record_id}'")
         merged = {**self._records[index], **changes, "id": record_id}
         stored = normalise_record(merged)
+        # Moving a window onto (or across) another record's period is an
+        # entry error too; keeping its own window is not a collision.
+        self._assert_period_free(
+            stored["period_start"], stored["period_end"], exclude_id=record_id
+        )
         self._records = _sorted(
             [r for i, r in enumerate(self._records) if i != index] + [stored]
         )
