@@ -125,6 +125,14 @@ and duration.
 Same geometry as the Owner and Site panels — the same box, right-aligned to
 the value column — carrying the headline only:
 
+> **Scope — Ethex-only payments.** The financial calculations here and in the
+> modal — the capital/interest split, every ROI figure, the derived capital
+> and the returns line — are designed **only for members who have had their
+> payments solely via Ethex**. They assume the Ethex payment model; money
+> arriving by any other arrangement will not be described correctly by these
+> figures (the Invested form's italic Ripple note names the difference that
+> creates).
+
 | Measure | Value |
 | --- | --- |
 | Invested | `£5,000` in **green** (you entered or ticked it), **amber** while it is only the derived auto-fill, or `Not set` until a share price or your entry exists |
@@ -268,6 +276,7 @@ records:
     period_end: 2026-06-30
     rate_p_per_w: 21
     announced_on: 2025-07-15
+    capital_gbp: 0 # interest-only payment: interest is worked out, not guessed
     note: "£1.6m member payment approved — 21 p/W for the 17-month period"
 ```
 
@@ -289,6 +298,14 @@ records:
 - **The board's figure wins on a re-announcement**: if the new rate makes an
   entered capital/interest split impossible, the split is cleared and the log
   says so — a wrong split is never kept silently.
+- **The file can carry the split too.** Optional `capital_gbp` /
+  `interest_gbp` on an entry: give **one half** and the other is worked out
+  from the period's figure, give **both** and they must sum to it **to the
+  penny** — the service's own rules, because they ride the same validation. A
+  split the file names **owns both halves** (the one it omits is recomputed,
+  never inherited from an entered split); a file silent on splits keeps
+  whatever you entered. The shipped record carries **`capital_gbp: 0`** — the
+  board's payment was interest-only, so interest is derived, not guessed.
 
 ### What the Owner and Site panels no longer show
 

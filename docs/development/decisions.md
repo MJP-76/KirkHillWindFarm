@@ -606,6 +606,26 @@ decision changes.
 
   Regression tests: unchanged — 345 passing (presentation only).
 
+- **2026-10-23 — the repo file carries the split; the calcs are Ethex-only.**
+  Two owner calls:
+
+  - **`capital_gbp` / `interest_gbp` join the file schema** (both optional):
+    one half completes the other, both must sum to the penny — riding the
+    same `normalise_record` the service uses, so there is one validator for
+    both paths. A split the file names **owns both halves** (the omitted one
+    is recomputed from the period's figure, never inherited from an entered
+    split — the inheritance bug was caught by test before it ever deployed);
+    a file silent on splits keeps what was entered; a rate or watts move, or
+    file halves that stop adding up, clear it with a reworded log line. Key
+    presence, not truthiness — **`capital_gbp: 0` is a figure** (an
+    interest-only payment), and the shipped record now carries exactly that.
+  - **Scope stated in the docs:** the financial calculations are designed
+    **only for members who have had their payments solely via Ethex** —
+    recorded in dashboard's ROI section and the README, since the split, ROI
+    and derived capital all assume the Ethex payment model.
+
+  Regression tests: 4 new in `TestBoardAnnouncements` — 349 passing.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

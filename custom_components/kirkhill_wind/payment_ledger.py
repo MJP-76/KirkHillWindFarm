@@ -673,6 +673,22 @@ class PaymentLedger:
                 "note": entry.get("note"),
                 "source": SOURCE_BOARD,
             }
+            # A split the file names wins for that period -- and owns BOTH
+            # halves: the half it omits goes back to normalise_record to be
+            # worked out from this period's figure, never inherited from an
+            # entered split. A file silent on splits keeps an entered one
+            # (only a rate or watts change clears that -- handled below). Key
+            # presence, not truthiness: capital_gbp: 0 is a figure, and an
+            # interest-only payment is exactly that. Validation, the penny
+            # sum and completing the other half all ride normalise_record, so
+            # the file gets the service's rules for free.
+            named_split = {
+                k: entry[k] for k in ("capital_gbp", "interest_gbp") if k in entry
+            }
+            if named_split:
+                named_split.setdefault("capital_gbp", None)
+                named_split.setdefault("interest_gbp", None)
+            candidate.update(named_split)
             try:
                 stored = normalise_record(candidate)
             except ValueError:
@@ -692,7 +708,9 @@ class PaymentLedger:
                     )
                     continue
                 _LOGGER.warning(
-                    "%s: entry %s changed the rate, so its capital/interest split was cleared",
+                    "%s: entry %s no longer sums with its capital/interest"
+                    " split (the rate or watts moved, or the file's own"
+                    " halves do not add up) -- the split was cleared",
                     BOARD_ANNOUNCEMENTS_FILE.name,
                     position,
                 )
