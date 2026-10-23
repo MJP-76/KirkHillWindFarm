@@ -2,6 +2,32 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.18.4
+
+**Testing pre-release.** The hardening series responding to an external
+review of 4.18.3 — correctness only, no features.
+
+- **Period collisions refused** — re-declaring a period, or crossing one
+  with an overlapping window, is now a clear error instead of a silent
+  double-count in every total. Adjacent periods never collide; an edit may
+  not move its window onto another record; the board file's upsert is
+  untouched (board-authoritative, matches by period).
+- **An unreadable Store is dropped, not fatal** — as the ledger's docstring
+  always promised: Home Assistant's Store raises on truncated or corrupt
+  files, which used to kill setup entirely. Now a loud error, an empty
+  ledger, and an alive integration — and one corrupt record no longer sinks
+  its neighbours.
+- **The paths a review cannot run, pinned** — malformed Open-Meteo payloads
+  driven through the real parser (four garbage shapes; the core update never
+  flinches), a rich v1 → current migration walk (connection-only data,
+  monetary inputs purged whatever they hold, restore marker gone, second
+  call a no-op), and the dashboard lifecycle: disabled creation never
+  touches Lovelace, second runs **write nothing** (the idempotent-merge
+  guard), user cards survive merges, and unloading releases everything
+  except the user's dashboard — which a reinstall finds and merges into.
+
+Tests 366 → 372.
+
 ## Version 4.18.3
 
 **Stable release** — promoted the same day, after the owner tested the whole
