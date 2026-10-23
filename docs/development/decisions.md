@@ -675,6 +675,31 @@ decision changes.
 
   Regression tests: 3 new — 352 passing.
 
+- **2026-10-23 (later) — Year becomes Last 12 months (rolling).** The owner
+  spotted YTD and Year showing the same value — because they were:
+
+  - **Root cause, by API contract:** the coordinator fetched
+    `range=<current year>`, and the spec says *"the current year behaves like
+    year-to-date"* (openapi.yaml `Range`; api.md too) — one window behind two
+    rows (raw values differed only between calls: 6,776.928 vs 6,776.562 kWh —
+    identical once scaled).
+  - **Routes ruled out:** an HA-recorder delta (the recorder keeps **10 days**
+    by default — the alltime entity's earliest row is 2026-10-13), and a
+    named rolling range (the enum has none: today/yesterday/7d/30d/ytd/all/
+    custom/`YYYY`).
+  - **Chosen:** `range=custom` with `from`/`to` = trailing 365 days — declared
+    first-class in the committed spec (`Range`/`From`/`To`, ISO-8601
+    examples). Rechecked hourly with the slow tier; failures ride the
+    existing stale/backoff path. **The live deploy doubles as the TODO #37
+    confirmation:** rolling must read ≈ 8,200 kWh (owner) against YTD's
+    ≈ 6,777 — divergence is the proof.
+  - **Renames:** card rows *Year* → **Last 12 months** (owner and site) and
+    the entity's friendly name → *Generation (last 12 months)* — entity_id
+    (`..._generation_year`) untouched, so dashboards and templates survive.
+
+  Regression tests: `_ranges_for` expects `custom`, the label pin follows, a
+  new `get_summary` from/to test — **353 passing**.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

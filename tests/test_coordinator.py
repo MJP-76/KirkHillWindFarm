@@ -115,8 +115,9 @@ def _ranges_for(timeframes):
     "today" -- the fast tier is a separate tuple, and a due slow poll fetches
     the union of both.
     """
-    current_year = _current_year()
-    return {str(current_year) if tf == "year" else TIMEFRAME_TO_RANGE[tf] for tf in timeframes}
+    # "year" is the rolling custom window (the current-year range is ytd by
+    # API contract, which made the row a duplicate of YTD).
+    return {"custom" if tf == "year" else TIMEFRAME_TO_RANGE[tf] for tf in timeframes}
 
 
 def _fast_ranges():
@@ -272,7 +273,7 @@ class TestSummaryRetryScope:
 
         failed_once = {"owner:7d": False}
 
-        async def summary_side_effect(session, *, scope, range_value):
+        async def summary_side_effect(session, *, scope, range_value, **_window):
             key = f"{scope}:{range_value}"
             if key == "owner:7d" and not failed_once[key]:
                 failed_once[key] = True
@@ -737,7 +738,6 @@ class TestForecastTaskLifecycle:
 
         assert cancelled.is_set(), "the Open-Meteo forecast task outlived the update that created it"
 
-
     @pytest.mark.asyncio
     async def test_hung_forecast_is_bounded_by_the_budget(self, hass, mock_api_client, monkeypatch):
         """A hung Open-Meteo must not eat the whole poll.
@@ -755,14 +755,10 @@ class TestForecastTaskLifecycle:
             await asyncio.Event().wait()
 
         coord.open_meteo_client.get_point_forecast = hang
-        monkeypatch.setattr(
-            "custom_components.kirkhill_wind.coordinator._FORECAST_BUDGET", 0.05
-        )
+        monkeypatch.setattr("custom_components.kirkhill_wind.coordinator._FORECAST_BUDGET", 0.05)
 
         result = await asyncio.wait_for(
-            coord._fetch_open_meteo_forecast(
-                None, {"T1": {"latitude": 55.0, "longitude": -4.0}}
-            ),
+            coord._fetch_open_meteo_forecast(None, {"T1": {"latitude": 55.0, "longitude": -4.0}}),
             timeout=2,
         )
 
@@ -805,9 +801,7 @@ class TestPermissionFailureAtRuntime:
     """A lost permission holds data and says why -- it never starts re-auth."""
 
     @pytest.mark.asyncio
-    async def test_denied_scope_keeps_data_and_does_not_reauth(
-        self, hass, mock_api_client, mock_current_payload
-    ):
+    async def test_denied_scope_keeps_data_and_does_not_reauth(self, hass, mock_api_client, mock_current_payload):
         """A 403 on one scope behaves like any other non-auth API failure.
 
         If it were mistaken for a 401, _resolve_current_result would raise

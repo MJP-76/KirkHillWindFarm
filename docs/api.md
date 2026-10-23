@@ -54,7 +54,9 @@ API: the forecast sensors come from Open-Meteo, a separate public service.
 the current dashboard year (for example `2024`). Default is `7d`. The current
 year behaves as year-to-date; completed years cover the full UK-local calendar
 year. The integration maps its timeframes as `yesterday → yesterday`,
-`today → today`, `week → 7d`, `month → 30d`, `ytd → ytd`, `year → <YYYY>`,
+`today → today`, `week → 7d`, `month → 30d`, `ytd → ytd`,
+`year → custom` (rolling 365 days with `from`/`to` — the four-digit
+current-year range behaves as ytd, which would duplicate the ytd row),
 `alltime → all`.
 
 **`scope`** — `owner` (default) or `site`. Wind speed, capacity factor and

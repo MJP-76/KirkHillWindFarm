@@ -1,4 +1,5 @@
 """HTTP client for the Kirk Hill Wind Farm API."""
+
 from __future__ import annotations
 
 import asyncio
@@ -45,7 +46,9 @@ def describe_key(key: str) -> str:
         shape = "does not start with kh_live_"
     whitespace = ""
     if key != stripped:
-        whitespace = f", {len(key) - len(stripped)} whitespace character(s) at the edges"
+        whitespace = (
+            f", {len(key) - len(stripped)} whitespace character(s) at the edges"
+        )
     return f"{len(stripped)}-char value{whitespace}, {shape}"
 
 
@@ -113,8 +116,7 @@ class KirkHillApiClient:
                     detail = ""
                 if resp.status == 401:
                     raise KirkHillAuthError(
-                        "Invalid or missing API key"
-                        + (f": {detail}" if detail else "")
+                        "Invalid or missing API key" + (f": {detail}" if detail else "")
                     )
                 if resp.status == 403:
                     # Classified before raise_for_status(): otherwise this
@@ -176,9 +178,13 @@ class KirkHillApiClient:
         own ``isinstance`` guard. Callers may rely on a dict coming back.
         """
         if not isinstance(body, dict):
-            raise KirkHillApiError("Malformed response from Kirk Hill API: expected an object")
+            raise KirkHillApiError(
+                "Malformed response from Kirk Hill API: expected an object"
+            )
         if "data" not in body:
-            raise KirkHillApiError("Malformed response from Kirk Hill API: missing 'data' key")
+            raise KirkHillApiError(
+                "Malformed response from Kirk Hill API: missing 'data' key"
+            )
         data = body["data"]
         if not isinstance(data, dict):
             raise KirkHillApiError(
@@ -221,12 +227,24 @@ class KirkHillApiClient:
         session: aiohttp.ClientSession,
         scope: str = SCOPE_OWNER,
         range_value: str = "today",
+        from_ts: str | None = None,
+        to_ts: str | None = None,
     ) -> dict[str, Any]:
-        """GET /api/v1/summary?scope={scope}&range={range_value}."""
+        """GET /api/v1/summary?scope={scope}&range={range_value}[&from&to].
+
+        ``from_ts``/``to_ts`` (ISO-8601) are required by the API when
+        ``range_value == "custom"`` — the spec's first-class window, used for
+        the rolling last-12-months timeframe. Named ranges never send them.
+        """
+        params: dict[str, str] = {"scope": scope, "range": range_value}
+        if from_ts is not None:
+            params["from"] = from_ts
+        if to_ts is not None:
+            params["to"] = to_ts
         body = await self._get(
             session,
             "/api/v1/summary",
-            {"scope": scope, "range": range_value},
+            params,
         )
         return self._parse_data(body)
 

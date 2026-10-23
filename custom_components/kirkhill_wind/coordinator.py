@@ -364,8 +364,21 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
         for scope in SCOPES:
             for timeframe in sorted(timeframes[scope]):
+                from_ts = None
+                to_ts = None
                 if timeframe == "year":
-                    range_value = str(current_year)
+                    # Rolling last 365 days through range=custom — the spec's
+                    # first-class window (openapi.yaml Range/From/To). The
+                    # four-digit current-year range *behaves as year-to-date*
+                    # by API contract, which made this row a duplicate of YTD.
+                    # Rechecked hourly with the slow tier; failures fall into
+                    # the existing stale/backoff path.
+                    range_value = "custom"
+                    now_utc = dt_util.utcnow()
+                    from_ts = (now_utc - timedelta(days=365)).strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                    to_ts = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
                 elif timeframe.startswith("year_"):
                     year_str = timeframe.split("_")[1]
                     range_value = year_str
@@ -379,7 +392,11 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     range_value = TIMEFRAME_TO_RANGE[timeframe]
                 task = asyncio.create_task(
                     self.client.get_summary(
-                        session, scope=scope, range_value=range_value
+                        session,
+                        scope=scope,
+                        range_value=range_value,
+                        from_ts=from_ts,
+                        to_ts=to_ts,
                     )
                 )
                 tasks.append((scope, timeframe, task))

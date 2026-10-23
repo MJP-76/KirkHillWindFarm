@@ -2827,7 +2827,7 @@ _buildHeaderChips(layout) {
           <text class="user-gen-value" data-user-gen="gen-month" x="${layout.chipUserGenValueX}" y="418" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="438">YTD</text>
           <text class="user-gen-value" data-user-gen="gen-ytd" x="${layout.chipUserGenValueX}" y="438" text-anchor="end">—</text>
-          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="458">Year</text>
+          <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="458">Last 12 months</text>
           <text class="user-gen-value" data-user-gen="gen-year" x="${layout.chipUserGenValueX}" y="458" text-anchor="end">—</text>
           <text class="user-gen-label" x="${layout.chipUserGenTitleX}" y="478">All time</text>
           <text class="user-gen-value" data-user-gen="gen-alltime" x="${layout.chipUserGenValueX}" y="478" text-anchor="end">—</text>
@@ -2854,7 +2854,7 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-site-gen="gen-month" x="${layout.chipSiteGenValueX}" y="674" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="694">YTD</text>
           <text class="site-gen-value" data-site-gen="gen-ytd" x="${layout.chipSiteGenValueX}" y="694" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="714">Year</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="714">Last 12 months</text>
           <text class="site-gen-value" data-site-gen="gen-year" x="${layout.chipSiteGenValueX}" y="714" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="734">All time</text>
           <text class="site-gen-value" data-site-gen="gen-alltime" x="${layout.chipSiteGenValueX}" y="734" text-anchor="end">—</text>
