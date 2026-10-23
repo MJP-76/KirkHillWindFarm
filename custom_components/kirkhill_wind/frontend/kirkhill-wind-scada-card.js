@@ -1157,7 +1157,7 @@ class KirkHillWindScada extends HTMLElement {
         <div class="roi-stat"><span>Payments from Co-op</span><b>${this._gbp(attrs.board_total_gbp)}</b></div>
         <div class="roi-stat"><span>Your estimates</span><b>${this._gbp(attrs.self_total_gbp)}</b></div>
         <div class="roi-stat"><span>All Payments</span><b>${this._gbp(attrs.total_gbp)}</b></div>
-        <div class="roi-stat"><span>Return</span><b${investedSrc === "derived" || selfMoney ? ' class="roi-derived"' : ""}>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
+        <div class="roi-stat"><span>Total ROI</span><b${investedSrc === "derived" || selfMoney ? ' class="roi-derived"' : ""}>${roiPct === null || roiPct === undefined ? "—" : `${this._fmt(Number(roiPct), 2)}%`}</b></div>
       </div>${splitLine}${projectionLine}`;
 
     list.innerHTML =
@@ -2882,11 +2882,16 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Periods</text>
           <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Return</text>
-          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
-          <!-- The two returns, mirrored from the modal's split line: payback
-               and yield, only while a split and capital in force exist. -->
-          <text class="roi-subline" data-roi-subline x="${layout.chipSiteGenTitleX}" y="252"></text>
+          <!-- The split, as rows like every other figure: capital returned
+               shows £ and %, interest is the ROI it grows, Total ROI is the
+               two summed against the capital in force. Each reads — until a
+               split and capital exist (withheld, never invented). -->
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Capital returned</text>
+          <text class="site-gen-value" data-roi-cell="capital" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="242">Interest</text>
+          <text class="site-gen-value" data-roi-cell="interest" x="${layout.chipSiteGenValueX}" y="242" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="262">Total ROI</text>
+          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="262" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -2988,7 +2993,7 @@ _buildHeaderChips(layout) {
     const gbpOf = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? "—" : `£${this._fmt(Number(v), 2)}`);
     const roiAttrs = ledgerId && this._hass?.states?.[ledgerId] ? this._hass.states[ledgerId].attributes || {} : null;
     if (!roiAttrs) {
-      ["invested", "board", "self", "roi", "periods"].forEach((cell) => setRoi(cell, "—"));
+      ["invested", "board", "self", "capital", "interest", "roi", "periods"].forEach((cell) => setRoi(cell, "—"));
     } else {
       const roiRecords = Array.isArray(roiAttrs.records) ? roiAttrs.records : [];
       const investedSrc = roiAttrs.invested_source ?? null;
@@ -3056,35 +3061,45 @@ _buildHeaderChips(layout) {
         roiCell.style.fill = "";
       }
     }
-    // The split sub-line under the panel rows: capital back (payback) and
-    // interest ROI (the yield each payment grows), mirroring the modal's
-    // split line -- only while a split exists and capital is in force, amber
-    // under the Return's conditions.
-    const subline = root.querySelector("[data-roi-subline]");
-    if (subline) {
+    // The split as rows: capital returned (payback, shown in £ and %) and
+    // interest (the ROI each payment grows). Each withholds to "—" until its
+    // own half and the capital in force exist, and colours with Total ROI:
+    // green for confirmed capital over pure board money, amber while the
+    // capital is derived or own estimates contaminate the ledger.
+    const splitSrc = roiAttrs ? (roiAttrs.invested_source ?? null) : null;
+    const splitSelf = Boolean(
+      roiAttrs
+      && roiAttrs.self_total_gbp !== null
+      && roiAttrs.self_total_gbp !== undefined
+    );
+    const splitInForce = splitSrc === "user"
+      ? (roiAttrs ? roiAttrs.invested_gbp : null)
+      : splitSrc === "derived"
+        ? (roiAttrs ? roiAttrs.invested_derived_gbp : null)
+        : null;
+    const splitCanPct = splitInForce !== null && splitInForce !== undefined && Number(splitInForce) > 0;
+    const splitColour = splitSelf || splitSrc === "derived"
+      ? "var(--khscada-warn-color, #ffb300)"
+      : splitSrc === "user"
+        ? "var(--success-color, #4caf50)"
+        : "";
+    const capitalCell = root.querySelector('[data-roi-cell="capital"]');
+    if (capitalCell) {
       const capT = roiAttrs ? roiAttrs.capital_total_gbp : null;
+      const capFig = Boolean(splitCanPct && capT !== null && capT !== undefined);
+      capitalCell.textContent = capFig
+        ? `${this._gbp(Number(capT))} · ${this._fmt(Number(capT) / Number(splitInForce) * 100, 2)}%`
+        : "—";
+      capitalCell.style.fill = capFig ? splitColour : "";
+    }
+    const interestCell = root.querySelector('[data-roi-cell="interest"]');
+    if (interestCell) {
       const intT = roiAttrs ? roiAttrs.interest_total_gbp : null;
-      const subSrc = roiAttrs ? (roiAttrs.invested_source ?? null) : null;
-      const inForce = subSrc === "user"
-        ? roiAttrs.invested_gbp
-        : subSrc === "derived" ? roiAttrs.invested_derived_gbp : null;
-      const canPct = inForce !== null && inForce !== undefined && Number(inForce) > 0;
-      const capPart = canPct && capT !== null && capT !== undefined
-        ? `Capital back ${this._fmt(Number(capT) / Number(inForce) * 100, 2)}% of ${this._gbp(Number(inForce))}`
-        : "";
-      const intPart = canPct && intT !== null && intT !== undefined
-        ? `interest +${this._fmt(Number(intT) / Number(inForce) * 100, 2)}% ROI`
-        : "";
-      const subText = [capPart, intPart].filter(Boolean).join(" · ");
-      subline.textContent = subText;
-      const subSelf = roiAttrs
-        && roiAttrs.self_total_gbp !== null
-        && roiAttrs.self_total_gbp !== undefined;
-      subline.style.fill = !subText
-        ? ""
-        : subSrc === "derived" || subSelf
-          ? "var(--khscada-warn-color, #ffb300)"
-          : "";
+      const intFig = Boolean(splitCanPct && intT !== null && intT !== undefined);
+      interestCell.textContent = intFig
+        ? `+${this._fmt(Number(intT) / Number(splitInForce) * 100, 2)}%`
+        : "—";
+      interestCell.style.fill = intFig ? splitColour : "";
     }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
@@ -3457,9 +3472,6 @@ _buildHeaderChips(layout) {
       .roi-capital-derived .roi-capital-value { color: var(--khscada-warn-color, #ffb300); }
       .roi-input-derived { color: var(--khscada-warn-color, #ffb300); border-color: var(--khscada-warn-color, #ffb300); }
       .roi-derived { color: var(--khscada-warn-color, #ffb300); }
-      /* The panel's split sub-line: quiet secondary text under the rows,
-         amber under exactly the Return's amber conditions. */
-      .roi-subline { font: 500 calc(var(--ha-font-size-small, 14px) * 0.86 * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-secondary-color); }
       .roi-derived-note { color: var(--khscada-warn-color, #ffb300); }
       .roi-tick { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: normal; font-weight: 500; color: var(--khscada-primary-color); }
       /* Board-confirmed, the strongest confirmation there is: the period

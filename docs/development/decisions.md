@@ -626,6 +626,26 @@ decision changes.
 
   Regression tests: 4 new in `TestBoardAnnouncements` — 349 passing.
 
+- **2026-10-23 (later) — the split becomes rows; Return becomes Total
+  ROI.** The owner promoted the panel's sub-line into first-class figures:
+
+  - **Seven rows now:** Invested · Payments from Co-op · Your estimates ·
+    Periods · **Capital returned** · **Interest** · **Total ROI** — the
+    sub-line from earlier the same day is retired. Explicitly supersedes the
+    five-row list of the 2026-10-22 (later) bullet; the box holds the seventh
+    row at y262 inside its existing 192 height, so no geometry moved.
+  - **Capital returned shows £ *and* %** (`£0.00 · 0.00%` — payback of the
+    capital in force); **Interest is the ROI** (`+12.14%` — the yield each
+    payment grows); **Total ROI** (label renamed from *Return*, panel and
+    modal stat alike) is the two summed against capital in force — the
+    identity `capital% + interest% = Total ROI` is now visible on the panel.
+  - **Withheld like everything else:** each row reads `—` until its own half
+    and a capital in force exist, and all three wear the same green/amber as
+    before (confirmed over pure board money → green; derived capital or own
+    estimates → amber).
+
+  Regression tests: unchanged — presentation only, 349 passing.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

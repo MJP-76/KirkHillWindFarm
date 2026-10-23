@@ -139,7 +139,9 @@ the value column — carrying the headline only:
 | Payments from Co-op | `£1,074.98` in **green** — board-confirmed money |
 | Your estimates | `—` until one exists; **never green** — an estimate becomes board money only by editing the period and ticking the board box, which moves it into Payments from Co-op |
 | Periods | `2` |
-| Return | `21.50%` in **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
+| Capital returned | `£0.00 · 0.00%` — payback of your investment; **green/amber with Total ROI**, `—` until a split and capital exist |
+| Interest | `+12.14%` — the ROI each payment grows; same colours, same `—` rule |
+| Total ROI | `21.50%` — capital returned % + interest % vs invested (was *Return*): **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
 
 Three rows were dropped from the panel in favour of the modal: **Published
 rate** — it sits on every row there, and only board records ever set it —
@@ -149,7 +151,7 @@ Payments** — with own estimates barred from money sums, it was Co-op plus
 guesses: redundant when clean, contaminated when not. The combined total
 still shows in the modal's stats and split line.
 
-![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, period count and return](assets/roi-panel.png)
+![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, period count, capital returned, interest and total ROI](assets/roi-panel.png)
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 
@@ -162,10 +164,12 @@ still shows in the modal's stats and split line.
   the period form's *Announced by the board* tick shows the same green while
   ticked (untick and it leaves). Your own estimates keep their `~` and
   *your estimate* tag, uncoloured.
-- **Return is a plain percentage of capital**: `value ÷ capital × 100` per
+- **Total ROI is a plain percentage of capital**: `value ÷ capital × 100` per
   period and across the total, measured against **the capital in force** —
   your entry when you have one, the derived auto-fill while that is all there
-  is (and then Return reads **amber**, provisional until you confirm it). It
+  is (and then Total ROI reads **amber**, provisional until you confirm it).
+  On the panel it is the **sum of the two rows above it**: capital returned %
+  + interest % = Total ROI. It
   is deliberately **not annualised** — the
   board pays per period regardless of how long it runs, so a per-year figure
   would be a rate of our own invention. With neither an entry nor a derived
@@ -191,9 +195,10 @@ still shows in the modal's stats and split line.
   `capital_total ÷ invested`) and **interest +Y % ROI** (`interest_total ÷
   invested`, growing with every payment) — the two **always sum to the
   Return**, and they wear amber under exactly the Return's amber conditions.
-  The panel repeats both as a quiet **sub-line under its five rows** —
-  *Capital back 0.00% of £4,427.87 · interest +12.14% ROI* — same conditions,
-  same colours, so the two returns read without opening the modal. Nothing
+  The panel shows both **as rows in their own right** — **Capital returned**
+  in £ *and* %, **Interest** as the ROI it grows, and **Total ROI** (the two
+  summed against the capital in force) — each reading `—` until its half and
+  a capital in force exist. Nothing
   derives a split — it is entered by hand, and a period with no split
   shows none.
 - **Projection** — a labelled one-liner, never a figure. Enter an annual p/W
