@@ -319,7 +319,7 @@ records:
 - Gone from both panels: the **`Value (£)` column**, the **`£/h`** cells, the
   **Member savings** line and both **price pills**. Generation now takes the
   right-hand edge of each panel instead of leaving the old money column's gap.
-- **The timeframe rows stay moneyless on purpose.** `Yesterday … Year` are
+- **The timeframe rows stay moneyless on purpose.** `Yesterday … Last 12 months` are
   `kWh × price` sensors that remain disabled, and slicing a per-watt
   declaration across days would be the accrual the board's basis rules out —
   see [Development decisions](development/decisions.md). The ledger still

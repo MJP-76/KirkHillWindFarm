@@ -53,7 +53,7 @@ TIMEFRAME_LABELS = {
     "week": "Generation (week)",
     "month": "Generation (month)",
     "ytd": "Generation (ytd)",
-    "year": "Generation (year)",
+    "year": "Generation (last 12 months)",
     "alltime": "Generation (alltime)",
 }
 

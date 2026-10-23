@@ -35,7 +35,9 @@ class TestTimeframeLabels:
         assert _timeframe_label("week") == "Generation (week)"
         assert _timeframe_label("month") == "Generation (month)"
         assert _timeframe_label("ytd") == "Generation (ytd)"
-        assert _timeframe_label("year") == "Generation (year)"
+        # The rolling window, renamed when "year" stopped being the calendar
+        # year (which was ytd by API contract -- a duplicate row).
+        assert _timeframe_label("year") == "Generation (last 12 months)"
         assert _timeframe_label("alltime") == "Generation (alltime)"
 
     def test_year_labels_dynamic(self):

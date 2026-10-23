@@ -1,4 +1,5 @@
 """Tests for the API client — exception hierarchy and response parsing."""
+
 from __future__ import annotations
 
 import inspect
@@ -108,6 +109,36 @@ class TestApiClient:
         with patch.object(client, "_get", side_effect=fake_get):
             with pytest.raises(KirkHillApiError, match="must be an object"):
                 await client.get_current(session, SCOPE_OWNER)
+
+    @pytest.mark.asyncio
+    async def test_get_summary_sends_from_and_to_only_when_provided(self):
+        """range=custom requires from/to; named ranges must never send them."""
+        client = KirkHillApiClient(api_key="key")
+        session = MagicMock()
+        captured: list[dict] = []
+
+        async def fake_get(session, path, params):
+            captured.append(params)
+            return {"data": {"total_generation_kwh": 1.0}}
+
+        with patch.object(client, "_get", side_effect=fake_get):
+            await client.get_summary(
+                session,
+                SCOPE_OWNER,
+                "custom",
+                from_ts="2025-10-23T12:00:00Z",
+                to_ts="2026-10-23T12:00:00Z",
+            )
+            await client.get_summary(session, SCOPE_OWNER, "ytd")
+
+        rolling, named = captured
+        assert rolling == {
+            "scope": SCOPE_OWNER,
+            "range": "custom",
+            "from": "2025-10-23T12:00:00Z",
+            "to": "2026-10-23T12:00:00Z",
+        }
+        assert named == {"scope": SCOPE_OWNER, "range": "ytd"}
 
     @pytest.mark.asyncio
     async def test_get_turbines_rejects_non_object_data(self):
@@ -220,8 +251,7 @@ class TestPermissionHandling:
 
         assert issubclass(KirkHillPermissionError, KirkHillApiError)
         assert not issubclass(KirkHillPermissionError, KirkHillAuthError), (
-            "A 403 must not start re-auth: re-entering the same narrow key "
-            "would fail the same way."
+            "A 403 must not start re-auth: re-entering the same narrow key would fail the same way."
         )
 
     @pytest.mark.asyncio
@@ -373,8 +403,7 @@ class TestKeyShape:
         client = KirkHillApiClient(api_key="  kh_live_padded\n")
 
         assert client._headers["Authorization"] == "Bearer kh_live_padded", (
-            "A trailing newline in the Authorization header is enough for the "
-            "API to reply 'The API key is not valid.'"
+            "A trailing newline in the Authorization header is enough for the API to reply 'The API key is not valid.'"
         )
 
 
@@ -389,12 +418,5 @@ class TestGetTurbinesDefaultRange:
         bare get_turbines() call into a 422 the caller had to diagnose. Both
         call sites pass an explicit range, which is why this stayed latent.
         """
-        default = (
-            inspect.signature(KirkHillApiClient.get_turbines)
-            .parameters["range_value"]
-            .default
-        )
-        assert default in {"today", "all"}, (
-            f"get_turbines must default to a range the endpoint serves, got {default!r}"
-        )
-
+        default = inspect.signature(KirkHillApiClient.get_turbines).parameters["range_value"].default
+        assert default in {"today", "all"}, f"get_turbines must default to a range the endpoint serves, got {default!r}"

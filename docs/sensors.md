@@ -21,7 +21,7 @@
 - Generation (week) [kWh] for owner and site
 - Generation (month) [kWh] for owner and site
 - Generation (ytd) [kWh] for owner and site
-- Generation (year) [kWh] for owner and site
+- Generation (last 12 months) [kWh] for owner and site — a rolling 365-day window (`range=custom` with `from`/`to`, re-fetched hourly); the entity_id stays `..._generation_year` and the old calendar-year reading was ytd by API contract
 - Generation (2025) / Generation (2024) [kWh] for owner and site — past calendar years, fetched with `range=YYYY`. These are **sensors only** (not shown on the SCADA card). More years appear automatically as time passes.
 - Generation (alltime) [kWh] for owner and site — **calculated as the sum of all the year figures**: `2024 + 2025 + … + the current year to date`, including any future years. The `sum_of_years_kwh` attribute lists the per-year components.
 - Generation source attribute marks these entities as `api_dynamic` (`sum_of_years` on the All time entity when every year frame is present; `api_alltime_missing_years` plus `missing_year_frames` when one is missing; `stale` when showing last-known data; `restored` after a restart, before the first successful fetch)
