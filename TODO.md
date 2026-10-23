@@ -341,7 +341,7 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
-### v4.18.3 (pre-release, 2026-10-23)
+### v4.18.3 (stable, 2026-10-23)
 
 - **Derived investment** — stored share price (p/W) drives an amber
   auto-fill from the API's capacity, green once entered or ticked

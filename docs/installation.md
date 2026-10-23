@@ -75,14 +75,11 @@ the stable release yet.
 
 ## What's in the latest release
 
-**v4.18.3** is the current **pre-release**: the derived investment (amber
+**v4.18.3** is the latest **stable** release: the derived investment (amber
 auto-fill → green confirmation), the ROI panel rebuilt around the
-capital/interest split, and Year as a rolling last-12-months window.
-**v4.18.1** remains the latest **stable** release — it carries the shipped
-board-announcements file, the Repo/Manual switch, the capital/interest split
-and the labelled lifespan projection. See the
-[changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
-for both; to be offered a pre-release, enable pre-releases in HACS (above).
+capital/interest split, and Year as a rolling last-12-months window. There is
+no pre-release currently open — to be offered one when it exists, enable
+pre-releases in HACS (above).
 
 ## Reporting a pre-release problem
 
