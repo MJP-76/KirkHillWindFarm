@@ -635,7 +635,7 @@ decision changes.
     five-row list of the 2026-10-22 (later) bullet; the box holds the seventh
     row at y262 inside its existing 192 height, so no geometry moved.
   - **Capital returned shows £ *and* %** (`£0.00 · 0.00%` — payback of the
-    capital in force); **Interest is the ROI** (`+12.14%` — the yield each
+    capital in force); **Interest ROI** (`12.14%` — the yield each
     payment grows); **Total ROI** (label renamed from *Return*, panel and
     modal stat alike) is the two summed against capital in force — the
     identity `capital% + interest% = Total ROI` is now visible on the panel.

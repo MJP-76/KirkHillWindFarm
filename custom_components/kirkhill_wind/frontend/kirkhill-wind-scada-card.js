@@ -2888,7 +2888,7 @@ _buildHeaderChips(layout) {
                split and capital exist (withheld, never invented). -->
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Capital returned</text>
           <text class="site-gen-value" data-roi-cell="capital" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="242">Interest</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="242">Interest ROI</text>
           <text class="site-gen-value" data-roi-cell="interest" x="${layout.chipSiteGenValueX}" y="242" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="262">Total ROI</text>
           <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="262" text-anchor="end">—</text>
@@ -3097,7 +3097,7 @@ _buildHeaderChips(layout) {
       const intT = roiAttrs ? roiAttrs.interest_total_gbp : null;
       const intFig = Boolean(splitCanPct && intT !== null && intT !== undefined);
       interestCell.textContent = intFig
-        ? `+${this._fmt(Number(intT) / Number(splitInForce) * 100, 2)}%`
+        ? `${this._fmt(Number(intT) / Number(splitInForce) * 100, 2)}%`
         : "—";
       interestCell.style.fill = intFig ? splitColour : "";
     }

@@ -140,7 +140,7 @@ the value column — carrying the headline only:
 | Your estimates | `—` until one exists; **never green** — an estimate becomes board money only by editing the period and ticking the board box, which moves it into Payments from Co-op |
 | Periods | `2` |
 | Capital returned | `£0.00 · 0.00%` — payback of your investment; **green/amber with Total ROI**, `—` until a split and capital exist |
-| Interest | `+12.14%` — the ROI each payment grows; same colours, same `—` rule |
+| Interest ROI | `12.14%` — the return each payment grows; same colours, same `—` rule |
 | Total ROI | `21.50%` — capital returned % + interest % vs invested (was *Return*): **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
 
 Three rows were dropped from the panel in favour of the modal: **Published
@@ -151,7 +151,7 @@ Payments** — with own estimates barred from money sums, it was Co-op plus
 guesses: redundant when clean, contaminated when not. The combined total
 still shows in the modal's stats and split line.
 
-![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, period count, capital returned, interest and total ROI](assets/roi-panel.png)
+![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, period count, capital returned, interest ROI and total ROI](assets/roi-panel.png)
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 
@@ -196,7 +196,8 @@ still shows in the modal's stats and split line.
   invested`, growing with every payment) — the two **always sum to the
   Return**, and they wear amber under exactly the Return's amber conditions.
   The panel shows both **as rows in their own right** — **Capital returned**
-  in £ *and* %, **Interest** as the ROI it grows, and **Total ROI** (the two
+  in £ *and* %, **Interest ROI** as the return each payment grows, and
+  **Total ROI** (the two
   summed against the capital in force) — each reading `—` until its half and
   a capital in force exist. Nothing
   derives a split — it is entered by hand, and a period with no split
