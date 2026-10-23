@@ -2,6 +2,52 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.18.3
+
+**Testing pre-release.** Twenty-two PRs since 4.18.2: the derived-investment
+flows and provenance colours, the ROI panel rebuilt around the split, the
+repo file carrying board splits, and Year turned into a rolling window.
+
+- **Derived investment — amber auto-fill, green confirmation.** A stored
+  share price (`set_share_price`, pence per watt) derives capital as
+  *price × the API's owner capacity* at read time and stores nothing: **amber**
+  until you type your own figure or tick *This matches my investment*,
+  **green** after (`invested_source` = `user` · `derived`). ROI measures
+  against the capital in force and reports which it used, and the Invested
+  form carries the Ripple-fee caveat in italics. New attributes:
+  `share_price_p_per_w`, `invested_derived_gbp`, `invested_source`,
+  `capacity_watts` (API capacity first for every derived figure).
+- **The ROI panel rebuilt around the split** — eight rows: Invested ·
+  Payments from Co-op · Your estimates · Payment periods · **Capital
+  returned** (in £ *and* %) · **Interest ROI** · **Average interest**
+  (interest ÷ the periods declaring a split — capital excluded, unknown never
+  divides) · **Total ROI** (renamed from Return; equals capital % + interest
+  %). Own estimates contaminate: the totals and ROI rows go **amber** the
+  moment one joins, and *Your estimates* never reads green.
+- **A full colour language** across the ROI panel *and* the Owner/Site
+  panels: green = confirmed or freshly measured, amber = derived or assumed
+  (Share, restored cache, a missing-year All time, the output fallback),
+  red = stale — with panel fills written as inline styles so the stylesheet
+  can never override them.
+- **The repo file carries the split** — optional `capital_gbp` /
+  `interest_gbp` on `board_announcements.yaml` entries (one half completes
+  the other, both must sum to the penny), shipped as `capital_gbp: 0` for the
+  interest-only Feb 2025 → Jun 2026 payment — plus a documented scope note:
+  the financial calculations assume **Ethex-only payments**.
+- **Year → Last 12 months (rolling).** The four-digit current-year range
+  *behaves as year-to-date* by API contract — one figure behind two rows. Now
+  `range=custom` with `from`/`to` (confirmed live: the site scope answered
+  503-"being prepared" then succeeded through the existing retry), refreshed
+  hourly; renamed in friendly form only, `entity_id` untouched.
+- **Audit sweep findings fixed:** SCADA chip-row and UI docs, the release
+  flow riding a PR, dead layout constants and translation keys pruned, a
+  stale service description corrected.
+- **Docs:** seven screenshots refreshed or added — including the
+  contamination frame and the projection/lifetime line — every alt matching
+  its image.
+
+Tests 334 → 353.
+
 ## Version 4.18.2
 
 **Testing pre-release.** A lifetime view over the ledger, a derived share

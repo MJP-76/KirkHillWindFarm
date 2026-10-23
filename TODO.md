@@ -34,7 +34,7 @@ Fields the coordinator already fetches but discards. No API changes needed.
 - [ ] Per-turbine generation for intermediate ranges (7d, 30d, ytd, year) — `/api/v1/turbines` currently only supports `today` and `all`
 - [ ] Structured curtailment reason in turbine state data (environmental / grid / maintenance / commercial)
 - [ ] Confirm `/api/v1/generation` endpoint stability and build client support if stable
-- [ ] Confirm `range=custom` with `from`/`to` stability and document rate limits
+- [x] Confirm `range=custom` with `from`/`to` stability and document rate limits — **confirmed 2026-10-23 in production**: the owner scope answered immediately, the site scope answered 503 "data being prepared" and then succeeded through the existing retry/backoff (request params visible in the warning). The documented `429` + `Retry-After` handling in `docs/api.md` covers the rate-limit half.
 - [ ] Confirm unused response fields stability (see #54 above)
 - [ ] **Financial figures in the API response** — the target design. See
       [Target design: prices owned by the API](#target-design-prices-owned-by-the-api)
@@ -162,7 +162,9 @@ restatement will silently serve stale earnings.
 - [ ] Calendar month-to-date revenue + a 12-month `monthly` breakdown attribute
       (`{month, generation_kwh, revenue_gbp}` × 12) on the YTD value entity, for a
       revenue-by-month chart. Our `month` timeframe is a rolling 30d window, so that chart
-      is impossible today. Needs `range=custom` with `from`/`to` (already on #55). Current
+      is impossible today. Needs `range=custom` with `from`/`to` — which now
+      works (confirmed 2026-10-23, #37) — but stays queued behind #55's
+      upstream monthly support. Current
       months at the current price only — same basis as the existing YTD value, so the
       suppress-historical-£ decision is untouched.
 
@@ -338,6 +340,23 @@ reached the same conclusion independently.
 ## Release history
 
 Completed releases, newest first. Preserved for reference.
+
+### v4.18.3 (pre-release, 2026-10-23)
+
+- **Derived investment** — stored share price (p/W) drives an amber
+  auto-fill from the API's capacity, green once entered or ticked
+  (`invested_source`); ROI measures against capital in force; Ripple caveat
+  in the Invested form.
+- **ROI panel rebuilt** — eight rows: Capital returned (£ + %), Interest ROI,
+  Average interest, Total ROI; the contamination rule (own estimates →
+  amber, never green); the colour language extended to the Owner/Site panels
+  (green measured · amber derived/assumed · red stale).
+- **Repo file carries the split** — `capital_gbp: 0` shipped for the
+  interest-only payment; Ethex-only scope note added to the docs.
+- **Year → Last 12 months** via `range=custom&from&to` — spec-confirmed live,
+  **TODO #37 ticked** with the evidence.
+- Audit sweep fixes (#134–#137) and seven refreshed/added screenshots.
+- PRs #134–#155. 353 tests.
 
 ### v4.18.2 (pre-release, 2026-10-22)
 
