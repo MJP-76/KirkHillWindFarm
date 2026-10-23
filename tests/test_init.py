@@ -722,3 +722,37 @@ class TestFullMigrationChain:
         current = _make_entry(_CONFIG_ENTRY_VERSION, call["data"], call["options"])
         assert await async_migrate_entry(hass, current) is True
         assert hass.config_entries.async_update_entry.call_count == 1
+
+
+class TestUnloadLifecycle:
+    """Removing/disabling the entry cleans its machinery and leaves the
+    user's dashboard alone — a reinstall then starts from a clean slate."""
+
+    async def test_unload_releases_platforms_services_urls_and_runtime(self):
+        import custom_components.kirkhill_wind as pkg
+        from custom_components.kirkhill_wind.services import SERVICES_REGISTERED
+
+        hass = MagicMock()
+        hass.data = {
+            pkg._FRONTEND_URLS: {"http://host/scada-card.js"},
+            SERVICES_REGISTERED: True,
+        }
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+        entry = MagicMock()
+        entry.entry_id = "unload-test"
+        entry.runtime_data = object()
+
+        with patch.object(pkg, "remove_extra_js_url") as remove_url:
+            ok = await pkg.async_unload_entry(hass, entry)
+
+        assert ok is True
+        assert entry.runtime_data is None
+        hass.config_entries.async_unload_platforms.assert_awaited_once()
+        # The card's extra JS URL is released …
+        remove_url.assert_called_once_with(hass, "http://host/scada-card.js")
+        assert pkg._FRONTEND_URLS not in hass.data
+        # … the domain services are torn down (flag cleared) …
+        assert hass.data[SERVICES_REGISTERED] is False
+        assert hass.services.async_remove.called
+        # … and the dashboard itself is deliberately NOT deleted: it belongs
+        # to the user, and a reinstall must find it and merge into it.

@@ -765,6 +765,28 @@ decision changes.
 
   Regression tests: 8 new (`TestStoreRobustness` ×3, `TestForecastMalformedPayload` ×4, `TestFullMigrationChain`) — **366 passing**.
 
+- **2026-10-23 (later) — hardening, review-driven (PR 3 of 3): the dashboard
+  lifecycle the review could only ask about, now pinned.** Test-only — no
+  production code changed:
+
+  - **`TestEnsureLifecycle`**: dashboard creation **disabled** → Lovelace is
+    never touched; **Lovelace not loaded** → skipped; **first run** creates
+    once, saves the default, registers the panel; **second run** (reinstall /
+    entry update) reuses the existing dashboard, never duplicates it, and —
+    because the merge is idempotent — **writes nothing** (the guard that stops
+    `.storage/lovelace` being rewritten on every price change); a user card
+    **survives** the merge next to a new managed default.
+  - **`TestUnloadLifecycle`**: unloading releases platforms, the card's extra
+    JS URL and the domain services (flag cleared) and nulls `runtime_data` —
+    and deliberately leaves the dashboard alone: it belongs to the user, and
+    a reinstall must find it and merge into it.
+  - Probes during authorship pinned two facts worth keeping: the real merge
+    preserves user *cards* inside the matched view (bare user *views* are a
+    different matter), and `CONF_URL_PATH` comes from `lovelace.const` — the
+    import comment in dashboard.py is right.
+
+  Regression tests: 6 new — **372 passing**.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board
