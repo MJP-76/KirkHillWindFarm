@@ -53,7 +53,7 @@ and an animated dashboard.
   Rates now live per declared period in the ledger.
 - **Return on investment panel** — the top panel of the right column, above
   Owner and Site, in the same box and columns: invested amount, payments from
-  Co-op, your estimates, return and period count. Click it for
+  Co-op, your estimates, period count and return. Click it for
   the ledger modal — one row per period (months,
   rate × watts, £, ROI %, the capital/interest split as reported by Ethex or
   the board, board or yours), the invested input, a labelled projection over
@@ -63,7 +63,7 @@ and an animated dashboard.
   derived auto-fill (share price × your watts) while that is all there is —
   deliberately not annualised, and reads `—` when neither exists.
 
-  ![Return on investment panel: invested, payments from Co-op, your estimates, return and period count](docs/assets/roi-panel.png)
+  ![Return on investment panel: invested, payments from Co-op, your estimates, period count and return](docs/assets/roi-panel.png)
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
   actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
   something is declared, and **withholds any figure for an undeclared period**

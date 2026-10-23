@@ -2880,10 +2880,10 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="162" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">Your estimates</text>
           <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Return</text>
-          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Periods</text>
-          <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Periods</text>
+          <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Return</text>
+          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
           <!-- The two returns, mirrored from the modal's split line: payback
                and yield, only while a split and capital in force exist. -->
           <text class="roi-subline" data-roi-subline x="${layout.chipSiteGenTitleX}" y="252"></text>

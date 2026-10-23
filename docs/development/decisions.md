@@ -591,7 +591,9 @@ decision changes.
     *All Payments* was Co-op plus guesses: redundant when clean,
     contaminated when not. `total_gbp` survives as an attribute (the modal's
     stats, the split line and templates still read it); only the row is gone,
-    and the rows below it shifted up to keep the box packed.
+    and the rows below it shifted up to keep the box packed. Order, same
+    session: **Periods moved under Your estimates**, Return sits last —
+    directly above the two-returns sub-line, the total over its own parts.
   - **The split line shows both returns:** *capital returned X % of your
     investment* (`capital_total ÷ capital in force` — payback) and *interest
     +Y % ROI* (`interest_total ÷ capital in force` — the yield each payment
