@@ -75,8 +75,9 @@ the stable release yet.
 
 ## What's in the latest release
 
-**v4.18.2** is the current **pre-release**: the lifetime estimate over known
-board periods, the derived share value and a green Invested figure.
+**v4.18.3** is the current **pre-release**: the derived investment (amber
+auto-fill → green confirmation), the ROI panel rebuilt around the
+capital/interest split, and Year as a rolling last-12-months window.
 **v4.18.1** remains the latest **stable** release — it carries the shipped
 board-announcements file, the Repo/Manual switch, the capital/interest split
 and the labelled lifespan projection. See the
