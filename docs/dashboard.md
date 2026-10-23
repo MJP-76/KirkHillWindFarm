@@ -163,7 +163,7 @@ green:
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 
-![The ledger modal showing invested and projection controls, the four totals, the capital and interest summary and a period row with its rate, figure and ROI](assets/roi-modal-populated.png)
+![The ledger modal with the invested and projection controls (£9,598 set), the four totals, the capital and interest summary, the projection line with its lifetime estimate, and both period rows — the board's in green and an own estimate tagged](assets/roi-modal-populated.png)
 
 - **Rows** — one per declared period, e.g.
   `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
@@ -227,7 +227,7 @@ green:
   `lifetime_roi_pct` and `lifetime_remaining_years`; it fills no period, feeds
   no total and changes no ROI, exactly like the projection it rides on.
 
-  ![The projection line naming an annual figure and a 25-year total, ending with Not a board figure](assets/projection-line.png)
+  ![The projection line naming an annual figure and a 25-year total, ending with Not a board figure and the lifetime estimate](assets/projection-line.png)
 - **A caption under the rows** says which of two things the current period is:
   **announced by the board**, or **your own estimate**. An undeclared period
   shows no figure — the estimate is withheld, never invented — but the caption
