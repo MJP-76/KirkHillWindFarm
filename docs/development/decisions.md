@@ -700,6 +700,27 @@ decision changes.
   Regression tests: `_ranges_for` expects `custom`, the label pin follows, a
   new `get_summary` from/to test — **353 passing**.
 
+- **2026-10-23 (later) — the colour language extends to the Owner and Site
+  panels.** The owner asked for the ROI panel's amber/green provenance rules
+  on measured data; full two-tone approved:
+
+  - **Green** = a fresh API measurement (`api_dynamic`, or All time's exact
+    `sum_of_years`): Yesterday … Last 12 months, All time, Your output,
+    Power, Capacity Factor.
+  - **Amber** = derived or assumed: **Share (‱)** — a ratio whichever source
+    feeds it (capacity entity or the generation-ratio fallback), forced;
+    All time's `api_alltime_missing_years` approximation; restored cache
+    before the first fetch; and **Your output** when it uses the site-power ×
+    energy-ratio fallback.
+  - **Red** = stale, unchanged — stronger than amber by design, and a stale
+    number in red still beats hiding it. The restored 0.5-opacity dim is
+    retired: amber now carries that meaning.
+  - `_setChipStale` renamed **`_setCellTone(el, entity, force?)`** — one tone
+    engine routed through every row (including Power, which had no stale
+    marking at all before).
+
+  Presentation only — 353 passing.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board
