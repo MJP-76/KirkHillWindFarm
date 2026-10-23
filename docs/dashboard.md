@@ -167,7 +167,10 @@ green:
 
 - **Rows** — one per declared period, e.g.
   `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
-  edit and remove, plus **Add period**. A **board record's £ figure reads
+  edit and remove, plus **Add period**. Re-adding a declared period, or
+  crossing one with an overlapping window, is **refused** — either would
+  double-count money — so edit the existing record instead; adjacent periods
+  are fine. A **board record's £ figure reads
   green** — announced by the board, the strongest confirmation there is, and
   the period form's *Announced by the board* tick shows the same green while
   ticked (untick and it leaves). Your own estimates keep their `~` and

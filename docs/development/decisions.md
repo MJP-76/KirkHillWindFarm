@@ -721,6 +721,27 @@ decision changes.
 
   Presentation only — 353 passing.
 
+- **2026-10-23 (later) — hardening, review-driven: period collisions are
+  refused.** An external review of 4.18.3 flagged duplicate declarations;
+  inspection confirmed the hole — `async_add` deduped by *record id* (a
+  uuid), so adding the same period twice **double-counted money in every
+  total silently**.
+
+  - **`_assert_period_free`**: exact same-window re-adds and overlapping
+    windows are refused with errors pointing at the existing record — added
+    to `async_add` (no exclusions) and to `async_update` (own window
+    excluded, so nudging a note is fine but moving a window onto another
+    record is not). Adjacent periods (…Jun / Jul…) never collide.
+  - The **file upsert is unchanged**: it matches by period and is
+    board-authoritative — a same-period file entry updates in place (by
+    design), it never creates a second record.
+  - Reviewer's other priorities checked against the suite: forecast-task
+    cancellation/reaping and auth-failure reauth are already pinned
+    (test_coordinator), multi-version migrations are exercised (v1/v3/v6 +
+    the v9 backfill marker), unknown-≠-zero is a first-class invariant.
+
+  Regression tests: 5 new in `TestPeriodCollision` — 358 passing.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board

@@ -1531,3 +1531,72 @@ class TestAverageInterestPayment:
         # the second period's interest is unknown, not zero.
         assert attrs["record_count"] == 2
         assert attrs["average_interest_payment_gbp"] == 300.0
+
+
+class TestPeriodCollision:
+    """Duplicates and overlaps are entry errors — a silent double add would
+    double-count money in every total (the external review's integrity hole)."""
+
+    @pytest.mark.asyncio
+    async def test_re_adding_a_declared_period_is_refused(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_add(_record())
+
+        with pytest.raises(ValueError, match="already declared"):
+            await ledger.async_add(_record())  # same window, fresh uuid
+
+        assert len(ledger.records) == 1  # money never double-counted
+
+    @pytest.mark.asyncio
+    async def test_an_overlapping_window_is_refused(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_add(_record())  # 2025-02-01 → 2026-06-30
+
+        with pytest.raises(ValueError, match="overlaps"):
+            await ledger.async_add(
+                _record(period_start="2026-04-01", period_end="2026-12-31")
+            )  # crosses the end
+        with pytest.raises(ValueError, match="overlaps"):
+            await ledger.async_add(
+                _record(period_start="2024-06-01", period_end="2025-03-31")
+            )  # crosses the start
+
+        assert len(ledger.records) == 1
+
+    @pytest.mark.asyncio
+    async def test_adjacent_periods_are_allowed(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_add(_record())  # ends 2026-06-30
+        await ledger.async_add(
+            _record(period_start="2026-07-01", period_end="2026-12-31")
+        )
+
+        assert len(ledger.records) == 2
+
+    @pytest.mark.asyncio
+    async def test_an_edit_may_not_move_onto_another_period(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_add(_record())
+        second = await ledger.async_add(
+            _record(period_start="2026-07-01", period_end="2026-12-31")
+        )
+
+        with pytest.raises(ValueError, match="already declared|overlaps"):
+            await ledger.async_update(
+                second["id"],
+                {"period_start": "2025-02-01", "period_end": "2026-06-30"},
+            )
+
+        # ...and an edit that keeps its own window is not a collision.
+        kept = await ledger.async_update(second["id"], {"note": "nudged"})
+        assert kept["note"] == "nudged"
+        assert len(ledger.records) == 2
+
+    @pytest.mark.asyncio
+    async def test_removing_frees_the_period_again(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        first = await ledger.async_add(_record())
+        await ledger.async_remove(first["id"])
+
+        again = await ledger.async_add(_record())
+        assert again["period_start"] == "2025-02-01"
