@@ -75,11 +75,13 @@ the stable release yet.
 
 ## What's in the latest release
 
-**v4.18.3** is the latest **stable** release: the derived investment (amber
-auto-fill → green confirmation), the ROI panel rebuilt around the
-capital/interest split, and Year as a rolling last-12-months window. There is
-no pre-release currently open — to be offered one when it exists, enable
-pre-releases in HACS (above).
+**v4.18.4** is the current **pre-release**: the hardening series responding
+to an external review of 4.18.3 — period-collision guards, a resilient
+ledger load, and pinned forecast/migration/dashboard lifecycles.
+**v4.18.3** remains the latest **stable** release — the derived investment,
+the rebuilt ROI panel and the rolling last-12-months window. See the
+[changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
+for both; to be offered a pre-release, enable pre-releases in HACS (above).
 
 ## Reporting a pre-release problem
 

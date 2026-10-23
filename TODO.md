@@ -341,6 +341,20 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.18.4 (pre-release, 2026-10-23)
+
+- **Hardening series responding to the external review** (366 → 372 tests):
+  - **Period collisions refused** (#158) — duplicates and overlapping
+    windows were a silent double-count in every total.
+  - **Ledger load resilient** (#159) — a truncated or corrupt Store no
+    longer kills setup; one bad record no longer sinks its neighbours.
+  - **Pinned what a review cannot run** (#159, #160) — malformed Open-Meteo
+    payloads through the real parser, a rich v1 → current migration walk,
+    and the dashboard ensure/unload lifecycle (disabled, not-loaded, first
+    run, zero-write second run, user cards preserved, dashboard survives
+    unload).
+- PRs #158–#160.
+
 ### v4.18.3 (stable, 2026-10-23)
 
 - **Derived investment** — stored share price (p/W) drives an amber
