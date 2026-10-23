@@ -1493,3 +1493,41 @@ class TestDerivedInvestment:
         assert attrs["invested_derived_gbp"] == 3460.0  # still shown, amber-free
         assert attrs["total_roi_pct"] == 8.0  # 400 / 5000 -- theirs, not the
         # auto-fill's 11.56
+
+
+class TestAverageInterestPayment:
+    """Interest per split-declared payment: capital excluded, unknown never
+    dividing into the average (the owner's rule)."""
+
+    @pytest.mark.asyncio
+    async def test_one_split_payment_averages_to_itself(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_add(_record(capital_gbp=100.0, interest_gbp=300.0))
+        attrs = _sensor(ledger=ledger).extra_state_attributes
+
+        assert attrs["average_interest_payment_gbp"] == 300.0
+
+    @pytest.mark.asyncio
+    async def test_no_split_means_no_average(self, hass, fake_store):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_add(_record())  # a period, but no declared split
+        attrs = _sensor(ledger=ledger).extra_state_attributes
+
+        assert attrs["record_count"] == 1
+        assert attrs["average_interest_payment_gbp"] is None
+
+    @pytest.mark.asyncio
+    async def test_unsplit_periods_never_divide_into_the_average(
+        self, hass, fake_store
+    ):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_add(_record(capital_gbp=100.0, interest_gbp=300.0))
+        await ledger.async_add(
+            _record(period_start="2027-01-01", period_end="2027-06-30")
+        )  # second payment, split undeclared
+        attrs = _sensor(ledger=ledger).extra_state_attributes
+
+        # Two payments exist, one declares: 300 / 1 -- never 300 / 2, because
+        # the second period's interest is unknown, not zero.
+        assert attrs["record_count"] == 2
+        assert attrs["average_interest_payment_gbp"] == 300.0

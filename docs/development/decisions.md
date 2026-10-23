@@ -656,9 +656,24 @@ decision changes.
   enter it). Forward note, not built: with a payment count and interest
   together on the panel, an **average interest payment per period**
   (`interest ÷ payment periods`) follows naturally at a later stage — the
-  owner flagged it, deliberately deferred.
+  owner flagged it, deliberately deferred. **Built the same session, one
+  exchange later:** the eighth panel row **Average interest** delivers it —
 
-  Regression tests: unchanged — presentation only, 349 passing.
+  - **`average_interest_payment_gbp` = `interest_total ÷ the periods that
+    declare a split`** — capital excluded by the owner's rule, and an
+    unsplit period's unknown interest never divides in (unknown is not zero:
+    two payments with one declared average over 1, never 2). `None` until a
+    split exists.
+  - **Geometry, explicitly amended:** the ROI box grows `192 → 216` (eighth
+    row at y262, Total ROI ends at y282) and Owner/Site shift **+24** via
+    `translate(0,24)` on their groups — Owner 292→316, Site 548→572, gaps
+    preserved. This supersedes the recorded `y=76 / 192 / Owner 292 / Site
+    548` layout of the 2026-10-21 (later) bullet.
+  - **Colour:** green while the ledger is pure board, amber once an own
+    estimate joins — like Payment periods. Derived capital deliberately does
+    **not** amber it: the figure excludes capital entirely.
+
+  Regression tests: 3 new — 352 passing.
 
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call

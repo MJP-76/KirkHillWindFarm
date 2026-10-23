@@ -2811,7 +2811,7 @@ _buildHeaderChips(layout) {
 
         <!-- Right side: Owner Generation & Capacity (below Return on investment) -->
         <text class="gen-section-heading" x="${layout.chipUserGenTitleX}" y="64">Generation, Capacity & Earnings</text>
-        <g class="user-gen" data-user-gen="panel">
+        <g class="user-gen" data-user-gen="panel" transform="translate(0,24)">
           <rect x="${layout.chipUserGenX}" y="292" width="${layout.chipUserGenW}" height="232" rx="8"/>
           <text class="user-gen-title" x="${layout.chipUserGenTitleX}" y="314">Owner</text>
           <text class="user-gen-colh" data-colh="label" x="${layout.chipUserGenTitleX}" y="336">Timeframe</text>
@@ -2838,7 +2838,7 @@ _buildHeaderChips(layout) {
         </g>
 
         <!-- Right side: Site Generation & Capacity (below Owner) -->
-        <g class="site-gen" data-site-gen="panel">
+        <g class="site-gen" data-site-gen="panel" transform="translate(0,24)">
           <rect x="${layout.chipSiteGenX}" y="548" width="${layout.chipSiteGenW}" height="232" rx="8"/>
           <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="570">Site</text>
           <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="592">Timeframe</text>
@@ -2869,7 +2869,7 @@ _buildHeaderChips(layout) {
              Clicking it opens the ledger modal -- this is the only place money
              appears on the card. -->
         <g class="roi-gen" data-roi-panel="group">
-          <rect x="${layout.chipSiteGenX}" y="76" width="${layout.chipSiteGenW}" height="192" rx="8"/>
+          <rect x="${layout.chipSiteGenX}" y="76" width="${layout.chipSiteGenW}" height="216" rx="8"/>
           <text class="site-gen-title" x="${layout.chipSiteGenTitleX}" y="98">Return on investment</text>
           <text class="site-gen-colh" data-colh="label" x="${layout.chipSiteGenTitleX}" y="120">Measure</text>
           <text class="site-gen-colh" data-colh="gen" x="${layout.chipSiteGenValueX}" y="120" text-anchor="end">Value</text>
@@ -2890,8 +2890,10 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-roi-cell="capital" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="242">Interest ROI</text>
           <text class="site-gen-value" data-roi-cell="interest" x="${layout.chipSiteGenValueX}" y="242" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="262">Total ROI</text>
-          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="262" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="262">Average interest</text>
+          <text class="site-gen-value" data-roi-cell="avgint" x="${layout.chipSiteGenValueX}" y="262" text-anchor="end">—</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="282">Total ROI</text>
+          <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="282" text-anchor="end">—</text>
         </g>
       </g>
     `;
@@ -2993,7 +2995,7 @@ _buildHeaderChips(layout) {
     const gbpOf = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? "—" : `£${this._fmt(Number(v), 2)}`);
     const roiAttrs = ledgerId && this._hass?.states?.[ledgerId] ? this._hass.states[ledgerId].attributes || {} : null;
     if (!roiAttrs) {
-      ["invested", "board", "self", "capital", "interest", "roi", "periods"].forEach((cell) => setRoi(cell, "—"));
+      ["invested", "board", "self", "capital", "interest", "avgint", "roi", "periods"].forEach((cell) => setRoi(cell, "—"));
     } else {
       const roiRecords = Array.isArray(roiAttrs.records) ? roiAttrs.records : [];
       const investedSrc = roiAttrs.invested_source ?? null;
@@ -3115,6 +3117,26 @@ _buildHeaderChips(layout) {
         : splitSelf
           ? "var(--khscada-warn-color, #ffb300)"
           : "var(--success-color, #4caf50)";
+    }
+    // Average interest payment: known interest over the periods that
+    // declared a split -- never divide by a period whose interest is unknown.
+    // Capital is excluded entirely (the owner's rule), so the figure is pure
+    // board money: green while the ledger is clean, amber once an own
+    // estimate joins. Derived capital does not touch it: this number never
+    // mentions capital.
+    const avgCell = root.querySelector('[data-roi-cell="avgint"]');
+    if (avgCell) {
+      const avg = roiAttrs ? roiAttrs.average_interest_payment_gbp : null;
+      avgCell.textContent =
+        avg !== null && avg !== undefined && Number.isFinite(Number(avg))
+          ? this._gbp(Number(avg))
+          : "—";
+      avgCell.style.fill =
+        avg === null || avg === undefined
+          ? ""
+          : splitSelf
+            ? "var(--khscada-warn-color, #ffb300)"
+            : "var(--success-color, #4caf50)";
     }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
