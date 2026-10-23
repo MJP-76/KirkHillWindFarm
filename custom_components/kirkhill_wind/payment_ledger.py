@@ -564,7 +564,19 @@ class PaymentLedger:
 
     async def async_load(self) -> None:
         """Load the stored ledger. An unreadable entry is dropped, not fatal."""
-        data = await ledger_store(self._hass, self._entry_id).async_load()
+        try:
+            data = await ledger_store(self._hass, self._entry_id).async_load()
+        except (ValueError, OSError) as err:
+            # HA's Store raises on a truncated or corrupt file instead of
+            # returning None -- the docstring's promise stands: an unreadable
+            # entry is dropped, never fatal. The integration starts; the
+            # error names the loss loudly so it cannot pass unnoticed.
+            _LOGGER.error(
+                "Stored payment ledger is unreadable (%s) -- starting empty;"
+                " declarations must be re-entered or re-applied from the file",
+                err,
+            )
+            data = None
         is_dict = isinstance(data, dict)
         raw = data.get("records") if is_dict else None
         if isinstance(raw, list):

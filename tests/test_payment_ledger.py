@@ -13,6 +13,7 @@ actually declared, so the tests below pin three things that must not drift:
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -1080,9 +1081,7 @@ records:
         assert record["interest_gbp"] is None
 
     @pytest.mark.asyncio
-    async def test_file_carries_a_split_and_completes_the_other_half(
-        self, hass, fake_store, announcements, caplog
-    ):
+    async def test_file_carries_a_split_and_completes_the_other_half(self, hass, fake_store, announcements, caplog):
         # capital_gbp: 0 is a figure, not an absence: an interest-only
         # payment is exactly that, and it must survive key-presence checks.
         ledger = PaymentLedger(hass, "test-entry")
@@ -1105,9 +1104,7 @@ records:
         assert record["interest_gbp"] == 400.0
 
     @pytest.mark.asyncio
-    async def test_a_split_the_file_names_wins_over_an_entered_one(
-        self, hass, fake_store, announcements
-    ):
+    async def test_a_split_the_file_names_wins_over_an_entered_one(self, hass, fake_store, announcements):
         ledger = PaymentLedger(hass, "test-entry")
         await ledger.async_add(_record(capital_gbp=100.0, interest_gbp=300.0))
         self._write(
@@ -1127,9 +1124,7 @@ records:
         assert record["interest_gbp"] == 400.0  # the other half, recomputed
 
     @pytest.mark.asyncio
-    async def test_a_file_silent_on_split_keeps_an_entered_one(
-        self, hass, fake_store, announcements
-    ):
+    async def test_a_file_silent_on_split_keeps_an_entered_one(self, hass, fake_store, announcements):
         ledger = PaymentLedger(hass, "test-entry")
         await ledger.async_add(_record(capital_gbp=100.0, interest_gbp=300.0))
         self._write(
@@ -1148,9 +1143,7 @@ records:
         assert record["interest_gbp"] == 300.0
 
     @pytest.mark.asyncio
-    async def test_halves_that_cannot_sum_are_dropped_and_say_so(
-        self, hass, fake_store, announcements, caplog
-    ):
+    async def test_halves_that_cannot_sum_are_dropped_and_say_so(self, hass, fake_store, announcements, caplog):
         ledger = PaymentLedger(hass, "test-entry")
         self._write(
             announcements,
@@ -1171,6 +1164,7 @@ records:
         assert record["capital_gbp"] is None
         assert record["interest_gbp"] is None
         assert "split was cleared" in caplog.text
+
     @pytest.mark.asyncio
     async def test_empty_list_is_a_noop(self, hass, fake_store, announcements):
         self._write(announcements, "records: []\n")
@@ -1517,9 +1511,7 @@ class TestAverageInterestPayment:
         assert attrs["average_interest_payment_gbp"] is None
 
     @pytest.mark.asyncio
-    async def test_unsplit_periods_never_divide_into_the_average(
-        self, hass, fake_store
-    ):
+    async def test_unsplit_periods_never_divide_into_the_average(self, hass, fake_store):
         ledger = PaymentLedger(MagicMock(), "test-entry")
         await ledger.async_add(_record(capital_gbp=100.0, interest_gbp=300.0))
         await ledger.async_add(
@@ -1553,13 +1545,9 @@ class TestPeriodCollision:
         await ledger.async_add(_record())  # 2025-02-01 → 2026-06-30
 
         with pytest.raises(ValueError, match="overlaps"):
-            await ledger.async_add(
-                _record(period_start="2026-04-01", period_end="2026-12-31")
-            )  # crosses the end
+            await ledger.async_add(_record(period_start="2026-04-01", period_end="2026-12-31"))  # crosses the end
         with pytest.raises(ValueError, match="overlaps"):
-            await ledger.async_add(
-                _record(period_start="2024-06-01", period_end="2025-03-31")
-            )  # crosses the start
+            await ledger.async_add(_record(period_start="2024-06-01", period_end="2025-03-31"))  # crosses the start
 
         assert len(ledger.records) == 1
 
@@ -1567,9 +1555,7 @@ class TestPeriodCollision:
     async def test_adjacent_periods_are_allowed(self, hass, fake_store):
         ledger = PaymentLedger(MagicMock(), "test-entry")
         await ledger.async_add(_record())  # ends 2026-06-30
-        await ledger.async_add(
-            _record(period_start="2026-07-01", period_end="2026-12-31")
-        )
+        await ledger.async_add(_record(period_start="2026-07-01", period_end="2026-12-31"))
 
         assert len(ledger.records) == 2
 
@@ -1577,9 +1563,7 @@ class TestPeriodCollision:
     async def test_an_edit_may_not_move_onto_another_period(self, hass, fake_store):
         ledger = PaymentLedger(MagicMock(), "test-entry")
         await ledger.async_add(_record())
-        second = await ledger.async_add(
-            _record(period_start="2026-07-01", period_end="2026-12-31")
-        )
+        second = await ledger.async_add(_record(period_start="2026-07-01", period_end="2026-12-31"))
 
         with pytest.raises(ValueError, match="already declared|overlaps"):
             await ledger.async_update(
@@ -1600,3 +1584,68 @@ class TestPeriodCollision:
 
         again = await ledger.async_add(_record())
         assert again["period_start"] == "2025-02-01"
+
+
+class TestStoreRobustness:
+    """An unreadable Store is dropped, never fatal -- the load path's promise.
+
+    HA's real Store RAISES on a truncated or corrupt file instead of returning
+    None, so the failure this pins is a setup-killing crash, not an empty
+    dict: without the guard the integration failed to load at all and the
+    ledger (and its sensor) disappeared with it.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_truncated_store_starts_empty(self, hass):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+
+        class Truncated:
+            async def async_load(self):
+                raise json.JSONDecodeError("Expecting value", "doc", 0)
+
+        with patch(
+            "custom_components.kirkhill_wind.payment_ledger.ledger_store",
+            return_value=Truncated(),
+        ):
+            await ledger.async_load()  # must not raise
+
+        assert ledger.records == []
+        assert ledger.invested_gbp is None
+
+    @pytest.mark.asyncio
+    async def test_an_io_failure_starts_empty(self, hass):
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+
+        class Unreadable:
+            async def async_load(self):
+                raise PermissionError("database disk image is malformed")
+
+        with patch(
+            "custom_components.kirkhill_wind.payment_ledger.ledger_store",
+            return_value=Unreadable(),
+        ):
+            await ledger.async_load()
+
+        assert ledger.records == []
+        assert ledger.share_price_p_per_w is None
+
+    @pytest.mark.asyncio
+    async def test_one_corrupt_record_does_not_sink_the_others(self, hass, fake_store):
+        fake_store.data = {
+            "records": [
+                {"nonsense": True},  # no period, no rate: dropped
+                {
+                    "period_start": "2025-02-01",
+                    "period_end": "2026-06-30",
+                    "rate_p_per_w": 21.0,
+                    "capacity_watts": 2559.465,
+                },
+            ],
+            "invested_gbp": 4427.87,
+        }
+        ledger = PaymentLedger(MagicMock(), "test-entry")
+        await ledger.async_load()
+
+        assert len(ledger.records) == 1
+        assert ledger.records[0]["rate_p_per_w"] == 21.0
+        assert ledger.invested_gbp == 4427.87  # the good half survives

@@ -742,6 +742,29 @@ decision changes.
 
   Regression tests: 5 new in `TestPeriodCollision` — 358 passing.
 
+- **2026-10-23 (later) — hardening, review-driven (PR 2 of 3): the load
+  path's promise made true, and the paths the review could not run,
+  pinned.**
+
+  - **Truncated Store:** `async_load`'s docstring promised "an unreadable
+    entry is dropped, not fatal" — but HA's Store *raises*
+    (`json.JSONDecodeError`) on a truncated/corrupt file instead of returning
+    `None`, so the promise was half-kept: the raise killed setup and the
+    integration failed to load entirely. Now caught (`ValueError`/`OSError`)
+    with a loud error naming the loss, and the ledger starts empty — the
+    availability-over-history call this codebase already makes for unreadable
+    announcement files.
+  - **Malformed forecast payloads** driven through the *real* client and
+    parser (fake HTTP, four garbage shapes): Open-Meteo's summariser yields
+    `{}` by design, and the core update never flinches.
+  - **Migration chain:** one call now proves a rich v1 entry (legacy data
+    keys *and* configured, non-default prices) lands at the current version:
+    connection-only data, monetary inputs purged whatever they hold (the
+    v10-spared/v11-purged lesson, end to end), restore marker gone, second
+    call a no-op.
+
+  Regression tests: 8 new (`TestStoreRobustness` ×3, `TestForecastMalformedPayload` ×4, `TestFullMigrationChain`) — **366 passing**.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board
