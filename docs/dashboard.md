@@ -183,7 +183,10 @@ still shows in the modal's stats and split line.
   `capital_total ÷ invested`) and **interest +Y % ROI** (`interest_total ÷
   invested`, growing with every payment) — the two **always sum to the
   Return**, and they wear amber under exactly the Return's amber conditions.
-  Nothing derives a split — it is entered by hand, and a period with no split
+  The panel repeats both as a quiet **sub-line under its five rows** —
+  *Capital back 0.00% of £4,427.87 · interest +12.14% ROI* — same conditions,
+  same colours, so the two returns read without opening the modal. Nothing
+  derives a split — it is entered by hand, and a period with no split
   shows none.
 - **Projection** — a labelled one-liner, never a figure. Enter an annual p/W
   rate — normally the board's own published equivalent, whose Feb 2025 → Jun

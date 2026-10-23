@@ -598,7 +598,9 @@ decision changes.
     grows). They always sum to the Return, need a declared split and capital
     in force, and wear the Return's amber conditions (derived capital or own
     estimates). On the owner's figures: **0.00 % back, +12.14 % interest
-    ROI**.
+    ROI**. Follow-up the same session: the panel repeats both as a **sub-line
+    under its five rows** (y≈252, inside the existing box) — the owner's
+    placement call, no seventh row and no geometry change.
 
   Regression tests: unchanged — 345 passing (presentation only).
 
