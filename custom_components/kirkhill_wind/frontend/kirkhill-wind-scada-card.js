@@ -2880,7 +2880,7 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-roi-cell="board" x="${layout.chipSiteGenValueX}" y="162" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="182">Your estimates</text>
           <text class="site-gen-value" data-roi-cell="self" x="${layout.chipSiteGenValueX}" y="182" text-anchor="end">—</text>
-          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Periods</text>
+          <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="202">Payment periods</text>
           <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
           <!-- The split, as rows like every other figure: capital returned
                shows £ and %, interest is the ROI it grows, Total ROI is the
@@ -3100,6 +3100,21 @@ _buildHeaderChips(layout) {
         ? `${this._fmt(Number(intT) / Number(splitInForce) * 100, 2)}%`
         : "—";
       interestCell.style.fill = intFig ? splitColour : "";
+    }
+    // Payment periods: green while every period is board-confirmed, amber the
+    // moment an own estimate joins -- the contamination rule, no capital
+    // dimension (a count is not an ROI). No periods at all keeps the default
+    // colour and its dash.
+    const periodsCell = root.querySelector('[data-roi-cell="periods"]');
+    if (periodsCell) {
+      const hasPeriods = Boolean(
+        roiAttrs && Array.isArray(roiAttrs.records) && roiAttrs.records.length
+      );
+      periodsCell.style.fill = !hasPeriods
+        ? ""
+        : splitSelf
+          ? "var(--khscada-warn-color, #ffb300)"
+          : "var(--success-color, #4caf50)";
     }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available

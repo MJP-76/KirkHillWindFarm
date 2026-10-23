@@ -646,6 +646,20 @@ decision changes.
 
   Regression tests: unchanged — presentation only, 349 passing.
 
+- **2026-10-23 (later) — Payment periods: renamed and brought into the
+  colour rule.** The count row was wearing the panel's default value amber
+  (`.site-gen-value`'s power colour) with no state of its own. Renamed
+  **Payment periods** — the owner's wording, it says what is counted — and
+  coloured by the contamination rule: **green while every period is
+  board-confirmed, amber the moment an own estimate joins**, dash when none
+  exist (a count carries no capital dimension, so derived capital does not
+  enter it). Forward note, not built: with a payment count and interest
+  together on the panel, an **average interest payment per period**
+  (`interest ÷ payment periods`) follows naturally at a later stage — the
+  owner flagged it, deliberately deferred.
+
+  Regression tests: unchanged — presentation only, 349 passing.
+
 - **2026-10-22 — The capital/interest split is entered by hand, now.**
   *Supersedes "no code until the board publishes the split".* The owner's call
   after v4.17.0 shipped: the split comes from an **Ethex statement or a board
