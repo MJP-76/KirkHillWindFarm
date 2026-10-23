@@ -75,13 +75,13 @@ the stable release yet.
 
 ## What's in the latest release
 
-**v4.18.4** is the current **pre-release**: the hardening series responding
-to an external review of 4.18.3 — period-collision guards, a resilient
-ledger load, and pinned forecast/migration/dashboard lifecycles.
-**v4.18.3** remains the latest **stable** release — the derived investment,
-the rebuilt ROI panel and the rolling last-12-months window. See the
+**v4.18.4** is the latest **stable** release: the hardening series
+responding to an external review — period-collision guards, a resilient
+ledger load, and pinned forecast/migration/dashboard lifecycles. There is no
+pre-release currently open — to be offered one when it exists, enable
+pre-releases in HACS (above). See the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
-for both; to be offered a pre-release, enable pre-releases in HACS (above).
+for the full history.
 
 ## Reporting a pre-release problem
 
