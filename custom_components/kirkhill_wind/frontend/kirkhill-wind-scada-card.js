@@ -2884,6 +2884,9 @@ _buildHeaderChips(layout) {
           <text class="site-gen-value" data-roi-cell="roi" x="${layout.chipSiteGenValueX}" y="202" text-anchor="end">—</text>
           <text class="site-gen-label" x="${layout.chipSiteGenTitleX}" y="222">Periods</text>
           <text class="site-gen-value" data-roi-cell="periods" x="${layout.chipSiteGenValueX}" y="222" text-anchor="end">—</text>
+          <!-- The two returns, mirrored from the modal's split line: payback
+               and yield, only while a split and capital in force exist. -->
+          <text class="roi-subline" data-roi-subline x="${layout.chipSiteGenTitleX}" y="252"></text>
         </g>
       </g>
     `;
@@ -3052,6 +3055,36 @@ _buildHeaderChips(layout) {
       } else {
         roiCell.style.fill = "";
       }
+    }
+    // The split sub-line under the panel rows: capital back (payback) and
+    // interest ROI (the yield each payment grows), mirroring the modal's
+    // split line -- only while a split exists and capital is in force, amber
+    // under the Return's conditions.
+    const subline = root.querySelector("[data-roi-subline]");
+    if (subline) {
+      const capT = roiAttrs ? roiAttrs.capital_total_gbp : null;
+      const intT = roiAttrs ? roiAttrs.interest_total_gbp : null;
+      const subSrc = roiAttrs ? (roiAttrs.invested_source ?? null) : null;
+      const inForce = subSrc === "user"
+        ? roiAttrs.invested_gbp
+        : subSrc === "derived" ? roiAttrs.invested_derived_gbp : null;
+      const canPct = inForce !== null && inForce !== undefined && Number(inForce) > 0;
+      const capPart = canPct && capT !== null && capT !== undefined
+        ? `Capital back ${this._fmt(Number(capT) / Number(inForce) * 100, 2)}% of ${this._gbp(Number(inForce))}`
+        : "";
+      const intPart = canPct && intT !== null && intT !== undefined
+        ? `interest +${this._fmt(Number(intT) / Number(inForce) * 100, 2)}% ROI`
+        : "";
+      const subText = [capPart, intPart].filter(Boolean).join(" · ");
+      subline.textContent = subText;
+      const subSelf = roiAttrs
+        && roiAttrs.self_total_gbp !== null
+        && roiAttrs.self_total_gbp !== undefined;
+      subline.style.fill = !subText
+        ? ""
+        : subSrc === "derived" || subSelf
+          ? "var(--khscada-warn-color, #ffb300)"
+          : "";
     }
 
     // Version pill: Running vs Latest, green up-to-date, amber update available
@@ -3424,6 +3457,9 @@ _buildHeaderChips(layout) {
       .roi-capital-derived .roi-capital-value { color: var(--khscada-warn-color, #ffb300); }
       .roi-input-derived { color: var(--khscada-warn-color, #ffb300); border-color: var(--khscada-warn-color, #ffb300); }
       .roi-derived { color: var(--khscada-warn-color, #ffb300); }
+      /* The panel's split sub-line: quiet secondary text under the rows,
+         amber under exactly the Return's amber conditions. */
+      .roi-subline { font: 500 calc(var(--ha-font-size-small, 14px) * 0.86 * var(--khscada-fs, 1)) var(--khscada-font-family); fill: var(--khscada-secondary-color); }
       .roi-derived-note { color: var(--khscada-warn-color, #ffb300); }
       .roi-tick { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: normal; font-weight: 500; color: var(--khscada-primary-color); }
       /* Board-confirmed, the strongest confirmation there is: the period
