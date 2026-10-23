@@ -4,7 +4,9 @@ All notable changes to the Kirk Hill Wind Farm integration.
 
 ## Version 4.18.3
 
-**Testing pre-release.** Twenty-two PRs since 4.18.2: the derived-investment
+**Stable release** — promoted the same day, after the owner tested the whole
+line live (screenshots included) and an external review passed the
+architecture. Twenty-two PRs since 4.18.2: the derived-investment
 flows and provenance colours, the ROI panel rebuilt around the split, the
 repo file carrying board splits, and Year turned into a rolling window.
 
