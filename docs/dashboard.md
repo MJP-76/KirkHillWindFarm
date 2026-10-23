@@ -152,11 +152,18 @@ Payments** — with own estimates barred from money sums, it was Co-op plus
 guesses: redundant when clean, contaminated when not. The combined total
 still shows in the modal's stats and split line.
 
-![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, payment periods, capital returned, interest ROI, average interest and total ROI](assets/roi-panel.png)
+![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, payment periods, capital returned, interest ROI, average interest and total ROI, above the Owner and Site panels](assets/roi-panel.png)
+
+The same panel once an own estimate joins the ledger (here **£383.92** for
+Jul–Dec 2026) — the contamination rule in one frame: everything the estimate
+touches goes **amber**, while Invested and Payments from Co-op hold their
+green:
+
+![The ROI panel with an own estimate in the ledger: Your estimates, Payment periods, Capital returned, Interest ROI, Average interest and Total ROI all amber while Invested and Payments from Co-op stay green](assets/roi-panel-estimates.png)
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 
-![The ledger modal showing invested and projection controls, the four totals, the capital and interest summary, the projection line and a period row with its rate, figure and ROI](assets/roi-modal-populated.png)
+![The ledger modal showing invested and projection controls, the four totals, the capital and interest summary and a period row with its rate, figure and ROI](assets/roi-modal-populated.png)
 
 - **Rows** — one per declared period, e.g.
   `Feb 2025 – Jun 2026 · 21 p/W × 2,559 W · £537.49 · ROI 10.75%`, each with
@@ -196,6 +203,7 @@ still shows in the modal's stats and split line.
   `capital_total ÷ invested`) and **interest +Y % ROI** (`interest_total ÷
   invested`, growing with every payment) — the two **always sum to the
   Return**, and they wear amber under exactly the Return's amber conditions.
+  ![The Edit period form with capital 0 and interest £537.49 entered, and the Announced by the board tick green](assets/period-edit-form.png)
   The panel shows both **as rows in their own right** — **Capital returned**
   in £ *and* %, **Interest ROI** as the return each payment grows, and
   **Total ROI** (the two

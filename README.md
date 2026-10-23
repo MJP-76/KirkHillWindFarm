@@ -66,7 +66,7 @@ and an animated dashboard.
   financial calculations here are designed **only for members who have had
   their payments solely via Ethex**.
 
-  ![Return on investment panel: invested, payments from Co-op, your estimates, payment periods, capital returned, interest ROI, average interest and total ROI](docs/assets/roi-panel.png)
+  ![Return on investment panel: invested, payments from Co-op, your estimates, payment periods, capital returned, interest ROI, average interest and total ROI, above the Owner and Site panels](docs/assets/roi-panel.png)
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
   actually declared (`watts × p/W ÷ 100` per period), reads `unknown` until
   something is declared, and **withholds any figure for an undeclared period**
