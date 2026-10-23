@@ -141,6 +141,7 @@ the value column — carrying the headline only:
 | Payment periods | `2` — **green** while every period is board-confirmed, **amber** once an own estimate joins; `—` when none exist |
 | Capital returned | `£0.00 · 0.00%` — payback of your investment; **green/amber with Total ROI**, `—` until a split and capital exist |
 | Interest ROI | `12.14%` — the return each payment grows; same colours, same `—` rule |
+| Average interest | `£537.49` — interest ÷ the payment periods that declare a split (capital excluded; an unsplit period's interest is unknown, and unknown never divides); **green while the ledger is pure board**, **amber once an own estimate joins**; `—` until a split exists |
 | Total ROI | `21.50%` — capital returned % + interest % vs invested (was *Return*): **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
 
 Three rows were dropped from the panel in favour of the modal: **Published
@@ -151,7 +152,7 @@ Payments** — with own estimates barred from money sums, it was Co-op plus
 guesses: redundant when clean, contaminated when not. The combined total
 still shows in the modal's stats and split line.
 
-![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, payment periods, capital returned, interest ROI and total ROI](assets/roi-panel.png)
+![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, payment periods, capital returned, interest ROI, average interest and total ROI](assets/roi-panel.png)
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 

@@ -856,6 +856,16 @@ class PaymentLedgerSensor(KirkHillScopedEntity, SensorEntity):
         splits = split_totals_gbp(records)
         attrs["capital_total_gbp"] = splits["capital"]
         attrs["interest_total_gbp"] = splits["interest"]
+        # Average interest per payment that declared a split: an unsplit
+        # period's interest is unknown, and unknown must never divide into an
+        # average. Capital is excluded by the owner's rule -- this is the
+        # yield per payment, not the payback.
+        split_periods = [r for r in records if r.get("interest_gbp") is not None]
+        attrs["average_interest_payment_gbp"] = (
+            round(splits["interest"] / len(split_periods), 2)
+            if splits["interest"] is not None and split_periods
+            else None
+        )
         # No capital at all -> None, never 0: there is no return to quote.
         # Measured against derived capital the ROI is provisional, and
         # invested_source says so -- the card colours it amber.
