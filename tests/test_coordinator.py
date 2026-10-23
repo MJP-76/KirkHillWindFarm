@@ -837,3 +837,58 @@ class TestPermissionFailureAtRuntime:
         assert result2["current_stale"][SCOPE_SITE] is True
         # The scope that still works is unaffected.
         assert result2["current_stale"][SCOPE_OWNER] is False
+
+
+class TestForecastMalformedPayload:
+    """A garbage Open-Meteo payload is contained by the real parser, end to
+    end -- the core update survives whatever the third party sends."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {},
+            {"hourly": []},
+            {"hourly": {"time": "not-a-list"}},
+            {"hourly": {"time": ["junk", 42], "wind_speed_10m": ["x", None]}},
+        ],
+    )
+    async def test_garbage_payload_never_fails_the_update(
+        self, hass, mock_api_client, body
+    ):
+        from custom_components.kirkhill_wind.api import OpenMeteoApiClient
+
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+        # Real client, real parse path; only the HTTP response is fake.
+        coord.open_meteo_client = OpenMeteoApiClient()
+        coord._cached_coordinates = {
+            "t1": {"latitude": 54.123, "longitude": -2.456}
+        }
+
+        class _Resp:
+            def raise_for_status(self):
+                pass
+
+            async def json(self):
+                return body
+
+        class _Ctx:
+            async def __aenter__(self):
+                return _Resp()
+
+            async def __aexit__(self, *exc):
+                return False
+
+        with patch("aiohttp.ClientSession.get", return_value=_Ctx()):
+            with patch(
+                "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+                return_value=now,
+            ):
+                data = await coord._async_update_data()
+
+        # The forecast yields nothing -- never an exception, never a partial.
+        assert data["open_meteo_forecast"] == {}
+        # ...and the core data is untouched by the garbage.
+        assert data["timeframe_summaries"]["owner"]

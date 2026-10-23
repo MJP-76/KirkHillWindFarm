@@ -663,3 +663,62 @@ class TestPaymentTrackingSetup:
 
         loader.assert_not_awaited()
         flow.async_init.assert_not_called()
+
+
+class TestFullMigrationChain:
+    """One call must carry a v1 entry through every step to the current
+    version -- not just the step immediately after it."""
+
+    async def test_v1_with_configured_prices_lands_money_free_at_current(self):
+        hass = MagicMock()
+        entry = _make_entry(
+            1,
+            data={
+                CONF_API_KEY: "key",
+                # Dead since v4 …
+                "owner_share_percent": 50,
+                "owner_value_rate": 12,
+                # … dead since v7 …
+                "owner_projected_annual_earnings_gbp": 132,
+                "site_projected_annual_earnings_gbp": 0,
+            },
+            options={
+                # … and real configured prices (not defaults) a pre-v4.13.0
+                # install would carry. v10 spared configured prices; v11
+                # purges monetary inputs whatever they hold -- that is the
+                # chain lesson, so assert it end to end.
+                CONF_CFD_PRICE_GBP_PER_MWH: 85.0,
+                CONF_OWNER_PRICE_PENCE_PER_KWH: 6.0,
+            },
+        )
+
+        result = await async_migrate_entry(hass, entry)
+        assert result is True
+
+        call = hass.config_entries.async_update_entry.call_args[1]
+        assert call["version"] == _CONFIG_ENTRY_VERSION
+        # The v8 split's invariant: connection data only.
+        assert set(call["data"]) == {CONF_API_KEY, CONF_BASE_URL}
+        # v11's purge: monetary inputs gone even though configured.
+        for key in (
+            CONF_CFD_PRICE_GBP_PER_MWH,
+            CONF_OWNER_PRICE_PENCE_PER_KWH,
+            CONF_OWNER_RATE_PENCE_PER_W,
+            CONF_PRICE_RESTORE_PENDING,
+        ):
+            assert key not in call["options"]
+            assert key not in call["data"]
+        # Keys dead since v4/v7 reach neither mapping.
+        for dead in (
+            "owner_share_percent",
+            "owner_value_rate",
+            "owner_projected_annual_earnings_gbp",
+            "site_projected_annual_earnings_gbp",
+        ):
+            assert dead not in call["data"]
+            assert dead not in call["options"]
+
+        # Idempotent: a second call against a current entry is a no-op True.
+        current = _make_entry(_CONFIG_ENTRY_VERSION, call["data"], call["options"])
+        assert await async_migrate_entry(hass, current) is True
+        assert hass.config_entries.async_update_entry.call_count == 1
