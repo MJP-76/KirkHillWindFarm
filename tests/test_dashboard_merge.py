@@ -325,3 +325,182 @@ class TestEnsureDashboardDoesNotRewriteAnUnchangedDashboard:
         await self._ensure(store, copy.deepcopy(_DEFAULT_CONFIG))
 
         assert len(store.saves) == 1, "a dashboard that drifted must still be saved"
+
+
+def _fake_collection(items=None):
+    coll = MagicMock()
+    coll.async_load = AsyncMock()
+    coll.async_items = MagicMock(return_value=list(items or []))
+    coll.async_create_item = AsyncMock(side_effect=lambda payload: {**payload})
+    return coll
+
+
+def _fake_lovelace_store(existing=None):
+    store = MagicMock()
+    store.async_load = AsyncMock(return_value=existing)
+    store.async_save = AsyncMock()
+    return store
+
+
+class TestEnsureLifecycle:
+    """The dashboard lifecycle the external review asked about: disabled,
+    not-loaded, first run, steady state, and user customisation."""
+
+    def _hass(self, loaded=True):
+        hass = MagicMock()
+        hass.data = {}
+        if loaded:
+            from custom_components.kirkhill_wind.dashboard import LOVELACE_DATA
+            hass.data[LOVELACE_DATA] = SimpleNamespace(dashboards={})
+        return hass
+
+    def _entry(self, enabled=True):
+        entry = MagicMock()
+        entry.entry_id = "lifecycle-test"
+        entry.options = {"create_dashboard": enabled}
+        return entry
+
+    async def test_disabled_creation_never_touches_lovelace(self):
+        import custom_components.kirkhill_wind.dashboard as dash
+
+        hass = self._hass(loaded=True)
+        with patch.object(
+            dash.lovelace_dashboard, "DashboardsCollection"
+        ) as coll_cls:
+            await dash.async_ensure_dashboard(hass, self._entry(enabled=False))
+        coll_cls.assert_not_called()
+
+    async def test_lovelace_not_loaded_skips(self):
+        import custom_components.kirkhill_wind.dashboard as dash
+
+        hass = self._hass(loaded=False)
+        with patch.object(
+            dash.lovelace_dashboard, "DashboardsCollection"
+        ) as coll_cls:
+            await dash.async_ensure_dashboard(hass, self._entry(enabled=True))
+        coll_cls.assert_not_called()
+
+    async def test_first_run_creates_saves_and_registers(self):
+        from homeassistant.components.lovelace.const import (
+            CONF_URL_PATH,
+        )
+
+        import custom_components.kirkhill_wind.dashboard as dash
+
+        hass = self._hass()
+        coll = _fake_collection(items=[])
+        store = _fake_lovelace_store(existing=None)
+        default_config = {"views": [{"title": "SCADA"}]}
+        with patch.object(
+            dash.lovelace_dashboard, "DashboardsCollection"
+        ) as coll_cls, patch.object(
+            dash.lovelace_dashboard, "LovelaceStorage", return_value=store
+        ), patch.object(
+            dash, "build_dashboard_config", return_value=default_config
+        ), patch.object(dash, "frontend") as frontend:
+            coll_cls.return_value = coll
+            await dash.async_ensure_dashboard(hass, self._entry())
+
+        # One dashboard created with our URL path, the default saved once.
+        coll.async_create_item.assert_awaited_once()
+        assert coll.async_create_item.call_args[0][0][CONF_URL_PATH]
+        store.async_save.assert_awaited_once_with(default_config)
+        frontend.async_register_built_in_panel.assert_called_once()
+
+    async def test_second_run_is_a_no_write_steady_state(self):
+        """Reinstall/reload must not rewrite .storage on every entry update."""
+        from homeassistant.components.lovelace.const import (
+            CONF_REQUIRE_ADMIN,
+            CONF_SHOW_IN_SIDEBAR,
+            CONF_TITLE,
+            CONF_URL_PATH,
+        )
+
+        import custom_components.kirkhill_wind.dashboard as dash
+
+        hass = self._hass()
+        default_config = {"views": [{"title": "SCADA"}]}
+        existing_item = {
+            CONF_URL_PATH: dash._URL_PATH,
+            CONF_TITLE: "Kirk Hill Wind Farm",
+            CONF_REQUIRE_ADMIN: False,
+            CONF_SHOW_IN_SIDEBAR: True,
+        }
+        coll = _fake_collection(items=[existing_item])
+        store = _fake_lovelace_store(existing=default_config)  # already merged
+        with patch.object(
+            dash.lovelace_dashboard, "DashboardsCollection"
+        ) as coll_cls, patch.object(
+            dash.lovelace_dashboard, "LovelaceStorage", return_value=store
+        ), patch.object(
+            dash, "build_dashboard_config", return_value=default_config
+        ), patch.object(dash, "frontend"):
+            coll_cls.return_value = coll
+            await dash.async_ensure_dashboard(hass, self._entry())
+            await dash.async_ensure_dashboard(hass, self._entry())
+
+        # The existing dashboard is reused (never duplicated) …
+        coll.async_create_item.assert_not_called()
+        # … and the merge being idempotent means not one rewrite happened.
+        store.async_save.assert_not_called()
+
+    async def test_user_customisations_survive_the_merge(self):
+        from homeassistant.components.lovelace.const import (
+            CONF_REQUIRE_ADMIN,
+            CONF_SHOW_IN_SIDEBAR,
+            CONF_TITLE,
+            CONF_URL_PATH,
+        )
+
+        import custom_components.kirkhill_wind.dashboard as dash
+
+        hass = self._hass()
+        default_config = {
+            "views": [
+                {
+                    "title": "SCADA",
+                    "cards": [
+                        {"type": "entities", "title": "Owner data"},
+                        {"type": "gauge", "title": "New in this version"},
+                    ],
+                }
+            ]
+        }
+        user_card = {"type": "markdown", "content": "My notes"}
+        existing_config = {
+            "views": [
+                {
+                    "title": "SCADA",
+                    "cards": [
+                        {"type": "entities", "title": "Owner data"},
+                        user_card,
+                    ],
+                }
+            ]
+        }
+        existing_item = {
+            CONF_URL_PATH: dash._URL_PATH,
+            CONF_TITLE: "Kirk Hill Wind Farm",
+            CONF_REQUIRE_ADMIN: False,
+            CONF_SHOW_IN_SIDEBAR: True,
+        }
+        coll = _fake_collection(items=[existing_item])
+        store = _fake_lovelace_store(existing=existing_config)
+        with patch.object(
+            dash.lovelace_dashboard, "DashboardsCollection"
+        ) as coll_cls, patch.object(
+            dash.lovelace_dashboard, "LovelaceStorage", return_value=store
+        ), patch.object(
+            dash, "build_dashboard_config", return_value=default_config
+        ), patch.object(dash, "frontend"):
+            coll_cls.return_value = coll
+            await dash.async_ensure_dashboard(hass, self._entry())
+
+        saved = store.async_save.call_args[0][0]
+        # The user's own card survives inside the matched view, next to the
+        # managed default (the merge's exact output shape is pinned in the
+        # helper tests above).
+        cards = saved["views"][0]["cards"]
+        assert user_card in cards
+        assert {"type": "entities", "title": "Owner data"} in cards
+        assert {"type": "gauge", "title": "New in this version"} in cards
