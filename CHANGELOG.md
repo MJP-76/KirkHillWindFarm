@@ -4,8 +4,10 @@ All notable changes to the Kirk Hill Wind Farm integration.
 
 ## Version 4.18.4
 
-**Testing pre-release.** The hardening series responding to an external
-review of 4.18.3 — correctness only, no features.
+**Stable release** — promoted the same day, after the owner tested the
+hardening live (duplicate-refusal proof on the install, restarts, ledger
+checks). The series responding to an external review of 4.18.3 —
+correctness only, no features.
 
 - **Period collisions refused** — re-declaring a period, or crossing one
   with an overlapping window, is now a clear error instead of a silent

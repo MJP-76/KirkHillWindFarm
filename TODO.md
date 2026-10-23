@@ -341,7 +341,7 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
-### v4.18.4 (pre-release, 2026-10-23)
+### v4.18.4 (stable, 2026-10-23)
 
 - **Hardening series responding to the external review** (366 → 372 tests):
   - **Period collisions refused** (#158) — duplicates and overlapping
