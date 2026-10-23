@@ -208,13 +208,32 @@ class KirkHillWindScada extends HTMLElement {
     return this._attr(entityId, "data_stale") === true;
   }
 
-  _setChipStale(el, entityId) {
-    // Last-known data shown in red instead of being hidden, so a stale value
-    // is obvious but the number stays visible.
+  _setCellTone(el, entityId, force = null) {
+    // The ROI panel's colour language, applied to measured data:
+    //   green — a fresh API measurement, or an exact sum of them;
+    //   amber — a derived or assumed figure: force="derived", the API's
+    //           approximation when yearly frames are missing, or restored
+    //           cache before the first fetch lands;
+    //   red   — last-known data after a failed refresh, kept stronger than
+    //           amber exactly as before (hidden numbers help nobody).
     if (!el) return;
-    const stale = this._isStale(entityId);
-    el.style.fill = stale ? "var(--khscada-error-color)" : "";
-    el.style.opacity = stale ? "1" : this._attr(entityId, "generation_source") === "restored" ? "0.5" : "1";
+    const source = this._attr(entityId, "generation_source");
+    if (this._isStale(entityId)) {
+      el.style.fill = "var(--khscada-error-color)";
+      el.style.opacity = "1";
+      return;
+    }
+    if (
+      force === "derived"
+      || source === "restored"
+      || source === "api_alltime_missing_years"
+    ) {
+      el.style.fill = "var(--khscada-warn-color, #ffb300)";
+      el.style.opacity = "1";
+      return;
+    }
+    el.style.fill = "var(--success-color, #4caf50)";
+    el.style.opacity = "1";
   }
 
   _fmt(n, decimals = 1) {
@@ -2925,6 +2944,9 @@ _buildHeaderChips(layout) {
     ) {
       ownerExportKw = sitePowerMw * 1000 * (ownerEnergyKwh / siteEnergyKwh);
     }
+    // The fallback above derives output from site power and today's energy
+    // ratio -- a derived figure, which the colour rule must see.
+    const exportDerived = ownerPowerKw === null && ownerExportKw !== null;
     const ownerPowerText = this._powerText(ownerExportKw);
     let sitePowerText =
       sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
@@ -2949,13 +2971,18 @@ _buildHeaderChips(layout) {
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-user-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
-      this._setChipStale(root.querySelector(`[data-user-gen="${key}"]`), item.entity);
+      this._setCellTone(root.querySelector(`[data-user-gen="${key}"]`), item.entity);
     });
 
 
     const siteCap = this._num(config.capacity_entity);
     // Your share: owner export power is reported in kW; display in watts.
     this._setText(root, '[data-user-gen="share"]', ownerExportKw === null ? "—" : `${this._fmt(ownerExportKw * 1000, 0)} W`);
+    this._setCellTone(
+      root.querySelector('[data-user-gen="share"]'),
+      config.owner_power_entity,
+      exportDerived ? "derived" : null,
+    );
     // Owner share (per myriad, ‱) as the single source of truth. Prefer the
     // capacity-derived owner_share entity (in %) when set; it is the fixed share
     // of watts bought and does not vary with generation or capacity factor.
@@ -2968,6 +2995,13 @@ _buildHeaderChips(layout) {
           ? (ownerEnergyKwh / siteEnergyKwh) * 100
           : null;
     this._setText(root, '[data-user-gen="sharepct"]', sharePct === null ? "—" : `${this._fmt(sharePct * 100, 2)}‱`);
+    // Share (‱) is a derived ratio whichever source feeds it: the
+    // capacity-derived entity or today's generation-ratio fallback.
+    this._setCellTone(
+      root.querySelector('[data-user-gen="sharepct"]'),
+      config.owner_share_entity,
+      "derived",
+    );
 
 
 
@@ -2977,13 +3011,17 @@ _buildHeaderChips(layout) {
       const val = this._num(item.entity);
       const scaled = val !== null ? this._scaleKwh(val) : { value: "—", unit: "" };
       this._setText(root, `[data-site-gen="${key}"]`, scaled.value === "—" ? scaled.value : `${scaled.value} ${scaled.unit}`);
-      this._setChipStale(root.querySelector(`[data-site-gen="${key}"]`), item.entity);
+      this._setCellTone(root.querySelector(`[data-site-gen="${key}"]`), item.entity);
     });
 
     this._setText(root, '[data-site-gen="capacity"]', siteCap === null ? "—" : `${this._fmt(siteCap, 1)}%`);
-    this._setChipStale(root.querySelector('[data-site-gen="capacity"]'), config.capacity_entity);
+    this._setCellTone(root.querySelector('[data-site-gen="capacity"]'), config.capacity_entity);
     sitePowerText = sitePowerMw === null ? { value: "—", unit: "" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     this._setText(root, '[data-site-gen="power"]', `${sitePowerText.value} ${sitePowerText.unit}`);
+    this._setCellTone(
+      root.querySelector('[data-site-gen="power"]'),
+      config.farm_power_entity,
+    );
 
 
     // Return on investment panel — the ledger's headline, drawn like Owner and

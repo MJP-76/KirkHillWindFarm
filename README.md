@@ -98,7 +98,10 @@ and an animated dashboard.
   period is board-confirmed, amber once an estimate joins. **Average
   interest** is green the same way (pure board money — capital's state never
   touches a figure that excludes capital). Amber is
-  only ever provisional.
+  only ever provisional — and the Owner and Site panels join the same
+  language: green for fresh API measurements, amber for derived or assumed
+  figures (Share, a missing-year All time, restored cache, the output
+  fallback), red for stale.
 - **Per-turbine statistics** — each of T1–T8 reports power, capacity factor,
   wind speed, state text, active status, and generation (today + all-time), with
   colour-coded status pills.

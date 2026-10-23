@@ -325,6 +325,14 @@ records:
   see [Development decisions](development/decisions.md). The ledger still
   exposes `current_year_gbp` / `year_totals_gbp` (declarations attributed whole
   to the year they *end* in) for templates.
+- **The panels speak the ROI panel's colour language.** **Green** = a fresh
+  API measurement, including All time's exact `sum_of_years` (Yesterday …
+  Last 12 months, All time, Your output, Power, Capacity Factor). **Amber** =
+  a derived or assumed figure: **Share (‱)** — a ratio whichever source feeds
+  it — All time's `api_alltime_missing_years` approximation, restored cache
+  before the first fetch, and *Your output* whenever it falls back to site
+  power × today's energy ratio. **Red** = stale last-known data, exactly as
+  before (a stale number in red beats a hidden one).
 
 ### Prices and member savings (entities present, disabled, unused by the cards)
 
