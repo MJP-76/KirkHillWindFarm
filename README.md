@@ -61,7 +61,9 @@ and an animated dashboard.
   where it gives one — × years, counting towards nothing), and the add/edit
   forms. ROI is `value ÷ capital × 100` — against your entry, or the amber
   derived auto-fill (share price × your watts) while that is all there is —
-  deliberately not annualised, and reads `—` when neither exists.
+  deliberately not annualised, and reads `—` when neither exists. The
+  financial calculations here are designed **only for members who have had
+  their payments solely via Ethex**.
 
   ![Return on investment panel: invested, payments from Co-op, your estimates, period count and return](docs/assets/roi-panel.png)
 - **Payment ledger** — `sensor.<farm>_payment_ledger` sums what the board has
@@ -74,7 +76,8 @@ and an animated dashboard.
   `set_projection` services —
   or by editing the shipped `board_announcements.yaml` in a PR, whose entries
   are upserted into the ledger as board records on setup (switchable to
-  *Manual entry only* in Options → Board figures source).
+  *Manual entry only* in Options → Board figures source); an entry may also
+  carry the period's capital/interest split — one half completes the other.
 - **Live SCADA dashboard** — auto-creates a Lovelace dashboard with a single
   **Kirk Hill SCADA** tab: a full-bleed animated single-line diagram of the
   farm — 8 turbines feeding the site collection bus, through the step-up

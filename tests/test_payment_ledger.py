@@ -1080,6 +1080,98 @@ records:
         assert record["interest_gbp"] is None
 
     @pytest.mark.asyncio
+    async def test_file_carries_a_split_and_completes_the_other_half(
+        self, hass, fake_store, announcements, caplog
+    ):
+        # capital_gbp: 0 is a figure, not an absence: an interest-only
+        # payment is exactly that, and it must survive key-presence checks.
+        ledger = PaymentLedger(hass, "test-entry")
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 20
+    capital_gbp: 0
+""",
+        )
+        applied = await ledger.async_apply_board_announcements(default_capacity=2000.0)
+
+        assert applied == 1
+        record = ledger.records[0]
+        assert record["capital_gbp"] == 0
+        # Worked out from the period's figure -- penny-exact by construction.
+        assert record["interest_gbp"] == 400.0
+
+    @pytest.mark.asyncio
+    async def test_a_split_the_file_names_wins_over_an_entered_one(
+        self, hass, fake_store, announcements
+    ):
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_add(_record(capital_gbp=100.0, interest_gbp=300.0))
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 20
+    capital_gbp: 0
+""",
+        )
+        await ledger.async_apply_board_announcements(default_capacity=9999.0)
+
+        record = ledger.records[0]
+        assert record["capital_gbp"] == 0
+        assert record["interest_gbp"] == 400.0  # the other half, recomputed
+
+    @pytest.mark.asyncio
+    async def test_a_file_silent_on_split_keeps_an_entered_one(
+        self, hass, fake_store, announcements
+    ):
+        ledger = PaymentLedger(hass, "test-entry")
+        await ledger.async_add(_record(capital_gbp=100.0, interest_gbp=300.0))
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 20
+""",
+        )
+        await ledger.async_apply_board_announcements(default_capacity=9999.0)
+
+        record = ledger.records[0]
+        assert record["capital_gbp"] == 100.0
+        assert record["interest_gbp"] == 300.0
+
+    @pytest.mark.asyncio
+    async def test_halves_that_cannot_sum_are_dropped_and_say_so(
+        self, hass, fake_store, announcements, caplog
+    ):
+        ledger = PaymentLedger(hass, "test-entry")
+        self._write(
+            announcements,
+            """
+records:
+  - period_start: 2025-02-01
+    period_end: 2026-06-30
+    rate_p_per_w: 20
+    capital_gbp: 100
+    interest_gbp: 100
+""",
+        )
+        applied = await ledger.async_apply_board_announcements(default_capacity=2000.0)
+
+        # The record lands; the impossible split does not.
+        assert applied == 1
+        record = ledger.records[0]
+        assert record["capital_gbp"] is None
+        assert record["interest_gbp"] is None
+        assert "split was cleared" in caplog.text
+    @pytest.mark.asyncio
     async def test_empty_list_is_a_noop(self, hass, fake_store, announcements):
         self._write(announcements, "records: []\n")
         ledger = PaymentLedger(hass, "test-entry")

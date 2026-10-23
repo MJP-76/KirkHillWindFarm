@@ -15,7 +15,11 @@
 #     the periods it names
 #
 # Fields: period_start / period_end (YYYY-MM-DD, whole months), rate_p_per_w,
-# optional announced_on (when the board published it), optional note.
+# optional announced_on (when the board published it), optional capital_gbp /
+# interest_gbp (give one half -- the other is worked out from the period's
+# figure -- or both, which must then sum to it to the penny; a split this file
+# names wins for that period, one it does not name keeps whatever was entered),
+# optional note.
 #
 # Example — the board's £1.6m announcement:
 #
@@ -32,4 +36,5 @@ records:
     period_end: 2026-06-30
     rate_p_per_w: 21
     announced_on: 2025-07-15
+    capital_gbp: 0 # interest-only payment: interest is worked out, not guessed
     note: "£1.6m member payment approved — 21 p/W for the 17-month period"
