@@ -130,8 +130,8 @@ the value column — carrying the headline only:
 | Invested | `£5,000` in **green** (you entered or ticked it), **amber** while it is only the derived auto-fill, or `Not set` until a share price or your entry exists |
 | Payments from Co-op | `£1,074.98` in **green** — board-confirmed money |
 | Your estimates | `—` until one exists; **never green** — an estimate becomes board money only by editing the period and ticking the board box, which moves it into Payments from Co-op |
-| Return | `21.50%` in **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
 | Periods | `2` |
+| Return | `21.50%` in **green only for confirmed capital over pure board money**, **amber while it measures against derived capital or the ledger holds any own estimate**; `—` with neither an entry nor a derived figure |
 
 Three rows were dropped from the panel in favour of the modal: **Published
 rate** — it sits on every row there, and only board records ever set it —
@@ -141,7 +141,7 @@ Payments** — with own estimates barred from money sums, it was Co-op plus
 guesses: redundant when clean, contaminated when not. The combined total
 still shows in the modal's stats and split line.
 
-![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, return and period count](assets/roi-panel.png)
+![Return on investment panel with the Measure and Value columns: invested, payments from Co-op, your estimates, period count and return](assets/roi-panel.png)
 
 **Clicking the panel opens the ledger modal**, which holds everything else:
 
