@@ -171,6 +171,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
             "next_24h_avg_wind_speed_mps",
             "Forecast wind (next 24h avg)",
         ),
+        # Owner scope, because that is the scope the forecast is fetched with
+        # and the scope the wind sensors above already pair with.
+        ForecastEnergySensor(coordinator, entry, "today", "Forecast generation (today)"),
+        ForecastEnergySensor(coordinator, entry, "tomorrow", "Forecast generation (tomorrow)"),
         # P50/P75/P90 and the actual against them, on the same two windows
         # the generation sensors use, so a target and the figure it is judged
         # against always cover the same period.
@@ -1056,6 +1060,57 @@ class ForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
             "weather_stale": forecast.get("weather_stale"),
             "operational_stale": forecast.get("operational_stale"),
             "forecast_points": forecast.get("forecast_points"),
+        }
+
+
+class ForecastEnergySensor(KirkHillEntity, SensorEntity):
+    """The API's own generation forecast for one day.
+
+    Same treatment as BenchmarkSensor: no ``device_class``, kWh and
+    ``state_class: measurement``. Home Assistant allows only
+    ``total``/``total_increasing`` on an energy device class, and this is a
+    prediction rather than a window total -- ``total`` would be wrong as well
+    as ineligible. It keeps statistics for graphing and stays out of the
+    Energy Dashboard, which is unwired on purpose.
+
+    Today's figure covers only the *remaining* time -- ``forecast_from`` to
+    midnight, not midnight to midnight, as the spec states explicitly -- so it
+    is not the counterpart of the Today generation sensor until the day
+    completes. ``forecast_from`` is published as an attribute so the window is
+    visible rather than assumed.
+    """
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:weather-sunny"
+
+    def __init__(self, coordinator, entry, day: str, name: str):
+        super().__init__(coordinator, entry, f"forecast_energy_{day}")
+        self._day = day
+        self._attr_name = name
+
+    def _day_data(self) -> dict:
+        days = self.coordinator.data.get("forecast", {}).get("days", {})
+        return days.get(self._day, {}) if isinstance(days, dict) else {}
+
+    @property
+    def native_value(self):
+        return _as_float(self._day_data().get("energy_kwh"))
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        forecast = self.coordinator.data.get("forecast", {})
+        day = self._day_data()
+        return {
+            "source": "kirkhill_api",
+            "day": self._day,
+            "date": day.get("date"),
+            "forecast_from": day.get("forecast_from"),
+            "complete": day.get("complete"),
+            "status": forecast.get("status"),
+            "generated_at": forecast.get("generated_at"),
+            "model_version": forecast.get("model_version"),
         }
 
 

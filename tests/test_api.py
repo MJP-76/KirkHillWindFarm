@@ -272,6 +272,74 @@ class TestForecastSummarize:
         assert result["next_hour_wind_speed_mps"] == 6.0
         assert result["next_3h_avg_wind_speed_mps"] == 6.0
 
+    @staticmethod
+    def _day(key, energy, *, complete=True, forecast_from="2026-11-03T12:00:00+00:00"):
+        return {
+            "key": key,
+            "date": "2026-11-03",
+            "from": "2026-11-03T00:00:00+00:00",
+            "to": "2026-11-04T00:00:00+00:00",
+            "forecast_from": forecast_from,
+            "complete": complete,
+            "energy_kwh": energy,
+            "points": [
+                {
+                    "from": "2026-11-03T12:00:00+00:00",
+                    "to": "2026-11-03T13:00:00+00:00",
+                    "power_kw": 100.0,
+                    "wind_speed_mps": 6.0,
+                    "nowcast": False,
+                }
+            ],
+        }
+
+    @staticmethod
+    def _days_payload(days):
+        return {"status": "ready", "scope": "owner", "days": days}
+
+    def test_daily_energy_totals_are_carried_through(self):
+        payload = self._days_payload([self._day("today", 812.5), self._day("tomorrow", 1904.0)])
+        result = summarize_forecast(payload, now=self.NOW)
+
+        assert result["days"]["today"]["energy_kwh"] == 812.5
+        assert result["days"]["tomorrow"]["energy_kwh"] == 1904.0
+        assert result["days"]["today"]["complete"] is True
+        # The wind figures ride along in the same payload.
+        assert result["next_hour_wind_speed_mps"] == 6.0
+
+    def test_today_starts_mid_day_not_at_midnight(self):
+        """The spec: today's total covers only the remaining time."""
+        payload = self._days_payload([self._day("today", 812.5, forecast_from="2026-11-03T15:00:00+00:00")])
+        result = summarize_forecast(payload, now=self.NOW)
+
+        assert result["days"]["today"]["forecast_from"] == "2026-11-03T15:00:00+00:00"
+
+    def test_an_absent_energy_is_unknown_not_zero(self):
+        """Zero would read as a calm day rather than missing data."""
+        payload = self._days_payload([self._day("today", None)])
+        result = summarize_forecast(payload, now=self.NOW)
+
+        assert result["days"]["today"]["energy_kwh"] is None
+
+    @pytest.mark.parametrize("key", ["yesterday", "next_week", None, 3])
+    def test_an_unrecognised_day_key_is_dropped(self, key):
+        payload = self._days_payload([self._day(key, 100.0), self._day("today", 812.5)])
+        result = summarize_forecast(payload, now=self.NOW)
+
+        assert set(result["days"]) == {"today"}
+
+    def test_a_non_boolean_complete_reads_as_unknown(self):
+        payload = self._days_payload([self._day("today", 812.5, complete="yes")])
+        result = summarize_forecast(payload, now=self.NOW)
+
+        assert result["days"]["today"]["complete"] is None
+
+    def test_a_day_entry_that_is_not_an_object_is_skipped(self):
+        payload = self._days_payload(["junk", self._day("today", 812.5)])
+        result = summarize_forecast(payload, now=self.NOW)
+
+        assert set(result["days"]) == {"today"}
+
 
 class TestSummarizeBenchmarks:
     """Verify the P50/P75/P90 window reduction."""

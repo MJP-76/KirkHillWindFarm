@@ -357,6 +357,25 @@ def summarize_forecast(data: Any, now: datetime | None = None) -> dict[str, Any]
     if not points or not any(end > reference for _, end, _ in points):
         return {}
 
+    # The daily energy totals ride along with the wind figures. A day whose
+    # key we do not recognise is dropped rather than guessed at, and an absent
+    # total reads as unknown -- never as zero, which would look like a calm
+    # day instead of missing data.
+    day_totals: dict[str, dict[str, Any]] = {}
+    for day in days:
+        if not isinstance(day, dict):
+            continue
+        key = day.get("key")
+        if key not in ("today", "tomorrow"):
+            continue
+        complete = day.get("complete")
+        day_totals[key] = {
+            "date": day.get("date"),
+            "forecast_from": day.get("forecast_from"),
+            "energy_kwh": _number(day.get("energy_kwh")),
+            "complete": complete if isinstance(complete, bool) else None,
+        }
+
     def _average(hours: float) -> float | None:
         horizon = reference + timedelta(hours=hours)
         window = [
@@ -373,6 +392,7 @@ def summarize_forecast(data: Any, now: datetime | None = None) -> dict[str, Any]
         "weather_stale": data.get("weather_stale"),
         "operational_stale": data.get("operational_stale"),
         "forecast_points": future_points,
+        "days": day_totals,
         "next_hour_wind_speed_mps": _average(1),
         "next_3h_avg_wind_speed_mps": _average(3),
         "next_24h_avg_wind_speed_mps": _average(24),

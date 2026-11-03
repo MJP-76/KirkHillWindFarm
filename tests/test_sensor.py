@@ -16,6 +16,7 @@ from custom_components.kirkhill_wind.sensor import (
     FarmCapacityFactorSensor,
     FarmGenerationByTimeframeSensor,
     FarmWindSpeedSensor,
+    ForecastEnergySensor,
     GenerationValueByTimeframeSensor,
     LatestImportStatusSensor,
     MemberSavingsValueSensor,
@@ -119,6 +120,60 @@ class TestDataGeneratedAtSensor:
     def test_none_when_not_string(self):
         sensor = self._make_sensor({"generated_at": 12345})
         assert sensor.native_value is None
+
+
+class TestForecastEnergySensor:
+    """Verify the generation forecast reads its day and publishes the window."""
+
+    @staticmethod
+    def _make_sensor(days, day="today"):
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {"forecast": {"status": "ready", "days": days}}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        return ForecastEnergySensor(coordinator, entry, day, "Forecast generation (today)")
+
+    def test_reads_the_day_total(self):
+        assert self._make_sensor({"today": {"energy_kwh": 812.5}}).native_value == 812.5
+
+    def test_none_when_the_day_is_missing(self):
+        assert self._make_sensor({}).native_value is None
+
+    def test_none_when_the_total_is_unknown(self):
+        assert self._make_sensor({"today": {"energy_kwh": None}}).native_value is None
+
+    def test_the_other_day_is_not_read(self):
+        sensor = self._make_sensor({"tomorrow": {"energy_kwh": 1904.0}}, day="today")
+        assert sensor.native_value is None
+
+    def test_the_window_is_published_not_assumed(self):
+        sensor = self._make_sensor(
+            {
+                "today": {
+                    "energy_kwh": 812.5,
+                    "forecast_from": "2026-11-03T15:00:00+00:00",
+                    "complete": True,
+                }
+            }
+        )
+        attrs = sensor.extra_state_attributes
+
+        assert attrs["forecast_from"] == "2026-11-03T15:00:00+00:00"
+        assert attrs["complete"] is True
+        assert attrs["source"] == "kirkhill_api"
+        assert attrs["day"] == "today"
+
+    def test_a_missing_forecast_reads_unknown_rather_than_raising(self):
+        coordinator = MagicMock()
+        coordinator.last_update_success = True
+        coordinator.data = {}
+        entry = MagicMock()
+        entry.entry_id = "test"
+        sensor = ForecastEnergySensor(coordinator, entry, "today", "Forecast generation (today)")
+
+        assert sensor.native_value is None
+        assert sensor.extra_state_attributes["status"] is None
 
 
 class TestUnknownTurbinesSensor:
