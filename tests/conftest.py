@@ -254,7 +254,55 @@ def mock_summary_payload():
 
 
 @pytest.fixture
-def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payload):
+def mock_benchmark_payload():
+    """Return a realistic /api/v1/benchmarks `data` payload.
+
+    One calendar month, which is the shape every `range=today` fetch has; a
+    rolling 30 days returns two. Every target carries all five documented
+    fields because the schema is `additionalProperties: false`.
+    """
+
+    def target(period, full_month, achieved):
+        return {
+            "period_kwh": period,
+            "full_month_kwh": full_month,
+            "expected_capacity_factor_percent": 31.5,
+            "vs_period_percent": 80.0,
+            "full_month_achieved_percent": achieved,
+        }
+
+    return {
+        "window": {
+            "range": "today",
+            "from": "2026-11-03T00:00:00+00:00",
+            "to": "2026-11-03T23:59:59+00:00",
+            "scope": "owner",
+        },
+        "basis": "long_term_monthly_budgets",
+        "timezone": "Europe/London",
+        "months": [
+            {
+                "month": "2026-11",
+                "from": "2026-11-01T00:00:00+00:00",
+                "to": "2026-11-30T23:59:59+00:00",
+                "hours": 24.0,
+                "full_month_hours": 720.0,
+                "generation_kwh": 80.0,
+                "generation_complete": True,
+                "boundary_complete": False,
+                "is_full_month": False,
+                "targets": {
+                    "p50": target(100.0, 744.0, None),
+                    "p75": target(120.0, 892.8, None),
+                    "p90": target(140.0, 1041.6, None),
+                },
+            }
+        ],
+    }
+
+
+@pytest.fixture
+def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payload, mock_benchmark_payload):
     """Return a mock KirkHillApiClient with endpoint-shaped responses."""
     client = AsyncMock()
     client.get_current = AsyncMock(side_effect=lambda session, scope: _current_payload(scope))
@@ -263,5 +311,6 @@ def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payloa
     # An empty forecast payload: summarize_forecast({}) yields no forecast,
     # which is what a slow tier with nothing to say should look like.
     client.get_forecast = AsyncMock(return_value={})
+    client.get_benchmarks = AsyncMock(return_value=mock_benchmark_payload)
     client.test = AsyncMock()
     return client

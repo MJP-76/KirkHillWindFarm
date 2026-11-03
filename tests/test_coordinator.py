@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from custom_components.kirkhill_wind.const import (
+    BENCHMARK_RANGES,
     CONF_API_KEY,
     CONF_BASE_URL,
     CONF_SCAN_INTERVAL,
@@ -91,6 +92,18 @@ def _summary_calls(mock_api_client):
     """
     counter = Counter(
         (call.kwargs["scope"], call.kwargs["range_value"]) for call in mock_api_client.get_summary.call_args_list
+    )
+    return dict(counter)
+
+
+def _benchmark_calls(mock_api_client):
+    """Return {(scope, range_value): fetch_count} for the benchmark fetch.
+
+    Same reasoning as _summary_calls: a Counter, so a window fetched twice
+    fails the assertion instead of collapsing into a set.
+    """
+    counter = Counter(
+        (call.kwargs["scope"], call.kwargs["range_value"]) for call in mock_api_client.get_benchmarks.call_args_list
     )
     return dict(counter)
 
@@ -501,6 +514,114 @@ class TestApiCallBudget:
                         f"completed year {year} was re-requested for {scope} {minutes} minutes in"
                     )
             self._only_once(later, f"slow poll at +{minutes}min")
+
+
+    @pytest.mark.asyncio
+    async def test_benchmarks_are_fetched_exactly_once_per_update(self, hass, mock_api_client):
+        """Four windows per slow tick, never twice."""
+        entry = _make_entry()
+        t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0,
+        ):
+            await coord._async_update_data()
+
+        calls = _benchmark_calls(mock_api_client)
+        expected = {(scope, range_value) for scope in SCOPES for range_value, _label in BENCHMARK_RANGES}
+        assert set(calls) == expected, f"expected {sorted(expected)}, got {sorted(calls)}"
+        self._only_once(calls, "benchmarks on the first poll")
+
+        # A fast poll inside the hour must not touch them again.
+        mock_api_client.get_benchmarks.reset_mock()
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=t0 + timedelta(minutes=5),
+        ):
+            await coord._async_update_data()
+        assert _benchmark_calls(mock_api_client) == {}, "benchmarks were re-fetched between slow tiers"
+
+
+# ---------------------------------------------------------------------------
+# Benchmarks (P50/P75/P90) -- side data, slow tier, never fatal
+# ---------------------------------------------------------------------------
+
+
+class TestBenchmarks:
+    """The expectations are side data: they must never take the update down."""
+
+    @staticmethod
+    async def _update(coord, now):
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            return await coord._async_update_data()
+
+    @pytest.mark.asyncio
+    async def test_a_valid_payload_reaches_the_coordinator_data(self, hass, mock_api_client):
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        data = await self._update(coord, now)
+
+        window = data["benchmarks"]["owner"]["today"]
+        assert window["p50_kwh"] == 100.0
+        assert window["p75_kwh"] == 120.0
+        assert window["p90_kwh"] == 140.0
+        assert window["actual_kwh"] == 80.0
+        assert window["vs_p50_percent"] == 80.0
+        assert data["benchmarks"]["site"]["today"]["p50_kwh"] == 100.0
+
+    @pytest.mark.asyncio
+    async def test_a_failing_benchmark_never_fails_the_update(self, hass, mock_api_client):
+        """Side data is side data: the core payload survives a dead endpoint."""
+        mock_api_client.get_benchmarks = AsyncMock(side_effect=KirkHillApiError("nope"))
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        data = await self._update(coord, now)
+
+        assert data["benchmarks"] == {scope: {} for scope in SCOPES}
+        assert data["timeframe_summaries"]["owner"], "core data must be untouched"
+
+    @pytest.mark.asyncio
+    async def test_a_garbage_payload_yields_no_windows(self, hass, mock_api_client):
+        """A payload this cannot read must not reach the sensors half-formed."""
+        mock_api_client.get_benchmarks = AsyncMock(return_value={"months": "not-a-list"})
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        data = await self._update(coord, now)
+
+        assert data["benchmarks"] == {scope: {} for scope in SCOPES}
+        assert data["timeframe_summaries"]["owner"]
+
+    @pytest.mark.asyncio
+    async def test_one_dead_window_does_not_sink_the_others(self, hass, mock_api_client):
+        """A partial result is still a result: only the failed window clears."""
+        payload = mock_api_client.get_benchmarks.return_value
+
+        async def flaky(session, *, scope, range_value):
+            if scope == "owner" and range_value == "today":
+                raise KirkHillApiError("boom")
+            return payload
+
+        mock_api_client.get_benchmarks = AsyncMock(side_effect=flaky)
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        data = await self._update(coord, now)
+
+        assert "today" not in data["benchmarks"]["owner"]
+        assert data["benchmarks"]["owner"]["30d"]["p50_kwh"] == 100.0
+        assert data["benchmarks"]["site"]["today"]["p50_kwh"] == 100.0
 
 
 # ---------------------------------------------------------------------------

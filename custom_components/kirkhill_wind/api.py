@@ -46,7 +46,9 @@ def describe_key(key: str) -> str:
         shape = "does not start with kh_live_"
     whitespace = ""
     if key != stripped:
-        whitespace = f", {len(key) - len(stripped)} whitespace character(s) at the edges"
+        whitespace = (
+            f", {len(key) - len(stripped)} whitespace character(s) at the edges"
+        )
     return f"{len(stripped)}-char value{whitespace}, {shape}"
 
 
@@ -94,12 +96,16 @@ class KirkHillApiClient:
             "Accept": "application/json",
         }
 
-    async def _get(self, session: aiohttp.ClientSession, path: str, params: dict[str, str]) -> dict[str, Any]:
+    async def _get(
+        self, session: aiohttp.ClientSession, path: str, params: dict[str, str]
+    ) -> dict[str, Any]:
         url = f"{self._base_url}{path}"
         started = time.monotonic()
         _LOGGER.debug("Kirk Hill API GET %s params=%s", path, params)
         try:
-            async with session.get(url, params=params, headers=self._headers, timeout=TIMEOUT) as resp:
+            async with session.get(
+                url, params=params, headers=self._headers, timeout=TIMEOUT
+            ) as resp:
                 if resp.status >= 400:
                     # Read the body *before* raising: the dashboard explains
                     # itself in {"message": ...} -- "which rejection was this?"
@@ -109,7 +115,9 @@ class KirkHillApiClient:
                 else:
                     detail = ""
                 if resp.status == 401:
-                    raise KirkHillAuthError("Invalid or missing API key" + (f": {detail}" if detail else ""))
+                    raise KirkHillAuthError(
+                        "Invalid or missing API key" + (f": {detail}" if detail else "")
+                    )
                 if resp.status == 403:
                     # Classified before raise_for_status(): otherwise this
                     # lands in the ClientError branch below and a permission
@@ -124,7 +132,8 @@ class KirkHillApiClient:
                     # -> KirkHillConnectionError(str(exc)), which kept the status
                     # but dropped the body. Same exception type, both halves kept.
                     raise KirkHillConnectionError(
-                        f"HTTP {resp.status} from {path} (params={params}): " + (detail or "no detail returned")
+                        f"HTTP {resp.status} from {path} (params={params}): "
+                        + (detail or "no detail returned")
                     )
                 body = await resp.json()
                 _LOGGER.debug(
@@ -169,9 +178,13 @@ class KirkHillApiClient:
         own ``isinstance`` guard. Callers may rely on a dict coming back.
         """
         if not isinstance(body, dict):
-            raise KirkHillApiError("Malformed response from Kirk Hill API: expected an object")
+            raise KirkHillApiError(
+                "Malformed response from Kirk Hill API: expected an object"
+            )
         if "data" not in body:
-            raise KirkHillApiError("Malformed response from Kirk Hill API: missing 'data' key")
+            raise KirkHillApiError(
+                "Malformed response from Kirk Hill API: missing 'data' key"
+            )
         data = body["data"]
         if not isinstance(data, dict):
             raise KirkHillApiError(
@@ -179,7 +192,9 @@ class KirkHillApiClient:
             )
         return data
 
-    async def get_current(self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER) -> dict[str, Any]:
+    async def get_current(
+        self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER
+    ) -> dict[str, Any]:
         """GET /api/v1/current?scope={scope}."""
         body = await self._get(session, "/api/v1/current", {"scope": scope})
         return self._parse_data(body)
@@ -201,7 +216,9 @@ class KirkHillApiClient:
         )
         turbines = self._parse_data(body).get("turbines")
         if not isinstance(turbines, list):
-            raise KirkHillApiError("Malformed response from Kirk Hill API: missing 'turbines' list")
+            raise KirkHillApiError(
+                "Malformed response from Kirk Hill API: missing 'turbines' list"
+            )
         return turbines
 
     async def get_summary(
@@ -230,7 +247,9 @@ class KirkHillApiClient:
         )
         return self._parse_data(body)
 
-    async def get_forecast(self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER) -> dict[str, Any]:
+    async def get_forecast(
+        self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER
+    ) -> dict[str, Any]:
         """GET /api/v1/forecast?scope={scope}.
 
         The wind farm's own forecast: its weather models run at hub height
@@ -240,6 +259,26 @@ class KirkHillApiClient:
         generation forecast, which a wind-only source cannot produce.
         """
         body = await self._get(session, "/api/v1/forecast", {"scope": scope})
+        return self._parse_data(body)
+
+    async def get_benchmarks(
+        self,
+        session: aiohttp.ClientSession,
+        scope: str = SCOPE_OWNER,
+        range_value: str = "today",
+    ) -> dict[str, Any]:
+        """GET /api/v1/benchmarks?scope={scope}&range={range_value}.
+
+        Long-term expectations (P50/P75/P90) for a window, plus how the
+        actual generation for that window measures against them. The spec is
+        explicit that these are **not** weather forecasts: they are
+        ``long_term_monthly_budgets``.
+        """
+        body = await self._get(
+            session,
+            "/api/v1/benchmarks",
+            {"scope": scope, "range": range_value},
+        )
         return self._parse_data(body)
 
     async def test(self, session: aiohttp.ClientSession) -> None:
@@ -304,7 +343,12 @@ def summarize_forecast(data: Any, now: datetime | None = None) -> dict[str, Any]
             start = _parse_timestamp(point.get("from"))
             end = _parse_timestamp(point.get("to"))
             speed = point.get("wind_speed_mps")
-            if start is None or end is None or isinstance(speed, bool) or not isinstance(speed, (int, float)):
+            if (
+                start is None
+                or end is None
+                or isinstance(speed, bool)
+                or not isinstance(speed, (int, float))
+            ):
                 continue
             points.append((start, end, float(speed)))
 
@@ -315,7 +359,9 @@ def summarize_forecast(data: Any, now: datetime | None = None) -> dict[str, Any]
 
     def _average(hours: float) -> float | None:
         horizon = reference + timedelta(hours=hours)
-        window = [speed for start, end, speed in points if end > reference and start < horizon]
+        window = [
+            speed for start, end, speed in points if end > reference and start < horizon
+        ]
         return round(sum(window) / len(window), 2) if window else None
 
     future_points = sum(1 for _, end, _ in points if end > reference)
@@ -330,4 +376,86 @@ def summarize_forecast(data: Any, now: datetime | None = None) -> dict[str, Any]
         "next_hour_wind_speed_mps": _average(1),
         "next_3h_avg_wind_speed_mps": _average(3),
         "next_24h_avg_wind_speed_mps": _average(24),
+    }
+
+
+def _number(value: Any) -> float | None:
+    """Coerce a numeric field to float, or None when it is absent/null/garbage."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _total(values: list[float | None]) -> float | None:
+    """Sum a window's per-month figures, or None if any part is unknown.
+
+    A partial sum would read as a real total and be quietly wrong, so an
+    unknown part makes the whole window unknown.
+    """
+    if not values or any(value is None for value in values):
+        return None
+    return round(sum(values), 3)
+
+
+def summarize_benchmarks(data: Any) -> dict[str, Any]:
+    """Reduce the ``/api/v1/benchmarks`` payload to one window's figures.
+
+    The payload reports one entry per calendar month the window touches, each
+    carrying its own targets, so a window spanning two months -- any rolling
+    30 days does -- has to be summed rather than read off the first entry.
+    Percentages are the exception: they cannot be summed, so
+    ``vs_p50_percent`` is derived from the summed energies instead of
+    averaged across months.
+
+    Returns ``{}`` when the payload holds nothing usable. That is the
+    contract the coordinator's "drop to no benchmarks" path depends on: a
+    payload this cannot read must yield nothing rather than raise, because
+    side data must never fail the core update.
+    """
+    if not isinstance(data, dict):
+        return {}
+    months = data.get("months")
+    if not isinstance(months, list) or not months:
+        return {}
+
+    target_totals: dict[str, list[float | None]] = {"p50": [], "p75": [], "p90": []}
+    actuals: list[float | None] = []
+    data_complete = True
+
+    for month in months:
+        if not isinstance(month, dict):
+            return {}
+        targets = month.get("targets")
+        if not isinstance(targets, dict):
+            return {}
+        # Present-but-null is a legitimate value (the schema allows it) and
+        # becomes an unknown total; absent is a malformed payload, which must
+        # yield nothing rather than a window of invented nulls.
+        if "generation_kwh" not in month or "generation_complete" not in month:
+            return {}
+        for percentile in target_totals:
+            target = targets.get(percentile)
+            if not isinstance(target, dict) or "period_kwh" not in target:
+                return {}
+            target_totals[percentile].append(_number(target.get("period_kwh")))
+        actuals.append(_number(month.get("generation_kwh")))
+        if month.get("generation_complete") is False:
+            data_complete = False
+
+    p50 = _total(target_totals["p50"])
+    p75 = _total(target_totals["p75"])
+    p90 = _total(target_totals["p90"])
+    actual = _total(actuals)
+    vs_p50 = round(actual / p50 * 100, 2) if (actual is not None and p50) else None
+
+    return {
+        "basis": data.get("basis"),
+        "timezone": data.get("timezone"),
+        "month_count": len(months),
+        "actual_kwh": actual,
+        "p50_kwh": p50,
+        "p75_kwh": p75,
+        "p90_kwh": p90,
+        "vs_p50_percent": vs_p50,
+        "data_complete": data_complete,
     }

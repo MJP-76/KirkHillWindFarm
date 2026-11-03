@@ -11,6 +11,7 @@ import pytest
 from custom_components.kirkhill_wind.api import (
     KirkHillApiClient,
     describe_key,
+    summarize_benchmarks,
     summarize_forecast,
 )
 from custom_components.kirkhill_wind.const import SCOPE_OWNER, SCOPE_SITE
@@ -270,6 +271,130 @@ class TestForecastSummarize:
 
         assert result["next_hour_wind_speed_mps"] == 6.0
         assert result["next_3h_avg_wind_speed_mps"] == 6.0
+
+
+class TestSummarizeBenchmarks:
+    """Verify the P50/P75/P90 window reduction."""
+
+    @staticmethod
+    def _target(period_kwh, *, vs=None):
+        return {
+            "period_kwh": period_kwh,
+            "full_month_kwh": 1000.0,
+            "expected_capacity_factor_percent": 31.5,
+            "vs_period_percent": vs,
+            "full_month_achieved_percent": None,
+        }
+
+    @classmethod
+    def _month(cls, generation, p50, p75, p90, *, month="2026-11", complete=True):
+        return {
+            "month": month,
+            "from": "2026-11-01T00:00:00+00:00",
+            "to": "2026-12-01T00:00:00+00:00",
+            "hours": 720.0,
+            "full_month_hours": 720.0,
+            "generation_kwh": generation,
+            "generation_complete": complete,
+            "boundary_complete": False,
+            "is_full_month": False,
+            "targets": {
+                "p50": cls._target(p50),
+                "p75": cls._target(p75),
+                "p90": cls._target(p90),
+            },
+        }
+
+    @staticmethod
+    def _payload(months, **extra):
+        data = {
+            "basis": "long_term_monthly_budgets",
+            "timezone": "Europe/London",
+            "months": months,
+        }
+        data.update(extra)
+        return data
+
+    def test_a_single_month_reads_straight_off_it(self):
+        result = summarize_benchmarks(self._payload([self._month(80.0, 100.0, 120.0, 140.0)]))
+
+        assert result["p50_kwh"] == 100.0
+        assert result["p75_kwh"] == 120.0
+        assert result["p90_kwh"] == 140.0
+        assert result["actual_kwh"] == 80.0
+        # 80 of an expected 100.
+        assert result["vs_p50_percent"] == 80.0
+        assert result["month_count"] == 1
+        assert result["basis"] == "long_term_monthly_budgets"
+        assert result["timezone"] == "Europe/London"
+        assert result["data_complete"] is True
+
+    def test_a_window_spanning_two_months_is_summed_not_read_off_the_first(self):
+        """Any rolling 30 days crosses a calendar month boundary."""
+        months = [
+            self._month(40.0, 50.0, 60.0, 70.0, month="2026-10"),
+            self._month(60.0, 150.0, 180.0, 210.0, month="2026-11"),
+        ]
+        result = summarize_benchmarks(self._payload(months))
+
+        assert result["p50_kwh"] == 200.0
+        assert result["actual_kwh"] == 100.0
+        assert result["month_count"] == 2
+
+    def test_the_percentage_is_derived_from_energy_not_averaged(self):
+        """Averaging 80% and 40% would say 60%; the window is 100 of 200."""
+        months = [
+            self._month(40.0, 50.0, 60.0, 70.0, month="2026-10"),
+            self._month(60.0, 150.0, 180.0, 210.0, month="2026-11"),
+        ]
+        result = summarize_benchmarks(self._payload(months))
+
+        assert result["vs_p50_percent"] == 50.0
+
+    def test_an_unknown_actual_blanks_the_percentage_but_keeps_the_targets(self):
+        months = [self._month(None, 100.0, 120.0, 140.0)]
+        result = summarize_benchmarks(self._payload(months))
+
+        assert result["actual_kwh"] is None
+        assert result["vs_p50_percent"] is None
+        assert result["p50_kwh"] == 100.0
+
+    def test_an_unknown_target_blanks_the_whole_window(self):
+        """A partial sum would read as a real total and be quietly wrong."""
+        months = [
+            self._month(40.0, 50.0, 60.0, 70.0, month="2026-10"),
+            self._month(60.0, None, 180.0, 210.0, month="2026-11"),
+        ]
+        result = summarize_benchmarks(self._payload(months))
+
+        assert result["p50_kwh"] is None
+        assert result["p75_kwh"] == 240.0
+        assert result["vs_p50_percent"] is None
+
+    def test_incomplete_generation_is_reported_not_hidden(self):
+        """The spec says check completeness before comparing totals."""
+        result = summarize_benchmarks(self._payload([self._month(80.0, 100.0, 120.0, 140.0, complete=False)]))
+
+        assert result["data_complete"] is False
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {},
+            {"months": []},
+            {"months": "not-a-list"},
+            {"months": [None]},
+            {"months": [{"targets": "not-a-object"}]},
+            {"months": [{"targets": {"p50": {}, "p75": {}, "p90": {}}}]},
+            {"months": [{"generation_kwh": 1.0}]},
+            "junk",
+            None,
+            42,
+        ],
+    )
+    def test_a_payload_it_cannot_read_yields_nothing(self, body):
+        """The coordinator's "drop to no benchmarks" path depends on this."""
+        assert summarize_benchmarks(body) == {}
 
 
 class TestPermissionHandling:

@@ -14,8 +14,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .api import KirkHillApiClient, summarize_forecast
+from .api import KirkHillApiClient, summarize_benchmarks, summarize_forecast
 from .const import (
+    BENCHMARK_RANGES,
     CONF_API_KEY,
     CONF_BASE_URL,
     DEFAULT_BASE_URL,
@@ -35,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 # Fast: every poll - current power + today summary
 # Medium: every 10 minutes - turbines, wind-speed series
 # Slow: every 1 hour - yesterday, week, month, ytd, year, alltime,
-#       past-year CfD windows (year_YYYY), the wind forecast
+#       past-year CfD windows (year_YYYY), the wind forecast, benchmarks
 FAST_TIMEFRAMES = ("today",)
 SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
 _TURBINE_INTERVAL = timedelta(minutes=10)
@@ -45,6 +46,9 @@ _SLOW_INTERVAL = timedelta(hours=1)
 # plus 1s and 2s of backoff, can take ~63s: longer than the 60s scan
 # interval, so one hung forecast silently costs a poll.
 _FORECAST_BUDGET = 10.0
+# The same bound for the benchmark fetch. It issues one request per
+# (scope, range) concurrently, so this covers the whole group.
+_BENCHMARK_BUDGET = 10.0
 
 
 async def _reap_forecast_task(task: asyncio.Task) -> None:
@@ -93,6 +97,10 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self._site_turbines: list[dict] = []
         self._turbine_generation: dict[str, dict] = {}
         self._forecast: dict = {}
+        # P50/P75/P90 expectations, keyed scope -> range -> window summary.
+        # Cleared rather than held on failure: `vs_p50_percent` moves with
+        # every generation reading, so a last-known target would be a lie.
+        self._benchmarks: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
         # Immutable year summaries: completed calendar years never change, so
         # fetch them once and cache forever.  Keyed by (scope, year_string).
         self._immutable_year_summaries: dict[tuple[str, str], dict] = {}
@@ -172,15 +180,17 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 self._cached_coordinates = self._build_coordinates(self._site_turbines)
             self._next_turbine_update = now + _TURBINE_INTERVAL
 
-        # Slow tier: the wind farm's own forecast runs in parallel with
-        # timeframe summaries (below) when both are due. It needs no turbine
-        # data at all -- the API resolves the location itself -- so unlike the
-        # Open-Meteo call it replaces, it does not depend on a fresh turbine
-        # fetch and needs no coordinate cache.
+        # Slow tier: the wind farm's own forecast and the benchmark
+        # expectations both run in parallel with timeframe summaries (below)
+        # when due. Neither needs turbine data -- the API resolves the
+        # location itself -- so, unlike the Open-Meteo call this replaces,
+        # neither depends on a fresh turbine fetch or a coordinate cache.
         slow_due = now >= self._next_slow_update
         forecast_task: asyncio.Task | None = None
+        benchmark_task: asyncio.Task | None = None
         if slow_due:
             forecast_task = asyncio.create_task(self._fetch_forecast(session))
+            benchmark_task = asyncio.create_task(self._fetch_benchmarks(session))
 
         # Fast tier (+ slow tier timeframes when due): summary fetches.
         try:
@@ -191,23 +201,24 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         except BaseException:
             # _fetch_timeframe_summaries re-raises ConfigEntryAuthFailed when a
             # summary answers 401, and any other failure here strands the same
-            # thing: forecast_task is never awaited, so it keeps running its
-            # retry sleeps (2**attempt) in the background while asyncio reports
-            # "Task was destroyed but it is pending". A forecast from a failed
-            # update is worthless, so reap it before propagating rather than
-            # waiting it out. BaseException, not Exception: a cancelled update
-            # must not orphan the task either.
-            if forecast_task is not None:
-                await _reap_forecast_task(forecast_task)
+            # thing: the side-data tasks are never awaited, so they keep
+            # running their retry sleeps in the background while asyncio
+            # reports "Task was destroyed but it is pending". Side data from a
+            # failed update is worthless, so reap it before propagating rather
+            # than waiting it out. BaseException, not Exception: a cancelled
+            # update must not orphan the tasks either.
+            for task in (forecast_task, benchmark_task):
+                if task is not None:
+                    await _reap_forecast_task(task)
             raise
 
         if slow_due:
             try:
                 self._forecast = await forecast_task
             except asyncio.CancelledError:
-                # The update itself is being torn down: reap the child so it
-                # cannot outlive us, then carry the cancellation outward.
-                await _reap_forecast_task(forecast_task)
+                # The update itself is being torn down: reap the children so
+                # they cannot outlive us, then carry the cancellation outward.
+                await _reap_forecast_task(benchmark_task)
                 raise
             except Exception:
                 # _fetch_forecast advertises "never fail core update", but a
@@ -221,6 +232,22 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     exc_info=True,
                 )
                 self._forecast = {}
+
+            try:
+                self._benchmarks = await benchmark_task
+            except asyncio.CancelledError:
+                await _reap_forecast_task(forecast_task)
+                raise
+            except Exception:
+                # Same contract as the forecast: a benchmark payload this
+                # cannot read clears the expectations rather than taking the
+                # update with it. A stale target would be worse than none --
+                # `vs_p50_percent` moves with every generation reading.
+                _LOGGER.warning(
+                    "Benchmarks failed (side data, non-fatal)",
+                    exc_info=True,
+                )
+                self._benchmarks = {scope: {} for scope in SCOPES}
             self._next_slow_update = now + _SLOW_INTERVAL
 
         return {
@@ -233,6 +260,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "current_stale": dict(self._current_stale),
             "turbine_generation": self._turbine_generation,
             "forecast": self._forecast,
+            "benchmarks": self._benchmarks,
             "summary_failures": {
                 f"{scope}:{timeframe}": count
                 for (scope, timeframe), count in self._summary_failures.items()
@@ -513,3 +541,47 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     await asyncio.sleep(2**attempt)
 
         raise last_exc
+
+    async def _fetch_benchmarks(self, session: aiohttp.ClientSession) -> dict:
+        """Fetch P50/P75/P90 expectations; never fail the core update.
+
+        One request per (scope, range), concurrently, bounded as a group by
+        ``_BENCHMARK_BUDGET``. A window that fails is dropped rather than
+        held: ``vs_p50_percent`` moves with every generation reading, so a
+        last-known target would quietly disagree with the actual sitting
+        next to it on the graph.
+        """
+        pairs = [(scope, range_value) for scope in SCOPES for range_value, _label in BENCHMARK_RANGES]
+        cleared: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
+        try:
+            responses = await asyncio.wait_for(
+                asyncio.gather(
+                    *(
+                        self.client.get_benchmarks(session, scope=scope, range_value=range_value)
+                        for scope, range_value in pairs
+                    ),
+                    return_exceptions=True,
+                ),
+                timeout=_BENCHMARK_BUDGET,
+            )
+        except asyncio.TimeoutError:
+            _LOGGER.warning(
+                "Benchmarks exceeded their %ss budget (side data, non-fatal)",
+                _BENCHMARK_BUDGET,
+            )
+            return cleared
+
+        results: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
+        for (scope, range_value), response in zip(pairs, responses):
+            if isinstance(response, BaseException):
+                _LOGGER.warning(
+                    "Benchmarks scope=%s range=%s failed (side data, non-fatal): %s",
+                    scope,
+                    range_value,
+                    response,
+                )
+                continue
+            summary = summarize_benchmarks(response)
+            if summary:
+                results[scope][range_value] = summary
+        return results

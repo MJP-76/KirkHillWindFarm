@@ -41,6 +41,7 @@ Other responses the API can return:
 | `/api/v1/summary` | `range`, `scope`, `from`, `to` | Generation totals, capacity factor, turbine counts, `latest_import_status` for a window | **Yes —** `range=today` every poll, the rest hourly, once per scope |
 | `/api/v1/turbines` | `range`, `scope`, `from`, `to` | Per-turbine generation, capacity factor, coordinates, rotor speed | **Yes — every 10 minutes**, `range=today` and `range=all`, site scope |
 | `/api/v1/forecast` | `scope` | Point forecast for the rest of today and tomorrow: wind speed and power per interval, a daily energy total, and `status` / `*_stale` flags | **Yes — hourly**, once, default scope |
+| `/api/v1/benchmarks` | `range`, `scope`, `from`, `to` | P50/P75/P90 expectations for a window plus the actual generation against them; `basis: long_term_monthly_budgets` | **Yes — hourly**, `range=today` and `range=30d`, once per scope |
 | `/api/v1/wind-speed` | `range`, `scope`, `from`, `to` | Mean wind speed time series | **No** — dropped in v4.13.1; `/current` already carries wind speed, and HA's recorder holds the history |
 | `/api/v1/generation` | `range`, `scope`, `from`, `to` | Bucketed kWh generation series | **No** — in the spec since it was first committed, but its stability has never been confirmed (see [API feature requests](api-feature-requests.md)) |
 | `/api/v1/carbon-avoided` | `range`, `scope`, `from`, `to` | Indicative CO₂ avoided, weighted by NESO grid carbon intensity | **No** — appeared upstream on 2026-10-08 (see below) |
