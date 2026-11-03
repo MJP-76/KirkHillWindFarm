@@ -779,6 +779,23 @@ class TestForecastTaskLifecycle:
         assert coord._next_slow_update == now, "a failed update must not consume the slow-tier slot"
 
     @pytest.mark.asyncio
+    async def test_both_scopes_are_fetched_for_the_forecast(self, hass, mock_api_client):
+        """The site popout charts the site forecast, so it has to be fetched."""
+        entry = _make_entry()
+        now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        coord = _make_coordinator(hass, entry, mock_api_client, now=now)
+
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            data = await coord._async_update_data()
+
+        scopes = {call.kwargs.get("scope") for call in mock_api_client.get_forecast.call_args_list}
+        assert scopes == set(SCOPES), f"expected both scopes, got {scopes}"
+        assert set(data["forecast"]) == set(SCOPES)
+
+    @pytest.mark.asyncio
     async def test_forecast_result_is_consumed_on_success(self, hass, mock_api_client):
         """The happy path still awaits the forecast and advances the slow timer."""
         entry = _make_entry()
@@ -786,7 +803,7 @@ class TestForecastTaskLifecycle:
         coord = _make_coordinator(hass, entry, mock_api_client, now=now)
 
         async def quick_forecast(session):
-            return {"next_hour_wind_speed_mps": 7.5}
+            return {"owner": {"next_hour_wind_speed_mps": 7.5}}
 
         coord._fetch_forecast = quick_forecast
 
@@ -796,7 +813,7 @@ class TestForecastTaskLifecycle:
         ):
             data = await coord._async_update_data()
 
-        assert data["forecast"]["next_hour_wind_speed_mps"] == 7.5
+        assert data["forecast"]["owner"]["next_hour_wind_speed_mps"] == 7.5
         assert coord._next_slow_update == now + timedelta(hours=1)
 
     @pytest.mark.asyncio
@@ -823,7 +840,7 @@ class TestForecastTaskLifecycle:
         ):
             data = await coord._async_update_data()
 
-        assert data["forecast"] == {}
+        assert data["forecast"] == {scope: {} for scope in SCOPES}
         assert coord._next_slow_update == now + timedelta(hours=1)
 
     @pytest.mark.asyncio
@@ -871,7 +888,7 @@ class TestForecastTaskLifecycle:
         t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
 
-        async def hang(session):
+        async def hang(session, **kwargs):
             await asyncio.Event().wait()
 
         coord.client.get_forecast = hang
@@ -879,7 +896,7 @@ class TestForecastTaskLifecycle:
 
         result = await asyncio.wait_for(coord._fetch_forecast(None), timeout=2)
 
-        assert result == {}
+        assert result == {scope: {} for scope in SCOPES}
 
 
 class TestScopeAwareCurrentPayloads:
@@ -985,6 +1002,6 @@ class TestForecastMalformedPayload:
             data = await coord._async_update_data()
 
         # The forecast yields nothing -- never an exception, never a partial.
-        assert data["forecast"] == {}
+        assert data["forecast"] == {scope: {} for scope in SCOPES}
         # ...and the core data is untouched by the garbage.
         assert data["timeframe_summaries"]["owner"]

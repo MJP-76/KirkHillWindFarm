@@ -46,8 +46,11 @@ class TestConfigFlowVersion:
         v12 renames the three forecast unique_ids in place: the forecast
         source moved from Open-Meteo to the wind farm's own API, and the
         entity_id, its history and every reference to it must survive.
+
+        v13 gives the generation forecast a scope, so the two unscoped ids
+        gain an owner prefix and two site counterparts appear beside them.
         """
-        assert KirkHillWindConfigFlow.VERSION == 12
+        assert KirkHillWindConfigFlow.VERSION == 13
 
 
 def _make_entry() -> MagicMock:

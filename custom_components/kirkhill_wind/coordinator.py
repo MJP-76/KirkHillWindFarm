@@ -51,6 +51,11 @@ _FORECAST_BUDGET = 10.0
 _BENCHMARK_BUDGET = 10.0
 
 
+def _empty_forecast() -> dict[str, dict]:
+    """A forecast nobody could read, per scope, so readers can index it."""
+    return {scope: {} for scope in SCOPES}
+
+
 async def _reap_forecast_task(task: asyncio.Task) -> None:
     """Cancel a forecast task and wait for it, swallowing whatever it raises.
 
@@ -96,7 +101,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self._next_slow_update: datetime = now
         self._site_turbines: list[dict] = []
         self._turbine_generation: dict[str, dict] = {}
-        self._forecast: dict = {}
+        self._forecast: dict = _empty_forecast()
         # P50/P75/P90 expectations, keyed scope -> range -> window summary.
         # Cleared rather than held on failure: `vs_p50_percent` moves with
         # every generation reading, so a last-known target would be a lie.
@@ -231,7 +236,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     "Wind forecast failed (forecast-only, non-fatal)",
                     exc_info=True,
                 )
-                self._forecast = {}
+                self._forecast = _empty_forecast()
 
             try:
                 self._benchmarks = await benchmark_task
@@ -496,12 +501,13 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         return summaries, windows
 
     async def _fetch_forecast(self, session: aiohttp.ClientSession) -> dict:
-        """Fetch the wind farm's own forecast; never fail the core update.
+        """Fetch the forecast for both scopes; never fail the core update.
 
-        Bounded by _FORECAST_BUDGET: the retries below, at the client's own
-        20s timeout with 1s/2s of backoff, can otherwise take ~63s -- longer
-        than the 60s scan interval -- so one hung forecast silently costs a
-        poll. wait_for also cancels the attempt, so nothing is left running.
+        Returns ``{scope: summary}``. Bounded by ``_FORECAST_BUDGET``: the
+        retries below, at the client's own 20s timeout with 1s/2s of backoff,
+        can otherwise take ~63s -- longer than the 60s scan interval -- so one
+        hung forecast silently costs a poll. wait_for also cancels the
+        attempt, so nothing is left running.
         """
         try:
             return await asyncio.wait_for(
@@ -513,34 +519,58 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 "Wind forecast exceeded its %ss budget (forecast-only, non-fatal)",
                 _FORECAST_BUDGET,
             )
-            return {}
+            return _empty_forecast()
         except (aiohttp.ClientError, KirkHillApiError) as exc:
             _LOGGER.warning(
                 "Wind forecast fetch failed (forecast-only, non-fatal): %s",
                 exc,
             )
-            return {}
+            return _empty_forecast()
 
     async def _forecast_with_retries(self, session: aiohttp.ClientSession) -> dict:
-        """Three attempts with short backoff; raises the last error if all fail.
+        """Both scopes concurrently; retry only when *neither* could be read.
 
-        The parse lives here rather than in the caller so that a payload this
-        cannot read is contained by the same path as a transport error: both
-        end as "no forecast", never as a failed update.
+        A scope that fails on its own -- no permission, one bad payload --
+        keeps its sibling's result: the owner forecast must not disappear
+        because the site one could not be read.
+
+        An empty summary is a *result*, not a failure. Retrying it would cost
+        two sleeps on every poll that legitimately has nothing to say, so only
+        a transport error from every scope triggers another attempt.
         """
         last_exc: Exception | None = None
+        parsed: dict[str, dict] = _empty_forecast()
 
         for attempt in range(3):
-            try:
-                return summarize_forecast(await self.client.get_forecast(session))
-            except (aiohttp.ClientError, asyncio.TimeoutError, KirkHillApiError) as exc:
-                last_exc = exc
-                if attempt < 2:
-                    # Short exponential backoff between attempts — same spirit
-                    # as the summary retry schedule, but bounded within this tick.
-                    await asyncio.sleep(2**attempt)
+            results = await asyncio.gather(
+                *(self.client.get_forecast(session, scope=scope) for scope in SCOPES),
+                return_exceptions=True,
+            )
+            parsed = _empty_forecast()
+            raised = 0
+            for scope, result in zip(SCOPES, results):
+                if isinstance(result, BaseException):
+                    raised += 1
+                    last_exc = result
+                    _LOGGER.warning(
+                        "Wind forecast scope=%s failed (forecast-only, non-fatal): %s",
+                        scope,
+                        result,
+                    )
+                    continue
+                parsed[scope] = summarize_forecast(result)
 
-        raise last_exc
+            if raised < len(SCOPES):
+                # At least one scope answered: whatever it said is the answer.
+                return parsed
+            if attempt < 2:
+                # Short exponential backoff between attempts — same spirit
+                # as the summary retry schedule, but bounded within this tick.
+                await asyncio.sleep(2**attempt)
+
+        if last_exc is not None:
+            raise last_exc
+        return parsed
 
     async def _fetch_benchmarks(self, session: aiohttp.ClientSession) -> dict:
         """Fetch P50/P75/P90 expectations; never fail the core update.
