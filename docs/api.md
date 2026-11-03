@@ -149,8 +149,14 @@ that names it.
 
 - **`OpenAPI sync`** ([`.github/workflows/openapi-sync.yml`](https://github.com/MJP-76/KirkHillWindFarm/blob/main/.github/workflows/openapi-sync.yml))
   runs daily at 06:23 UTC. It reads the dashboard's build stamp
-  (`data-release-id`) from `/api-docs`, and only when that stamp moves does it
-  download the spec and compare it *parsed* against our copy.
+  (`data-release-id`) from the dashboard home page, and only when that stamp
+  moves does it download the spec and compare it *parsed* against our copy.
+- Since the dashboard's 2026-10-23 release, `/api-docs` and its spec require a
+  signed-in session. The job signs in with the `KH_DASHBOARD_EMAIL` /
+  `KH_DASHBOARD_PASSWORD` repository secrets through the dashboard's own
+  `/dashboard-api/login` endpoint; without them it fails with an explicit
+  "the upstream spec is no longer public" message rather than a YAML error.
+  The account must not require a two-factor code.
 - If the content differs it refreshes `openapi.yaml`, records the release in
   `.github/openapi-release-id`, and opens or updates a single long-lived PR on
   the `chore/openapi-sync` branch listing **new endpoints, new schemas, new
