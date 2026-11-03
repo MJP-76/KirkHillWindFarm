@@ -9,6 +9,13 @@
 # default GITHUB_TOKEN do not trigger CI, and main requires those checks --
 # so without a token the bot PR would sit forever with no checks reported.
 # The workflow falls back to the default token and still opens the PR.
+#
+# KH_DASHBOARD_EMAIL / KH_DASHBOARD_PASSWORD: the dashboard stopped serving
+# /api-docs and its spec anonymously in its 2026-10-23 release. Member
+# credentials let scripts/openapi_check.py sign in through the dashboard's own
+# JSON endpoint (/dashboard-api/login) before fetching the spec. Without them
+# the check fails with an explicit "spec is no longer public" message. The
+# account must not require a two-factor code, which CI cannot supply.
 name: OpenAPI sync
 
 on:
@@ -50,6 +57,9 @@ jobs:
 
       - name: Check for a new upstream release
         id: check
+        env:
+          KH_DASHBOARD_EMAIL: ${{ secrets.KH_DASHBOARD_EMAIL }}
+          KH_DASHBOARD_PASSWORD: ${{ secrets.KH_DASHBOARD_PASSWORD }}
         run: |
           python scripts/openapi_check.py check \
             --summary "$RUNNER_TEMP/openapi-summary.md" \
