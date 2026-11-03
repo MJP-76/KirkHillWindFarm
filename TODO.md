@@ -341,6 +341,21 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
+### v4.19.0 (pre-release, 2026-11-03)
+
+- **The forecast series** (372 → 437 tests, PRs #163–#169):
+  - **Forecast from the wind farm's own API** (#166) — hub-height models
+    replace a 10 m Open-Meteo reading; config entry **v12** renames the three
+    unique_ids in place so entity IDs and history survive.
+  - **P50/P75/P90 benchmark sensors** (#167) — 16 sensors on `today` and
+    `30d`, summed across calendar months, percentages derived not averaged.
+  - **Generation forecast sensors** (#169) — `days[].energy_kwh`, owner
+    scope, no new API requests.
+  - **OpenAPI sync signed in** (#163) — still needs the
+    `KH_DASHBOARD_EMAIL` / `KH_DASHBOARD_PASSWORD` secrets to go green.
+  - **Feature request 3: unattended spec access** (#168) — awaiting upstream.
+  - **`incoming/` drop-box** (#164, #165) — exports untracked and ignored.
+
 ### v4.18.4 (stable, 2026-10-23)
 
 - **Hardening series responding to the external review** (366 → 372 tests):

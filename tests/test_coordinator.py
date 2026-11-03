@@ -515,7 +515,6 @@ class TestApiCallBudget:
                     )
             self._only_once(later, f"slow poll at +{minutes}min")
 
-
     @pytest.mark.asyncio
     async def test_benchmarks_are_fetched_exactly_once_per_update(self, hass, mock_api_client):
         """Four windows per slow tick, never twice."""

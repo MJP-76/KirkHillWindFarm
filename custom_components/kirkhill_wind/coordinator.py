@@ -551,13 +551,19 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         last-known target would quietly disagree with the actual sitting
         next to it on the graph.
         """
-        pairs = [(scope, range_value) for scope in SCOPES for range_value, _label in BENCHMARK_RANGES]
+        pairs = [
+            (scope, range_value)
+            for scope in SCOPES
+            for range_value, _label in BENCHMARK_RANGES
+        ]
         cleared: dict[str, dict[str, dict]] = {scope: {} for scope in SCOPES}
         try:
             responses = await asyncio.wait_for(
                 asyncio.gather(
                     *(
-                        self.client.get_benchmarks(session, scope=scope, range_value=range_value)
+                        self.client.get_benchmarks(
+                            session, scope=scope, range_value=range_value
+                        )
                         for scope, range_value in pairs
                     ),
                     return_exceptions=True,
