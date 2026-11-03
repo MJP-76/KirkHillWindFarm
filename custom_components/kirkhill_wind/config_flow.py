@@ -94,7 +94,7 @@ class KirkHillWindConfigFlow(
     # Not implied by the domain= kwarg (that only registers the handler): the
     # OAuth base's __init__ refuses to build an instance whose DOMAIN is unset.
     DOMAIN = DOMAIN
-    VERSION = 12
+    VERSION = 13
 
     # Set by async_oauth_create_entry and consumed by async_step_settings: the
     # token exchange hands over the key, the settings step builds the entry.

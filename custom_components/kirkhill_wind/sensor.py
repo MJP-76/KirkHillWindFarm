@@ -171,14 +171,19 @@ async def async_setup_entry(hass, entry, async_add_entities):
             "next_24h_avg_wind_speed_mps",
             "Forecast wind (next 24h avg)",
         ),
-        # Owner scope, because that is the scope the forecast is fetched with
-        # and the scope the wind sensors above already pair with.
-        ForecastEnergySensor(
-            coordinator, entry, "today", "Forecast generation (today)"
-        ),
-        ForecastEnergySensor(
-            coordinator, entry, "tomorrow", "Forecast generation (tomorrow)"
-        ),
+        # Both scopes: the site popout charts the site forecast beside the
+        # site actuals, so the two have to exist side by side.
+        *[
+            ForecastEnergySensor(
+                coordinator,
+                entry,
+                scope,
+                day,
+                f"Forecast generation ({day}) ({scope.capitalize()})",
+            )
+            for scope in SCOPES
+            for day in ("today", "tomorrow")
+        ],
         # P50/P75/P90 and the actual against them, on the same two windows
         # the generation sensors use, so a target and the figure it is judged
         # against always cover the same period.
@@ -1047,14 +1052,25 @@ class ForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
         self._forecast_key = forecast_key
         self._attr_name = name
 
+    def _forecast(self) -> dict:
+        """The forecast payload.
+
+        The wind farm's forecast models are not share-specific -- the spec
+        says a share scales energy and CO2, not wind -- so either scope
+        answers these sensors identically. Owner is read for stability: it is
+        the scope the fetch defaults to and the one these sensors have always
+        reported.
+        """
+        return self.coordinator.data.get("forecast", {}).get(SCOPE_OWNER, {})
+
     @property
     def native_value(self):
-        value = self.coordinator.data.get("forecast", {}).get(self._forecast_key)
+        value = self._forecast().get(self._forecast_key)
         return _as_float(value)
 
     @property
     def extra_state_attributes(self) -> dict:
-        forecast = self.coordinator.data.get("forecast", {})
+        forecast = self._forecast()
         return {
             "source": "kirkhill_api",
             "status": forecast.get("status"),
@@ -1067,7 +1083,7 @@ class ForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
         }
 
 
-class ForecastEnergySensor(KirkHillEntity, SensorEntity):
+class ForecastEnergySensor(KirkHillScopedEntity, SensorEntity):
     """The API's own generation forecast for one day.
 
     Same treatment as BenchmarkSensor: no ``device_class``, kWh and
@@ -1089,13 +1105,16 @@ class ForecastEnergySensor(KirkHillEntity, SensorEntity):
     _attr_suggested_display_precision = 2
     _attr_icon = "mdi:weather-sunny"
 
-    def __init__(self, coordinator, entry, day: str, name: str):
-        super().__init__(coordinator, entry, f"forecast_energy_{day}")
+    def __init__(self, coordinator, entry, scope: str, day: str, name: str):
+        super().__init__(coordinator, entry, scope, f"forecast_energy_{day}")
         self._day = day
         self._attr_name = name
 
+    def _forecast(self) -> dict:
+        return self.coordinator.data.get("forecast", {}).get(self._scope, {})
+
     def _day_data(self) -> dict:
-        days = self.coordinator.data.get("forecast", {}).get("days", {})
+        days = self._forecast().get("days", {})
         return days.get(self._day, {}) if isinstance(days, dict) else {}
 
     @property
@@ -1104,18 +1123,22 @@ class ForecastEnergySensor(KirkHillEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
-        forecast = self.coordinator.data.get("forecast", {})
+        forecast = self._forecast()
         day = self._day_data()
-        return {
-            "source": "kirkhill_api",
-            "day": self._day,
-            "date": day.get("date"),
-            "forecast_from": day.get("forecast_from"),
-            "complete": day.get("complete"),
-            "status": forecast.get("status"),
-            "generated_at": forecast.get("generated_at"),
-            "model_version": forecast.get("model_version"),
-        }
+        attrs = dict(super().extra_state_attributes)
+        attrs.update(
+            {
+                "source": "kirkhill_api",
+                "day": self._day,
+                "date": day.get("date"),
+                "forecast_from": day.get("forecast_from"),
+                "complete": day.get("complete"),
+                "status": forecast.get("status"),
+                "generated_at": forecast.get("generated_at"),
+                "model_version": forecast.get("model_version"),
+            }
+        )
+        return attrs
 
 
 class FarmActiveTurbinesSensor(KirkHillEntity, SensorEntity):

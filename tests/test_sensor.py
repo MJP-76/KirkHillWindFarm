@@ -126,13 +126,13 @@ class TestForecastEnergySensor:
     """Verify the generation forecast reads its day and publishes the window."""
 
     @staticmethod
-    def _make_sensor(days, day="today"):
+    def _make_sensor(days, day="today", scope="owner"):
         coordinator = MagicMock()
         coordinator.last_update_success = True
-        coordinator.data = {"forecast": {"status": "ready", "days": days}}
+        coordinator.data = {"forecast": {scope: {"status": "ready", "days": days}}}
         entry = MagicMock()
         entry.entry_id = "test"
-        return ForecastEnergySensor(coordinator, entry, day, "Forecast generation (today)")
+        return ForecastEnergySensor(coordinator, entry, scope, day, f"Forecast generation ({day})")
 
     def test_reads_the_day_total(self):
         assert self._make_sensor({"today": {"energy_kwh": 812.5}}).native_value == 812.5
@@ -170,7 +170,7 @@ class TestForecastEnergySensor:
         coordinator.data = {}
         entry = MagicMock()
         entry.entry_id = "test"
-        sensor = ForecastEnergySensor(coordinator, entry, "today", "Forecast generation (today)")
+        sensor = ForecastEnergySensor(coordinator, entry, "owner", "today", "Forecast generation (today)")
 
         assert sensor.native_value is None
         assert sensor.extra_state_attributes["status"] is None

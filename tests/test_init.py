@@ -579,6 +579,36 @@ class TestForecastSourceRename:
 
         assert registry._by_unique_id == entities
 
+    @pytest.mark.asyncio
+    async def test_v13_prefixes_the_generation_forecast_with_owner(self):
+        """v13 gives the generation forecast a scope.
+
+        The two unscoped ids become owner ids so the two site counterparts can
+        sit beside them, and the swap has to preserve the entity_id, the
+        history and every reference -- the same promise v12 made.
+        """
+        today = "sensor.kirk_hill_wind_farm_forecast_generation_today"
+        tomorrow = "sensor.kirk_hill_wind_farm_forecast_generation_tomorrow"
+        registry = _FakeEntityRegistry(
+            {
+                f"{self.ENTRY_ID}_forecast_energy_today": today,
+                f"{self.ENTRY_ID}_forecast_energy_tomorrow": tomorrow,
+            }
+        )
+        hass = MagicMock()
+        hass.data = {DATA_REGISTRY: registry}
+        entry = _make_entry(12, {CONF_API_KEY: "key"})
+        entry.entry_id = self.ENTRY_ID
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        for suffix, entity_id in (("today", today), ("tomorrow", tomorrow)):
+            assert (
+                registry.async_get_entity_id("sensor", DOMAIN, f"{self.ENTRY_ID}_owner_forecast_energy_{suffix}")
+                == entity_id
+            )
+            assert registry.async_get_entity_id("sensor", DOMAIN, f"{self.ENTRY_ID}_forecast_energy_{suffix}") is None
+
 
 class TestSettingsAccess:
     """Reads go through settings.py, which owns defaults and option keys."""

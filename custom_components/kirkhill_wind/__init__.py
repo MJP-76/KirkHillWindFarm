@@ -61,7 +61,7 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 ]
 
 # Keep in sync with the VERSION in config_flow.py.
-_CONFIG_ENTRY_VERSION = 12
+_CONFIG_ENTRY_VERSION = 13
 
 # The forecast source moved from Open-Meteo to the wind farm's own API. Each
 # suffix is renamed in place rather than re-created: see async_migrate_entry.
@@ -70,6 +70,47 @@ _FORECAST_UNIQUE_ID_RENAMES: tuple[tuple[str, str], ...] = (
     ("open_meteo_next_3h_avg_wind_speed_mps", "forecast_next_3h_avg_wind_speed_mps"),
     ("open_meteo_next_24h_avg_wind_speed_mps", "forecast_next_24h_avg_wind_speed_mps"),
 )
+
+# The generation forecast became scope-specific -- the site popout charts the
+# site forecast beside the site actuals -- so the two unscoped ids gain an
+# owner prefix, exactly as v12 renamed the wind ones.
+_GENERATION_FORECAST_UNIQUE_ID_RENAMES: tuple[tuple[str, str], ...] = (
+    ("forecast_energy_today", "owner_forecast_energy_today"),
+    ("forecast_energy_tomorrow", "owner_forecast_energy_tomorrow"),
+)
+
+
+def _rename_unique_ids(
+    registry, entry_id: str, renames: tuple[tuple[str, str], ...]
+) -> None:
+    """Swap unique_ids *in place* so entity_id, history and references survive.
+
+    Creating fresh entities instead would orphan every automation, script or
+    card that references the old id and start its history from scratch. A
+    rename that cannot complete is logged, never raised: losing it costs only
+    the honest name, and an exception here would abort the whole migration.
+    """
+    for old_suffix, new_suffix in renames:
+        old_unique_id = f"{entry_id}_{old_suffix}"
+        entity_id = registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
+        if entity_id is None:
+            # Nothing to migrate: never created, or an earlier run already
+            # renamed it.
+            continue
+        new_unique_id = f"{entry_id}_{new_suffix}"
+        if registry.async_get_entity_id("sensor", DOMAIN, new_unique_id):
+            # Already exists, so leave the old one alone rather than let
+            # async_update_entity raise and abort the migration.
+            continue
+        try:
+            registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
+        except ValueError as err:
+            _LOGGER.warning(
+                "Could not rename %s to unique id %s: %s",
+                entity_id,
+                new_unique_id,
+                err,
+            )
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -179,32 +220,21 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         # Open-Meteo. The unique_id is swapped *in place* so the entity_id,
         # its recorded history and every automation, script or card that
         # references it survive untouched -- only the identifier naming the
-        # source changes. Creating three fresh entities instead would orphan
-        # every reference and start their history from scratch.
-        registry = er.async_get(hass)
-        for old_suffix, new_suffix in _FORECAST_UNIQUE_ID_RENAMES:
-            old_unique_id = f"{config_entry.entry_id}_{old_suffix}"
-            entity_id = registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
-            if entity_id is None:
-                # Nothing to migrate: never created, or an earlier run of
-                # this migration already renamed it.
-                continue
-            new_unique_id = f"{config_entry.entry_id}_{new_suffix}"
-            if registry.async_get_entity_id("sensor", DOMAIN, new_unique_id):
-                # Already exists, so leave the old one alone rather than let
-                # async_update_entity raise and abort the whole migration.
-                continue
-            try:
-                registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
-            except ValueError as err:
-                # A concurrent creation can win this race. Losing it costs
-                # only the honest name, never the entity or its history.
-                _LOGGER.warning(
-                    "Could not rename %s to unique id %s: %s",
-                    entity_id,
-                    new_unique_id,
-                    err,
-                )
+        # source changes.
+        _rename_unique_ids(
+            er.async_get(hass), config_entry.entry_id, _FORECAST_UNIQUE_ID_RENAMES
+        )
+
+    if config_entry.version < 13:
+        # The generation forecast gained a scope, so the two unscoped ids
+        # become owner ids and two site counterparts are added alongside
+        # them. Same in-place swap: the existing entities keep their
+        # entity_id, their history and every reference to them.
+        _rename_unique_ids(
+            er.async_get(hass),
+            config_entry.entry_id,
+            _GENERATION_FORECAST_UNIQUE_ID_RENAMES,
+        )
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, options=options, version=_CONFIG_ENTRY_VERSION

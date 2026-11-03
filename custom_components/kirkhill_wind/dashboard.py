@@ -537,6 +537,40 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                             {"name": name, "entity": entity}
                             for name, entity in site_generation_entities
                         ],
+                        # The site popout's "forecast and expectation" charts.
+                        # Every one of these is site scope, so a target, the
+                        # forecast and the actual it is judged against all
+                        # cover the same share of the farm.
+                        "site_gen_month_entity": farm_scoped(
+                            "site", "farm_generation_month"
+                        ),
+                        "site_forecast_today_entity": farm_scoped(
+                            "site", "forecast_energy_today"
+                        ),
+                        "site_forecast_tomorrow_entity": farm_scoped(
+                            "site", "forecast_energy_tomorrow"
+                        ),
+                        "site_p50_today_entity": farm_scoped(
+                            "site", "benchmark_p50_today"
+                        ),
+                        "site_p75_today_entity": farm_scoped(
+                            "site", "benchmark_p75_today"
+                        ),
+                        "site_p90_today_entity": farm_scoped(
+                            "site", "benchmark_p90_today"
+                        ),
+                        "site_p50_month_entity": farm_scoped(
+                            "site", "benchmark_p50_30d"
+                        ),
+                        "site_p75_month_entity": farm_scoped(
+                            "site", "benchmark_p75_30d"
+                        ),
+                        "site_p90_month_entity": farm_scoped(
+                            "site", "benchmark_p90_30d"
+                        ),
+                        "site_vs_p50_today_entity": farm_scoped(
+                            "site", "benchmark_vs_p50_today"
+                        ),
                         "turbines": scada_turbines,
                     },
                 ],

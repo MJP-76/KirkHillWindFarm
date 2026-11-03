@@ -94,6 +94,28 @@ cursor/hover affordance to signal they are clickable.
 
 ![Site Generation and Capacity modal with power, capacity factor and generation charts](assets/site-modal.png)
 
+### Forecast and expectation on the Site modal
+
+Below the timeframe-driven charts, the **Site** modal carries a fixed
+**Forecast & expectation** section that deliberately does *not* follow the
+timeframe selector — a P50 for today and a P50 for the last 30 days are
+different figures, and letting the selector swap them would put a target on a
+window it does not describe.
+
+- **Today: actual vs expected (kWh)** — the site's actual generation for today
+  against its forecast and its P50 / P75 / P90 expectations: site scope
+  throughout, one kWh axis. The actual is solid, every expectation is dashed, so
+  the distinction survives a greyscale screenshot.
+- **Last 30 days: actual vs expected (kWh)** — the rolling 30-day total against
+  the same three percentiles. This is what the sensors named "Month" describe: a
+  rolling 30 days, not a calendar month.
+- A KPI row above them shows **vs P50 (today)**, the **forecast** and the
+  **P50**, so the headline number is readable without reading a chart.
+
+Both charts are drawn from recorder history and long-term statistics, so a
+target line only appears from the moment the integration first reported it —
+they do not retro-fill.
+
 ### Turbine detail modal
 
 Clicking a turbine node opens its pop-out. Besides power, wind, rotor, capacity

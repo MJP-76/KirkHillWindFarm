@@ -550,6 +550,12 @@ class KirkHillWindScada extends HTMLElement {
     const sitePowerText =
       sitePowerMw === null ? { value: "—", unit: "MW" } : { value: this._fmt(sitePowerMw, 2), unit: "MW" };
     const siteGenScaled = this._scaleKwh(siteGenToday);
+    const vsP50 = this._num(config.site_vs_p50_today_entity);
+    const forecastToday = this._num(config.site_forecast_today_entity);
+    const p50Today = this._num(config.site_p50_today_entity);
+    const vsP50Text = vsP50 !== null ? { value: this._fmt(vsP50, 0), unit: "%" } : { value: "—", unit: "" };
+    const forecastTodayText = forecastToday !== null ? this._scaleKwh(forecastToday) : { value: "—", unit: "" };
+    const p50TodayText = p50Today !== null ? this._scaleKwh(p50Today) : { value: "—", unit: "" };
 
     const modal = document.createElement("div");
     modal.className = "turbine-detail-modal";
@@ -586,6 +592,24 @@ class KirkHillWindScada extends HTMLElement {
               </div>
             </div>
           </div>
+          <div class="td-section td-charts">
+            <div class="td-kpi-grid">
+              <div class="td-kpi"><span class="td-kpi-label">vs P50 (today)</span><span class="td-kpi-value">${vsP50Text.value}</span><span class="td-kpi-unit">${vsP50Text.unit}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">Forecast (today)</span><span class="td-kpi-value">${forecastTodayText.value}</span><span class="td-kpi-unit">${forecastTodayText.unit}</span></div>
+              <div class="td-kpi"><span class="td-kpi-label">P50 (today)</span><span class="td-kpi-value">${p50TodayText.value}</span><span class="td-kpi-unit">${p50TodayText.unit}</span></div>
+            </div>
+            <h3>Forecast &amp; expectation</h3>
+            <div class="chart-grid">
+              <div class="chart-item large">
+                <h3>Today: actual vs expected (kWh)</h3>
+                <div id="site-chart-today-target" class="apex-chart"></div>
+              </div>
+              <div class="chart-item">
+                <h3>Last 30 days: actual vs expected (kWh)</h3>
+                <div id="site-chart-month-target" class="apex-chart"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>`;
     this.shadowRoot.appendChild(modal);
@@ -614,19 +638,45 @@ class KirkHillWindScada extends HTMLElement {
       capacity: config.capacity_entity,
       genSite: config.grid_energy_entity,
     };
+    // Two fixed windows for the expectation charts. They deliberately do NOT
+    // follow the time-range bar above: a P50 for today and a P50 for the last
+    // 30 days are different figures, and letting the bar swap them would put a
+    // target on a window it does not describe.
+    const nowISO = now.toISOString();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const monthStart = new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
+    const todayEntities = {
+      genSite: config.grid_energy_entity,
+      forecastToday: config.site_forecast_today_entity,
+      p50Today: config.site_p50_today_entity,
+      p75Today: config.site_p75_today_entity,
+      p90Today: config.site_p90_today_entity,
+    };
+    const monthEntities = {
+      genSite: config.site_gen_month_entity,
+      p50Month: config.site_p50_month_entity,
+      p75Month: config.site_p75_month_entity,
+      p90Month: config.site_p90_month_entity,
+    };
     this._setChartLoading();
     try {
       await this._ensureApexCharts();
-      const history = await this._fetchHistory(entities, startISO, now.toISOString());
-      if (window.ApexCharts) { this._renderSiteCharts(history); this._clearChartPlaceholders(); }
-      else this._showChartError("Charts unavailable — ApexCharts failed to load");
+      const [history, todayHistory, monthHistory] = await Promise.all([
+        this._fetchHistory(entities, startISO, nowISO),
+        this._fetchHistory(todayEntities, todayStart, nowISO),
+        this._fetchHistory(monthEntities, monthStart, nowISO),
+      ]);
+      if (window.ApexCharts) {
+        this._renderSiteCharts(history, todayHistory, monthHistory);
+        this._clearChartPlaceholders();
+      } else this._showChartError("Charts unavailable — ApexCharts failed to load");
     } catch (err) {
       console.error("Failed to load site history:", err);
       this._showChartError(`Charts unavailable — ${err.message || "unknown error"}`);
     }
   }
 
-  _renderSiteCharts(history) {
+  _renderSiteCharts(history, todayHistory, monthHistory) {
     if (!window.ApexCharts) return;
     const charts = {};
     const ts = (id) => this.shadowRoot.querySelector(id);
@@ -680,6 +730,63 @@ class KirkHillWindScada extends HTMLElement {
         }));
       }
       charts.gen.render();
+    }
+
+    // Forecast and expectation: one chart for today, one for the rolling 30
+    // days the "Month" targets actually describe. Both share the kWh axis
+    // with the generation chart above, so a target line and the actual it is
+    // judged against are read in the same units.
+    const targetSeries = (data, keys) => keys.map(([name, key]) => ({
+      name,
+      data: toSeries(data && data[key]),
+    }));
+    const todaySeries = [
+      { name: "Actual", data: toSeries(todayHistory && todayHistory.genSite) },
+      ...targetSeries(todayHistory, [
+        ["Forecast", "forecastToday"],
+        ["P50", "p50Today"],
+        ["P75", "p75Today"],
+        ["P90", "p90Today"],
+      ]),
+    ];
+    if (todaySeries.some(s => s.data.length)) {
+      charts.todayTarget = new ApexCharts(ts("#site-chart-today-target"), this._apexOpts({
+        type: "line", height: 260,
+        series: todaySeries,
+        xaxis: { type: "datetime" },
+        yaxis: this._kwhAxis(),
+        // Actual solid, every expectation dashed: the distinction has to
+        // survive a greyscale screenshot.
+        stroke: { curve: "stepline", width: 2, dashArray: [0, 6, 5, 5, 5] },
+        markers: { size: 0 },
+        colors: ["#059669", "#0284c7", "#8b5cf6", "#a855f7", "#d946ef"],
+        tooltip: { x: { format: "HH:mm" } },
+        chartExtra: { legend: { show: true, position: "top", horizontalAlign: "left" } },
+      }));
+      charts.todayTarget.render();
+    }
+
+    const monthSeries = [
+      { name: "Actual", data: toSeries(monthHistory && monthHistory.genSite) },
+      ...targetSeries(monthHistory, [
+        ["P50", "p50Month"],
+        ["P75", "p75Month"],
+        ["P90", "p90Month"],
+      ]),
+    ];
+    if (monthSeries.some(s => s.data.length)) {
+      charts.monthTarget = new ApexCharts(ts("#site-chart-month-target"), this._apexOpts({
+        type: "line", height: 260,
+        series: monthSeries,
+        xaxis: { type: "datetime" },
+        yaxis: this._kwhAxis(),
+        stroke: { curve: "stepline", width: 2, dashArray: [0, 5, 5, 5] },
+        markers: { size: 0 },
+        colors: ["#059669", "#8b5cf6", "#a855f7", "#d946ef"],
+        tooltip: { x: { format: "dd MMM" } },
+        chartExtra: { legend: { show: true, position: "top", horizontalAlign: "left" } },
+      }));
+      charts.monthTarget.render();
     }
 
     this._siteDetailCharts = charts;
