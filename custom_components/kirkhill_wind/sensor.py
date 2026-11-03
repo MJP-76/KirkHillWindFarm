@@ -152,23 +152,23 @@ async def async_setup_entry(hass, entry, async_add_entities):
         MemberSavingsValueSensor(coordinator, entry),
         PaymentLedgerSensor(coordinator, entry, ledger),
         FarmWindSpeedSensor(coordinator, entry),
-        OpenMeteoForecastWindSpeedSensor(
+        ForecastWindSpeedSensor(
             coordinator,
             entry,
             "next_hour_wind_speed_mps",
-            "Open-Meteo forecast wind (next hour)",
+            "Forecast wind (next hour)",
         ),
-        OpenMeteoForecastWindSpeedSensor(
+        ForecastWindSpeedSensor(
             coordinator,
             entry,
             "next_3h_avg_wind_speed_mps",
-            "Open-Meteo forecast wind (next 3h avg)",
+            "Forecast wind (next 3h avg)",
         ),
-        OpenMeteoForecastWindSpeedSensor(
+        ForecastWindSpeedSensor(
             coordinator,
             entry,
             "next_24h_avg_wind_speed_mps",
-            "Open-Meteo forecast wind (next 24h avg)",
+            "Forecast wind (next 24h avg)",
         ),
         FarmActiveTurbinesSensor(coordinator, entry),
         FarmInactiveTurbinesSensor(coordinator, entry),
@@ -934,8 +934,15 @@ class FarmWindSpeedSensor(KirkHillEntity, SensorEntity):
         return _as_float(summary.get("wind_speed_mps"))
 
 
-class OpenMeteoForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
-    """Forecast wind-speed sensor from Open-Meteo (non-authoritative)."""
+class ForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
+    """Wind-speed forecast from the Kirk Hill API itself.
+
+    The API's forecast models run at hub height (80 or 100 m, per the spec)
+    against the farm's own turbines, so this supersedes the 10 m Open-Meteo
+    reading this integration used to request at the turbine centroid. The
+    status flags are exposed rather than hidden: a late upstream weather run
+    leaves a number that looks valid but is old.
+    """
 
     _attr_device_class = SensorDeviceClass.WIND_SPEED
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -943,25 +950,26 @@ class OpenMeteoForecastWindSpeedSensor(KirkHillEntity, SensorEntity):
     _attr_icon = "mdi:weather-windy"
 
     def __init__(self, coordinator, entry, forecast_key: str, name: str):
-        super().__init__(coordinator, entry, f"open_meteo_{forecast_key}")
+        super().__init__(coordinator, entry, f"forecast_{forecast_key}")
         self._forecast_key = forecast_key
         self._attr_name = name
 
     @property
     def native_value(self):
-        value = self.coordinator.data.get("open_meteo_forecast", {}).get(
-            self._forecast_key
-        )
+        value = self.coordinator.data.get("forecast", {}).get(self._forecast_key)
         return _as_float(value)
 
     @property
     def extra_state_attributes(self) -> dict:
-        forecast = self.coordinator.data.get("open_meteo_forecast", {})
+        forecast = self.coordinator.data.get("forecast", {})
         return {
-            "source": "open_meteo_forecast_only",
-            "authoritative_actual_source": "kirkhill_api",
-            "provider": forecast.get("provider"),
-            "model": forecast.get("model"),
+            "source": "kirkhill_api",
+            "status": forecast.get("status"),
+            "scope": forecast.get("scope"),
+            "model_version": forecast.get("model_version"),
+            "generated_at": forecast.get("generated_at"),
+            "weather_stale": forecast.get("weather_stale"),
+            "operational_stale": forecast.get("operational_stale"),
             "forecast_points": forecast.get("forecast_points"),
         }
 

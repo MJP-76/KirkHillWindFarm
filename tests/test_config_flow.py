@@ -42,8 +42,12 @@ class TestConfigFlowVersion:
 
         v11 purges the earnings inputs whatever they hold, because a
         configured value survived the upgrade it was meant to clear.
+
+        v12 renames the three forecast unique_ids in place: the forecast
+        source moved from Open-Meteo to the wind farm's own API, and the
+        entity_id, its history and every reference to it must survive.
         """
-        assert KirkHillWindConfigFlow.VERSION == 11
+        assert KirkHillWindConfigFlow.VERSION == 12
 
 
 def _make_entry() -> MagicMock:
@@ -149,8 +153,7 @@ class TestPermissionGate:
 
         assert errors == {"base": "permission_required"}
         assert errors != {"base": "auth_failed"}, (
-            "auth_failed would tell the user their key is invalid when it "
-            "only lacks permission."
+            "auth_failed would tell the user their key is invalid when it only lacks permission."
         )
 
     @pytest.mark.asyncio
@@ -168,9 +171,7 @@ class TestPermissionGate:
         flow = self._make_flow(hass)
         flow._validate_api_key = AsyncMock(return_value={"base": "permission_required"})
 
-        result = await flow.async_oauth_create_entry(
-            {"token": {"access_token": "kh_live_narrow"}}
-        )
+        result = await flow.async_oauth_create_entry({"token": {"access_token": "kh_live_narrow"}})
 
         assert result["type"] == "abort"
         assert result["reason"] == "oauth_permission_denied", (
@@ -200,9 +201,7 @@ class TestValidationDetail:
             patch.object(
                 KirkHillApiClient,
                 "test",
-                side_effect=KirkHillAuthError(
-                    "Invalid or missing API key: The API key is not valid."
-                ),
+                side_effect=KirkHillAuthError("Invalid or missing API key: The API key is not valid."),
             ),
         ):
             errors = await flow._validate_api_key("key", DEFAULT_BASE_URL)

@@ -7,7 +7,7 @@ import json
 import logging
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import aiohttp
@@ -46,9 +46,7 @@ def describe_key(key: str) -> str:
         shape = "does not start with kh_live_"
     whitespace = ""
     if key != stripped:
-        whitespace = (
-            f", {len(key) - len(stripped)} whitespace character(s) at the edges"
-        )
+        whitespace = f", {len(key) - len(stripped)} whitespace character(s) at the edges"
     return f"{len(stripped)}-char value{whitespace}, {shape}"
 
 
@@ -96,16 +94,12 @@ class KirkHillApiClient:
             "Accept": "application/json",
         }
 
-    async def _get(
-        self, session: aiohttp.ClientSession, path: str, params: dict[str, str]
-    ) -> dict[str, Any]:
+    async def _get(self, session: aiohttp.ClientSession, path: str, params: dict[str, str]) -> dict[str, Any]:
         url = f"{self._base_url}{path}"
         started = time.monotonic()
         _LOGGER.debug("Kirk Hill API GET %s params=%s", path, params)
         try:
-            async with session.get(
-                url, params=params, headers=self._headers, timeout=TIMEOUT
-            ) as resp:
+            async with session.get(url, params=params, headers=self._headers, timeout=TIMEOUT) as resp:
                 if resp.status >= 400:
                     # Read the body *before* raising: the dashboard explains
                     # itself in {"message": ...} -- "which rejection was this?"
@@ -115,9 +109,7 @@ class KirkHillApiClient:
                 else:
                     detail = ""
                 if resp.status == 401:
-                    raise KirkHillAuthError(
-                        "Invalid or missing API key" + (f": {detail}" if detail else "")
-                    )
+                    raise KirkHillAuthError("Invalid or missing API key" + (f": {detail}" if detail else ""))
                 if resp.status == 403:
                     # Classified before raise_for_status(): otherwise this
                     # lands in the ClientError branch below and a permission
@@ -132,8 +124,7 @@ class KirkHillApiClient:
                     # -> KirkHillConnectionError(str(exc)), which kept the status
                     # but dropped the body. Same exception type, both halves kept.
                     raise KirkHillConnectionError(
-                        f"HTTP {resp.status} from {path} (params={params}): "
-                        + (detail or "no detail returned")
+                        f"HTTP {resp.status} from {path} (params={params}): " + (detail or "no detail returned")
                     )
                 body = await resp.json()
                 _LOGGER.debug(
@@ -178,24 +169,17 @@ class KirkHillApiClient:
         own ``isinstance`` guard. Callers may rely on a dict coming back.
         """
         if not isinstance(body, dict):
-            raise KirkHillApiError(
-                "Malformed response from Kirk Hill API: expected an object"
-            )
+            raise KirkHillApiError("Malformed response from Kirk Hill API: expected an object")
         if "data" not in body:
-            raise KirkHillApiError(
-                "Malformed response from Kirk Hill API: missing 'data' key"
-            )
+            raise KirkHillApiError("Malformed response from Kirk Hill API: missing 'data' key")
         data = body["data"]
         if not isinstance(data, dict):
             raise KirkHillApiError(
-                f"Malformed response from Kirk Hill API: 'data' must be an object, "
-                f"got {type(data).__name__}"
+                f"Malformed response from Kirk Hill API: 'data' must be an object, got {type(data).__name__}"
             )
         return data
 
-    async def get_current(
-        self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER
-    ) -> dict[str, Any]:
+    async def get_current(self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER) -> dict[str, Any]:
         """GET /api/v1/current?scope={scope}."""
         body = await self._get(session, "/api/v1/current", {"scope": scope})
         return self._parse_data(body)
@@ -217,9 +201,7 @@ class KirkHillApiClient:
         )
         turbines = self._parse_data(body).get("turbines")
         if not isinstance(turbines, list):
-            raise KirkHillApiError(
-                "Malformed response from Kirk Hill API: missing 'turbines' list"
-            )
+            raise KirkHillApiError("Malformed response from Kirk Hill API: missing 'turbines' list")
         return turbines
 
     async def get_summary(
@@ -248,6 +230,18 @@ class KirkHillApiClient:
         )
         return self._parse_data(body)
 
+    async def get_forecast(self, session: aiohttp.ClientSession, scope: str = SCOPE_OWNER) -> dict[str, Any]:
+        """GET /api/v1/forecast?scope={scope}.
+
+        The wind farm's own forecast: its weather models run at hub height
+        (80 or 100 m, per the spec) against its own turbines, so this replaces
+        both the 10 m Open-Meteo reading we used to ask for and the coordinate
+        centroid we used to derive it from. The payload also carries a
+        generation forecast, which a wind-only source cannot produce.
+        """
+        body = await self._get(session, "/api/v1/forecast", {"scope": scope})
+        return self._parse_data(body)
+
     async def test(self, session: aiohttp.ClientSession) -> None:
         """Validate the key against every scope this integration reads.
 
@@ -260,93 +254,80 @@ class KirkHillApiClient:
         await self.get_current(session, SCOPE_SITE)
 
 
-class OpenMeteoApiClient:
-    """Async HTTP client for Open-Meteo wind forecast data (forecasting only)."""
+def _parse_timestamp(raw: Any) -> datetime | None:
+    """Parse an API timestamp to aware UTC, or None if it is not one."""
+    if not isinstance(raw, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    # A naive payload timestamp is read as UTC rather than rejected: an
+    # unrecognised offset would otherwise drop every point and make a valid
+    # forecast look empty.
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
-    def __init__(self) -> None:
-        self._base_url = "https://api.open-meteo.com/v1/forecast"
 
-    async def get_point_forecast(
-        self,
-        session: aiohttp.ClientSession,
-        latitude: float,
-        longitude: float,
-    ) -> dict[str, Any]:
-        """GET Open-Meteo forecast and return parsed wind forecast summary."""
-        params = {
-            "latitude": f"{latitude:.6f}",
-            "longitude": f"{longitude:.6f}",
-            "hourly": "wind_speed_10m",
-            "forecast_days": "2",
-            "timezone": "UTC",
-            "wind_speed_unit": "ms",
-        }
-        try:
-            async with session.get(
-                self._base_url,
-                params=params,
-                timeout=TIMEOUT,
-                headers={"Accept": "application/json"},
-            ) as resp:
-                resp.raise_for_status()
-                body = await resp.json()
-        except aiohttp.ClientError as exc:
-            raise KirkHillConnectionError(str(exc)) from exc
-        except asyncio.TimeoutError as exc:
-            raise KirkHillConnectionError("Open-Meteo request timed out") from exc
+def summarize_forecast(data: Any, now: datetime | None = None) -> dict[str, Any]:
+    """Build stable summary metrics from the ``/api/v1/forecast`` payload.
 
-        return self._summarize_forecast(body)
+    Averages are taken over a *time window* rather than over a fixed number of
+    points, so they stay correct whatever interval the API chooses to publish
+    (hourly today, 15-minute tomorrow): the next hour is every point that
+    overlaps ``[now, now + 1h)``, not "the first three points".
 
-    def _summarize_forecast(self, body: dict[str, Any]) -> dict[str, Any]:
-        """Build stable summary metrics from Open-Meteo payload."""
-        hourly = body.get("hourly")
-        if not isinstance(hourly, dict):
-            return {}
+    Returns ``{}`` when the payload holds no point reaching into the future.
+    That is the contract the coordinator's "drop to no-forecast" path depends
+    on -- a payload this cannot read must yield nothing rather than raise,
+    because a forecast must never fail the core update.
+    """
+    if not isinstance(data, dict):
+        return {}
+    days = data.get("days")
+    if not isinstance(days, list):
+        return {}
 
-        timestamps = hourly.get("time")
-        speeds = hourly.get("wind_speed_10m")
-        if not isinstance(timestamps, list) or not isinstance(speeds, list):
-            return {}
+    reference = now or datetime.now(timezone.utc)
 
-        points: list[tuple[datetime, float]] = []
-        for time_raw, speed_raw in zip(timestamps, speeds):
-            point_time = self._parse_hourly_timestamp(time_raw)
-            if point_time is None or not isinstance(speed_raw, (int, float)):
+    points: list[tuple[datetime, datetime, float]] = []
+    for day in days:
+        if not isinstance(day, dict):
+            continue
+        raw_points = day.get("points")
+        if not isinstance(raw_points, list):
+            continue
+        for point in raw_points:
+            if not isinstance(point, dict):
                 continue
-            points.append((point_time, float(speed_raw)))
+            start = _parse_timestamp(point.get("from"))
+            end = _parse_timestamp(point.get("to"))
+            speed = point.get("wind_speed_mps")
+            if start is None or end is None or isinstance(speed, bool) or not isinstance(speed, (int, float)):
+                continue
+            points.append((start, end, float(speed)))
 
-        if not points:
-            return {}
+    # A forecast entirely in the past is not a forecast: the upstream run is
+    # late or stale, and reporting a number would put a lie on the graph.
+    if not points or not any(end > reference for _, end, _ in points):
+        return {}
 
-        now_utc = datetime.now(timezone.utc)
-        future_speeds = [speed for point_time, speed in points if point_time > now_utc]
-        if not future_speeds:
-            future_speeds = [speed for _, speed in points]
+    def _average(hours: float) -> float | None:
+        horizon = reference + timedelta(hours=hours)
+        window = [speed for start, end, speed in points if end > reference and start < horizon]
+        return round(sum(window) / len(window), 2) if window else None
 
-        if not future_speeds:
-            return {}
-
-        def _avg(first_n: int) -> float | None:
-            subset = future_speeds[:first_n]
-            if not subset:
-                return None
-            return round(sum(subset) / len(subset), 2)
-
-        return {
-            "provider": "open_meteo",
-            "model": "open-meteo",
-            "forecast_points": len(future_speeds),
-            "next_hour_wind_speed_mps": round(future_speeds[0], 2),
-            "next_3h_avg_wind_speed_mps": _avg(3),
-            "next_24h_avg_wind_speed_mps": _avg(24),
-        }
-
-    @staticmethod
-    def _parse_hourly_timestamp(raw: Any) -> datetime | None:
-        """Parse Open-Meteo hourly timestamp as UTC."""
-        if not isinstance(raw, str):
-            return None
-        try:
-            return datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
-        except ValueError:
-            return None
+    future_points = sum(1 for _, end, _ in points if end > reference)
+    return {
+        "status": data.get("status"),
+        "scope": data.get("scope"),
+        "generated_at": data.get("generated_at"),
+        "model_version": data.get("model_version"),
+        "weather_stale": data.get("weather_stale"),
+        "operational_stale": data.get("operational_stale"),
+        "forecast_points": future_points,
+        "next_hour_wind_speed_mps": _average(1),
+        "next_3h_avg_wind_speed_mps": _average(3),
+        "next_24h_avg_wind_speed_mps": _average(24),
+    }

@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import inspect
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from custom_components.kirkhill_wind.api import (
     KirkHillApiClient,
-    OpenMeteoApiClient,
     describe_key,
+    summarize_forecast,
 )
 from custom_components.kirkhill_wind.const import SCOPE_OWNER, SCOPE_SITE
 from custom_components.kirkhill_wind.exceptions import (
@@ -167,41 +168,108 @@ class TestApiClient:
                 await client.get_turbines(session, SCOPE_SITE, range_value="today")
 
 
-class TestOpenMeteoClient:
-    """Verify Open-Meteo forecast summarization."""
+class TestForecastSummarize:
+    """Verify the wind farm's own forecast summarization."""
 
-    def test_summarize_forecast_valid(self):
-        client = OpenMeteoApiClient()
-        body = {
-            "hourly": {
-                "time": [
-                    "2025-01-15T13:00",
-                    "2025-01-15T14:00",
-                    "2025-01-15T15:00",
-                    "2025-01-15T16:00",
-                ],
-                "wind_speed_10m": [5.0, 6.0, 7.0, 8.0],
-            },
+    NOW = datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc)
+
+    @staticmethod
+    def _payload(points, **extra):
+        data = {
+            "status": "ready",
+            "scope": "owner",
+            "days": [{"key": "today", "points": points}],
         }
-        result = client._summarize_forecast(body)
-        assert result["provider"] == "open_meteo"
-        assert "next_hour_wind_speed_mps" in result
+        data.update(extra)
+        return data
 
-    def test_summarize_forecast_missing_hourly(self):
-        client = OpenMeteoApiClient()
-        result = client._summarize_forecast({})
-        assert result == {}
-
-    def test_summarize_forecast_empty_speeds(self):
-        client = OpenMeteoApiClient()
-        body = {
-            "hourly": {
-                "time": [],
-                "wind_speed_10m": [],
-            },
+    @staticmethod
+    def _point(start: str, end: str, speed) -> dict:
+        return {
+            "from": start,
+            "to": end,
+            "power_kw": 100.0,
+            "wind_speed_mps": speed,
+            "nowcast": False,
         }
-        result = client._summarize_forecast(body)
-        assert result == {}
+
+    def test_hourly_points_are_averaged_over_the_window(self):
+        points = [
+            self._point(f"2026-11-03T{h}:00:00+00:00", f"2026-11-03T{h + 1}:00:00+00:00", float(s))
+            for h, s in ((12, 4), (13, 6), (14, 8), (15, 10))
+        ]
+        result = summarize_forecast(self._payload(points), now=self.NOW)
+
+        # The next hour is 12:00-13:00 alone, whatever comes after it.
+        assert result["next_hour_wind_speed_mps"] == 4.0
+        # The next three hours are 12, 13 and 14.
+        assert result["next_3h_avg_wind_speed_mps"] == 6.0
+        assert result["forecast_points"] == 4
+
+    def test_the_window_is_time_based_not_count_based(self):
+        """Fifteen-minute points must not be averaged as if they were hours.
+
+        A fixed "first N points" rule silently turns a 15-minute forecast's
+        next hour into the next fifteen minutes.
+        """
+        points = []
+        for m, s in ((0, 4), (15, 6), (30, 8), (45, 10)):
+            start = datetime(2026, 11, 3, 12, m, tzinfo=timezone.utc)
+            end = start + timedelta(minutes=15)
+            points.append(self._point(start.isoformat(), end.isoformat(), float(s)))
+        result = summarize_forecast(self._payload(points), now=self.NOW)
+
+        assert result["next_hour_wind_speed_mps"] == 7.0
+
+    def test_the_twenty_four_hour_average_covers_what_exists(self):
+        points = [
+            self._point("2026-11-03T12:00:00+00:00", "2026-11-03T13:00:00+00:00", 5.0),
+            self._point("2026-11-03T13:00:00+00:00", "2026-11-03T14:00:00+00:00", 7.0),
+        ]
+        result = summarize_forecast(self._payload(points), now=self.NOW)
+
+        assert result["next_24h_avg_wind_speed_mps"] == 6.0
+
+    def test_a_forecast_entirely_in_the_past_yields_nothing(self):
+        """A late upstream run must not put a stale number on the graph."""
+        points = [self._point("2026-11-03T08:00:00+00:00", "2026-11-03T09:00:00+00:00", 5.0)]
+        assert summarize_forecast(self._payload(points), now=self.NOW) == {}
+
+    def test_status_and_staleness_are_carried_through(self):
+        points = [self._point("2026-11-03T12:00:00+00:00", "2026-11-03T13:00:00+00:00", 5.0)]
+        result = summarize_forecast(
+            self._payload(points, status="stale", weather_stale=True, model_version="v3"),
+            now=self.NOW,
+        )
+
+        assert result["status"] == "stale"
+        assert result["weather_stale"] is True
+        assert result["model_version"] == "v3"
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {},
+            {"days": []},
+            {"days": "not-a-list"},
+            {"days": [{"points": "not-a-list"}]},
+            {"days": [{"points": [None, 42, "junk"]}]},
+            {"days": [{"points": [{"from": "junk", "to": "junk", "wind_speed_mps": 5.0}]}]},
+        ],
+    )
+    def test_a_payload_it_cannot_read_yields_nothing(self, body):
+        """The coordinator's "drop to no-forecast" path depends on this."""
+        assert summarize_forecast(body, now=self.NOW) == {}
+
+    def test_null_wind_speeds_are_skipped_not_averaged(self):
+        points = [
+            self._point("2026-11-03T12:00:00+00:00", "2026-11-03T13:00:00+00:00", 6.0),
+            self._point("2026-11-03T13:00:00+00:00", "2026-11-03T14:00:00+00:00", None),
+        ]
+        result = summarize_forecast(self._payload(points), now=self.NOW)
+
+        assert result["next_hour_wind_speed_mps"] == 6.0
+        assert result["next_3h_avg_wind_speed_mps"] == 6.0
 
 
 class TestPermissionHandling:

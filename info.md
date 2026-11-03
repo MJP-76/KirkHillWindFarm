@@ -22,7 +22,9 @@ estimates, all payments and the return, with the full payment ledger and both
 forms behind a click (every period the board has declared a p/W rate for, its
 £ figure and ROI; your-estimate lines tagged `~`). The old price/rate entities
 stay disabled and zeroed while the model is confirmed. Kirk Hill
-API remains the authoritative source for actual generation values. Open-Meteo integration is forecast-only and does not require a separate forecast API key.
+API remains the authoritative source for actual generation values. The
+forecast figures come from the API's own forecast endpoint and need no
+separate forecast API key.
 Dev updates can be published as GitHub pre-releases for early testing while stable releases remain marked as Latest.
 Stable release flow uses a full merge into `main` before final tagging/publishing.
 Dashboard layout and labels are being aligned to the live Kirk Hill dashboard UX from exported snapshots, while preserving Home Assistant-native entity behavior.
@@ -54,7 +56,7 @@ The Kirk Hill documents (agreement/rules/share offer) help define the finance mo
   Re-enable one with `hab entity enable <entity_id>` — no reinstall needed
 - **AGM/published-books manual finance inputs removed** — those estimates were
   dropped in an earlier release and stay dropped
-- **Open-Meteo forecast sensors** — optional next-hour / 3h / 24h wind-speed forecast context (non-authoritative), using automatic farm-location lookup
+- **Forecast sensors** — next-hour / 3h / 24h wind-speed forecast context (non-authoritative), from the API's own `/api/v1/forecast` at hub height
 - **Optional experimental Ethex onboarding toggle** — config-flow option to also configure payment tracking via `ha-ethex`
 - **Per-turbine sensors** — power (owner + site), capacity factor (owner + site), wind speed, state text, active binary sensor, generation today (site), generation all-time (site), and rotor speed for each of the 8 turbines
 - **Kirk Hill SCADA tab** — the single tab on the auto-generated dashboard (titled **Kirk Hill SCADA**), a full-bleed animated single-line diagram (turbines → bus → transformer → grid) with live per-turbine power, status, today's generation and rotor speed; national grid block shows Owner and Site export and to-grid-today, with wind/forecast chips and a flashing alarm indicator; **top-right "Owner" panel shows your generation timeframes (auto-scaled), your output in watts and your share in ‱**; panel view so it fills the entire tab; **pinch to zoom (up to 6x), drag to pan, and double-tap to reset on mobile**; National Grid box and panel text enlarged for readability on small screens; owner export auto-derived from site export × owner generation share when the API reports no owner power; **consistent colour scheme**: amber=power/energy, cyan=wind speed, green=financial values (the ROI panel), primary=titles/labels

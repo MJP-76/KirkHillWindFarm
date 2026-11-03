@@ -39,7 +39,7 @@ Since config entry **v11**, an upgrade purges all three inputs from
 `entry.options` whatever they hold, so no monetary value is stored at all — the
 defaults in `settings.SETTING_DEFAULTS` answer instead.
 
-- Open-Meteo forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] (forecast-only, non-authoritative)
+- Forecast wind speed (next hour / next 3h avg / next 24h avg) [m/s] — from the API's own `/api/v1/forecast` (forecast-only, non-authoritative)
 - Wind speed [m/s]
 - Active turbines
 - Inactive turbines

@@ -637,7 +637,7 @@ class TestForecastTaskLifecycle:
 
         cancelled = asyncio.Event()
 
-        async def hanging_forecast(session, coordinates):
+        async def hanging_forecast(session):
             # Never returns on its own, so an unreaped task stays pending.
             try:
                 await asyncio.Event().wait()
@@ -645,7 +645,7 @@ class TestForecastTaskLifecycle:
                 cancelled.set()
                 raise
 
-        coord._fetch_open_meteo_forecast = hanging_forecast
+        coord._fetch_forecast = hanging_forecast
         mock_api_client.get_summary = AsyncMock(side_effect=KirkHillAuthError("Invalid API key"))
 
         with patch(
@@ -655,7 +655,7 @@ class TestForecastTaskLifecycle:
             with pytest.raises(ConfigEntryAuthFailed):
                 await coord._async_update_data()
 
-        assert cancelled.is_set(), "the Open-Meteo forecast task was left running after the update failed"
+        assert cancelled.is_set(), "the wind forecast task was left running after the update failed"
         assert coord._next_slow_update == now, "a failed update must not consume the slow-tier slot"
 
     @pytest.mark.asyncio
@@ -665,10 +665,10 @@ class TestForecastTaskLifecycle:
         now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         coord = _make_coordinator(hass, entry, mock_api_client, now=now)
 
-        async def quick_forecast(session, coordinates):
-            return {"provider": "open_meteo", "next_hour_wind_speed_mps": 7.5}
+        async def quick_forecast(session):
+            return {"next_hour_wind_speed_mps": 7.5}
 
-        coord._fetch_open_meteo_forecast = quick_forecast
+        coord._fetch_forecast = quick_forecast
 
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
@@ -676,26 +676,26 @@ class TestForecastTaskLifecycle:
         ):
             data = await coord._async_update_data()
 
-        assert data["open_meteo_forecast"]["provider"] == "open_meteo"
+        assert data["forecast"]["next_hour_wind_speed_mps"] == 7.5
         assert coord._next_slow_update == now + timedelta(hours=1)
 
     @pytest.mark.asyncio
     async def test_forecast_exception_does_not_fail_the_update(self, hass, mock_api_client):
         """A forecast it cannot parse must not take the whole update down.
 
-        _fetch_open_meteo_forecast says "never fail core update", but its
-        except tuple misses ValueError/AttributeError, so the exception used to
-        surface at `await forecast_task` and every entity went unavailable for
-        a poll because a third-party payload was malformed.
+        _fetch_forecast says "never fail core update", but a payload it
+        cannot read escapes as a ValueError or AttributeError, so the
+        exception surfaces at `await forecast_task` and every entity goes
+        unavailable for a poll because one response was malformed.
         """
         entry = _make_entry()
         now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         coord = _make_coordinator(hass, entry, mock_api_client, now=now)
 
-        async def exploding_forecast(session, coordinates):
+        async def exploding_forecast(session):
             raise ValueError("malformed forecast payload")
 
-        coord._fetch_open_meteo_forecast = exploding_forecast
+        coord._fetch_forecast = exploding_forecast
 
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
@@ -703,7 +703,7 @@ class TestForecastTaskLifecycle:
         ):
             data = await coord._async_update_data()
 
-        assert data["open_meteo_forecast"] == {}
+        assert data["forecast"] == {}
         assert coord._next_slow_update == now + timedelta(hours=1)
 
     @pytest.mark.asyncio
@@ -716,7 +716,7 @@ class TestForecastTaskLifecycle:
         started = asyncio.Event()
         cancelled = asyncio.Event()
 
-        async def hanging_forecast(session, coordinates):
+        async def hanging_forecast(session):
             started.set()
             try:
                 await asyncio.Event().wait()
@@ -724,7 +724,7 @@ class TestForecastTaskLifecycle:
                 cancelled.set()
                 raise
 
-        coord._fetch_open_meteo_forecast = hanging_forecast
+        coord._fetch_forecast = hanging_forecast
 
         with patch(
             "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
@@ -736,11 +736,11 @@ class TestForecastTaskLifecycle:
             with pytest.raises(asyncio.CancelledError):
                 await update
 
-        assert cancelled.is_set(), "the Open-Meteo forecast task outlived the update that created it"
+        assert cancelled.is_set(), "the wind forecast task outlived the update that created it"
 
     @pytest.mark.asyncio
     async def test_hung_forecast_is_bounded_by_the_budget(self, hass, mock_api_client, monkeypatch):
-        """A hung Open-Meteo must not eat the whole poll.
+        """A hung forecast must not eat the whole poll.
 
         Three attempts at the client's own 20s timeout with 1s/2s of backoff
         is ~63s -- longer than the 60s scan interval -- so one hung forecast
@@ -751,16 +751,13 @@ class TestForecastTaskLifecycle:
         t0 = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         coord = _make_coordinator(hass, entry, mock_api_client, now=t0)
 
-        async def hang(session, *, latitude, longitude):
+        async def hang(session):
             await asyncio.Event().wait()
 
-        coord.open_meteo_client.get_point_forecast = hang
+        coord.client.get_forecast = hang
         monkeypatch.setattr("custom_components.kirkhill_wind.coordinator._FORECAST_BUDGET", 0.05)
 
-        result = await asyncio.wait_for(
-            coord._fetch_open_meteo_forecast(None, {"T1": {"latitude": 55.0, "longitude": -4.0}}),
-            timeout=2,
-        )
+        result = await asyncio.wait_for(coord._fetch_forecast(None), timeout=2)
 
         assert result == {}
 
@@ -840,55 +837,34 @@ class TestPermissionFailureAtRuntime:
 
 
 class TestForecastMalformedPayload:
-    """A garbage Open-Meteo payload is contained by the real parser, end to
-    end -- the core update survives whatever the third party sends."""
+    """A garbage forecast payload is contained by the real parser, end to
+    end -- the core update survives whatever the API sends."""
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "body",
         [
             {},
-            {"hourly": []},
-            {"hourly": {"time": "not-a-list"}},
-            {"hourly": {"time": ["junk", 42], "wind_speed_10m": ["x", None]}},
+            {"days": []},
+            {"days": "not-a-list"},
+            {"days": [{"points": "not-a-list"}]},
+            {"days": [{"points": [{"from": "junk", "to": "junk", "wind_speed_mps": "x"}]}]},
         ],
     )
-    async def test_garbage_payload_never_fails_the_update(
-        self, hass, mock_api_client, body
-    ):
-        from custom_components.kirkhill_wind.api import OpenMeteoApiClient
-
+    async def test_garbage_payload_never_fails_the_update(self, hass, mock_api_client, body):
         entry = _make_entry()
         now = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         coord = _make_coordinator(hass, entry, mock_api_client, now=now)
-        # Real client, real parse path; only the HTTP response is fake.
-        coord.open_meteo_client = OpenMeteoApiClient()
-        coord._cached_coordinates = {
-            "t1": {"latitude": 54.123, "longitude": -2.456}
-        }
+        # Real parse path; only the response is fake.
+        mock_api_client.get_forecast = AsyncMock(return_value=body)
 
-        class _Resp:
-            def raise_for_status(self):
-                pass
-
-            async def json(self):
-                return body
-
-        class _Ctx:
-            async def __aenter__(self):
-                return _Resp()
-
-            async def __aexit__(self, *exc):
-                return False
-
-        with patch("aiohttp.ClientSession.get", return_value=_Ctx()):
-            with patch(
-                "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
-                return_value=now,
-            ):
-                data = await coord._async_update_data()
+        with patch(
+            "custom_components.kirkhill_wind.coordinator.dt_util.utcnow",
+            return_value=now,
+        ):
+            data = await coord._async_update_data()
 
         # The forecast yields nothing -- never an exception, never a partial.
-        assert data["open_meteo_forecast"] == {}
+        assert data["forecast"] == {}
         # ...and the core data is untouched by the garbage.
         assert data["timeframe_summaries"]["owner"]

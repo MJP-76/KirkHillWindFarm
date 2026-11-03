@@ -14,7 +14,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .api import KirkHillApiClient, OpenMeteoApiClient
+from .api import KirkHillApiClient, summarize_forecast
 from .const import (
     CONF_API_KEY,
     CONF_BASE_URL,
@@ -35,12 +35,12 @@ _LOGGER = logging.getLogger(__name__)
 # Fast: every poll - current power + today summary
 # Medium: every 10 minutes - turbines, wind-speed series
 # Slow: every 1 hour - yesterday, week, month, ytd, year, alltime,
-#       past-year CfD windows (year_YYYY), Open-Meteo forecast
+#       past-year CfD windows (year_YYYY), the wind forecast
 FAST_TIMEFRAMES = ("today",)
 SLOW_TIMEFRAMES = ("yesterday", "week", "month", "ytd", "year", "alltime")
 _TURBINE_INTERVAL = timedelta(minutes=10)
 _SLOW_INTERVAL = timedelta(hours=1)
-# Seconds for the whole Open-Meteo attempt -- retries and backoff sleeps
+# Seconds for the whole forecast attempt -- retries and backoff sleeps
 # included. Without it three attempts at the client's own 20s timeout,
 # plus 1s and 2s of backoff, can take ~63s: longer than the 60s scan
 # interval, so one hung forecast silently costs a poll.
@@ -85,7 +85,6 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             api_key=entry.data[CONF_API_KEY],
             base_url=entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         )
-        self.open_meteo_client = OpenMeteoApiClient()
         # Time-based scheduling: initialise to "now" so the first tick runs
         # all tiers immediately, after which each tier resets its own timer.
         now = dt_util.utcnow()
@@ -93,12 +92,13 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         self._next_slow_update: datetime = now
         self._site_turbines: list[dict] = []
         self._turbine_generation: dict[str, dict] = {}
-        self._open_meteo_forecast: dict = {}
+        self._forecast: dict = {}
         # Immutable year summaries: completed calendar years never change, so
         # fetch them once and cache forever.  Keyed by (scope, year_string).
         self._immutable_year_summaries: dict[tuple[str, str], dict] = {}
         self._immutable_year_windows: dict[tuple[str, str], dict] = {}
-        # Cached turbine coordinates for Open-Meteo forecast location.
+        # Cached turbine coordinates, published for the per-turbine state
+        # attributes (latitude/longitude/location_source on the SCADA modal).
         self._cached_coordinates: dict[str, dict[str, float | str | None]] = {}
         # Last known-good current payloads per scope, kept so a failed fast-path
         # refresh keeps showing old data (marked stale) instead of blanking.
@@ -135,10 +135,10 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
         #
         # Summary fetches deliberately do NOT join this gather. They are issued
         # exactly once, further down, after the turbine tier has had its chance
-        # to refresh the cached coordinates the Open-Meteo forecast depends on.
-        # Fetching them here as well doubled every summary API call per update,
-        # because _next_slow_update is only advanced after the later call, so
-        # both invocations saw the slow tier as due. See
+        # to refresh the cached coordinates published for the turbine state
+        # attributes. Fetching them here as well doubled every summary API call
+        # per update, because _next_slow_update is only advanced after the later
+        # call, so both invocations saw the slow tier as due. See
         # test_summaries_are_fetched_exactly_once_per_update.
         owner_result, site_result = await asyncio.gather(
             self.client.get_current(session, SCOPE_OWNER),
@@ -172,15 +172,15 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                 self._cached_coordinates = self._build_coordinates(self._site_turbines)
             self._next_turbine_update = now + _TURBINE_INTERVAL
 
-        # Slow tier: Open-Meteo forecast runs in parallel with timeframe
-        # summaries (below) when both are due, using cached turbine coordinates
-        # so it does not depend on a fresh turbine fetch.
+        # Slow tier: the wind farm's own forecast runs in parallel with
+        # timeframe summaries (below) when both are due. It needs no turbine
+        # data at all -- the API resolves the location itself -- so unlike the
+        # Open-Meteo call it replaces, it does not depend on a fresh turbine
+        # fetch and needs no coordinate cache.
         slow_due = now >= self._next_slow_update
         forecast_task: asyncio.Task | None = None
         if slow_due:
-            forecast_task = asyncio.create_task(
-                self._fetch_open_meteo_forecast(session, self._cached_coordinates)
-            )
+            forecast_task = asyncio.create_task(self._fetch_forecast(session))
 
         # Fast tier (+ slow tier timeframes when due): summary fetches.
         try:
@@ -203,24 +203,24 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
         if slow_due:
             try:
-                self._open_meteo_forecast = await forecast_task
+                self._forecast = await forecast_task
             except asyncio.CancelledError:
                 # The update itself is being torn down: reap the child so it
                 # cannot outlive us, then carry the cancellation outward.
                 await _reap_forecast_task(forecast_task)
                 raise
             except Exception:
-                # _fetch_open_meteo_forecast advertises "never fail core
-                # update", but a payload it cannot parse escapes it as a
-                # ValueError or AttributeError, and one bad third-party
-                # forecast must not fail the update. Drop to no-forecast --
-                # the sensors read unknown -- exactly what the handled path
-                # inside _fetch_open_meteo_forecast already does.
+                # _fetch_forecast advertises "never fail core update", but a
+                # payload it cannot parse escapes it as a ValueError or
+                # AttributeError, and one bad forecast must not fail the
+                # update. Drop to no-forecast -- the sensors read unknown --
+                # exactly what the handled path inside _fetch_forecast
+                # already does.
                 _LOGGER.warning(
-                    "Open-Meteo forecast failed (forecast-only, non-fatal)",
+                    "Wind forecast failed (forecast-only, non-fatal)",
                     exc_info=True,
                 )
-                self._open_meteo_forecast = {}
+                self._forecast = {}
             self._next_slow_update = now + _SLOW_INTERVAL
 
         return {
@@ -232,7 +232,7 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
             "summary_stale": self._summary_stale,
             "current_stale": dict(self._current_stale),
             "turbine_generation": self._turbine_generation,
-            "open_meteo_forecast": self._open_meteo_forecast,
+            "forecast": self._forecast,
             "summary_failures": {
                 f"{scope}:{timeframe}": count
                 for (scope, timeframe), count in self._summary_failures.items()
@@ -467,57 +467,44 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
 
         return summaries, windows
 
-    async def _fetch_open_meteo_forecast(
-        self,
-        session: aiohttp.ClientSession,
-        coordinates: dict[str, dict[str, float | str | None]],
-    ) -> dict:
-        """Fetch optional Open-Meteo forecast; never fail core update.
+    async def _fetch_forecast(self, session: aiohttp.ClientSession) -> dict:
+        """Fetch the wind farm's own forecast; never fail the core update.
 
         Bounded by _FORECAST_BUDGET: the retries below, at the client's own
         20s timeout with 1s/2s of backoff, can otherwise take ~63s -- longer
         than the 60s scan interval -- so one hung forecast silently costs a
         poll. wait_for also cancels the attempt, so nothing is left running.
         """
-        latitude, longitude = self._resolve_forecast_location(coordinates)
-        if latitude is None or longitude is None:
-            return {}
-
         try:
             return await asyncio.wait_for(
-                self._forecast_with_retries(session, latitude, longitude),
+                self._forecast_with_retries(session),
                 timeout=_FORECAST_BUDGET,
             )
         except asyncio.TimeoutError:
             _LOGGER.warning(
-                "Open-Meteo forecast exceeded its %ss budget "
-                "(forecast-only, non-fatal)",
+                "Wind forecast exceeded its %ss budget (forecast-only, non-fatal)",
                 _FORECAST_BUDGET,
             )
             return {}
         except (aiohttp.ClientError, KirkHillApiError) as exc:
             _LOGGER.warning(
-                "Open-Meteo forecast fetch failed (forecast-only, non-fatal): %s",
+                "Wind forecast fetch failed (forecast-only, non-fatal): %s",
                 exc,
             )
             return {}
 
-    async def _forecast_with_retries(
-        self,
-        session: aiohttp.ClientSession,
-        latitude: float,
-        longitude: float,
-    ) -> dict:
-        """Three attempts with short backoff; raises the last error if all fail."""
+    async def _forecast_with_retries(self, session: aiohttp.ClientSession) -> dict:
+        """Three attempts with short backoff; raises the last error if all fail.
+
+        The parse lives here rather than in the caller so that a payload this
+        cannot read is contained by the same path as a transport error: both
+        end as "no forecast", never as a failed update.
+        """
         last_exc: Exception | None = None
 
         for attempt in range(3):
             try:
-                return await self.open_meteo_client.get_point_forecast(
-                    session,
-                    latitude=latitude,
-                    longitude=longitude,
-                )
+                return summarize_forecast(await self.client.get_forecast(session))
             except (aiohttp.ClientError, asyncio.TimeoutError, KirkHillApiError) as exc:
                 last_exc = exc
                 if attempt < 2:
@@ -526,21 +513,3 @@ class KirkHillWindCoordinator(DataUpdateCoordinator):
                     await asyncio.sleep(2**attempt)
 
         raise last_exc
-
-    def _resolve_forecast_location(
-        self, coordinates: dict[str, dict[str, float | str | None]]
-    ) -> tuple[float | None, float | None]:
-        """Resolve forecast location from turbine coordinates automatically."""
-        latitudes: list[float] = []
-        longitudes: list[float] = []
-        for coord in coordinates.values():
-            lat = coord.get("latitude")
-            lon = coord.get("longitude")
-            if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
-                latitudes.append(float(lat))
-                longitudes.append(float(lon))
-
-        if not latitudes or not longitudes:
-            return None, None
-
-        return sum(latitudes) / len(latitudes), sum(longitudes) / len(longitudes)
