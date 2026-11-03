@@ -173,8 +173,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ),
         # Owner scope, because that is the scope the forecast is fetched with
         # and the scope the wind sensors above already pair with.
-        ForecastEnergySensor(coordinator, entry, "today", "Forecast generation (today)"),
-        ForecastEnergySensor(coordinator, entry, "tomorrow", "Forecast generation (tomorrow)"),
+        ForecastEnergySensor(
+            coordinator, entry, "today", "Forecast generation (today)"
+        ),
+        ForecastEnergySensor(
+            coordinator, entry, "tomorrow", "Forecast generation (tomorrow)"
+        ),
         # P50/P75/P90 and the actual against them, on the same two windows
         # the generation sensors use, so a target and the figure it is judged
         # against always cover the same period.

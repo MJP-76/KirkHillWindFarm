@@ -895,6 +895,16 @@ decision changes.
 
 ## Deployment state
 
+- **2026-11-03 — `main` is at `4.19.0`, published as a **pre-release** and not
+  yet promoted. `4.18.4` remains the latest stable until the owner has tested
+  it; this supersedes the "no pre-release is currently open" note below.**
+  The forecast series: forecast moved from Open-Meteo to the wind farm's own
+  API (config entry v12), P50/P75/P90 benchmark sensors, generation-forecast
+  sensors, and the OpenAPI sync's sign-in. Nothing is deployed by releasing —
+  files reach this host only when `origin/main` is mirrored, and Python
+  changes need Home Assistant fully restarted, which is the owner's explicit
+  go-ahead.
+
 - **2026-10-23 (later) — `main` is at `4.18.4`, promoted to stable the same
   day on the owner's testing; it is the latest stable. `4.18.3` stepped down
   and `4.18.0`–`4.18.2` remain superseded pre-releases for reference; no

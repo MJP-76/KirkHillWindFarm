@@ -77,8 +77,12 @@ the stable release yet.
 
 **v4.18.4** is the latest **stable** release: the hardening series
 responding to an external review — period-collision guards, a resilient
-ledger load, and pinned forecast/migration/dashboard lifecycles. There is no
-pre-release currently open — to be offered one when it exists, enable
+ledger load, and pinned forecast/migration/dashboard lifecycles.
+
+**v4.19.0** is the current **pre-release**: the forecast series — the
+integration now takes its forecast from the wind farm's own API instead of
+Open-Meteo, exposes the dashboard's P50/P75/P90 expectations, and reads the
+generation forecast that was already arriving. To be offered it, enable
 pre-releases in HACS (above). See the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
 for the full history.

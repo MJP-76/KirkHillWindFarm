@@ -2,6 +2,56 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.19.0
+
+**Testing pre-release.** The forecast series: the integration now takes its
+forecast from the wind farm's own API instead of Open-Meteo, exposes the
+P50/P75/P90 expectations the dashboard publishes, and reads the generation
+forecast that was already arriving. Seven PRs, all 2026-11-03.
+
+- **Forecast from the wind farm's own API** (#166) — `/api/v1/forecast`
+  replaces `hourly=wind_speed_10m` at the turbine centroid. That reading was
+  wind at **10 metres** for turbines whose rotors sit at 80–100 metres; the
+  API's models run at hub height against its own turbines, and return a
+  generation forecast a wind-only source cannot produce. `OpenMeteoApiClient`,
+  `_resolve_forecast_location` and the forecast's coordinate cache go with it;
+  the 10-second budget, "never fail the core update", the task reaper and
+  last-known-on-failure all stay. Config entry **v12** renames the three
+  forecast unique_ids *in place*, so entity IDs, history and every automation
+  reference survive byte-identical.
+- **P50/P75/P90 benchmark sensors** (#167) — 16 sensors: the three
+  percentiles plus *vs P50*, on `range=today` beside Generation (today) and
+  `range=30d` beside Generation (month), for owner and site. A rolling 30 days
+  spans two calendar months, so the per-month entries are summed; the
+  percentage is derived from the summed energies rather than averaged, because
+  percentages cannot be summed. Side data on the slow tier — four requests an
+  hour, its own budget, a failed window dropped rather than held.
+- **Generation forecast sensors** (#169) — `days[].energy_kwh` for today and
+  tomorrow, which `/forecast` had been returning unread since #166. Today's
+  figure covers only the remaining time, so `forecast_from` is published as an
+  attribute rather than buried in a caveat.
+- **Predictions stay out of the Energy Dashboard** — all six new energy
+  sensors carry `state_class: measurement` with **no `device_class`**:
+  Home Assistant allows only `total`/`total_increasing` there, and either
+  would put a predicted figure in front of a dashboard this integration
+  deliberately does not wire up. Window totals keep `state_class: total`,
+  untouched.
+- **OpenAPI sync fixed** (#163) — the dashboard's 2026-10-23 release put
+  `/api-docs` and its spec behind a signed-in session, and the daily job had
+  been failing ever since as a PyYAML scanner error inside an inline
+  `<script>`. It now signs in through the dashboard's own
+  `/dashboard-api/login` and fails with a named message when it cannot read
+  the spec. **The `KH_DASHBOARD_EMAIL` / `KH_DASHBOARD_PASSWORD` secrets still
+  have to be added** before a run goes green.
+- **Feature request recorded** (#168) — unattended spec access (a token, or a
+  changelog feed) is written up as Issue 3, awaiting upstream feedback.
+- **`incoming/` is a drop-box again** (#164, #165) — the saved docs page and
+  spec exports were briefly tracked; untracked and ignored, so a 1.2 MB export
+  can never be committed by accident.
+
+Tests 372 → 437, plus one skipped (`test_benchmarks_response`, which starts
+pinning its fixture the moment the OpenAPI sync lands the refreshed spec).
+
 ## Version 4.18.4
 
 **Stable release** — promoted the same day, after the owner tested the
