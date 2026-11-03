@@ -15,6 +15,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    BENCHMARK_RANGES,
     SCOPE_OWNER,
     SCOPE_SITE,
     SCOPES,
@@ -170,6 +171,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
             "next_24h_avg_wind_speed_mps",
             "Forecast wind (next 24h avg)",
         ),
+        # P50/P75/P90 and the actual against them, on the same two windows
+        # the generation sensors use, so a target and the figure it is judged
+        # against always cover the same period.
+        *[
+            BenchmarkSensor(coordinator, entry, scope, range_value, label, metric)
+            for scope in SCOPES
+            for range_value, label in BENCHMARK_RANGES
+            for metric in ("p50", "p75", "p90", "vs_p50")
+        ],
         FarmActiveTurbinesSensor(coordinator, entry),
         FarmInactiveTurbinesSensor(coordinator, entry),
         DataGeneratedAtSensor(coordinator, entry),
@@ -279,6 +289,81 @@ class FarmCapacityFactorSensor(KirkHillScopedEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         attrs = super().extra_state_attributes
         attrs["data_stale"] = self._summary_is_stale("today")
+        return attrs
+
+
+class BenchmarkSensor(KirkHillScopedEntity, SensorEntity):
+    """A long-term expectation for a window, or the actual measured against it.
+
+    Deliberately **not** a ``device_class: energy`` sensor. Home Assistant
+    allows only ``total``/``total_increasing`` there, and either would put a
+    *predicted* figure in front of the Energy Dashboard. With no device class
+    and ``state_class: measurement`` these keep long-term statistics for
+    graphing while staying ineligible for the Energy Dashboard, which is
+    unwired on purpose (docs/development/review-brief.md). The window totals
+    they sit beside keep ``state_class: total``, untouched.
+
+    These are expectations, not forecasts: the spec says so in as many words
+    ("These are not weather forecasts") and their basis is
+    ``long_term_monthly_budgets``.
+    """
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 2
+
+    _KEYS = {
+        "p50": "p50_kwh",
+        "p75": "p75_kwh",
+        "p90": "p90_kwh",
+        "vs_p50": "vs_p50_percent",
+    }
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        scope: str,
+        range_value: str,
+        label: str,
+        metric: str,
+    ):
+        super().__init__(coordinator, entry, scope, f"benchmark_{metric}_{range_value}")
+        self._range_value = range_value
+        self._key = self._KEYS[metric]
+        scope_label = scope.capitalize()
+        if metric == "vs_p50":
+            self._attr_name = f"vs P50 {label} ({scope_label})"
+            self._attr_native_unit_of_measurement = PERCENTAGE
+            self._attr_icon = "mdi:percent"
+        else:
+            self._attr_name = f"{metric.upper()} expected {label} ({scope_label})"
+            self._attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+            self._attr_icon = "mdi:chart-timeline-variant"
+
+    def _window(self) -> dict:
+        """This scope's summary for this window, or {} when there is none."""
+        return (
+            self.coordinator.data.get("benchmarks", {})
+            .get(self._scope, {})
+            .get(self._range_value, {})
+        )
+
+    @property
+    def native_value(self):
+        return _as_float(self._window().get(self._key))
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs = dict(super().extra_state_attributes)
+        window = self._window()
+        attrs["window_range"] = self._range_value
+        # `data_complete` qualifies the comparison the spec asks for: "check
+        # completeness before comparing totals". Exposed rather than acted on,
+        # because a partial window is still worth seeing next to its target.
+        attrs["data_complete"] = window.get("data_complete")
+        attrs["month_count"] = window.get("month_count")
+        attrs["basis"] = window.get("basis")
+        attrs["timezone"] = window.get("timezone")
         return attrs
 
 

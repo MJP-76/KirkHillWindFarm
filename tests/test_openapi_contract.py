@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).parent.parent
@@ -83,3 +84,26 @@ class TestFixturesMatchTheSpec:
         )
         _assert_matches(SCHEMAS["Summary"], mock_summary_payload["summary"], "summary")
         _assert_matches(SCHEMAS["Window"], mock_summary_payload["window"], "window")
+
+    def test_benchmarks_response(self, mock_benchmark_payload):
+        """Pin the benchmark fixture to the spec -- once the spec has it.
+
+        openapi.yaml at the repo root is refreshed by the scheduled OpenAPI
+        sync, which is three weeks behind: /api/v1/benchmarks is not in the
+        checked-in copy yet. Skip until the sync lands it rather than
+        KeyError now, and never pass silently once it does.
+        """
+        if "BenchmarksResponse" not in SCHEMAS:
+            pytest.skip("checked-in openapi.yaml predates /api/v1/benchmarks")
+
+        _assert_matches(SCHEMAS["BenchmarksResponse"], {"data": mock_benchmark_payload}, "BenchmarksResponse")
+        _assert_matches(
+            SCHEMAS["BenchmarksResponse"]["properties"]["data"],
+            mock_benchmark_payload,
+            "benchmarks data",
+        )
+        month_schema = SCHEMAS["BenchmarksData"]["properties"]["months"]["items"]
+        for month in mock_benchmark_payload["months"]:
+            _assert_matches(month_schema, month, f"benchmark month {month['month']}")
+            for percentile, target in month["targets"].items():
+                _assert_matches(SCHEMAS["BenchmarkTarget"], target, f"benchmark {percentile}")

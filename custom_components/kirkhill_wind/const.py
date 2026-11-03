@@ -77,6 +77,13 @@ TIMEFRAME_TO_RANGE = {
     "ytd": "ytd",
     "alltime": "all",
 }
+# Windows /api/v1/benchmarks is polled for, each paired with the label its
+# sensors use. Both are chosen to line up with an existing generation
+# timeframe -- today -> today, 30d -> month -- so a target and the actual it
+# is judged against cover exactly the same period. The benchmark API has no
+# `month` range, and `mtd` is a calendar month rather than the rolling 30
+# days `month` means here, so `mtd` would compare against nothing.
+BENCHMARK_RANGES: tuple[tuple[str, str], ...] = (("today", "Today"), ("30d", "Month"))
 # Fixed (non-year) timeframes. Past calendar years are added dynamically via
 # yearly_timeframes() so future years are picked up without code changes.
 TIMEFRAME_ORDER = ("yesterday", "today", "week", "month", "ytd", "year", "alltime")
