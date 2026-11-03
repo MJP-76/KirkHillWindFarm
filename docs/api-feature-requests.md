@@ -66,3 +66,41 @@ Either:
 - Distinct `state_text` values for each curtailment type that we can map in `TURBINE_STATUS_MAP`
 
 Either approach works — a dedicated field is cleaner but new state_text values are backwards-compatible.
+
+---
+
+## Issue 3: Unattended access to the OpenAPI spec
+
+**Title:** Let an automated client read `/api-docs/openapi.yaml`, or publish a changelog feed
+
+**Labels:** enhancement
+
+**Status:** asked upstream — awaiting feedback
+
+---
+
+Since the dashboard's 2026-10-23 release, `/api-docs` and its spec require a signed-in session: an anonymous request is redirected to the home page, and a request without a session answers `401 {"message": "Please sign in to view API documentation."}`.
+
+### Why we want this
+
+The integration ships a scheduled job (`OpenAPI sync`, daily at 06:23 UTC) that reads the build stamp `data-release-id` from the dashboard home page and, only when that stamp moves, downloads `/api-docs/openapi.yaml` and compares it *parsed* against the copy committed in the repository. When the content differs it refreshes the spec, records the release, and opens a PR listing the new endpoints and schemas.
+
+**The trigger still works** — `data-release-id` remains public on `/` — so the job knows exactly when upstream ships. It fails only at the **download**, which is now gated. That has left the committed spec three weeks behind (recorded `20261008T151851Z-ce4aaa47b8cd`, live `20261029T001606Z-5be915ce91ed`), and more importantly means code can be written against an endpoint the committed spec does not document — which is precisely the drift the job exists to catch. Two endpoints are already in that state.
+
+The fallback we implemented is a member's dashboard credentials held as CI secrets and driven through `POST /dashboard-api/login` with an `X-XSRF-TOKEN` cookie. It works, but it is fragile in ways a token would not be: two-factor authentication cannot be supplied by CI, repeated failed attempts are temporarily locked upstream, and a password rotation silently breaks the job.
+
+### What it would enable
+
+- A spec that stays in step with the API it describes, with no human in the loop
+- The contract test that pins our fixtures to the spec to keep running (it currently skips for the missing endpoint)
+- Drift detection for endpoints added after 2026-10-23
+- No shared password sitting in CI
+
+### What we would need
+
+Either:
+
+1. **A token that unlocks the spec** — an API key presented as `Authorization: Bearer …`, or a dedicated read token, permitting `GET /api-docs/openapi.yaml` and ideally `/api-docs/changelog.md` too. A *dummy* `kh_live_*` key is rejected by the gate today; whether a *valid* key is accepted has not been tested.
+2. **A changelog feed** — RSS, Atom or JSON, covering `/api-docs/changelog.md`. This would not unblock the spec download, but it would let a client detect upstream changes with no credentials at all.
+
+Either is sufficient on its own: (1) solves the sync outright, (2) is a useful addition on top of it. There is currently no feed at any obvious path — the docs page, the spec and the Postman collection contain no `rss`, `atom`, `feed` or `webhook` reference.

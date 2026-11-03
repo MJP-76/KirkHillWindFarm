@@ -182,7 +182,8 @@ never sent it. The contract test is a floor, not a guarantee.
 
 ## What we have asked upstream for
 
-See [API feature requests](api-feature-requests.md) for the two open requests
-(intermediate ranges on `/turbines`, a structured curtailment reason) and
+See [API feature requests](api-feature-requests.md) for the three open requests
+(intermediate ranges on `/turbines`, a structured curtailment reason, and
+unattended access to the spec) and
 `TODO.md` #55 for the rest of the queue — combined endpoints, `range=custom`
 stability, rate-limit documentation, and financial figures owned by the API.
