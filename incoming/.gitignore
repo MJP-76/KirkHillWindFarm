@@ -1,0 +1,4 @@
+# Upload drop-box: keeps this folder in the repo, ignores its contents.
+# Anything saved here (API exports, saved docs pages) stays local.
+*
+!.gitignore
