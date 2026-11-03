@@ -5,10 +5,12 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.helpers.entity_registry import DATA_REGISTRY
 from homeassistant.loader import IntegrationNotFound
 
 from custom_components.kirkhill_wind import (
     _CONFIG_ENTRY_VERSION,
+    _FORECAST_UNIQUE_ID_RENAMES,
     _async_setup_payment_tracking,
     _async_update_listener,
     async_migrate_entry,
@@ -29,6 +31,7 @@ from custom_components.kirkhill_wind.const import (
     DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SITE_NAME,
+    DOMAIN,
 )
 from custom_components.kirkhill_wind.settings import (
     OPTION_KEYS,
@@ -470,6 +473,111 @@ class TestMonetaryInputsPurged:
 
         hass.config_entries.async_update_entry.assert_not_called()
         assert entry.options[CONF_OWNER_PRICE_PENCE_PER_KWH] == 6.0
+
+
+class _FakeEntityRegistry:
+    """Just enough of the entity registry to exercise the v12 rename."""
+
+    def __init__(self, entities: dict[str, str]) -> None:
+        self._by_unique_id = dict(entities)
+
+    def async_get_entity_id(self, domain, platform, unique_id):
+        return self._by_unique_id.get(unique_id)
+
+    def async_update_entity(self, entity_id, *, new_unique_id=None, **kwargs):
+        for unique_id, current in list(self._by_unique_id.items()):
+            if current != entity_id:
+                continue
+            if new_unique_id in self._by_unique_id:
+                raise ValueError(f"Unique id '{new_unique_id}' is already in use")
+            del self._by_unique_id[unique_id]
+            self._by_unique_id[new_unique_id] = entity_id
+            return
+        raise KeyError(entity_id)
+
+
+class TestForecastSourceRename:
+    """v12 moves the forecast from Open-Meteo to the wind farm's own API.
+
+    The unique_id is renamed *in place*, so the entity_id, its recorded
+    history and every automation, script or card that references it come out
+    of the migration byte-identical. Only the identifier naming the source
+    changes.
+    """
+
+    ENTRY_ID = "entry-1"
+    # The entity_id is derived from the old display name and must not move.
+    ENTITY_IDS = (
+        "sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_hour",
+        "sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_3h_avg",
+        "sensor.kirk_hill_wind_farm_open_meteo_forecast_wind_next_24h_avg",
+    )
+
+    @classmethod
+    def _old_entities(cls) -> dict[str, str]:
+        return {
+            f"{cls.ENTRY_ID}_{old}": entity_id
+            for (old, _), entity_id in zip(_FORECAST_UNIQUE_ID_RENAMES, cls.ENTITY_IDS)
+        }
+
+    @staticmethod
+    def _migrate(entities: dict[str, str], version: int = 11):
+        registry = _FakeEntityRegistry(entities)
+        hass = MagicMock()
+        hass.data = {DATA_REGISTRY: registry}
+        entry = _make_entry(version, {CONF_API_KEY: "key"})
+        entry.entry_id = TestForecastSourceRename.ENTRY_ID
+        return registry, hass, entry
+
+    @pytest.mark.asyncio
+    async def test_entity_ids_and_history_survive(self):
+        registry, hass, entry = self._migrate(self._old_entities())
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        for (old, new), entity_id in zip(_FORECAST_UNIQUE_ID_RENAMES, self.ENTITY_IDS):
+            # Same entity, new identifier.
+            assert registry.async_get_entity_id("sensor", DOMAIN, f"{self.ENTRY_ID}_{new}") == entity_id
+            # Nothing was left behind under the old name.
+            assert registry.async_get_entity_id("sensor", DOMAIN, f"{self.ENTRY_ID}_{old}") is None
+
+    @pytest.mark.asyncio
+    async def test_an_install_with_no_forecast_entities_migrates_cleanly(self):
+        """A fresh install, or one that never created them, is not an error."""
+        registry, hass, entry = self._migrate({})
+
+        assert await async_migrate_entry(hass, entry) is True
+        assert registry._by_unique_id == {}
+
+    @pytest.mark.asyncio
+    async def test_a_name_already_taken_leaves_the_old_entity_alone(self):
+        """Never let the rename raise: that would abort the whole migration."""
+        entities = self._old_entities()
+        taken = f"{self.ENTRY_ID}_forecast_next_hour_wind_speed_mps"
+        entities[taken] = "sensor.a_different_entity"
+        registry, hass, entry = self._migrate(entities)
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        # The conflicted one keeps its old identity rather than failing.
+        assert (
+            registry.async_get_entity_id("sensor", DOMAIN, f"{self.ENTRY_ID}_open_meteo_next_hour_wind_speed_mps")
+            == self.ENTITY_IDS[0]
+        )
+        # The other two still moved.
+        assert (
+            registry.async_get_entity_id("sensor", DOMAIN, f"{self.ENTRY_ID}_forecast_next_3h_avg_wind_speed_mps")
+            == self.ENTITY_IDS[1]
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_current_entry_is_left_untouched(self):
+        entities = self._old_entities()
+        registry, hass, entry = self._migrate(entities, version=_CONFIG_ENTRY_VERSION)
+
+        assert await async_migrate_entry(hass, entry) is True
+
+        assert registry._by_unique_id == entities
 
 
 class TestSettingsAccess:

@@ -60,7 +60,7 @@ development, you can do so here:
 - Config flow with masked API key entry, validated against the API
 - Optional automatic dashboard creation during setup
 - Configurable prices: Owner price (p/kWh), Owner rate (p/W) and Site/CfD price (£/MWh) as `number` entities — **all three disabled from v4.16.1** pending the board's model
-- Open-Meteo forecast integration (forecast only; not authoritative actual generation)
+- Wind forecast from the API's own `/api/v1/forecast` (forecast only; not authoritative actual generation)
 - Optional experimental Ethex payment-tracking onboarding toggle
 - Configurable polling interval via Options
 - Auto-generated Lovelace dashboard: SCADA (single-line diagram, top chip row with API status, Owner/Site panels with per-timeframe generation, the **Return on investment** panel leading the right column, Wind Speed detail modal, pop-out charts including a labelled turbine activity swimlane). History removed in v4.8.77, Finances retired into the SCADA card in v4.8.79, and the Turbines tab removed in v4.8.80 (its standalone map card since removed).

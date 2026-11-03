@@ -40,12 +40,18 @@ Other responses the API can return:
 | `/api/v1/current` | `scope` | Latest 1-minute power and wind readings, turbine state text, capacity factor, `capacity_watts` | **Yes — every poll**, once per scope |
 | `/api/v1/summary` | `range`, `scope`, `from`, `to` | Generation totals, capacity factor, turbine counts, `latest_import_status` for a window | **Yes —** `range=today` every poll, the rest hourly, once per scope |
 | `/api/v1/turbines` | `range`, `scope`, `from`, `to` | Per-turbine generation, capacity factor, coordinates, rotor speed | **Yes — every 10 minutes**, `range=today` and `range=all`, site scope |
+| `/api/v1/forecast` | `scope` | Point forecast for the rest of today and tomorrow: wind speed and power per interval, a daily energy total, and `status` / `*_stale` flags | **Yes — hourly**, once, default scope |
 | `/api/v1/wind-speed` | `range`, `scope`, `from`, `to` | Mean wind speed time series | **No** — dropped in v4.13.1; `/current` already carries wind speed, and HA's recorder holds the history |
 | `/api/v1/generation` | `range`, `scope`, `from`, `to` | Bucketed kWh generation series | **No** — in the spec since it was first committed, but its stability has never been confirmed (see [API feature requests](api-feature-requests.md)) |
 | `/api/v1/carbon-avoided` | `range`, `scope`, `from`, `to` | Indicative CO₂ avoided, weighted by NESO grid carbon intensity | **No** — appeared upstream on 2026-10-08 (see below) |
 
-The wind speed and forecast figures on the dashboard are **not** from this
-API: the forecast sensors come from Open-Meteo, a separate public service.
+Wind speed on the dashboard comes from `/api/v1/current`. The forecast
+sensors come from this API's own `/api/v1/forecast`, which runs its weather
+models at hub height (80–100 m, per the spec) against the farm's turbines —
+it replaced a direct Open-Meteo request for **10 m** wind at the turbine
+centroid, so the figure is now modelled for the rotors rather than for the
+ground. The endpoint also returns a generation forecast, which a wind-only
+source cannot produce.
 
 ### Query parameters
 

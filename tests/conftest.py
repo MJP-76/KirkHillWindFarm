@@ -260,5 +260,8 @@ def mock_api_client(mock_current_payload, mock_turbine_rows, mock_summary_payloa
     client.get_current = AsyncMock(side_effect=lambda session, scope: _current_payload(scope))
     client.get_turbines = AsyncMock(return_value=mock_turbine_rows)
     client.get_summary = AsyncMock(return_value=mock_summary_payload)
+    # An empty forecast payload: summarize_forecast({}) yields no forecast,
+    # which is what a slow tier with nothing to say should look like.
+    client.get_forecast = AsyncMock(return_value={})
     client.test = AsyncMock()
     return client

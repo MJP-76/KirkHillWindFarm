@@ -11,7 +11,7 @@
       },
       "manual": {
         "title": "Connect to Kirk Hill Wind Farm",
-        "description": "Enter your Kirk Hill dashboard API key. Forecast entities use Open-Meteo automatically (no forecast API key required). You can also enable optional experimental Ethex payment tracking onboarding.",
+        "description": "Enter your Kirk Hill dashboard API key. Forecast entities come from the wind farm's own API (no forecast key required). You can also enable optional experimental Ethex payment tracking onboarding.",
         "data": {
           "api_key": "API key",
           "create_dashboard": "Create dashboard automatically",
@@ -25,7 +25,7 @@
       },
       "settings": {
         "title": "Set up Kirk Hill Wind Farm",
-        "description": "Signed in. Choose the site name and what to create. Forecast entities use Open-Meteo automatically (no forecast API key required).",
+        "description": "Signed in. Choose the site name and what to create. Forecast entities come from the wind farm's own API (no forecast key required).",
         "data": {
           "site_name": "Site name",
           "create_dashboard": "Create dashboard automatically",
@@ -76,7 +76,7 @@
     "step": {
       "init": {
         "title": "Kirk Hill Wind Farm options",
-        "description": "Adjust polling and finance options. Forecast entities use Open-Meteo automatically (no forecast API key required). Enable experimental payment tracking onboarding to configure Ethex.",
+        "description": "Adjust polling and finance options. Forecast entities come from the wind farm's own API (no forecast key required). Enable experimental payment tracking onboarding to configure Ethex.",
         "data": {
           "create_dashboard": "Create dashboard automatically",
           "enable_payment_tracking": "Enable payment tracking onboarding (Ethex, experimental)",

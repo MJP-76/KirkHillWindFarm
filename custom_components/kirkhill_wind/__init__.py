@@ -12,6 +12,7 @@ from homeassistant.components.frontend import (
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import LoaderError, async_get_integration
 
 from .const import (
@@ -23,6 +24,7 @@ from .const import (
     DEFAULT_BASE_URL,
     DEFAULT_CFD_PRICE_GBP_PER_MWH,
     DEFAULT_OWNER_PRICE_PENCE_PER_KWH,
+    DOMAIN,
     PLATFORMS,
 )
 from .coordinator import KirkHillWindCoordinator
@@ -59,7 +61,15 @@ _FRONTEND_ASSETS: list[tuple[str, Path]] = [
 ]
 
 # Keep in sync with the VERSION in config_flow.py.
-_CONFIG_ENTRY_VERSION = 11
+_CONFIG_ENTRY_VERSION = 12
+
+# The forecast source moved from Open-Meteo to the wind farm's own API. Each
+# suffix is renamed in place rather than re-created: see async_migrate_entry.
+_FORECAST_UNIQUE_ID_RENAMES: tuple[tuple[str, str], ...] = (
+    ("open_meteo_next_hour_wind_speed_mps", "forecast_next_hour_wind_speed_mps"),
+    ("open_meteo_next_3h_avg_wind_speed_mps", "forecast_next_3h_avg_wind_speed_mps"),
+    ("open_meteo_next_24h_avg_wind_speed_mps", "forecast_next_24h_avg_wind_speed_mps"),
+)
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -163,6 +173,38 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         ):
             options.pop(_setting, None)
         options.pop(CONF_PRICE_RESTORE_PENDING, None)
+
+    if config_entry.version < 12:
+        # The forecast now comes from the wind farm's own API rather than
+        # Open-Meteo. The unique_id is swapped *in place* so the entity_id,
+        # its recorded history and every automation, script or card that
+        # references it survive untouched -- only the identifier naming the
+        # source changes. Creating three fresh entities instead would orphan
+        # every reference and start their history from scratch.
+        registry = er.async_get(hass)
+        for old_suffix, new_suffix in _FORECAST_UNIQUE_ID_RENAMES:
+            old_unique_id = f"{config_entry.entry_id}_{old_suffix}"
+            entity_id = registry.async_get_entity_id("sensor", DOMAIN, old_unique_id)
+            if entity_id is None:
+                # Nothing to migrate: never created, or an earlier run of
+                # this migration already renamed it.
+                continue
+            new_unique_id = f"{config_entry.entry_id}_{new_suffix}"
+            if registry.async_get_entity_id("sensor", DOMAIN, new_unique_id):
+                # Already exists, so leave the old one alone rather than let
+                # async_update_entity raise and abort the whole migration.
+                continue
+            try:
+                registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
+            except ValueError as err:
+                # A concurrent creation can win this race. Losing it costs
+                # only the honest name, never the entity or its history.
+                _LOGGER.warning(
+                    "Could not rename %s to unique id %s: %s",
+                    entity_id,
+                    new_unique_id,
+                    err,
+                )
 
     hass.config_entries.async_update_entry(
         config_entry, data=data, options=options, version=_CONFIG_ENTRY_VERSION

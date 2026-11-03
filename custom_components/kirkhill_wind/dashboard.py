@@ -524,7 +524,7 @@ def build_dashboard_config(hass: HomeAssistant, entry: ConfigEntry) -> dict:
                         "payment_ledger_entity": farm_scoped("owner", "payment_ledger"),
                         "wind_speed_entity": farm("farm_wind_speed"),
                         "wind_forecast_entity": farm(
-                            "open_meteo_next_hour_wind_speed_mps"
+                            "forecast_next_hour_wind_speed_mps"
                         ),
                         "active_entity": farm("farm_active_turbines"),
                         "api_status_entity": farm("api_status"),
