@@ -1,0 +1,2754 @@
+openapi: 3.1.0
+info:
+  title: Kirk Hill Wind Farm API
+  version: 1.0.0
+  summary: Read-only wind farm data API for the Kirk Hill dashboard.
+  description: >
+    Explore generation, wind, forecasts and CO2 avoided for your share or the
+    whole wind farm. Access is read-only. Use `scope=site` for whole-farm data
+    when your key allows it. Readings default to your share when permitted;
+    whole-farm-only keys default to whole-farm data.
+    Apart from ownership wattage and your wind-speed preference, personal
+    account information is not shared. Wind and capacity factor do not change
+    with your share. Do not cache or share responses between accounts.
+    All timestamps in responses are UTC ISO-8601 strings.
+
+
+    API requests are rate limited per account (120 requests per minute by
+    default, shared across all of an account's API keys). Exceeding the limit
+    returns `429 Too Many Requests` with a `Retry-After` header telling you how
+    long to wait. Contact support if you need a higher limit.
+
+
+    AI clients can also connect using MCP Streamable HTTP at
+    `https://dashboard.kirkhillcoop.org/mcp`. Authenticate with OAuth or a manual
+    API key in the Authorization header. Read the
+    [MCP setup guide](https://dashboard.kirkhillcoop.org/mcp.md) for configuration,
+    connection steps, examples and troubleshooting.
+
+
+    See the [API changelog](https://dashboard.kirkhillcoop.org/api-docs#api-changelog)
+    for REST and MCP additions, unreleased features and compatibility notes.
+servers:
+  - url: https://dashboard.kirkhillcoop.org
+    description: Production
+security:
+  - bearerAuth: []
+tags:
+  - name: Wind farm data
+    description: Read-only generation, wind speed, indicative carbon avoided, and turbine status data.
+paths:
+  /api/v1/preferences:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get display preferences
+      description: >
+        Read your saved wind-speed unit (mps or mph), with mps as the default.
+        Available with any data permission. Accepts no query parameters;
+        extra parameters return 422. Wind readings remain in metres per second,
+        so convert them for display if needed. Theme and other account settings
+        are not returned.
+      operationId: getWindFarmPreferences
+      responses:
+        '200':
+          description: Your wind-speed display preference.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: 'no-store, private'
+            Vary:
+              schema:
+                type: string
+                const: Authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesResponse'
+              example:
+                data:
+                  wind_speed_unit: mps
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          description: The key holder cannot access wind farm data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Query parameters are not accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: This endpoint does not accept query parameters.
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/v1/current:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get current wind farm readings
+      description: >
+        Returns the latest 1-minute power and wind readings, the latest
+        turbine state text, and current capacity factor. Power values default to
+        the API key holder's share of the wind farm; use `scope=site` for
+        whole-site power values. Capacity factor, wind speed, and turbine
+        active/inactive state are physical readings and are not changed by
+        `scope`.
+      operationId: getWindFarmCurrent
+      parameters:
+        - $ref: '#/components/parameters/Scope'
+      responses:
+        '200':
+          description: Current wind farm readings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+  /api/v1/summary:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get wind farm summary
+      description: Returns scoped generation totals, capacity factor, turbine count, and latest data status.
+      operationId: getWindFarmSummary
+      parameters:
+        - $ref: '#/components/parameters/Range'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Wind farm summary for the requested range.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+  /api/v1/generation:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get site generation time series
+      description: Returns energy generation in kWh for each bucket in the requested range and scope.
+      operationId: getWindFarmGeneration
+      parameters:
+        - $ref: '#/components/parameters/Range'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Site generation time series.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+  /api/v1/wind-speed:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get wind speed time series
+      description: Returns mean recorded wind speed in metres per second for each bucket in the requested range.
+      operationId: getWindFarmWindSpeed
+      parameters:
+        - $ref: '#/components/parameters/Range'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Wind speed time series.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WindSpeedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+  /api/v1/carbon-avoided:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get indicative CO2 avoided
+      description: >
+        Returns indicative CO2 avoided for the requested range. Each complete
+        30-minute gross-generation interval is weighted by the matching NESO
+        estimated actual GB grid carbon intensity and the configured assumed
+        export factor. Generation and avoided-emissions values default to the
+        API key holder's share; use `scope=site` for whole-wind-farm values.
+        Coverage fields explicitly identify missing generation or carbon data.
+      operationId: getWindFarmCarbonAvoided
+      parameters:
+        - $ref: '#/components/parameters/Range'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Indicative carbon avoided for the requested range.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarbonAvoidedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+  /api/v1/turbines:
+    get:
+      tags:
+        - Wind farm data
+      summary: Get turbine status
+      description: Returns scoped per-turbine generation, capacity factor, coordinates, and latest rotor speed.
+      operationId: getWindFarmTurbines
+      parameters:
+        - $ref: '#/components/parameters/Range'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Per-turbine status rows.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurbinesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+  "/api/v1/forecast":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getForecast
+      summary: Generation and wind forecasts
+      description: Predicted generation and wind for the rest of today and tomorrow.
+        Check status and complete for old or incomplete predictions. These are
+        estimates, not guarantees or P50 expectations. Today's total covers only
+        the remaining time, not the whole day.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ForecastResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+  "/api/v1/carbon-avoided/forecast":
+    get:
+      tags: [Wind farm data]
+      operationId: getCarbonAvoidedForecast
+      summary: Indicative CO2 avoided predictions
+      description: >-
+        Indicative CO2 savings for the rest of today and tomorrow in UK local time.
+        Uses predicted generation, forecast GB grid carbon intensity and the
+        assumed export rate. Today's first interval starts now. Totals include
+        only times with enough data; check complete and coverage_percent before
+        presenting them as full predictions. Separate from historical CO2 figures.
+      parameters:
+        - $ref: '#/components/parameters/Scope'
+      responses:
+        '200':
+          description: Indicative forecasts, not metered savings or P50 budgets.
+          headers:
+            Cache-Control:
+              schema: {type: string, const: 'private, no-store'}
+            Vary:
+              schema: {type: string, const: Authorization}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarbonForecastResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  "/api/v1/weather-forecast":
+    get:
+      tags:
+        - Wind farm data
+      operationId: getWeatherForecast
+      summary: Hourly weather forecasts
+      description: >-
+        Predicted wind speed, direction, temperature and surface air pressure,
+        shown separately for each weather model. Covers the next whole UTC hour
+        (including now if on the hour) through tomorrow in UK local time.
+        Check status and complete for old or partial forecasts. Missing values
+        are null; unavailable models have no points. Weather values and units
+        are the same for your share and the whole farm.
+      parameters:
+        - $ref: '#/components/parameters/Scope'
+      responses:
+        '200':
+          description: Modelled weather, not turbine observations. Preserve provider/model attribution.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+            Vary:
+              schema:
+                type: string
+                const: Authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherForecastResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorised'
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '423':
+          $ref: '#/components/responses/PasswordChangeRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  "/api/v1/series":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getExtendedSeries
+      summary: Detailed generation or wind history
+      description: Explore readings for a chosen turbine and time interval.
+        Missing values are null, not zero. Generation estimated across gaps is
+        marked as interpolated; wind averages include the number of readings used.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      - "$ref": "#/components/parameters/Range"
+      - name: from
+        in: query
+        required: false
+        description: Inclusive custom timestamp with timezone; only with range=custom.
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        description: Exclusive custom timestamp with timezone; only with range=custom.
+        schema:
+          type: string
+          format: date-time
+      - name: resolution
+        in: query
+        required: false
+        description: UTC buckets. Maximum 48h at 1m, 90 days at 10m, 365 days at 1h;
+          day for longer. Automatic when omitted.
+        schema:
+          type: string
+          enum:
+          - 1m
+          - 10m
+          - 1h
+          - day
+      - name: turbine
+        in: query
+        required: false
+        description: Filter readings by turbine; ownership still scales by the whole-farm
+          share.
+        schema:
+          type: string
+          pattern: "^T[1-8]$"
+      - name: metric
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - generation_kwh
+          - wind_speed_mps
+          default: generation_kwh
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ExtendedSeriesResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+  "/api/v1/generation/cumulative":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getExtendedSeriesCumulative
+      summary: Running generation totals
+      description: Running totals include known generation during gaps, with
+        estimates identified. Unknown values remain null, and totals stop at the
+        last supported reading. Check complete before using a full-period total.
+        The metric parameter is not accepted.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      - "$ref": "#/components/parameters/Range"
+      - name: from
+        in: query
+        required: false
+        description: Inclusive custom timestamp with timezone; only with range=custom.
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        description: Exclusive custom timestamp with timezone; only with range=custom.
+        schema:
+          type: string
+          format: date-time
+      - name: resolution
+        in: query
+        required: false
+        description: UTC buckets. Maximum 48h at 1m, 90 days at 10m, 365 days at 1h;
+          day for longer. Automatic when omitted.
+        schema:
+          type: string
+          enum:
+          - 1m
+          - 10m
+          - 1h
+          - day
+      - name: turbine
+        in: query
+        required: false
+        description: Filter readings by turbine; ownership still scales by the whole-farm
+          share.
+        schema:
+          type: string
+          pattern: "^T[1-8]$"
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ExtendedSeriesResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+  "/api/v1/statistics":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getStatistics
+      summary: Daily and monthly statistics
+      description: Explore daily or monthly generation, wind, CO2 and performance.
+        The current month is marked as month-to-date, with P50 expectations for
+        the elapsed time. Missing figures include reasons; use the calendar to
+        see wholly missing or pending periods. Unavailable statistics return no
+        rows with meta.status=unavailable.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      - name: period
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - day
+          - month
+          default: month
+      - name: from
+        in: query
+        required: false
+        description: Inclusive UK date, from 2024 onward and not after today.
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        description: Inclusive UK date, not before from or after today.
+        schema:
+          type: string
+          format: date
+      - name: order_by
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - date
+          - generation_kwh
+          - wind_speed_mps
+          - capacity_factor_percent
+          - vs_p50_percent
+          - co2_avoided_kg
+          - p50_kwh
+          default: date
+      - name: direction
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - asc
+          - desc
+          default: desc
+      - name: page
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          enum:
+          - 25
+          - 50
+          - 100
+          default: 25
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/StatisticsResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+  "/api/v1/statistics/compare":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getComparison
+      summary: Compare years
+      description: Compare monthly figures across two or three years. Check
+        is_complete before comparing a partial month with a full month.
+        Percentage metrics use percentage-point differences.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      - name: metric
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - generation_kwh
+          - wind_speed_mps
+          - capacity_factor_percent
+          - vs_p50_percent
+          - co2_avoided_kg
+          default: generation_kwh
+      - name: years[]
+        in: query
+        required: true
+        description: Ordered years; first is baseline. Encode as years[]=2025&years[]=2026.
+        schema:
+          type: array
+          items:
+            type: integer
+            minimum: 2024
+            description: No later than the current year.
+          minItems: 2
+          maxItems: 3
+          uniqueItems: true
+        style: form
+        explode: true
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ComparisonResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+  "/api/v1/statistics/calendar":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getCalendar
+      summary: Daily metric calendar
+      description: See a reading for each UK calendar day, with missing or
+        incomplete days identified. Day lengths allow for the clocks changing.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      - name: metric
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - generation_kwh
+          - wind_speed_mps
+          - capacity_factor_percent
+          - vs_p50_percent
+          - co2_avoided_kg
+          default: generation_kwh
+      - name: year
+        in: query
+        required: true
+        description: Calendar year from 2024 through the current year.
+        schema:
+          type: integer
+          minimum: 2024
+          description: No later than the current year.
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CalendarResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+  "/api/v1/records":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getRecords
+      summary: Record rankings
+      description: Explore top-three rankings, with dates and partial months
+        identified. Monthly P50 records are judged against the whole month's
+        target, even before the month ends. Your share scales energy and CO2,
+        not wind or percentages. Check coverage for CO2 estimates.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecordsResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+  "/api/v1/benchmarks":
+    get:
+      tags:
+      - Wind farm data
+      operationId: getBenchmarks
+      summary: P50, P75 and P90 benchmarks
+      description: Compare generation with long-term expectations, separately for
+        your chosen period and the whole month. Includes expected capacity factors.
+        Check completeness before comparing totals. These are not weather forecasts.
+      parameters:
+      - "$ref": "#/components/parameters/Scope"
+      - "$ref": "#/components/parameters/Range"
+      - name: from
+        in: query
+        required: false
+        description: Inclusive custom timestamp with timezone; only with range=custom.
+        schema:
+          type: string
+          format: date-time
+      - name: to
+        in: query
+        required: false
+        description: Exclusive custom timestamp with timezone; only with range=custom.
+        schema:
+          type: string
+          format: date-time
+      responses:
+        '200':
+          description: Read-only result.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: private, no-store
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BenchmarksResponse"
+        '401':
+          "$ref": "#/components/responses/Unauthorised"
+        '403':
+          description: The API key does not permit the requested scope.
+        '422':
+          "$ref": "#/components/responses/ValidationError"
+        '423':
+          "$ref": "#/components/responses/PasswordChangeRequired"
+        '429':
+          "$ref": "#/components/responses/TooManyRequests"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Kirk Hill API key
+      description: 'Dashboard-generated API key sent as `Authorization: Bearer <token>`.'
+  parameters:
+    Range:
+      name: range
+      in: query
+      required: false
+      description: >
+        Requested time range. Named ranges use Europe/London local day boundaries
+        and response timestamps are returned in UTC. Four-digit years from 2024
+        through the current dashboard year are also accepted, for example `2024`.
+        The current year behaves like year-to-date; completed years cover the
+        full UK-local calendar year.
+      schema:
+        oneOf:
+          - type: string
+            enum:
+              - today
+              - yesterday
+              - 7d
+              - 30d
+              - mtd
+              - last_month
+              - ytd
+              - all
+              - custom
+          - type: string
+            pattern: '^\d{4}$'
+            example: '2024'
+        default: 7d
+    From:
+      name: from
+      in: query
+      required: false
+      description: Required when `range=custom`. ISO-8601 timestamp.
+      schema:
+        type: string
+        format: date-time
+        examples:
+          - 2026-06-01T00:00:00Z
+    Scope:
+      name: scope
+      in: query
+      required: false
+      description: >
+        Generation scope. `owner` is the default and returns values scaled to
+        the API key holder's share of the wind farm. `site` returns whole-site
+        values. This parameter does not change wind speed readings. Keys can
+        be limited to owner-share data, whole-site data, or both. Owner-only
+        keys reject `scope=site`; site-only keys default to `site` and reject
+        `scope=owner`.
+      schema:
+        type: string
+        enum:
+          - owner
+          - site
+        default: owner
+    To:
+      name: to
+      in: query
+      required: false
+      description: Required when `range=custom`. ISO-8601 timestamp after `from`.
+      schema:
+        type: string
+        format: date-time
+        examples:
+          - 2026-06-02T00:00:00Z
+  responses:
+    Unauthorised:
+      description: Missing, invalid, revoked, or inactive API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missingToken:
+              value:
+                message: 'Use an API key in the Authorization: Bearer header.'
+            invalidToken:
+              value:
+                message: The API key is not valid.
+            expiredToken:
+              value:
+                message: This API key has expired after 90 days of inactivity. Reactivate it in your dashboard account settings before using it again.
+    PasswordChangeRequired:
+      description: The dashboard user must change their password before API keys can be used.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Please change your dashboard password before using API keys.
+    ValidationError:
+      description: Invalid range or timestamp parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    TooManyRequests:
+      description: >
+        The account exceeded its per-minute request limit, which is shared
+        across all of the account's API keys. The default limit is 120 requests
+        per minute; a `Retry-After` header (seconds) is returned. Contact
+        support if you need a higher limit for your account.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Too many requests. Please slow down and try again shortly.
+  schemas:
+    CarbonForecastPoint:
+      type: object
+      additionalProperties: false
+      required: [from, to, co2_avoided_kg, generation_kwh, grid_intensity_gco2_per_kwh, carbon_retrieved_at]
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: Inclusive UTC boundary; first interval starts at request time.
+        to:
+          type: string
+          format: date-time
+          description: Exclusive UTC half-hour boundary.
+        co2_avoided_kg:
+          type: [number, 'null']
+          minimum: 0
+          description: Predicted kilograms, rounded to six decimals. Null if either input is unavailable.
+        generation_kwh:
+          type: [number, 'null']
+          minimum: 0
+          description: Predicted gross generation in kWh for this interval, scaled to scope.
+        grid_intensity_gco2_per_kwh:
+          type: [number, 'null']
+          minimum: 0
+          description: NESO forecast national GB intensity, never ownership-scaled.
+        carbon_retrieved_at:
+          type: [string, 'null']
+          format: date-time
+          description: When we received the carbon forecast, not when NESO issued it. Null if unavailable.
+    CarbonForecastDay:
+      type: object
+      additionalProperties: false
+      required: [key, date, from, to, forecast_from, status, complete, co2_avoided_kg, expected_intervals, matched_intervals, expected_seconds, covered_seconds, coverage_percent, points]
+      properties:
+        key:
+          type: string
+          enum: [today, tomorrow]
+        date:
+          type: string
+          format: date
+          description: UK calendar date.
+        from:
+          type: string
+          format: date-time
+          description: Start of UK calendar day, in UTC; not the start of today's subtotal.
+        to:
+          type: string
+          format: date-time
+          description: Exclusive end of UK calendar day, in UTC.
+        forecast_from:
+          type: string
+          format: date-time
+          description: Start of remaining prediction and subtotal; now for today, day start for tomorrow.
+        status:
+          type: string
+          enum: [ready, stale, unavailable]
+          description: Generation freshness when any CO2 interval is usable, otherwise unavailable. Independent of coverage.
+        complete:
+          type: boolean
+          description: Every second from forecast_from to to has both usable forecast inputs.
+        co2_avoided_kg:
+          type: [number, 'null']
+          minimum: 0
+          description: Sum of supported intervals only; null when none. Today's subtotal is remaining time, not a whole-day prediction.
+        expected_intervals:
+          type: integer
+          minimum: 0
+        matched_intervals:
+          type: integer
+          minimum: 0
+        expected_seconds:
+          type: integer
+          minimum: 0
+        covered_seconds:
+          type: integer
+          minimum: 0
+        coverage_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Duration-weighted input coverage, rounded to four decimals; not confidence.
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarbonForecastPoint'
+    CarbonForecastData:
+      type: object
+      additionalProperties: false
+      required: [status, scope, now, timezone, estimate_type, intensity_source, assumed_export_factor, carbon_forecast_max_age_minutes, generation_status, generated_at, forecasted_at, weather_run_at, model_version, days]
+      properties:
+        status:
+          type: string
+          enum: [ready, stale, unavailable]
+          description: Generation freshness when any CO2 interval is usable, otherwise unavailable. A ready forecast can be incomplete.
+        scope:
+          type: string
+          enum: [owner, site]
+        now:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+          const: Europe/London
+        estimate_type:
+          type: string
+          const: indicative_forecast
+        intensity_source:
+          type: string
+          const: neso_national_forecast
+        assumed_export_factor:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Assumed proportion of generation exported to the grid, normally 0.99.
+        carbon_forecast_max_age_minutes:
+          type: integer
+          minimum: 30
+          description: Maximum age of usable carbon forecast data, currently 180 minutes.
+        generation_status:
+          type: string
+          enum: [ready, stale, unavailable]
+        generated_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the generation forecast was produced.
+        forecasted_at:
+          type: [string, 'null']
+          format: date-time
+          description: Generation forecast source run time.
+        weather_run_at:
+          type: [string, 'null']
+          format: date-time
+        model_version:
+          type: [string, 'null']
+        days:
+          type: array
+          description: Today and tomorrow; empty if generation forecasts are unavailable. Missing CO2 predictions are null, with coverage shown.
+          items:
+            $ref: '#/components/schemas/CarbonForecastDay'
+    CarbonForecastResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CarbonForecastData'
+    WeatherForecastPoint:
+      type: object
+      additionalProperties: false
+      required: [valid_at, wind_speed_mps, wind_direction_degrees, temperature_c, surface_pressure_hpa]
+      properties:
+        valid_at:
+          type: string
+          format: date-time
+          description: UTC instant the forecast describes; not an hourly average.
+        wind_speed_mps:
+          type: [number, 'null']
+          description: Wind speed in metres per second at the model's wind_height_m.
+        wind_direction_degrees:
+          type: [number, 'null']
+          minimum: 0
+          exclusiveMaximum: 360
+          description: Direction the wind comes from, clockwise from true north. North is 0 degrees.
+        temperature_c:
+          type: [number, 'null']
+          description: Air temperature in degrees Celsius at 2 metres above ground.
+        surface_pressure_hpa:
+          type: [number, 'null']
+          description: Surface atmospheric pressure in hPa, not sea-level pressure.
+    WeatherForecastModel:
+      type: object
+      additionalProperties: false
+      required: [model, label, provider, wind_height_m, temperature_height_m, pressure_reference, status, forecasted_at, retrieved_at, complete, points]
+      properties:
+        model:
+          type: string
+          examples: [icon_eu]
+        label:
+          type: string
+          examples: [ICON-EU]
+        provider:
+          type: string
+          const: open_meteo
+        wind_height_m:
+          type: integer
+          description: Wind forecast height above ground; currently 80 or 100 metres depending on model.
+        temperature_height_m:
+          type: integer
+          const: 2
+        pressure_reference:
+          type: string
+          const: surface
+        status:
+          type: string
+          enum: [ready, stale, unavailable]
+          description: >-
+            Run freshness, independent of completeness. Currently stale after 18
+            hours and unavailable after 36 hours; recent retrieval cannot refresh
+            an old run. Missing or disabled forecasts are unavailable.
+        forecasted_at:
+          type: [string, 'null']
+          format: date-time
+          description: UTC model initialisation time; not publication or retrieval time.
+        retrieved_at:
+          type: [string, 'null']
+          format: date-time
+          description: When we last received the returned weather data, or null when unavailable.
+        complete:
+          type: boolean
+          description: All four variables are present for every expected hourly point in the window.
+        points:
+          type: array
+          description: >-
+            Chronological hourly points; missing hours/fields remain null. No
+            substitution from older runs. Empty if unavailable.
+          items:
+            $ref: '#/components/schemas/WeatherForecastPoint'
+    WeatherForecastData:
+      type: object
+      additionalProperties: false
+      required: [scope, now, basis, window, wind_direction_convention, models]
+      properties:
+        scope:
+          type: string
+          enum: [owner, site]
+          description: Authorised key scope; weather values are identical for both scopes.
+        now:
+          type: string
+          format: date-time
+        basis:
+          type: string
+          const: modelled_weather
+        window:
+          type: object
+          additionalProperties: false
+          required: [from, to, interval_seconds]
+          properties:
+            from:
+              type: string
+              format: date-time
+              description: Inclusive next whole UTC hour, or now when exactly on the hour.
+            to:
+              type: string
+              format: date-time
+              description: Exclusive end of tomorrow in Europe/London, returned in UTC; DST-aware.
+            interval_seconds:
+              type: integer
+              const: 3600
+        wind_direction_convention:
+          type: string
+          const: from_degrees_clockwise_from_true_north
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeatherForecastModel'
+    WeatherForecastResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/WeatherForecastData'
+    ForecastPoint:
+      type: object
+      additionalProperties: false
+      required:
+      - from
+      - to
+      - power_kw
+      - wind_speed_mps
+      - nowcast
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        power_kw:
+          type: number
+        wind_speed_mps:
+          type:
+          - number
+          - 'null'
+        nowcast:
+          type: boolean
+    ForecastData:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - scope
+      - now
+      - estimate_type
+      - days
+      properties:
+        status:
+          type: string
+          enum:
+          - ready
+          - stale
+          - unavailable
+        scope:
+          type: string
+          enum:
+          - owner
+          - site
+        now:
+          type: string
+          format: date-time
+        generated_at:
+          type: string
+          format: date-time
+        forecasted_at:
+          type: string
+          format: date-time
+        weather_run_at:
+          type: string
+          format: date-time
+        model_version:
+          type: string
+        operational_stale:
+          type: boolean
+        weather_stale:
+          type: boolean
+        estimate_type:
+          const: point_estimate
+        days:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - key
+            - date
+            - from
+            - to
+            - forecast_from
+            - complete
+            - energy_kwh
+            - points
+            properties:
+              key:
+                enum:
+                - today
+                - tomorrow
+              date:
+                type: string
+                format: date
+              from:
+                type: string
+                format: date-time
+              to:
+                type: string
+                format: date-time
+              forecast_from:
+                type: string
+                format: date-time
+              complete:
+                type: boolean
+              energy_kwh:
+                type:
+                - number
+                - 'null'
+              points:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/ForecastPoint"
+    ExtendedSeriesData:
+      type: object
+      additionalProperties: false
+      required:
+      - window
+      - metric
+      - unit
+      - turbine
+      - series
+      properties:
+        window:
+          "$ref": "#/components/schemas/Window"
+        metric:
+          enum:
+          - generation_kwh
+          - wind_speed_mps
+          - cumulative_generation_kwh
+        unit:
+          enum:
+          - kWh
+          - m/s
+        turbine:
+          type:
+          - string
+          - 'null'
+          pattern: "^T[1-8]$"
+        series:
+          type: array
+          items:
+            oneOf:
+            - type: object
+              additionalProperties: false
+              required:
+              - timestamp
+              - interval_end
+              - generation_kwh
+              - interpolated
+              - complete
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                interval_end:
+                  type: string
+                  format: date-time
+                generation_kwh:
+                  type:
+                  - number
+                  - 'null'
+                interpolated:
+                  type: boolean
+                complete:
+                  type: boolean
+            - type: object
+              additionalProperties: false
+              required:
+              - timestamp
+              - interval_end
+              - cumulative_generation_kwh
+              - interpolated
+              - complete
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                interval_end:
+                  type: string
+                  format: date-time
+                cumulative_generation_kwh:
+                  type:
+                  - number
+                  - 'null'
+                interpolated:
+                  type: boolean
+                complete:
+                  type: boolean
+            - type: object
+              additionalProperties: false
+              required:
+              - timestamp
+              - interval_end
+              - wind_speed_mps
+              - sample_count
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                interval_end:
+                  type: string
+                  format: date-time
+                wind_speed_mps:
+                  type:
+                  - number
+                  - 'null'
+                sample_count:
+                  type: integer
+    StatisticsRow:
+      type: object
+      additionalProperties: false
+      required:
+      - date
+      - period_start
+      - period_end
+      - is_month_to_date
+      - generation_kwh
+      - generation_complete
+      - wind_speed_mps
+      - capacity_factor_percent
+      - p50_kwh
+      - vs_p50_percent
+      - pending
+      - co2_avoided_kg
+      - co2_coverage_percent
+      - co2_period_end
+      - reasons
+      properties:
+        date:
+          type: string
+          format: date
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        is_month_to_date:
+          type: boolean
+        generation_kwh:
+          type:
+          - number
+          - 'null'
+        generation_complete:
+          type: boolean
+        wind_speed_mps:
+          type:
+          - number
+          - 'null'
+        capacity_factor_percent:
+          type:
+          - number
+          - 'null'
+        p50_kwh:
+          type:
+          - number
+          - 'null'
+        vs_p50_percent:
+          type:
+          - number
+          - 'null'
+        pending:
+          type: boolean
+        co2_avoided_kg:
+          type:
+          - number
+          - 'null'
+        co2_coverage_percent:
+          type: number
+        co2_period_end:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        reasons:
+          type: object
+          additionalProperties: false
+          required:
+          - generation_kwh
+          - wind_speed_mps
+          - capacity_factor_percent
+          - vs_p50_percent
+          - co2_avoided_kg
+          properties:
+            generation_kwh:
+              type:
+              - string
+              - 'null'
+            wind_speed_mps:
+              type:
+              - string
+              - 'null'
+            capacity_factor_percent:
+              type:
+              - string
+              - 'null'
+            vs_p50_percent:
+              type:
+              - string
+              - 'null'
+            co2_avoided_kg:
+              type:
+              - string
+              - 'null'
+    StatisticsMeta:
+      type: object
+      additionalProperties: false
+      required:
+      - scope
+      properties:
+        scope:
+          type: string
+        status:
+          const: unavailable
+        period:
+          enum:
+          - day
+          - month
+        order_by:
+          type: string
+        direction:
+          enum:
+          - asc
+          - desc
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        eligible_periods:
+          type: integer
+        excluded_periods:
+          type: integer
+        pending_periods:
+          type: integer
+        first_date:
+          type:
+          - string
+          - 'null'
+        last_date:
+          type:
+          - string
+          - 'null'
+        refreshed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        p50_basis:
+          const: period_to_date
+    StatisticsData:
+      type: object
+      additionalProperties: false
+      required:
+      - rows
+      - meta
+      properties:
+        rows:
+          type: array
+          items:
+            "$ref": "#/components/schemas/StatisticsRow"
+        meta:
+          "$ref": "#/components/schemas/StatisticsMeta"
+    ComparisonData:
+      type: object
+      additionalProperties: false
+      required:
+      - rows
+      - meta
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - month
+            - values
+            properties:
+              month:
+                type: integer
+              values:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                  - year
+                  - date
+                  - period_start
+                  - period_end
+                  - value
+                  - reason
+                  - is_complete
+                  - difference
+                  - difference_percent
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    period_start:
+                      type: string
+                      format: date-time
+                    period_end:
+                      type: string
+                      format: date-time
+                    value:
+                      type:
+                      - number
+                      - 'null'
+                    reason:
+                      type:
+                      - string
+                      - 'null'
+                    coverage_percent:
+                      type: number
+                    year:
+                      type: integer
+                    is_complete:
+                      type: boolean
+                    difference:
+                      type:
+                      - number
+                      - 'null'
+                    difference_percent:
+                      type:
+                      - number
+                      - 'null'
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+          - scope
+          properties:
+            scope:
+              type: string
+            status:
+              const: unavailable
+            years:
+              type: array
+              items:
+                type: integer
+            baseline_year:
+              type: integer
+            metric:
+              type: string
+              enum:
+              - generation_kwh
+              - wind_speed_mps
+              - capacity_factor_percent
+              - vs_p50_percent
+              - co2_avoided_kg
+            difference_unit:
+              enum:
+              - kWh
+              - kg
+              - m/s
+              - percentage_points
+    CalendarData:
+      type: object
+      additionalProperties: false
+      required:
+      - rows
+      - meta
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - date
+            - period_start
+            - period_end
+            - value
+            - reason
+            - status
+            - hours
+            properties:
+              date:
+                type: string
+                format: date
+              period_start:
+                type: string
+                format: date-time
+              period_end:
+                type: string
+                format: date-time
+              value:
+                type:
+                - number
+                - 'null'
+              reason:
+                type:
+                - string
+                - 'null'
+              coverage_percent:
+                type: number
+              status:
+                enum:
+                - available
+                - missing
+                - pending
+                - not_complete
+                - before_records
+              hours:
+                type: number
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+          - scope
+          properties:
+            scope:
+              type: string
+            status:
+              const: unavailable
+            year:
+              type: integer
+            metric:
+              type: string
+              enum:
+              - generation_kwh
+              - wind_speed_mps
+              - capacity_factor_percent
+              - vs_p50_percent
+              - co2_avoided_kg
+            refreshed_at:
+              type:
+              - string
+              - 'null'
+              format: date-time
+            counts:
+              type: object
+              additionalProperties: false
+              required:
+              - available
+              - missing
+              - pending
+              - not_complete
+              - before_records
+              properties:
+                available:
+                  type: integer
+                missing:
+                  type: integer
+                pending:
+                  type: integer
+                not_complete:
+                  type: integer
+                before_records:
+                  type: integer
+    RecordCoverage:
+      type: object
+      additionalProperties: false
+      required:
+      - matched_intervals
+      - expected_intervals
+      - coverage_percent
+      - complete
+      properties:
+        matched_intervals:
+          type: integer
+        expected_intervals:
+          type: integer
+        coverage_percent:
+          type: number
+        complete:
+          type: boolean
+    RecordsData:
+      type: object
+      additionalProperties: false
+      required:
+      - scope
+      - records_generated_at
+      - carbon_assumed_export_factor
+      - p50_basis
+      - records
+      properties:
+        scope:
+          type: string
+        records_generated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        carbon_assumed_export_factor:
+          type: number
+        p50_basis:
+          const: full_month_for_monthly_records
+        records:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - key
+            - label
+            - unit
+            - period
+            - entries
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              unit:
+                enum:
+                - m/s
+                - kWh
+                - kg
+                - "%"
+                - days
+              period:
+                enum:
+                - day
+                - month
+                - streak
+              entries:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                  - position
+                  - period_start
+                  - period_end
+                  - is_month_to_date
+                  - value
+                  properties:
+                    position:
+                      type: integer
+                    period_start:
+                      type: string
+                      format: date-time
+                    period_end:
+                      type: string
+                      format: date-time
+                    is_month_to_date:
+                      type: boolean
+                    value:
+                      type: number
+                    coverage:
+                      "$ref": "#/components/schemas/RecordCoverage"
+    BenchmarkTarget:
+      type: object
+      additionalProperties: false
+      required:
+      - period_kwh
+      - full_month_kwh
+      - expected_capacity_factor_percent
+      - vs_period_percent
+      - full_month_achieved_percent
+      properties:
+        period_kwh:
+          type:
+          - number
+          - 'null'
+        full_month_kwh:
+          type:
+          - number
+          - 'null'
+        expected_capacity_factor_percent:
+          type:
+          - number
+          - 'null'
+        vs_period_percent:
+          type:
+          - number
+          - 'null'
+        full_month_achieved_percent:
+          type:
+          - number
+          - 'null'
+    BenchmarksData:
+      type: object
+      additionalProperties: false
+      required:
+      - window
+      - basis
+      - timezone
+      - months
+      properties:
+        window:
+          type: object
+          additionalProperties: false
+          required:
+          - range
+          - from
+          - to
+          - scope
+          properties:
+            range:
+              type: string
+            from:
+              type: string
+              format: date-time
+            to:
+              type: string
+              format: date-time
+            scope:
+              enum:
+              - owner
+              - site
+        basis:
+          const: long_term_monthly_budgets
+        timezone:
+          type: string
+        months:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - month
+            - from
+            - to
+            - hours
+            - full_month_hours
+            - generation_kwh
+            - generation_complete
+            - boundary_complete
+            - is_full_month
+            - targets
+            properties:
+              month:
+                type: string
+                pattern: "^\\d{4}-\\d{2}$"
+              from:
+                type: string
+                format: date-time
+              to:
+                type: string
+                format: date-time
+              hours:
+                type: number
+              full_month_hours:
+                type: number
+              generation_kwh:
+                type:
+                - number
+                - 'null'
+              generation_complete:
+                type: boolean
+              boundary_complete:
+                type: boolean
+              is_full_month:
+                type: boolean
+              targets:
+                type: object
+                additionalProperties: false
+                required:
+                - p50
+                - p75
+                - p90
+                properties:
+                  p50:
+                    "$ref": "#/components/schemas/BenchmarkTarget"
+                  p75:
+                    "$ref": "#/components/schemas/BenchmarkTarget"
+                  p90:
+                    "$ref": "#/components/schemas/BenchmarkTarget"
+    ForecastResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/ForecastData"
+    ExtendedSeriesResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/ExtendedSeriesData"
+    StatisticsResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/StatisticsData"
+    ComparisonResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/ComparisonData"
+    CalendarResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/CalendarData"
+    RecordsResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/RecordsData"
+    BenchmarksResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/BenchmarksData"
+    PreferencesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - wind_speed_unit
+          properties:
+            wind_speed_unit:
+              type: string
+              enum: [mps, mph]
+              description: Display preference only. Does not change the units of API readings.
+    Window:
+      type: object
+      additionalProperties: false
+      required:
+        - range
+        - from
+        - to
+        - bucket
+        - scope
+      properties:
+        range:
+          type: string
+          examples:
+            - 7d
+        from:
+          type: string
+          format: date-time
+          examples:
+            - 2026-06-18T23:00:00Z
+        to:
+          type: string
+          format: date-time
+          examples:
+            - 2026-06-25T12:34:00Z
+        bucket:
+          type: string
+          description: Aggregation bucket chosen for the requested window.
+          enum:
+            - 1m
+            - 10m
+            - 30m
+            - 1h
+            - day
+            - month
+            - year
+        scope:
+          type: string
+          description: Generation scope used for the response.
+          enum:
+            - owner
+            - site
+          examples:
+            - owner
+    CurrentReading:
+      type: object
+      additionalProperties: false
+      required:
+        - scope
+        - source_interval
+        - generated_at
+        - complete
+      properties:
+        scope:
+          type: string
+          enum:
+            - owner
+            - site
+          examples:
+            - owner
+        source_interval:
+          type: string
+          enum:
+            - 1m
+          description: Current readings are at one-minute intervals.
+        generated_at:
+          type: string
+          format: date-time
+          description: Time at which the API response was generated.
+        complete:
+          type: boolean
+          description: True when every turbine has current power, wind speed, and state data available.
+    CurrentSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - total_power_kw
+        - total_power_watts
+        - wind_speed_mps
+        - capacity_factor_percent
+        - active_turbines
+        - inactive_turbines
+        - unknown_turbines
+        - total_turbines
+        - capacity_watts
+        - capacity_kw
+        - latest_power_at
+        - latest_wind_speed_at
+        - latest_status_at
+        - total_generation_kwh_today
+        - total_generation_wh_today
+      properties:
+        total_power_kw:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Latest total power for the requested scope.
+          examples:
+            - 8420.125
+        total_power_watts:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Latest total power for the requested scope in watts.
+          examples:
+            - 8420125
+        wind_speed_mps:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Mean of the latest turbine wind speed readings.
+          examples:
+            - 9.42
+        capacity_factor_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Latest whole-site power divided by rated site capacity. This is not changed by `scope`.
+          examples:
+            - 44.79
+        active_turbines:
+          type: integer
+          examples:
+            - 8
+        inactive_turbines:
+          type: integer
+          examples:
+            - 0
+        unknown_turbines:
+          type: integer
+          examples:
+            - 0
+        total_turbines:
+          type: integer
+          examples:
+            - 8
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated capacity represented by the requested scope.
+          examples:
+            - 18800000
+        capacity_kw:
+          type: number
+          format: double
+          description: Rated capacity represented by the requested scope in kilowatts.
+          examples:
+            - 18800
+        latest_power_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        latest_wind_speed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        latest_status_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        total_generation_kwh_today:
+          type: number
+          format: double
+          description: Total energy generated since the start of the current UK local day, scaled to the requested scope.
+          examples:
+            - 1234.567
+        total_generation_wh_today:
+          type: integer
+          format: int64
+          description: Total energy generated since the start of the current UK local day in watt-hours, scaled to the requested scope.
+          examples:
+            - 1234567
+    CurrentTurbine:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - status
+        - power_kw
+        - wind_speed_mps
+        - capacity_factor_percent
+        - capacity_watts
+        - capacity_kw
+        - latest_power_at
+        - latest_wind_speed_at
+        - status_started_at
+        - state_started_at
+        - state_text
+      properties:
+        id:
+          type: string
+          pattern: '^T[1-8]$'
+          examples:
+            - T1
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - unknown
+          description: Whether the turbine is active. Unknown means no operating state is available.
+        power_kw:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Latest power for this turbine and requested scope.
+        wind_speed_mps:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Latest wind speed for this turbine.
+        capacity_factor_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Latest turbine power divided by the turbine's rated capacity.
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated turbine capacity represented by the requested scope.
+        capacity_kw:
+          type: number
+          format: double
+          description: Rated turbine capacity represented by the requested scope in kilowatts.
+        latest_power_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        latest_wind_speed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        status_started_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: When the turbine last changed between active and inactive. Null if unknown.
+        state_started_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: When the current uninterrupted operating state began.
+        state_text:
+          type:
+            - string
+            - 'null'
+          description: Latest operating-state description for this turbine.
+          examples:
+            - 'Normal operation: Turbine in operation'
+    CurrentResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - reading
+            - summary
+            - turbines
+          properties:
+            reading:
+              $ref: '#/components/schemas/CurrentReading'
+            summary:
+              $ref: '#/components/schemas/CurrentSummary'
+            turbines:
+              type: array
+              items:
+                $ref: '#/components/schemas/CurrentTurbine'
+    Summary:
+      type: object
+      additionalProperties: false
+      required:
+        - total_generation_kwh
+        - co2_avoided_kg
+        - co2_avoided_assumed_export_factor
+        - co2_avoided_coverage_percent
+        - co2_avoided_matched_intervals
+        - co2_avoided_expected_intervals
+        - co2_avoided_complete
+        - latest_carbon_intensity_at
+        - capacity_factor_percent
+        - active_turbines
+        - capacity_watts
+        - capacity_kw
+        - latest_generation_interval_end
+        - latest_import_status
+      properties:
+        total_generation_kwh:
+          type: number
+          format: double
+          description: Total generation for the requested scope.
+          examples:
+            - 123456.789
+        co2_avoided_kg:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Indicative CO2 avoided by matched intervals for the requested scope.
+          examples:
+            - 18432.125
+        co2_avoided_assumed_export_factor:
+          type: number
+          format: double
+          description: Assumed proportion of gross generation exported to the grid.
+          examples:
+            - 0.99
+        co2_avoided_coverage_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          description: Percentage of expected half-hour intervals with both complete generation and estimated actual carbon intensity data.
+        co2_avoided_matched_intervals:
+          type: integer
+          minimum: 0
+        co2_avoided_expected_intervals:
+          type: integer
+          minimum: 0
+        co2_avoided_complete:
+          type: boolean
+          description: True when every expected half-hour interval is included.
+        latest_carbon_intensity_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        capacity_factor_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Whole-farm capacity factor for the time covered by comparable readings from all turbines. This may cover less time than the generation total. Null if there is not enough comparable data. Does not change with scope.
+          examples:
+            - 40.8
+        active_turbines:
+          type: integer
+          examples:
+            - 8
+          description: Turbines whose latest known operating state is active, regardless of the selected generation period. Missing states are not counted as active.
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated capacity represented by the requested scope.
+          examples:
+            - 18800000
+        capacity_kw:
+          type: number
+          format: double
+          description: Rated capacity represented by the requested scope in kilowatts.
+          examples:
+            - 18800
+        latest_generation_interval_end:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Oldest contributing turbine end within the selected window, or null if a turbine has no known generation. A mixed-period total can include newer readings from other turbines.
+          examples:
+            - 2026-06-25T12:30:00Z
+        latest_import_status:
+          type:
+            - string
+            - 'null'
+          examples:
+            - completed
+    SummaryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - window
+            - summary
+          properties:
+            window:
+              $ref: '#/components/schemas/Window'
+            summary:
+              $ref: '#/components/schemas/Summary'
+    GenerationPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - timestamp
+        - generation_kwh
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        generation_kwh:
+          type: number
+          format: double
+          description: Energy generated during the bucket for the requested scope.
+    GenerationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - window
+            - summary
+            - series
+          properties:
+            window:
+              $ref: '#/components/schemas/Window'
+            summary:
+              $ref: '#/components/schemas/Summary'
+            series:
+              type: array
+              items:
+                $ref: '#/components/schemas/GenerationPoint'
+    CarbonAvoidedSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - co2_avoided_kg
+        - generation_kwh
+        - assumed_export_factor
+        - coverage_percent
+        - matched_intervals
+        - expected_intervals
+        - complete
+        - latest_intensity_at
+      properties:
+        co2_avoided_kg:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Indicative CO2 avoided by matched intervals for the requested scope.
+        generation_kwh:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Generation included in the estimate for the requested scope.
+        assumed_export_factor:
+          type: number
+          format: double
+          examples:
+            - 0.99
+        coverage_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        matched_intervals:
+          type: integer
+          minimum: 0
+        expected_intervals:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+        latest_intensity_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    CarbonAvoidedPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - timestamp
+        - interval_end
+        - duration_seconds
+        - co2_avoided_kg
+        - generation_kwh
+        - grid_intensity_gco2_per_kwh
+        - coverage_percent
+        - matched_intervals
+        - expected_intervals
+        - complete
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        interval_end:
+          type: string
+          format: date-time
+        duration_seconds:
+          type: integer
+          minimum: 0
+        co2_avoided_kg:
+          type:
+            - number
+            - 'null'
+          format: double
+        generation_kwh:
+          type:
+            - number
+            - 'null'
+          format: double
+        grid_intensity_gco2_per_kwh:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Generation-weighted NESO estimated actual GB grid carbon intensity for the bucket.
+        coverage_percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        matched_intervals:
+          type: integer
+          minimum: 0
+        expected_intervals:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+    CarbonAvoidedResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - window
+            - summary
+            - series
+          properties:
+            window:
+              $ref: '#/components/schemas/Window'
+            summary:
+              $ref: '#/components/schemas/CarbonAvoidedSummary'
+            series:
+              type: array
+              items:
+                $ref: '#/components/schemas/CarbonAvoidedPoint'
+    WindSpeedPoint:
+      type: object
+      additionalProperties: false
+      required:
+        - timestamp
+        - wind_speed_mps
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        wind_speed_mps:
+          type: number
+          format: double
+          description: Mean wind speed in metres per second.
+    WindSpeedResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - window
+            - series
+          properties:
+            window:
+              $ref: '#/components/schemas/Window'
+            series:
+              type: array
+              items:
+                $ref: '#/components/schemas/WindSpeedPoint'
+    Coordinates:
+      type: object
+      additionalProperties: false
+      required:
+        - latitude
+        - longitude
+        - source
+        - openstreetmap_node_id
+      properties:
+        latitude:
+          type:
+            - number
+            - 'null'
+          format: double
+        longitude:
+          type:
+            - number
+            - 'null'
+          format: double
+        source:
+          type:
+            - string
+            - 'null'
+          examples:
+            - OpenStreetMap
+        openstreetmap_node_id:
+          type:
+            - integer
+            - 'null'
+    Turbine:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - generation_kwh
+        - generation_share_percent
+        - capacity_factor_percent
+        - capacity_watts
+        - capacity_kw
+        - latest_generation_interval_end
+        - latest_rotor_speed_rpm
+        - latest_rotor_speed_at
+        - coordinates
+      properties:
+        id:
+          type: string
+          pattern: '^T[1-8]$'
+          examples:
+            - T1
+        generation_kwh:
+          type: number
+          format: double
+          description: Per-turbine generation for the requested scope.
+        generation_share_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Share of scoped generation produced by this turbine.
+        capacity_factor_percent:
+          type:
+            - number
+            - 'null'
+          format: double
+          description: Turbine capacity factor over the period covered by its readings. Null if coverage is insufficient. Does not change with scope.
+        capacity_watts:
+          type: number
+          format: double
+          description: Rated turbine capacity represented by the requested scope.
+        capacity_kw:
+          type: number
+          format: double
+          description: Rated turbine capacity represented by the requested scope in kilowatts.
+        latest_generation_interval_end:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        latest_rotor_speed_rpm:
+          type:
+            - number
+            - 'null'
+          format: double
+        latest_rotor_speed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+    TurbinesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - window
+            - turbines
+          properties:
+            window:
+              $ref: '#/components/schemas/Window'
+            turbines:
+              type: array
+              items:
+                $ref: '#/components/schemas/Turbine'
+    Error:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ValidationError:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
