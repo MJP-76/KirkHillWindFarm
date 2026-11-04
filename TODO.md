@@ -175,6 +175,7 @@ restatement will silently serve stale earnings.
 - [x] `url_already_exists` string matching — replaced with `translation_key` attribute check (more robust than string matching against translated message)
 - [x] ~~Split the ~700-line dashboard generation/merge logic out of `__init__.py`~~ — already done: `__init__.py` is 244 lines (setup/unload/listeners), `dashboard.py` is 519 lines (generation/merge/entity IDs).
 - [ ] Add a platform-agnostic notification option (generic service/blueprint). Preference is WhatsApp, but design so other users can route to Telegram, Signal, or the HA Companion app
+- [ ] Escape non-parseable timestamps in `_fmtTime` (SCADA card, line 270) — frenck's non-blocking note on hacs/default#11379: an unparseable value is returned as-is and reaches `innerHTML` in the turbine modal (lines 457–458). `return this._escape(iso)` closes it. Deferred until after v4.19.0.
 
 ## Bugs — v4.13.4 ChatGPT review
 
@@ -341,7 +342,7 @@ reached the same conclusion independently.
 
 Completed releases, newest first. Preserved for reference.
 
-### v4.19.0 (pre-release, 2026-11-03)
+### v4.19.0 (stable, 2026-11-04)
 
 - **The forecast series** (372 → 437 tests, PRs #163–#169):
   - **Forecast from the wind farm's own API** (#166) — hub-height models

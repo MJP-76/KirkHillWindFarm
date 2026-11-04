@@ -15,14 +15,52 @@ and copy the API key.
     rather than offered as a dead end. The code and its tests stay in the
     integration; the option returns once the dashboard is fixed.
 
-## Install via HACS
+## Install via HACS or Marketplace
 
-1. Add this repository to HACS (Custom Repositories)
-2. Install **Kirk Hill Wind Farm**
-3. Restart Home Assistant
-4. Add the integration via **Settings → Devices & Services → Add Integration → Kirk Hill Wind Farm**
-5. Enter your API key, choose whether to create the dashboard automatically,
+Kirk Hill Wind Farm is listed in the **HACS default repository**, so there is
+nothing to add by hand.
+
+[![Open Marketplace repository on My Home Assistant](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=MJP-76&repository=KirkHillWindFarm&category=integration)
+
+The button above uses [My Home Assistant](https://my.home-assistant.io) to open
+this repository straight in the store on your own instance — the first click
+only asks you to link your instance if you have not used a My link before.
+
+1. Install **Kirk Hill Wind Farm** from your instance's store:
+   - **Home Assistant 2026.11 and newer (Marketplace):** go to
+     **Settings → Marketplace**, search for **Kirk Hill Wind Farm** and select
+     **Install**. The first time, accept the Marketplace warning before
+     installing.
+   - **Earlier versions (HACS):** go to **HACS → Integrations**, search for
+     **Kirk Hill Wind Farm** and select **Download**.
+2. Restart Home Assistant
+3. Add the integration via **Settings → Devices & Services → Add Integration → Kirk Hill Wind Farm**
+4. Enter your API key, choose whether to create the dashboard automatically,
    and set a site name
+
+!!! note "Already installed from a custom repository?"
+
+    Nothing to migrate. Both HACS and the Marketplace track this repository
+    by its GitHub address, so once the default listing is picked up — at the
+    next startup or catalog refresh, within about a day of the listing going
+    live — the entry you already have is simply re-marked as default. Your
+    installed version, pre-release setting, config entry and entities are
+    untouched. Do not delete the repository entry or uninstall the
+    integration: both would remove the files.
+
+!!! note "Not showing up yet?"
+
+    A new listing can take up to 8 hours to reach the store, and each instance
+    refreshes its list at startup and every 6 hours after that. Until then:
+
+    - **Marketplace:** **Settings → Marketplace → Add from link** and enter
+      `https://github.com/MJP-76/KirkHillWindFarm` (requires connecting your
+      GitHub account).
+    - **HACS:** **HACS → Settings → Custom Repositories**, paste the same URL
+      and pick **Integration**.
+
+    Either way the result is identical, and it becomes the same entry once the
+    listing arrives.
 
 !!! note "Ethex earnings"
 
@@ -41,14 +79,34 @@ Pre-releases are development builds published before a stable release. Install
 one only if you want to test early, or you need a change that has not reached
 the stable release yet.
 
-### 1. Let HACS offer pre-releases
+### 1. Offer pre-releases
+
+**Home Assistant 2026.11 and newer (Marketplace):**
+
+1. Open **Settings → Devices & Services → Marketplace**
+2. Open the **Kirk Hill Wind Farm** repository device page
+3. Enable the disabled **Pre-release** entity, then turn on its switch
+
+**Earlier versions (HACS):**
 
 1. Open **Settings → Devices & Services**
 2. Open the **HACS** integration
 3. Open **Kirk Hill Wind Farm**
 4. In the **Diagnostics** section, switch on the disabled **Pre-release** item
 
-### 2. Download a specific pre-release
+### 2. Install a specific pre-release
+
+**Home Assistant 2026.11 and newer (Marketplace):**
+
+1. Open **Settings → Marketplace**
+2. Search for **Kirk Hill Wind Farm** and open its repository page
+3. Click the **⋮** (ellipsis) in the upper-right corner
+4. Click **Install another version**
+5. Select the pre-release from the list
+6. Click **Install**
+7. Restart Home Assistant
+
+**Earlier versions (HACS):**
 
 1. Open **HACS** from the sidebar
 2. Find **Kirk Hill Wind Farm**
@@ -68,24 +126,22 @@ the stable release yet.
 
 !!! tip "Going back to a stable release"
 
-    Repeat the steps above and pick the newest **Latest** version from the
-    **Need a different version?** dropdown, then restart Home Assistant.
-    Switching the **Pre-release** diagnostic back off stops HACS offering
+    Repeat step 2 and pick the newest **Latest** version — from the
+    **Install another version** dialog (Marketplace) or the **Need a
+    different version?** dropdown (HACS) — then restart Home Assistant.
+    Switching the **Pre-release** switch back off stops the store offering
     pre-releases as updates.
 
 ## What's in the latest release
 
-**v4.18.4** is the latest **stable** release: the hardening series
-responding to an external review — period-collision guards, a resilient
-ledger load, and pinned forecast/migration/dashboard lifecycles.
-
-**v4.19.0** is the current **pre-release**: the forecast series — the
+**v4.19.0** is the latest **stable** release: the forecast series — the
 integration now takes its forecast from the wind farm's own API instead of
 Open-Meteo, exposes the dashboard's P50/P75/P90 expectations, and reads the
-generation forecast that was already arriving. To be offered it, enable
-pre-releases in HACS (above). See the
+generation forecast that was already arriving. See the
 [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
 for the full history.
+
+No pre-release is currently open.
 
 ## Reporting a pre-release problem
 
@@ -98,9 +154,13 @@ include the details below.
 - **What did you do?** — the steps you took to trigger the problem
 - **What happened?** — the actual behaviour you saw
 - **What did you expect?** — what should have happened instead
-- **HACS version** — the version shown on the integration in the HACS sidebar
+- **Store version** — the version shown on the HACS integration in the
+  sidebar (Home Assistant 2026.10 and earlier); on 2026.11 and newer the
+  Marketplace ships inside Home Assistant, so the next line covers it
 - **Home Assistant version** — **Settings → System → Repairs** (top of the page)
-- **Integration version** — the version shown on the **Kirk Hill Wind Farm** card in HACS
+- **Integration version** — the version shown on the **Kirk Hill Wind Farm**
+  card in HACS, or the **Installed version** of its update entity under
+  **Settings → Devices & Services → Marketplace**
 
 State which pre-release you are on — version numbers like `v4.13.1` are more
 precise than "the latest".

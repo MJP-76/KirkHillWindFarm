@@ -4,7 +4,8 @@ All notable changes to the Kirk Hill Wind Farm integration.
 
 ## Version 4.19.0
 
-**Testing pre-release.** The forecast series: the integration now takes its
+**Stable release** — promoted 2026-11-04, the day after publication, on the
+owner's testing. The forecast series: the integration now takes its
 forecast from the wind farm's own API instead of Open-Meteo, exposes the
 P50/P75/P90 expectations the dashboard publishes, and reads the generation
 forecast that was already arriving. Seven PRs, all 2026-11-03.

@@ -9,9 +9,23 @@
 [![Release][badge-release]][releases]
 [![Built with AI][badge-built-with-ai]][built-with-ai]
 
-A Home Assistant custom component for the Kirk Hill Wind Farm dashboard API.
+[![Open Marketplace repository on My Home Assistant][badge-install]][install]
+
+A complete SCADA dashboard for the Kirk Hill Community Wind Farm, plus
+**high-level API entities generated for you to reuse anywhere in Home
+Assistant** — the best option for bringing your share of Kirk Hill into your
+smart home. Now listed in HACS.
 
 ![The Kirk Hill SCADA tab: eight turbines feeding the transformer and national grid, with the Return on investment, Owner and Site panels down the right-hand column](docs/assets/scada-overview.png)
+
+- **Generation and current power** — live farm and per-turbine generation
+  and kW, updated on your polling interval
+- **Wind and turbine status** — wind speed, active-turbine count and fault
+  alarms, with optional WhatsApp down/recovery alerts
+- **A dedicated SCADA dashboard** — the animated 8-turbine farm diagram with
+  Owner, Site and Return on investment panels, created for you on install
+- **Everything as reusable sensors** — high-level entities for your own
+  automations, dashboards and statistics
 
 It pulls current data for both OpenAPI scopes:
 
@@ -121,12 +135,22 @@ and an animated dashboard.
 
 ## Quick start
 
-1. Add this repository to **HACS → Settings → Custom Repositories** as an integration.
-2. Install **Kirk Hill Wind Farm**.
-3. Restart Home Assistant.
-4. Add the integration via **Settings → Devices & Services → Add Integration → "Kirk Hill Wind Farm"**.
-5. Enter your API key, choose whether to create the dashboard automatically,
+Kirk Hill Wind Farm is listed in the **HACS default repository** — no custom
+repository entry is needed.
+
+1. Install **Kirk Hill Wind Farm** from your instance's store:
+   - **Home Assistant 2026.11 and newer:** **Settings → Marketplace** →
+     search → **Install** (accept the Marketplace warning the first time).
+   - **Earlier versions (HACS):** **HACS → Integrations** → search →
+     **Download**.
+2. Restart Home Assistant.
+3. Add the integration via **Settings → Devices & Services → Add Integration → "Kirk Hill Wind Farm"**.
+4. Enter your API key, choose whether to create the dashboard automatically,
    and set a site name.
+
+> Already installed from a custom repository? Leave it as it is: the store
+> marks the same entry as default on its next catalog update, and your
+> installed version, config entry and entities do not change.
 
 > Generate your API key by logging in to the dashboard
 > <https://dashboard.kirkhillcoop.org>, click your username in the top right,
@@ -165,8 +189,10 @@ Full version history is kept in [`CHANGELOG.md`][changelog].
 [docs]: https://MJP-76.github.io/KirkHillWindFarm/
 [badge-home-assistant]: https://img.shields.io/badge/Home%20Assistant-41BDF5?style=flat-square&logo=homeassistant&logoColor=white
 [home-assistant]: https://www.home-assistant.io/
-[badge-hacs]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
+[badge-hacs]: https://img.shields.io/badge/HACS-Default-41BDF5.svg
 [hacs]: https://github.com/hacs/integration
+[badge-install]: https://my.home-assistant.io/badges/marketplace_repository.svg
+[install]: https://my.home-assistant.io/redirect/marketplace_repository/?owner=MJP-76&repository=KirkHillWindFarm&category=integration
 [badge-hacs-validation]: https://img.shields.io/badge/HACS%20Validation-passing-brightgreen
 [workflow-hacs-validation]: https://github.com/MJP-76/KirkHillWindFarm/actions/workflows/validate.yml
 [badge-hassfest]: https://img.shields.io/github/actions/workflow/status/MJP-76/KirkHillWindFarm/validate.yml?branch=main&label=Hassfest
