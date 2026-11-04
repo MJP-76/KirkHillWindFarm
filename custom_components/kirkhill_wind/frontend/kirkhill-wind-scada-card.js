@@ -12,7 +12,7 @@
  * Replace "@VERSION@" with the current release version before shipping; this
  * is done automatically by scripts/version_sync.py.
  */
-const KIRKHILL_WIND_SCADA_VERSION = "4.19.0";
+const KIRKHILL_WIND_SCADA_VERSION = "4.19.1";
 class KirkHillWindScada extends HTMLElement {
   static get VIEWBOX() {
     return { w: 1240, h: 1300, wMin: 900, wMax: 2200, hMin: 700, hMax: 1900 };
@@ -267,7 +267,7 @@ class KirkHillWindScada extends HTMLElement {
   _fmtTime(iso) {
     if (!iso) return "—";
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
+    if (Number.isNaN(d.getTime())) return this._escape(iso);
     return d.toLocaleString(undefined, {
       day: "2-digit",
       month: "short",
