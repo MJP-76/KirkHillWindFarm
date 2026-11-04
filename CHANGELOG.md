@@ -2,6 +2,31 @@
 
 All notable changes to the Kirk Hill Wind Farm integration.
 
+## Version 4.19.1
+
+**Testing pre-release.** The SCADA card's time fields escape what they
+cannot parse, plus the site pop-out's forecast charts from #171.
+
+- **Escaped non-parseable timestamps in the SCADA card** — `_fmtTime`
+  returned an unparseable value as-is, and the turbine modal's "Status
+  since" / "State since" cells put it straight into `innerHTML`; the
+  fallback now runs through `_escape` (frenck's non-blocking note on
+  hacs/default#11379).
+- **Forecast & expectation charts on the site pop-out** (#171) — the Site
+  detail modal gains a fixed section below its timeframe charts: today's
+  actual against its forecast and P50/P75/P90, and the rolling 30-day
+  actual against the same percentiles, with a KPI row for vs P50, the
+  forecast and the P50. Actual is solid, expectations dashed, so the
+  distinction survives a greyscale screenshot. The section deliberately
+  ignores the timeframe selector — a P50 for today and a P50 for the last
+  30 days are different figures — and everything on it is site scope,
+  which needed the forecast fetched for both scopes: one extra request an
+  hour on the slow tier, and a scope that fails keeps its sibling's
+  result.
+
+440 tests collected, one still skipped (`test_benchmarks_response`, which
+pins its fixture the moment the OpenAPI sync lands the refreshed spec).
+
 ## Version 4.19.0
 
 **Stable release** — promoted 2026-11-04, the day after publication, on the

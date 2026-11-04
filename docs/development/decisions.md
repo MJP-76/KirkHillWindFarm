@@ -895,6 +895,18 @@ decision changes.
 
 ## Deployment state
 
+- **2026-11-04 (later) — `main` is at `4.19.1`, published as a
+  **pre-release**; `4.19.0` remains the latest stable until the owner has
+  tested it. This supersedes the promotion note below.** Contents: the
+  `_fmtTime` escape fix (frenck's HACS-review note) and #171's site
+  pop-out forecast charts, which needed the forecast fetched for both
+  scopes. Deployed to the host the same day with the owner's go-ahead:
+  #171's Python changes needed a full restart (done), and the card fix is
+  frontend-only — a copy plus a browser refresh. Nothing else is deployed
+  by releasing: files reach this host only when `origin/main` is mirrored,
+  and Python changes need Home Assistant fully restarted, which is the
+  owner's explicit go-ahead.
+
 - **2026-11-04 — `main`'s `4.19.0` is promoted to **stable** on the owner's
   testing; it is the latest stable and no pre-release is currently open.
   This supersedes the 2026-11-03 note below.** The forecast series: forecast

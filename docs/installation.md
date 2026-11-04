@@ -137,11 +137,13 @@ the stable release yet.
 **v4.19.0** is the latest **stable** release: the forecast series — the
 integration now takes its forecast from the wind farm's own API instead of
 Open-Meteo, exposes the dashboard's P50/P75/P90 expectations, and reads the
-generation forecast that was already arriving. See the
-[changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
-for the full history.
+generation forecast that was already arriving.
 
-No pre-release is currently open.
+**v4.19.1** is the current **pre-release**: the SCADA card escapes
+timestamps it cannot parse, and the site pop-out gains forecast &
+expectation charts. To be offered it, turn on **Pre-release** (above). See
+the [changelog](https://github.com/MJP-76/KirkHillWindFarm/blob/main/CHANGELOG.md)
+for the full history.
 
 ## Reporting a pre-release problem
 
